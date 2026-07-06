@@ -1,0 +1,92 @@
+/* src/theme/site.css
+   The reading-column container and the cairn figure-placement contract for the public (site)
+   pages. The chrome (header, nav, footer) lives in owned token-driven components
+   (SiteHeader.svelte, SiteFooter.svelte); this sheet carries only the centered `.site-main`
+   measure and the figure role classes, on the public theme's tokens (theme.css), so they re-skin
+   with the rest. The bespoke article surface (every prose element) lives in prose.css, which
+   theme.css @import-s; this sheet keeps only the layout container and the figure-placement
+   geometry the article sits inside.
+
+   The sheet is referenced only through Vite ?url imports: the (site) layout links the resolved
+   URL, and the adapter's preview knob hands the same URL to the editor's preview frame. The
+   preview's `containerClass` is `site-main`, so the frame reproduces the same centered column the
+   reader sees; the figure rules below are scoped to `.site-main` for that reason. A static
+   `import './site.css'` in the layout would fold the sheet into the layout's CSS chunk, whose
+   basename differs between the client and server builds, so the server-resolved ?url would 404 in
+   the browser. Referenced only as an asset, both builds emit site.<hash>.css under one content
+   hash, and the URL holds. */
+
+html {
+  font-size: clamp(1rem, 0.7631rem + 0.2631vw, 1.125rem);
+
+  /* The sticky-header scroll offset; sized from the header's own touch-target height plus its
+     vertical padding, so an in-page anchor jump or a focused heading clears the band (WCAG
+     2.4.11). */
+  scroll-padding-top: calc(2.75rem + 2 * var(--spacing-xs) + 1rem);
+}
+
+.site-main {
+  /* margin-inline, not the margin: 0 auto shorthand: the shorthand also zeroes the block
+     (top/bottom) margins, which would silently beat a future sibling's own Tailwind
+     `mt-*`/`mb-*` utility. */
+  max-width: var(--container-measure);
+  margin-inline: auto;
+  padding: var(--spacing-l) var(--spacing-m);
+}
+
+/* cairn figure placement: the default reader CSS for the :::figure role classes. cairn defines
+   the class contract; the site owns the pixels by overriding these. */
+body {
+  overflow-x: clip;
+}
+.site-main figure {
+  margin: var(--spacing-l) 0;
+}
+.site-main figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-box);
+}
+.site-main figure figcaption {
+  margin-top: 0.6rem;
+  font-size: var(--text-step--1);
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.site-main figure:not(.cairn-place-center) img {
+  max-height: 32rem;
+  object-fit: cover;
+}
+
+.site-main .cairn-place-center {
+  text-align: center;
+}
+.site-main .cairn-place-center img {
+  max-width: min(100%, 22rem);
+  margin-inline: auto;
+}
+
+.site-main .cairn-place-wide {
+  width: min(var(--container-measure-wide), 100vw - 3rem);
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.site-main .cairn-place-full {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.site-main .cairn-place-full img {
+  border-radius: 0;
+}
+.site-main .cairn-place-full figcaption {
+  max-width: var(--container-measure);
+  margin-inline: auto;
+  padding: 0 var(--spacing-m);
+  box-sizing: border-box;
+}

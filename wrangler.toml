@@ -1,0 +1,48 @@
+# asc-site — Cloudflare Workers (SvelteKit adapter-cloudflare)
+name = "asc-site"
+# Lets cairn-doctor derive the account for its D1 auth-store check.
+account_id = "120c269ad6d3dfbe6d63a0bb53758ca0"
+compatibility_date = "2026-07-06"
+compatibility_flags = ["nodejs_compat"]
+
+main = ".svelte-kit/cloudflare/_worker.js"
+
+# Workers Logs ingests and indexes every console record, including cairn-cms's structured
+# diagnostic events (auth, commit, guard). Query them by `event` or `editor` in the dashboard
+# Logs tab. See ../cairn-cms/docs/guides/read-cairn-logs.md.
+[observability]
+enabled = true
+
+# not_found_handling = "none" (the schema's own default, set here explicitly) passes an unmatched
+# request through to the Worker instead of serving a static 404 straight from the edge, so
+# SvelteKit's built-in default-404 handling renders the themed root src/routes/+error.svelte
+# through a real SSR response. See ../cairn-cms/examples/showcase/src/chassis/README.md's "The
+# themed-404 pattern".
+[assets]
+directory = ".svelte-kit/cloudflare"
+binding = "ASSETS"
+not_found_handling = "none"
+
+# cairn-cms: unrestricted Email Sending binding for magic links (arbitrary recipients).
+# remote = true so `wrangler dev` sends real mail.
+[[send_email]]
+name = "EMAIL"
+remote = true
+
+# cairn-cms: self-owned magic-link auth store — editor allowlist, sessions, magic tokens.
+[[d1_databases]]
+binding = "AUTH_DB"
+database_name = "cairn-asc-auth"
+database_id = "e8ebb275-bd87-4e9f-b1f8-685c460e7629"
+
+# cairn-cms: R2 bucket backing the media library. The /media delivery route streams
+# content-addressed image bytes from here; the adapter's assets block names this binding.
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "asc-site-media"
+
+[vars]
+# Canonical origin for magic-link confirmation links, never read from a request header. The dev
+# cutover (plan Task 5) repoints the dev.aksailingclub.org Workers custom domain to this Worker;
+# production stays untouched. Dev overrides via PUBLIC_ORIGIN in .dev.vars.
+PUBLIC_ORIGIN = "https://dev.aksailingclub.org"

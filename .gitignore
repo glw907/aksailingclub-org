@@ -1,0 +1,35 @@
+# SvelteKit build output
+.svelte-kit/
+build/
+
+# Node
+node_modules/
+
+# Environment and secrets
+.env
+.env.local
+.env.*
+!.env.example
+.dev.vars
+
+# Wrangler
+.wrangler/
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Pagefind (generated at build time)
+build/_pagefind/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
+
+# Playwright
+test-results/

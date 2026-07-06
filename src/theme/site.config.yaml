@@ -1,0 +1,18 @@
+siteName: Alaska Sailing Club
+menus:
+  primary:
+    - label: Home
+      url: /
+vocabulary:
+  - value: news
+    label: News
+  - value: racing
+    label: Racing
+  - value: results
+    label: Results
+  - value: education
+    label: Education
+  - value: club
+    label: Club
+spellcheck:
+  dialect: en-US
