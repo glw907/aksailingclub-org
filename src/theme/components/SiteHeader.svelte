@@ -1,18 +1,21 @@
 <!-- @component
-ASC's public site header: an owned, copy-in chrome component on the token layer. This is Task
-1's placeholder chrome (a sticky band over `base-100`, the primary nav driven from
-`site.config.yaml`'s committed menu, and the light/dark toggle); Task 3 replaces the look with
-the ratified "club grounds" chrome (the gold active-nav mark, the navy-deep footer) per the north
-star. The nav reads `site.config.yaml`'s `primary` menu through `extractMenu`, so an editor's
-nav edit in `/admin` takes effect with no code change. The current route's nav link gets
-`aria-current="page"` and the accent colour.
+ASC's public site header: the club-grounds chrome (Task 3), replacing Task 1's placeholder. A
+sticky white band over a hairline border, the boat-and-pennant mark from the north star
+(docs/superpowers/specs/assets/2026-07-06-asc-home-northstar.html in the cairn-cms repo) on the
+left, the primary nav (site.config.yaml's committed menu) on the right. The current route's link
+gets the story's gold active-nav mark (flag-navy text plus a star-gold underline, via
+`box-shadow`, matching the north star's own `.nav a.active` rule) and `aria-current="page"`.
+Seven nav items plus the theme toggle do not comfortably wrap at 320px, so a hamburger drawer
+replaces the desktop row below 640px (the family five-viewport responsive standard), the same
+structural device ecxc.ski and 907.life's own headers use.
 
 The theme toggle sets `data-theme` on `<html>` between `asc` (light) and `asc-dark`, and persists
 the choice to an `asc-site-theme` cookie (path `/`, a year) so it survives a reload; the inline
-script in `app.html` reads that same cookie before first paint. With no stored choice,
-`data-theme` stays unset and `theme.css`'s own `prefers-color-scheme` block follows the OS
-setting, live, with no JS at all.
--->
+script in `app.html` reads that same cookie before first paint. With no stored choice, `data-theme`
+stays unset and `theme.css`'s own `prefers-color-scheme` block follows the OS setting, live, with
+no JS at all. The north star itself is a light-only design contract; the toggle is chassis
+infrastructure every cairn theme carries, kept working here even though the mockup shows no dark
+state. -->
 <script lang="ts">
   import { page } from '$app/state';
   import { browser } from '$app/environment';
@@ -22,6 +25,8 @@ setting, live, with no JS at all.
 
   const nav = extractMenu(siteConfig, 'primary', 2);
 
+  let mobileOpen = $state(false);
+
   /**
    * Whether a nav item points at the page being viewed. The home link matches only the exact
    * root; a deeper link matches its own path or anything nested under it.
@@ -30,6 +35,10 @@ setting, live, with no JS at all.
     const path = page.url.pathname;
     if (href === '/') return path === '/';
     return path === href || path.startsWith(`${href}/`);
+  }
+
+  function closeMobile(): void {
+    mobileOpen = false;
   }
 
   /** The two explicit theme choices; theme.css defines both as named DaisyUI themes. */
@@ -49,77 +58,196 @@ setting, live, with no JS at all.
   }
 </script>
 
-<header class="site-header sticky top-0 z-20 border-b border-card-border">
-  <div class="mx-auto flex max-w-measure flex-wrap items-center justify-between gap-m px-m py-xs">
-    <a href="/" class="inline-flex items-center gap-[0.55rem] text-base-content no-underline">
-      <svg class="h-[1.55rem] w-[1.55rem] text-primary" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M12 3 5 20h14Z" />
+{#snippet themeIcon()}
+  {#if theme === 'asc-dark'}
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 3v2M12 19v2M5.64 5.64l1.42 1.42M16.94 16.94l1.42 1.42M3 12h2M19 12h2M5.64 18.36l1.42-1.42M16.94 7.06l1.42-1.42" />
+    </svg>
+  {:else}
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M20.4 14.9A8.5 8.5 0 1 1 9.6 4.1a7 7 0 0 0 10.8 10.8z" />
+    </svg>
+  {/if}
+{/snippet}
+
+<header class="site-header sticky top-0 z-30 border-b border-card-border bg-base-100">
+  <div class="nav-inner mx-auto flex max-w-measure items-center justify-between gap-m px-m py-xs">
+    <a href="/" class="site-logo inline-flex items-center gap-[0.6rem] no-underline" onclick={closeMobile}>
+      <svg width="32" height="32" viewBox="0 0 34 34" aria-hidden="true">
+        <circle cx="17" cy="17" r="16" class="fill-flag-navy-deep" />
+        <path d="M10 22 L17 7 L19 22 Z" class="fill-white" />
+        <path d="M8 24 h18 l-2.5 3 h-13 Z" class="fill-star-gold" />
       </svg>
-      <span class="whitespace-nowrap font-display text-step-1 font-semibold tracking-tight">
+      <span class="whitespace-nowrap font-display text-step-1 font-semibold tracking-tight text-base-content">
         {siteConfig.siteName}
       </span>
     </a>
 
-    <div class="flex flex-wrap items-center gap-s">
-      <nav class="site-nav flex flex-wrap items-center gap-s text-step--1" aria-label="Primary">
-        {#each nav as item (item.url ?? item.label)}
-          {@const current = item.url ? isCurrent(item.url) : false}
-          <a
-            href={item.url}
-            aria-current={current ? 'page' : undefined}
-            class="inline-flex min-h-11 items-center px-xs no-underline {current
-              ? 'font-semibold text-primary'
-              : 'font-medium text-muted hover:text-base-content'}"
-          >
-            {item.label}
-          </a>
-        {/each}
-      </nav>
+    <!-- Desktop nav: hidden below 640px, replaced by the hamburger drawer. -->
+    <nav class="desktop-nav items-center gap-s text-step--1" aria-label="Primary">
+      {#each nav as item (item.url ?? item.label)}
+        {@const current = item.url ? isCurrent(item.url) : false}
+        <a
+          href={item.url}
+          class="nav-link"
+          class:active={current}
+          aria-current={current ? 'page' : undefined}
+        >
+          {item.label}
+        </a>
+      {/each}
+      <button
+        type="button"
+        onclick={toggleTheme}
+        aria-label={theme === 'asc-dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        class="theme-toggle inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-field text-muted hover:text-base-content"
+      >
+        {@render themeIcon()}
+      </button>
+    </nav>
 
+    <div class="mobile-controls items-center gap-1">
       <button
         type="button"
         onclick={toggleTheme}
         aria-label={theme === 'asc-dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         class="theme-toggle inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-field text-muted hover:text-base-content"
       >
-        {#if theme === 'asc-dark'}
-          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 3v2M12 19v2M5.64 5.64l1.42 1.42M16.94 16.94l1.42 1.42M3 12h2M19 12h2M5.64 18.36l1.42-1.42M16.94 7.06l1.42-1.42" />
+        {@render themeIcon()}
+      </button>
+      <button
+        type="button"
+        class="hamburger inline-flex h-11 w-11 items-center justify-center rounded-field text-base-content"
+        onclick={() => (mobileOpen = !mobileOpen)}
+        aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+        aria-expanded={mobileOpen}
+      >
+        {#if mobileOpen}
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M18 6 6 18" /><path d="m6 6 12 12" />
           </svg>
         {:else}
-          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M20.4 14.9A8.5 8.5 0 1 1 9.6 4.1a7 7 0 0 0 10.8 10.8z" />
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <line x1="4" x2="20" y1="12" y2="12" />
+            <line x1="4" x2="20" y1="6" y2="6" />
+            <line x1="4" x2="20" y1="18" y2="18" />
           </svg>
         {/if}
       </button>
     </div>
   </div>
+
+  {#if mobileOpen}
+    <div class="mobile-menu mx-auto max-w-measure border-t border-card-border px-m py-2xs">
+      {#each nav as item (item.url ?? item.label)}
+        {@const current = item.url ? isCurrent(item.url) : false}
+        <a
+          href={item.url}
+          class="mobile-link"
+          class:active={current}
+          aria-current={current ? 'page' : undefined}
+          onclick={closeMobile}
+        >
+          {item.label}
+        </a>
+      {/each}
+    </div>
+  {/if}
 </header>
 
 <style>
-  .site-header {
-    background: color-mix(in oklab, var(--color-base-100) 88%, transparent);
-    backdrop-filter: saturate(1.4) blur(8px);
+  .site-logo {
+    transition: opacity 0.15s ease;
   }
-  .site-nav a {
-    letter-spacing: 0.01em;
-    border-radius: 2px;
-    transition: color 0.15s;
+  .site-logo:hover {
+    opacity: 0.85;
   }
-  .site-nav a:focus-visible {
+  .site-logo:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
+    border-radius: 4px;
   }
+
+  .desktop-nav {
+    display: none;
+  }
+
+  .nav-link {
+    color: var(--color-base-content);
+    text-decoration: none;
+    font-weight: 500;
+    padding-block: 0.25rem;
+    transition: color 0.15s ease;
+  }
+  .nav-link:hover {
+    color: var(--color-primary);
+  }
+  .nav-link:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  /* The story's gold active-nav mark: flag-navy text plus a star-gold underline rule, matching the
+     north star's own `.nav a.active { color: #1C4670; box-shadow: 0 2px 0 #E3A008; }`. */
+  .nav-link.active {
+    color: var(--color-primary);
+    font-weight: 650;
+    box-shadow: 0 2px 0 var(--color-secondary);
+  }
+
   .theme-toggle {
-    transition: color 0.15s;
+    transition: color 0.15s ease;
   }
   .theme-toggle:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
+
+  .mobile-controls {
+    display: flex;
+  }
+
+  .hamburger:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .mobile-menu {
+    display: flex;
+    flex-direction: column;
+  }
+  .mobile-link {
+    font-weight: 500;
+    color: var(--color-base-content);
+    text-decoration: none;
+    padding-block: 0.8rem;
+    border-bottom: 1px solid var(--color-card-border);
+  }
+  .mobile-link:last-child {
+    border-bottom: none;
+  }
+  .mobile-link:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
+  }
+  .mobile-link.active {
+    color: var(--color-primary);
+    font-weight: 650;
+  }
+
+  @media (min-width: 640px) {
+    .desktop-nav {
+      display: flex;
+    }
+    .mobile-controls {
+      display: none;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .site-nav a,
+    .site-logo,
+    .nav-link,
     .theme-toggle {
       transition: none;
     }

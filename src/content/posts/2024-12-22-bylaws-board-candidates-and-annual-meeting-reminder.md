@@ -4,6 +4,9 @@ date: 2024-12-22
 description: "Ahoy sailors! I hope everybody is having a wonderful holiday season filled with friends, family, and good cheer. I assume you’ve all been good, and the Santa wi"
 tags:
   - club
+image:
+  src: "media:holiday-boat-parade.e624647758ff0d97"
+  alt: "A sailboat decorated with holiday lights, including a lit palm tree, at a nighttime boat parade."
 ---
 Ahoy sailors! I hope everybody is having a wonderful holiday season filled with friends, family, and good cheer. I assume you’ve all been good, and the Santa will be stopping by plenty of sailing-related presents.
 

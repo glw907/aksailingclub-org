@@ -4,6 +4,9 @@ date: 2025-08-25
 description: "Ahoy, sailors! The Gov Cup — usually the biggest regatta of the season — is this weekend. And all the details are below in the Sailing Instructions (SIs), which are"
 tags:
   - racing
+image:
+  src: "media:spinnakers-racing.fa09fbe2f4be3fb3"
+  alt: "Sailboats racing under colorful spinnakers, red, blue-and-white, and green-and-blue, on Big Lake."
 ---
 Ahoy, sailors! The Gov Cup — usually the biggest regatta of the season — is this weekend. And all the details are below in the Sailing Instructions (SIs), which are the event-specific rules that tell you how the regatta will run — things like the schedule, race courses, and how results are scored.
 

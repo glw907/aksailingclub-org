@@ -5,6 +5,9 @@ description: "Ahoy sailors! Those who defied the weather forecast and made it to
 tags:
   - results
   - education
+image:
+  src: "media:campfire-after-sailing.06ebd9fae8aabfa1"
+  alt: "Club members gathered around a campfire at dusk, cooking and talking after a day of sailing."
 ---
 Ahoy sailors! Those who defied the weather forecast and made it to the regatta were rewarded with a pretty outstanding weekend. The weather dramatically outperformed the forecast. We managed a complete regatta with five races on Saturday.
 

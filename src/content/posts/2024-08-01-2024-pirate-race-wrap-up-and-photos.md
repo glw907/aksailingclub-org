@@ -6,6 +6,9 @@ tags:
   - club
   - racing
   - results
+image:
+  src: "media:pirate-race-group-photo.1e319af018c5622d"
+  alt: "A large group of costumed pirates posing together in front of the ASC clubhouse."
 ---
 Arrr, there was plunderin', there was trickery, there were traitors aplenty, and a heap o' puzzles to be solved! The 2024 Pirate Race was a grand success!
 

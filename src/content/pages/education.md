@@ -48,50 +48,42 @@ Participants in our intro classes will learn all the following:
 
 ### Class Schedule
 
-The following is a rough schedule for our Introduction to Dinghy Sailing classes. We'll do our best to adhere to some version of this plan. But we sometimes have to adjust, since we don't have control over the weather and the wind.
+A rough schedule for the four-day Introduction to Dinghy Sailing course. We adjust for weather and wind, so treat the times as a plan, not a promise. Class runs to 6:00 p.m. Thursday through Saturday; most students camp at the club for the duration, and instructors often take a sunset sail on the club's Ensign 22 after dinner.
 
-Class ends officially at 6:00 p.m. on Thursday, Friday, and Saturday. But most students opt to camp at the club throughout the class. After class, students and instructors typically cook dinner together, and if the weather permits, instructors will take students out on the ASC's lovingly restored Ensign 22 for a sunset sail.
+| Day | Time | Focus |
+|---|---|---|
+| Arrival | Anytime before class | Set up your tent or RV; join the volunteers rigging boats if you like |
+| Thursday | 1:00–6:00 p.m. | Introductions, club tour, rigging, capsize drill, sailing theory |
+| Friday | 10:00 a.m.–6:00 p.m. | On-water drills; upwind and downwind sailing practice |
+| Saturday | 10:00 a.m.–6:00 p.m. | Advanced drills; right-of-way, docking, telltales, heavy weather |
+| Sunday | 10:00 a.m.–5:00 p.m. | Racing basics and a few fun class races; ends an hour early |
 
 #### Arrival
 
-You're welcome to arrive any time before the class, and many students opt to come out the day before to get settled. If you do this, you may find ASC volunteers prepping and rigging boats for the class. You're welcome to join in; we always appreciate the help, and it's a great way to get a head-start on the formal rigging work we'll do in class.
-
-If you arrive on the day of the class, we recommend getting to the club at least 45 minutes before your class starts so you have time to set up your tent or RV.
+Come any time before class starts; some students arrive a day early to set up camp and pitch in on rigging. Arriving the day of class, plan on 45 minutes to set up your tent or RV before start time.
 
 #### Day one (Thursday), 1:00-6:00 p.m.
 
-Class starts later on Thursday, so our instructors have time to prepare boats and materials on Thursday morning. This also gives students plenty of time to arrive and set up tents or RVs if they're staying at the ASC for the duration of the class.
-
-We'll start the class at 1:00 p.m. with introductions and then take a brief walking tour of the club. After that, we'll jump right into hands-on rigging the boats we need for class, and along the way, we will learn the names of all the "parts and pieces" of a sailing dingy. Once we've rigged all the boats, we'll launch them and do the dreaded (but fun!) capsize drill.
-
-Once everybody has had a chance to dry off and recover from the capsize session, we'll have a brief classroom session to cover basic theory, the mechanics of sailing, and basic sailing maneuvers (tacking and jibing). Following that, we'll do some "dry land" practice with the tiller, and then we will finish the day with a brief Q&A session and then learn to derig and put away all the boats.
+Class starts at 1:00 p.m. with introductions and a walking tour, then hands-on rigging, where you'll learn the names of every part of a dinghy. Once the boats are launched, everyone runs the capsize drill. A short classroom session covers sailing theory and basic maneuvers (tacking and jibing), followed by dry-land tiller practice, a Q&A, and derigging.
 
 #### Day two (Friday) 10:00 a.m.-6:00 p.m.
 
-We'll spend as much time on the water as the wind allows during the second day. We'll begin the day by getting the boats rigged and launched. From there, we'll do a brief classroom review and then head to the lake for our first drill! (We'll be beam reaching and tacking around two marks.)
-
-Once everybody is (mostly) comfortable, we'll head back for some class time, introducing the techniques and principles involved in sailing upwind and downwind.
-
-When everybody's brain is full, we'll take a lunch break, and after that, we'll hit the water and get some practice with upwind and downwind sailing. Since this is typically the most challenging part of sailing for beginners, we'll spend the rest of the day getting comfortable with this. We'll end the day with a Q&A session and then get the boats put away.
+As much water time as the wind allows. Rig and launch, a quick classroom review, then the first drill: beam reaching and tacking around two marks. After a classroom session on upwind and downwind technique and a lunch break, the rest of the day is upwind/downwind practice, typically the hardest skill for a beginner. Ends with Q&A and put-away.
 
 #### Day three (Saturday) 10:00 a.m.-6:00 p.m.
 
-We'll continue to spend as much time on the water as the wind allows during our third day. We'll begin the day by getting the boats rigged and launched, and from there, we'll hit the water to start work on more challenging drills, including tack-on-the-whistle, jibe-on-the-whistle, and follow the leader.
-
-After our on-water practice, we'll do a short classroom debrief in the clubhouse and then take a lunch break. Following lunch, we'll work on some more advanced sailing topics, including:
+More on-water time with harder drills: tack-on-the-whistle, jibe-on-the-whistle, follow the leader. After a classroom debrief and lunch, advanced topics:
 
 - Right-of-way
 - Safe docking procedures
 - Sailing with telltales
-- Sailing a boat in extreme conditions (too much wind, too little wind)
+- Sailing in extreme conditions (too much wind, too little wind)
 
-As usual, we'll end the day with a Q&A session and then get the boats put away.
+Ends with Q&A and put-away.
 
 #### Day four (Sunday) 10:00 a.m.-5:00 p.m.
 
-We'll begin our final day of class by rigging boats and jumping right in with some advanced drills. After that, we'll come in and spend time learning the basics of sailboat racing! Our goal is to give students the necessary knowledge to participate in ASC regattas. During the afternoon, we'll practice some low-key racing drills and then run a few fun class races!
-
-As with the other days, we'll finish up with a Q&A session and then get the boats put away. We will end class about an hour earlier than the other days, so students have time to get home and rest before the workweek!
+Rig and launch, then straight into advanced drills, followed by a classroom session on the basics of sailboat racing (enough to join an ASC regatta). The afternoon is low-key racing drills and a few fun class races. Ends about an hour earlier than the other days.
 
 ### Youth Class Special Notes
 

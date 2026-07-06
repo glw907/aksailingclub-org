@@ -3,6 +3,18 @@ menus:
   primary:
     - label: Home
       url: /
+    - label: Education
+      url: /education/
+    - label: Racing
+      url: /racing/
+    - label: Events
+      url: /events/
+    - label: Join
+      url: /join/
+    - label: Members
+      url: /members/
+    - label: Contact
+      url: /contact/
 vocabulary:
   - value: news
     label: News

@@ -4,6 +4,9 @@ date: 2025-09-16
 description: "This season has been a banner year for volunteer effort at the Alaska Sailing Club. Together, members have:"
 tags:
   - club
+image:
+  src: "media:hauling-boat-trailer.578ae6bd91505455"
+  alt: "Club members pulling together on a rope to haul a boat trailer across the clubhouse lawn."
 ---
 This season has been a banner year for volunteer effort at the Alaska Sailing Club. Together, members have:
 

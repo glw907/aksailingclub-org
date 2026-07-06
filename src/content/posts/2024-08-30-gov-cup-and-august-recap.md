@@ -7,6 +7,9 @@ tags:
   - racing
   - results
   - education
+image:
+  src: "media:kids-reading-on-dock.3d4d4b99f74ca4c2"
+  alt: "Two kids sitting together reading a book on the dock among moored club sailboats."
 ---
 Ahoy, sailors! As promised, here’s a recap of some August happening at the ASC, plus details about the 57th annual Governor’s Cup coming this weekend:
 

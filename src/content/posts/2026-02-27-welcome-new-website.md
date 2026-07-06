@@ -4,6 +4,9 @@ date: 2026-02-27
 description: "We've rebuilt the ASC website from the ground up on a new platform. We've been working on this since last fall, and it's finally live!"
 tags:
   - club
+image:
+  src: "media:new-website-launch-graphic.113a916181ab6f25"
+  alt: "A stylized graphic of club sailboats sailing across a field of green code, marking the new website's launch."
 ---
 We've rebuilt the ASC website from the ground up on a new platform. We've been working on this since last fall, and it's finally live!
 

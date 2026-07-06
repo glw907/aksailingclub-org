@@ -5,6 +5,9 @@ description: "Wow! We couldn’t have asked for a better weekend to close out th
 tags:
   - results
   - club
+image:
+  src: "media:dock-building-fall.035d0fdde124c129"
+  alt: "Club volunteers carrying lumber and building a dock ramp beside the green clubhouse in fall."
 ---
 Wow! We couldn’t have asked for a better weekend to close out the 2024 season. On Saturday, we had sunshine and just enough wind to run the largest Northern Lights Regatta in ASC history.
 

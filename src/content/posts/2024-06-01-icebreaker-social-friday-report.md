@@ -4,6 +4,9 @@ date: 2024-06-01
 description: "Well, it’s not exactly “shorts and t-shirt” weather, but the sailing’s fine! The Ensign’s already been out sailing twice (first with Anthony & sons, and again w"
 tags:
   - club
+image:
+  src: "media:icebreaker-dinghy-heeling.fbe460c88016e389"
+  alt: "A sailor blurred in the foreground as a small dinghy heels hard on Big Lake behind him."
 ---
 The sky is mostly overcast, but we had a nice, clear view of Denali, and tomorrow we have some boats planning dust off the cobwebs for a few quick races. Oh, and Nancy Black has volunteered to run race committee, so we won’t need to do [rabbit starts](https://www.duluthyachtclub.com/racing/racing-information/rabbit-start-instructions).
 

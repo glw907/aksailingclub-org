@@ -4,6 +4,9 @@ date: 2024-07-17
 description: "Well, that class was spectacular! I honestly don’t know where to start, so here’s an unordered list of my personal standout memories:"
 tags:
   - education
+image:
+  src: "media:instructor-kids-selfie.f71b1ec2e665998c"
+  alt: "A sailing instructor takes a selfie with three grinning kids in life jackets aboard a dinghy."
 ---
 Well, that class was spectacular! I honestly don’t know where to start, so here’s an unordered list of my personal standout memories:
 

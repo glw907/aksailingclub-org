@@ -1,9 +1,11 @@
 // ASC's adapter: the single seam the engine consumes. Three concepts (posts, pages, and the
-// site-declared notifications concept), a render that runs the engine pipeline with no
-// registered components yet (Task 3 wires the club-grounds chrome and any directive
-// components it needs), and the GitHub App backend against the asc-site repo.
+// site-declared notifications concept), a render that runs the engine's directive registry
+// (Task 3: the club-grounds chrome and the callout/passage/cards components), and the GitHub App
+// backend against the asc-site repo.
 import { defineAdapter, defineConcept, fieldset, fields, githubApp, createRenderer, parseSiteConfig } from '@glw907/cairn-cms';
 import { normalizeAssets, makeMediaResolver, readCommittedManifest } from '@glw907/cairn-cms/media';
+import { ascRegistry } from './markdown/components.js';
+import { ICON_PATHS } from './markdown/icons.js';
 import siteYaml from './site.config.yaml?raw';
 // The ?url import resolves the compiled stylesheets to their served URLs (the hashed assets in a
 // build), so the editor's preview frame can link the same sheets the (site) layout loads. They
@@ -11,14 +13,18 @@ import siteYaml from './site.config.yaml?raw';
 import themeCss from './theme.css?url';
 import siteCss from './site.css?url';
 
-const { renderMarkdown } = createRenderer();
+// Task 3 wires the club-grounds directive vocabulary (callout, passage, cards/card): the engine's
+// registry, not the bare default, so those directives dispatch to real markup instead of
+// rendering inert (Task 2's migration authored the content against this vocabulary already).
+const { renderMarkdown } = createRenderer(ascRegistry);
 
 // The committed media manifest the public render resolver reads. A bare {} until an editor
 // uploads. Read through import.meta.glob so a fresh site with no committed media.json degrades
 // to {} rather than failing the build: a static import of a missing file is a build-time
 // module-not-found, but a glob with no match returns {}, and readCommittedManifest parses that
-// to an empty manifest.
-const mediaManifest = readCommittedManifest(
+// to an empty manifest. Exported so the home page's fixed photography placements (src/theme/
+// home-images.ts) can read an entry's alt text directly, the same manifest the body resolver uses.
+export const mediaManifest = readCommittedManifest(
   import.meta.glob('../content/.cairn/media.json', { eager: true, import: 'default' }),
 );
 
@@ -47,6 +53,11 @@ export const cairn = defineAdapter({
         // The curated tag vocabulary (site.config.yaml's `vocabulary`) marks the news, racing,
         // results, education, and club categories; a public archive filters over this data.
         tags: fields.multiselect({ label: 'Tags', creatable: true, taxonomy: true }),
+        // The hero seam Task 2's migration found missing (finding #3: the old Hugo posts each had
+        // a real featuredImage from the live site, dropped rather than invented at migration time).
+        // createPublicRoutes derives `heroImage` from this same field with no bespoke code; the
+        // catch-all template already renders it.
+        image: fields.image({ label: 'Hero image', seo: true }),
       }),
     }),
     pages: defineConcept({
@@ -89,6 +100,8 @@ export const cairn = defineAdapter({
   rendering: {
     render: ({ body, resolve, resolveMedia }) =>
       renderMarkdown(body, { resolve, resolveMedia: resolveMedia ?? publicMediaResolver }),
+    components: ascRegistry,
+    icons: ICON_PATHS,
   },
   editor: {
     nav: { configPath: 'src/theme/site.config.yaml', menuName: 'primary', label: 'Navigation', maxDepth: 2 },

@@ -4,6 +4,9 @@ date: 2025-08-09
 description: "This event is designed to be fun and welcoming for sailors of all experience levels. Ladies only at the helm!"
 tags:
   - racing
+image:
+  src: "media:fireweed-race-closeup.d378e06361da1907"
+  alt: "Two women racing close together aboard a dinghy, hauling in the sheet mid-maneuver."
 ---
 This event is designed to be fun and welcoming for sailors of all experience levels. Ladies only at the helm!
 

@@ -4,6 +4,9 @@ date: 2024-08-08
 description: "Hey Ladies (and gentlemen): It’s once again time for the Fireweed Ladies Race! We also have updates about some informal Friday night racing, as well as a full f"
 tags:
   - racing
+image:
+  src: "media:mast-casualty-sailing.659b55426153c22e"
+  alt: "Two sailors aboard the dinghy Mast Casualty, one at the helm, sailing on Big Lake."
 ---
 Hey Ladies (and gentlemen): It’s once again time for the Fireweed Ladies Race! We also have updates about some informal Friday night racing, as well as a full fleet sail to the Susitna Brewing Company on Sunday. Read on for all the details.
 

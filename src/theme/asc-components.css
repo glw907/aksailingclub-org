@@ -1,0 +1,123 @@
+/* ASC's own directive components: passage and the cards/card grid (Task 2's content-migration
+   findings; see markdown/components.ts's header comment for why these have no Waymark
+   equivalent). Scoped under `.prose` to beat DaisyUI's own component classes on specificity, the
+   same convention prose.css itself uses. Reads only chassis/theme tokens, so a re-skin recolors
+   both with no edit here.
+
+   A1 (the locked house recipe, docs/superpowers/specs/2026-07-06-asc-phase-1-design.md): "bands
+   mark sections, cards mark objects, nothing gets both." Passage is content directly on whatever
+   band it sits on (no border, no background, no shadow); the card grid is the one place body
+   content gets real card chrome, and it stays deliberately quiet (a hairline border, no shadow at
+   rest) so a page with several card grids never stacks chrome three deep. */
+@layer components {
+  /* ─── Passage: a titled prose block, no card chrome ────────────────────── */
+  .prose .asc-passage {
+    --flow-space: var(--spacing-l);
+  }
+  .prose .asc-passage .ec-head {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2xs);
+    margin-bottom: 0.3rem;
+  }
+  .prose .asc-passage .card-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--text-step-2);
+    margin: 0;
+  }
+  /* The bare glyph SVG has no width/height attribute, so with no sizing rule it falls back to the
+     browser's intrinsic replaced-element box (a giant, page-breaking icon). */
+  .prose .asc-passage .ec-head .ec-glyph {
+    width: 1.3rem;
+    height: 1.3rem;
+    color: var(--color-primary);
+  }
+  .prose .asc-passage-body > * {
+    margin: 0;
+  }
+  .prose .asc-passage-body > * + * {
+    margin-top: var(--spacing-2xs);
+  }
+
+  /* ─── Cards: a quiet grid, one to a handful of cards, never nested ─────── */
+  .prose .asc-cards {
+    --flow-space: var(--spacing-m);
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+    gap: var(--spacing-m);
+  }
+  .prose .asc-card {
+    display: block;
+    background: var(--color-base-100);
+    border: var(--border) solid var(--color-card-border);
+    border-radius: var(--radius-box);
+    padding: var(--spacing-s) var(--spacing-m);
+    color: inherit;
+    text-decoration: none;
+    /* Only a link card animates; a static feature card has nothing to invite a hover toward. */
+  }
+  .prose a.asc-card-link {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .prose a.asc-card-link:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--cairn-shadow);
+  }
+  .prose a.asc-card-link:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  .prose .asc-card-head {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2xs);
+    margin-bottom: 0.3rem;
+  }
+  .prose .asc-card-icon {
+    display: inline-flex;
+    color: var(--color-primary);
+  }
+  .prose .asc-card-icon .ec-glyph {
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+  .prose .asc-card-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--text-step-0);
+  }
+  /* A link card's title carries the affordance instead of site.css's whole-block underline (see
+     that file's own comment): navy ink, underlined only on hover, so the card reads as one clean
+     object rather than every word inside it looking like its own link. */
+  .prose a.asc-card-link .asc-card-title {
+    color: var(--color-primary);
+  }
+  .prose a.asc-card-link:hover .asc-card-title {
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklab, var(--color-primary) 35%, transparent);
+    text-underline-offset: 3px;
+  }
+  .prose .asc-card-body {
+    font-size: var(--text-step--1);
+    color: var(--color-muted);
+  }
+  .prose .asc-card-body > * {
+    margin: 0;
+  }
+  .prose .asc-card-arrow {
+    display: inline-flex;
+    margin-top: 0.5rem;
+    color: var(--color-primary);
+  }
+  .prose .asc-card-arrow .ec-glyph {
+    width: 0.85rem;
+    height: 0.85rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .prose a.asc-card-link {
+      transition: none;
+    }
+  }
+}

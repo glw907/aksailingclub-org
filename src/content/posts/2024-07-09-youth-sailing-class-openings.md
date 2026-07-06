@@ -4,6 +4,9 @@ date: 2024-07-09
 description: "We've had a few last-minute cancellations for our \"Youth Introduction to Sailing\" courses. One seat is available in our class starting Thursday the 11th, and th"
 tags:
   - education
+image:
+  src: "media:youth-class-selfie.e10b384ce756013a"
+  alt: "A parent and three kids in orange life jackets laughing together aboard a club boat."
 ---
 We’ve had a few last-minute cancellations for our “Youth Introduction to Sailing” courses. One seat is available in our class starting Thursday the 11th, and three seats are opening in our class beginning on the 18th.
 

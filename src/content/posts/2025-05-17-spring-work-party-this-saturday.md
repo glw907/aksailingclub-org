@@ -4,6 +4,9 @@ date: 2025-05-17
 description: "Ahoy, sailors! It's finally time to open the club for the season. This Saturday is our spring work party, and as usual, there's a lot to do get the club ready. "
 tags:
   - club
+image:
+  src: "media:spring-work-party-lumber.12a6be95aa1e702c"
+  alt: "Volunteers cutting lumber together at the shoreline during a club work party, ice still on the lake."
 ---
 Ahoy, sailors! It’s finally time to open the club for the season. This Saturday is our spring work party, and as usual, there’s a lot to do get the club ready. Here’s a quick summary of the bigger projects for tomorrow:
 

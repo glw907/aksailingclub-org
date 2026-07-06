@@ -4,6 +4,9 @@ date: 2025-09-08
 description: "But wait, what the heck is a NOR? If you’re new to sailboat racing, you may not have seen a “Notice of Race” (NOR) before."
 tags:
   - racing
+image:
+  src: "media:fleet-at-dock-blue-sky.77686761b6b2f402"
+  alt: "A line of club sailboats moored along the dock under a clear blue sky before a regatta."
 ---
 But wait, what the heck is a NOR? If you’re new to sailboat racing, you may not have seen a “Notice of Race” (NOR) before.
 

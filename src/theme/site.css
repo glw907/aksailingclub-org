@@ -90,3 +90,22 @@ body {
   padding: 0 var(--spacing-m);
   box-sizing: border-box;
 }
+
+/* The club-grounds link color: "flag navy, the only link color" (the story). The chassis's own
+   prose.css declares no `a { color }` rule at all (only a focus-visible outline), so a plain
+   content link would otherwise inherit the surrounding text color with no visual link affordance.
+   This file is unlayered (plain rules, no `@layer` wrapper), so it always outranks prose.css's
+   `@layer components` rules regardless of specificity; scoped to `.site-main` rather than `.prose`
+   so a bare link in the chrome (SiteHeader/SiteFooter own their own link colors already) is
+   untouched. `:not(.asc-card-link)` excludes the card grid's own whole-card anchor: that link
+   wraps a title and a description together, and underlining the whole block read as every word in
+   the card being a separate link, not a single clean card (A1's quieting recipe). */
+.site-main .prose a:not(.asc-card-link) {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--color-primary) 35%, transparent);
+  text-underline-offset: 3px;
+}
+.site-main .prose a:not(.asc-card-link):hover {
+  text-decoration-color: currentColor;
+}

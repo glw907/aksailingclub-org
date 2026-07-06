@@ -27,13 +27,15 @@ boundary was first cut against (verbatim where a file is genuinely site-agnostic
 | `tokens.css` | The token SYSTEM: Tailwind and the DaisyUI plugin activation, the design-scale keys with generic defaults, and the semantic (code-highlight, ink, elevation, CTA) bindings. |
 | `prose.css` | The reading-surface foundation: every prose element bound to tokens, with the signature flourish gestures behind `[data-flourish]`. |
 | `composition.css` | The composition primitives: card, band, section, hero, sidebar-layout, site-shell. Unused in ASC's current markup, same as in the showcase; the theme reaches for one instead of hand-rolling its own. |
+| `render.ts` | The component-grammar wiring: `makeIconRenderer` closes a theme's icon set over the engine's glyph helpers. Added back in Task 3 (the theme build) once the migrated content's directives needed real icons; see the note below for the re-add path. |
 
 Omitted from this copy, deliberately: `dev-gate.ts` (the showcase's dev-backend feature flag;
-ASC has no dev backend, per `hooks.server.ts`'s own comment) and `render.ts` (the icon-renderer
-wiring; ASC declares no directive components or icon set yet). Per the chassis's own
+ASC has no dev backend, per `hooks.server.ts`'s own comment). Per the chassis's own
 subtractability rule (a developer may drop an unused chassis element with no other seam
-depending on it), adding either back is a matter of copying the file from `cairn-cms`'s showcase
-and wiring its one consumer; nothing else references them.
+depending on it), adding it back is a matter of copying the file from `cairn-cms`'s showcase and
+wiring its one consumer; nothing else references it. `render.ts` was omitted the same way at
+Task 1's scaffold time (zero components were registered yet) and re-added in Task 3 by that exact
+path, the worked example of the doctrine this file describes.
 
 ## Every override seam
 

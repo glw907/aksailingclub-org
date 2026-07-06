@@ -4,6 +4,9 @@ date: 2025-09-17
 description: "Ahoy sailors! The SIs for the Northern Lights Regatta are below. And note that we moved the start time up by an hour, so the skippers meeting is at 3:00 p.m. See"
 tags:
   - racing
+image:
+  src: "media:northern-lights-spinnaker.fca71c05a2f2b041"
+  alt: "A club boat sailing under a blue-and-white spinnaker marked with Alaska's stars, racing number 2838."
 ---
 Ahoy sailors! The SIs for the Northern Lights Regatta are below. And note that we moved the start time up by an hour, so the skippers meeting is at 3:00 p.m. See ya there!
 

@@ -1,7 +1,30 @@
-/* ASC's public reading template. Placeholder token values (Task 1's scaffold): a generic light
-   and dark DaisyUI theme pair, ready for Task 3 to tune in place to the ratified "club grounds"
-   color story (flag navy, star gold, fireweed, building sage, harbor ink) per the north star at
-   docs/superpowers/specs/assets/2026-07-06-asc-home-northstar.html in the cairn-cms repo.
+/* ASC's public reading template: the ratified "club grounds" color story (Task 3), per
+   docs/superpowers/specs/2026-07-06-asc-phase-1-design.md and the committed north star at
+   docs/superpowers/specs/assets/2026-07-06-asc-home-northstar.html in the cairn-cms repo. Every
+   hex the story names converts to oklch (Björn Ottosson's sRGB->OKLab matrices; see the
+   pass scratchpad) rather than eyeballed, so the DaisyUI role colors land pixel-close to the
+   north star's own literal hex values.
+
+   Role mapping (the story's roles, not a literal DaisyUI-name coincidence):
+     - primary   = flag navy: links, structure, focus rings, the blockquote rule. "The only link
+       color" per the story, so a dedicated `.site-main a` rule below (not prose.css, which
+       declares no link color of its own) reads this token directly.
+     - secondary = star gold: marks and waypoints only, never body text. The header's active-nav
+       underline and the Season section's classes/clinics dot both reach for
+       `--color-secondary` directly rather than a bespoke token.
+     - accent    = fireweed: the single pop, at most twice a page. Reached directly by name
+       (bg-fireweed / text-fireweed, from the brand-token block below) on the home template's own
+       hand-built CTA buttons, since no migrated content uses the `:::cta` directive yet (Task 2's
+       shortcode inventory found no source equivalent); DaisyUI's `--color-accent` role carries the
+       same value for any future component that wants it through the generic name instead.
+     - neutral   = flag navy deep: the fixed "closing band" the footer and the home page's closing
+       CTA section both use (SiteFooter and the home template read `--color-neutral` directly for
+       that dark band, not through a component that resolves it structurally).
+     - base-100/200/300 = white / building sage / hairline: the page paper, the section-band tint,
+       and every hairline border.
+     - info/success/warning/error stay the generic reserved semantic vocabulary the story
+       explicitly keeps separate ("the education category can never collide with warnings again"),
+       untouched by the club palette.
 
    This file is the THEME half of the chassis boundary (src/chassis/README.md): it `@import`s the
    chassis token SYSTEM (Tailwind, the DaisyUI plugin activation, prose.css, composition.css, and
@@ -9,35 +32,36 @@
    with this site's own concrete numbers and colors, plus the two named DaisyUI themes the
    chassis deliberately never declares. Cascade order does the override: a property declared
    again later in the same build wins, so nothing below duplicates chassis machinery, only
-   chassis VALUES.
+   chassis VALUES. asc-components.css (the site's own passage/cards components) imports last.
 
    This file is linked by the (site) layout and by the editor preview config, so the reader and
    the author see the same surface. */
 @import '../chassis/tokens.css';
+@import './asc-components.css';
 
 @import '@fontsource-variable/figtree/index.css';
 @import '@fontsource-variable/source-sans-3/index.css';
 @import '@fontsource-variable/source-code-pro/index.css';
 
-/* The light theme (default), placeholder neutral values. */
+/* The light theme (default): the club-grounds story at its literal daytime values. */
 @plugin "daisyui/theme" {
   name: 'asc';
   default: true;
   prefersdark: false;
   color-scheme: light;
 
-  --color-base-100: oklch(98.4% 0 0);
-  --color-base-200: oklch(96.4% 0 0);
-  --color-base-300: oklch(90.8% 0 0);
-  --color-base-content: oklch(25% 0 0);
-  --color-primary: oklch(45% 0.1 248);
-  --color-primary-content: oklch(99% 0.01 248);
-  --color-secondary: oklch(50% 0.02 75);
-  --color-secondary-content: oklch(99% 0.005 75);
-  --color-accent: oklch(52% 0.07 235);
-  --color-accent-content: oklch(99% 0.01 235);
-  --color-neutral: oklch(27% 0.013 72);
-  --color-neutral-content: oklch(97% 0.003 75);
+  --color-base-100: oklch(100% 0 0);
+  --color-base-200: oklch(96.7% 0.006 137.8);
+  --color-base-300: oklch(90.9% 0.011 141.3);
+  --color-base-content: oklch(24.7% 0.029 249);
+  --color-primary: oklch(38.7% 0.086 251);
+  --color-primary-content: oklch(100% 0 0);
+  --color-secondary: oklch(75.1% 0.155 78.3);
+  --color-secondary-content: oklch(24.7% 0.029 249);
+  --color-accent: oklch(53.9% 0.166 352.8);
+  --color-accent-content: oklch(100% 0 0);
+  --color-neutral: oklch(28.2% 0.068 257.6);
+  --color-neutral-content: oklch(100% 0 0);
   --color-info: oklch(55% 0.1 235);
   --color-info-content: oklch(99% 0.01 235);
   --color-success: oklch(54% 0.12 150);
@@ -49,7 +73,7 @@
 
   --radius-selector: 0.28rem;
   --radius-field: 0.4rem;
-  --radius-box: 0.625rem;
+  --radius-box: 0.5rem;
   --size-selector: 0.25rem;
   --size-field: 0.25rem;
   --border: 1px;
@@ -57,25 +81,27 @@
   --noise: 0;
 }
 
-/* The dark sibling, applied automatically under prefers-color-scheme: dark. */
+/* The dark sibling, applied automatically under prefers-color-scheme: dark. Not part of the
+   north star (a light-only design contract); values follow the same club-grounds hues, lightened
+   and desaturated just enough to read on a dark ground. */
 @plugin "daisyui/theme" {
   name: 'asc-dark';
   default: false;
   prefersdark: true;
   color-scheme: dark;
 
-  --color-base-100: oklch(24% 0 0);
-  --color-base-200: oklch(20% 0 0);
-  --color-base-300: oklch(32% 0 0);
-  --color-base-content: oklch(92% 0 0);
-  --color-primary: oklch(74% 0.1 248);
-  --color-primary-content: oklch(22% 0.03 248);
-  --color-secondary: oklch(72% 0.02 75);
-  --color-secondary-content: oklch(22% 0.01 75);
-  --color-accent: oklch(76% 0.08 235);
-  --color-accent-content: oklch(22% 0.03 235);
-  --color-neutral: oklch(86% 0.006 75);
-  --color-neutral-content: oklch(22% 0.01 75);
+  --color-base-100: oklch(22% 0.012 249);
+  --color-base-200: oklch(18% 0.012 249);
+  --color-base-300: oklch(30% 0.014 249);
+  --color-base-content: oklch(92% 0.008 249);
+  --color-primary: oklch(74% 0.09 251);
+  --color-primary-content: oklch(18% 0.03 251);
+  --color-secondary: oklch(78% 0.14 78.3);
+  --color-secondary-content: oklch(20% 0.02 78.3);
+  --color-accent: oklch(70% 0.15 352.8);
+  --color-accent-content: oklch(18% 0.03 352.8);
+  --color-neutral: oklch(34% 0.05 257.6);
+  --color-neutral-content: oklch(96% 0.01 257.6);
   --color-info: oklch(70% 0.1 235);
   --color-info-content: oklch(24% 0.04 235);
   --color-success: oklch(66% 0.12 150);
@@ -87,7 +113,7 @@
 
   --radius-selector: 0.28rem;
   --radius-field: 0.4rem;
-  --radius-box: 0.625rem;
+  --radius-box: 0.5rem;
   --size-selector: 0.25rem;
   --size-field: 0.25rem;
   --border: 1px;
@@ -126,8 +152,26 @@
   --container-measure: 44rem;
   --container-measure-wide: 58rem;
 
-  --color-muted: oklch(46% 0.013 72);
-  --color-card-border: color-mix(in oklab, var(--color-base-content) 9%, transparent);
+  /* Muted ink (#5C6B72) and the hairline border (#DDE3DC), both from the club-grounds story;
+     the hairline is a fixed value rather than the chassis default's color-mix formula, so it
+     lands pixel-close to the north star's own literal border color. */
+  --color-muted: oklch(51.8% 0.021 227.6);
+  --color-card-border: oklch(90.9% 0.011 141.3);
+
+  /* The club-grounds story's own names, generating matching Tailwind utilities (bg-flag-navy-deep,
+     text-star-gold, ...) for the bespoke chrome and home composition, which reach for the exact
+     brand roles directly rather than through the generic DaisyUI names above. These are fixed
+     brand colors (the same in both themes, like SiteHeader/SiteFooter's own local constants on
+     sibling sites), not part of the light/dark ladder. */
+  --color-flag-navy: oklch(38.7% 0.086 251);
+  --color-flag-navy-deep: oklch(28.2% 0.068 257.6);
+  --color-star-gold: oklch(75.1% 0.155 78.3);
+  --color-fireweed: oklch(53.9% 0.166 352.8);
+  --color-sage: oklch(96.7% 0.006 137.8);
+  --color-sage-mid: oklch(93.3% 0.012 137.8);
+  --color-harbor-ink: oklch(24.7% 0.029 249);
+  --color-footer-ink: oklch(75.1% 0.035 252.5);
+  --color-footer-ink-strong: oklch(86.2% 0.022 250.2);
 }
 
 :root {
@@ -148,7 +192,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --color-muted: oklch(70% 0.012 76);
+    --color-muted: oklch(72% 0.018 249);
     --cairn-success-ink: oklch(78% 0.11 150);
     --cairn-warning-ink: oklch(82% 0.12 76);
     --cairn-error-ink: oklch(76% 0.14 27);
@@ -167,7 +211,7 @@
 }
 
 :root[data-theme='asc-dark'] {
-  --color-muted: oklch(70% 0.012 76);
+  --color-muted: oklch(72% 0.018 249);
   --cairn-success-ink: oklch(78% 0.11 150);
   --cairn-warning-ink: oklch(82% 0.12 76);
   --cairn-error-ink: oklch(76% 0.14 27);

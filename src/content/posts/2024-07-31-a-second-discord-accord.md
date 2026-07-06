@@ -4,6 +4,9 @@ date: 2024-07-31
 description: "Between the new sailors who have joined ASC through our classes and quite a few existing sailors who have just found the club, we have a lot of new members this"
 tags:
   - club
+image:
+  src: "media:green-lakeside-grounds.6345a50f183c0900"
+  alt: "A green lakeside view of the club grounds with sailboats parked among the birch trees."
 ---
 Between the new sailors who have joined ASC through our classes and quite a few existing sailors who have just found the club, we have a lot of new members this year.
 

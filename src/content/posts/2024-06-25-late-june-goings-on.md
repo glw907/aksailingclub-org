@@ -5,6 +5,9 @@ description: "Good evening, Sailors! Alaska's weather has not disappointed the p
 tags:
   - club
   - education
+image:
+  src: "media:clubhouse-and-grounds.ead9645a4e60dd76"
+  alt: "A view across Big Lake to the ASC clubhouse and grounds, framed by spruce and birch trees."
 ---
 Good evening, Sailors! Alaska's weather has not disappointed the past two weeks; even the water is warming up! We have a lot going on at the club right now.
 

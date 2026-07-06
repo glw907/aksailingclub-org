@@ -4,6 +4,9 @@ date: 2024-07-05
 description: "Well, the forecast for Saturday sucks (1/2” of rain), but we’re still gonna have an awesome regatta weekend, especially with the unexpected early arrival of sai"
 tags:
   - club
+image:
+  src: "media:rigging-red-optimists.4dabe839a15099f1"
+  alt: "Kids and instructors rigging a row of red Optimist dinghies on the grass near the clubhouse."
 ---
 Well, the forecast for Saturday sucks (1/2” of rain), but we’re still gonna have an awesome regatta weekend, especially with the unexpected early arrival of sailing adventurer Barbara Meier, who is on a quest to sail Annie, her Sunfish, in all 50 states.
 

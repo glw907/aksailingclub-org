@@ -5,6 +5,9 @@ description: "Ahoy Sailors! We had an epic Gov Cup this year. The weather dramat
 tags:
   - results
   - club
+image:
+  src: "media:fleet-racing-spinnakers.aced8df0a45f9553"
+  alt: "Four ASC club boats racing under spinnaker on Big Lake, sails in red, blue, green, and white."
 ---
 Ahoy Sailors! We had an epic Gov Cup this year. The weather dramatically outperformed the forecast on Saturday. We managed five races in a fairly steady 5-10 knots of breeze. The racing was impressively tight with boats consistently finishing within seconds of one another.
 

@@ -4,6 +4,9 @@ date: 2024-07-04
 description: "It's time for our Annual Firecracker Regatta, and I can’t wait to see you all on the course this weekend! Be ready for our first race to start at 1:00 pm on Sat"
 tags:
   - racing
+image:
+  src: "media:youth-rigging-optimists.82f5b94a42ab4bf7"
+  alt: "Three sailors in drysuits smiling beside their dinghies at the shore, one sail striped red, white, and blue."
 ---
 It’s time for our Annual Firecracker Regatta, and I can’t wait to see you all on the course this weekend! Be ready for our first race to start at 1:00 pm on Saturday, and we are shooting for a 5-race minimum series, weather permitting.
 

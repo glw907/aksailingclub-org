@@ -4,6 +4,9 @@ date: 2024-05-18
 description: "The season is just around the corner, and we’re excited to see everybody in person at the spring work party next Saturday. (We’ll be posting more details about "
 tags:
   - club
+image:
+  src: "media:van-roof-camp-chairs.6af6b0768d544d48"
+  alt: "Two club members relaxing in camp chairs strapped to a van's roof rack, laughing under summer trees."
 ---
 The season is just around the corner, and we’re excited to see everybody in person at the spring work party next Saturday. (We’ll be posting more details about that shortly.) In the meantime, we’ve been hard at work expanding some of our website content to it a better resource for new and long-term members.
 

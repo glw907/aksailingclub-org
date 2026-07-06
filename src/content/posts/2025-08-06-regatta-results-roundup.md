@@ -5,6 +5,9 @@ description: "Ahoy, sailors! Between regattas, BNAC, classes, weddings, dock bui
 tags:
   - results
   - club
+image:
+  src: "media:regatta-capsize.aa6ac160ff58455e"
+  alt: "A sailor capsizing sideways off the stern of a racing dinghy marked 06, spray flying."
 ---
 Ahoy, sailors! Between regattas, BNAC, classes, weddings, dock building, sauna renovation, and grounds clean-up it’s been one of the busiest summers at the ASC I can remember. So busy, in fact, that I’ve been too distracted to get the normal summer ASC updates out.
 

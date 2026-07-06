@@ -5,6 +5,9 @@ description: "Wow! What an amazing way to close out the racing season. We couldn
 tags:
   - results
   - club
+image:
+  src: "media:hauling-boat-trailer-recap.6ee88326e98caa1c"
+  alt: "Club members pulling together on a rope to haul a boat trailer across the clubhouse lawn."
 ---
 Wow! What an amazing way to close out the racing season. We couldn’t have asked for better conditions — we had mixed sun and clouds, with 5-10 knots of breeze. (We even had a few zippier gusts that provided some good planing moments.) The whole day significantly outperformed the dismal forecast.
 

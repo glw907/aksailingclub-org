@@ -6,6 +6,9 @@ tags:
   - club
   - racing
   - education
+image:
+  src: "media:firecracker-dinghy-heeling.60c349e0c8ee6b47"
+  alt: "A club member in a life jacket in the foreground, with a dinghy sailing hard behind on Big Lake."
 ---
 Ahoy, crew! Now that July is here, we’re in the thick of the sailing season. The Firecracker Regatta is coming up this weekend. We just finished our first class (with two more to come), and we’re continuing grounds and dock work. Read on for details.
 

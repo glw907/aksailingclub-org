@@ -5,6 +5,9 @@ description: "Ahoy, sailors! Below are the results for both the Fireweed Ladies 
 tags:
   - results
   - club
+image:
+  src: "media:dock-party-selfie.f31eac34d6e2cce9"
+  alt: "Two sailors smiling for a selfie aboard a boat after a day of racing."
 ---
 Ahoy, sailors! Below are the results for both the Fireweed Ladies Race and the Governor’s Cup. (Apologies for the delay in posting the Fireweed results.) Both regattas were great fun.
 

@@ -4,6 +4,9 @@ date: 2025-09-08
 description: "Sunday was a full day at the club, with hammers swinging and frames coming together. We started at 11:00 in the morning and kept at it until about 6:30 in the e"
 tags:
   - club
+image:
+  src: "media:dock-under-construction.a1203e85ceaf5f30"
+  alt: "A new dock section under construction on the clubhouse lawn, its float frame ready for decking."
 ---
 Sunday was a full day at the club, with hammers swinging and frames coming together. We started at 11:00 in the morning and kept at it until about 6:30 in the evening. By the time we wrapped up, we had three new dock sections ready for service.
 

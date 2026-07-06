@@ -73,6 +73,19 @@ survives, just without chrome) until a future pass registers a real component.
    media library," which is the natural place to add the field and wire the uploads together.
    The source paths are recoverable from the Hugo repo's `content/**/*.md` frontmatter
    (`featuredImage`/`heroImage` keys) when that pass starts.
+
+   **Resolved in Task 3.** `posts` now declares `image: fields.image({ seo: true })`. 29 of the 31
+   Hugo posts with a real `feature.*` photo (matched by month-folder, since Hugo's upload folders
+   drop the day from the filename) were pulled into the media library with hand-written alt text
+   (each photo viewed and described, not derived from the post's own teaser copy, which describes
+   the post, not the picture); two were excluded as not real club photography (a decorative
+   painting on `spring-2024-big-update`, an unrelated stock photo of a legislative hearing on
+   `new-statewide-harbor-ladder-requirement`). The fleet and facilities home-page placements
+   (`src/theme/home-images.ts`) are separate fixed assets, not tied to any post's frontmatter,
+   since the home page itself is hand-built, not migrated content (see the URL-contract finding
+   below). All 30 unique uploaded assets (two posts share one source photo, which dedupes to a
+   single content-hash entry) are pushed to both the local and the real remote `asc-site-media` R2
+   bucket, so the bytes are already in place ahead of Task 5's cutover.
 4. **PDF assets on the governance pages.** Five legal documents link to a PDF
    (`/uploads/2024/04/*.pdf` on the live site). Those paths do not exist in the new build; the
    links in the migrated content point at the old paths as a placeholder. Pulling the PDFs into
@@ -186,6 +199,12 @@ original link rather than being edited to route around a gap in the current buil
 a dead link in the new site the same way its separate `/membership/` reference already was on the
 live site (verified: `/membership/` 404s on `aksailingclub.org` today too), and both are historical
 record, not migration regressions to paper over.
+
+**Resolved in Task 3.** The home page's own north star carries a real "View all news" link, which
+would otherwise be a fresh dead link on the first page every visitor sees, undermining the built
+home's fidelity to the design contract. `src/routes/(site)/posts/` is the small theme-owned archive
+page this finding anticipated: `posts.all()` grouped by year, no new content model. The
+`2026-02-welcome-new-website.md` link now resolves for real.
 
 ## Notifications: the current bulletin becomes the seed entry
 

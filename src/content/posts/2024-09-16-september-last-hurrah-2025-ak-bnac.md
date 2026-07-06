@@ -5,6 +5,9 @@ description: "Ahoy, sailors! It’s been a rainy September so far, but we still 
 tags:
   - club
   - racing
+image:
+  src: "media:alaska-flag-spinnaker.57264e5a02e12857"
+  alt: "A club boat sailing under an Alaska-flag spinnaker, blue and white with gold stars, racing number 2838."
 ---
 Ahoy, sailors! It’s been a rainy September so far, but we still have a bit more planned excitement at the club, including the Northern Lights Regatta on Saturday and the Fall Work Party on Sunday. We also have some exciting news from this year’s Buccaneer 18 North American Championships. More about all of this below:
 
