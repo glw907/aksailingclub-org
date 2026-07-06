@@ -6,7 +6,9 @@ section uses; both read `--color-neutral`/`--color-neutral-content` directly rat
 shared component, since they are two independent templates (the footer chrome, the home page's own
 markup) that happen to want the same brand device. "News" has no public archive page yet (Task 2's
 migration finding: cairn's site resolver has no concept-level index route), so it points at the
-home page's own News & Updates band instead of a dead link. -->
+home page's own News & Updates band instead of a dead link. The footer row boxes to
+`max-w-measure-wide`, the same width SiteHeader and the home page's own bands use, so the whole
+page reads as one aligned column top to bottom. -->
 <script lang="ts">
   import { siteConfig } from '$theme/cairn.config';
 
@@ -23,7 +25,7 @@ home page's own News & Updates band instead of a dead link. -->
 </script>
 
 <footer class="site-footer border-t border-white/10 bg-flag-navy-deep py-l">
-  <div class="mx-auto flex max-w-measure flex-wrap items-center justify-between gap-s px-m text-step--1 text-footer-ink">
+  <div class="mx-auto flex max-w-measure-wide flex-wrap items-center justify-between gap-s px-m text-step--1 text-footer-ink">
     <span>&copy; {new Date().getFullYear()} {siteConfig.siteName} &middot; a 501(c)(3) nonprofit</span>
     <nav class="flex flex-wrap items-center gap-m" aria-label="Footer">
       {#each nav as item (item.href)}

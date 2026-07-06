@@ -34,6 +34,28 @@ html {
   padding: var(--spacing-l) var(--spacing-m);
 }
 
+/* The home template breaks the shared reading-column contract deliberately: the north star's
+   bands are full-bleed to the viewport (alternating white/tinted/navy sections), never framed to
+   the prose article measure every other route reads at. `:has()` detects the marker the home
+   page's own root element carries (`.home-shell`) and cancels this box for that one route only;
+   every prose page (education, governance, a post) keeps the narrower reading column untouched.
+   Each home section then owns its own full-bleed background and boxes its own content to
+   `--container-measure-wide`, the same width SiteHeader/SiteFooter use, so the whole page reads as
+   one aligned content column under the full-bleed bands.
+
+   `margin-inline` must be cancelled here too, not just `max-width`: `main` is a flex item in the
+   layout's column flex (`.flex.flex-col`), and a flex item's own `auto` margins absorb the cross
+   axis's free space BEFORE stretch alignment is computed (the flexbox spec's auto-margin-alignment
+   step runs ahead of `align-items`/`align-self`). With `max-width: none` alone, the leftover
+   `margin-inline: auto` still soaks up every pixel of free space, so `main` shrinks back to its
+   content's natural width (the widest inner `max-w-measure-wide` box) instead of stretching to the
+   viewport, and every "full-bleed" band silently reverts to a boxed panel. */
+.site-main:has(> .home-shell) {
+  max-width: none;
+  margin-inline: 0;
+  padding: 0;
+}
+
 /* cairn figure placement: the default reader CSS for the :::figure role classes. cairn defines
    the class contract; the site owns the pixels by overriding these. */
 body {

@@ -117,6 +117,21 @@
   .prose h3 + * {
     margin-top: var(--spacing-xs);
   }
+  /* B1's "real subheads" (the editorial-pacing recipe for long content, e.g. education's
+     day-by-day schedule): a genuine pacing device, not a fourth heading level that silently falls
+     through to the body font at body size. Sized close to body text (the rhythm break comes from
+     weight and face, not scale) so a run of subheads still reads as one section, not a new
+     hierarchy tier competing with h2/h3. */
+  .prose h4 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--text-step-0);
+    line-height: var(--leading-snug);
+    --flow-space: var(--spacing-m);
+  }
+  .prose h4 + * {
+    margin-top: var(--spacing-3xs);
+  }
   .prose strong {
     font-weight: 650;
   }

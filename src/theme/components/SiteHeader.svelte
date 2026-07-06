@@ -7,7 +7,10 @@ gets the story's gold active-nav mark (flag-navy text plus a star-gold underline
 `box-shadow`, matching the north star's own `.nav a.active` rule) and `aria-current="page"`.
 Seven nav items plus the theme toggle do not comfortably wrap at 320px, so a hamburger drawer
 replaces the desktop row below 640px (the family five-viewport responsive standard), the same
-structural device ecxc.ski and 907.life's own headers use.
+structural device ecxc.ski and 907.life's own headers use. The nav row boxes to
+`max-w-measure-wide`, the same width the home page's own full-bleed bands use (Task 3's page-shell
+fix), so the header, the home content, and the footer read as one aligned column, matching the
+north star's single `.shell` measure used everywhere.
 
 The theme toggle sets `data-theme` on `<html>` between `asc` (light) and `asc-dark`, and persists
 the choice to an `asc-site-theme` cookie (path `/`, a year) so it survives a reload; the inline
@@ -72,7 +75,7 @@ state. -->
 {/snippet}
 
 <header class="site-header sticky top-0 z-30 border-b border-card-border bg-base-100">
-  <div class="nav-inner mx-auto flex max-w-measure items-center justify-between gap-m px-m py-xs">
+  <div class="nav-inner mx-auto flex max-w-measure-wide items-center justify-between gap-m px-m py-xs">
     <a href="/" class="site-logo inline-flex items-center gap-[0.6rem] no-underline" onclick={closeMobile}>
       <svg width="32" height="32" viewBox="0 0 34 34" aria-hidden="true">
         <circle cx="17" cy="17" r="16" class="fill-flag-navy-deep" />
@@ -139,7 +142,7 @@ state. -->
   </div>
 
   {#if mobileOpen}
-    <div class="mobile-menu mx-auto max-w-measure border-t border-card-border px-m py-2xs">
+    <div class="mobile-menu mx-auto max-w-measure-wide border-t border-card-border px-m py-2xs">
       {#each nav as item (item.url ?? item.label)}
         {@const current = item.url ? isCurrent(item.url) : false}
         <a
