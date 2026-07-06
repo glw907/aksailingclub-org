@@ -2,13 +2,773 @@
   "version": 1,
   "entries": [
     {
-      "id": "about",
-      "concept": "pages",
-      "title": "About",
-      "permalink": "/about",
-      "summary": "Who the Alaska Sailing Club is.",
+      "id": "2026-03-membership-open",
+      "concept": "notifications",
+      "title": "Membership open for 2026",
+      "permalink": "/notifications/2026-03-membership-open",
       "draft": false,
       "links": []
+    },
+    {
+      "id": "articles-of-incorporation",
+      "concept": "pages",
+      "title": "Articles of Incorporation",
+      "permalink": "/articles-of-incorporation",
+      "summary": "Amended and Restated Articles of Incorporation for The Alaska Sailing Club, Inc., a 501(c)(3) nonprofit. Document: Amended and Restated Articles of Incorporation of Alaska Sailing Club, Inc. Adopted:…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "ascca-bylaws",
+      "concept": "pages",
+      "title": "ASCCA Bylaws",
+      "permalink": "/ascca-bylaws",
+      "summary": "Bylaws of the Alaska Sailing Club Condominiums Owners Association, Inc., the condominium association that governs the property on which the club operates. Document: Bylaws of Alaska Sailing Club…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "bylaws",
+      "concept": "pages",
+      "title": "Bylaws",
+      "permalink": "/bylaws",
+      "summary": "Complete text of the Bylaws governing The Alaska Sailing Club, Inc. Document: Bylaws of The Alaska Sailing Club, Inc. Adopted: January 30, 2024 Authority: Board of Directors (Article XV) Download the…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "class-registration",
+      "concept": "pages",
+      "title": "Class Registration",
+      "permalink": "/class-registration",
+      "summary": "Class registration is moving from MembershipWorks to the new site as part of the club's phase-2 work, and isn't ready yet. :::callout{tone=\"note\"} [In the meantime] Not yet a member? Join first,…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "class-registration-complete",
+      "concept": "pages",
+      "title": "You're Registered!",
+      "permalink": "/class-registration-complete",
+      "summary": "You're all set. Check your email for a confirmation and receipt, if you don't see it within a few minutes, check your spam folder. Here are a few things to help you prepare: Class details and…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "club-boat-use-and-qualification",
+      "concept": "pages",
+      "title": "Club Boat Use and Qualification",
+      "permalink": "/club-boat-use-and-qualification",
+      "summary": "Our fleet is available to all qualified members at no extra charge. We have Lido 14s, Lasers, Optimists, a Buccaneer 18, a Catalina 16.5, a Skipjack 15, and an Ensign 22. Getting Qualified Completed…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "committees",
+      "concept": "pages",
+      "title": "Board and Committees",
+      "permalink": "/committees",
+      "summary": "The Board of Directors manages the affairs of the corporation. Between 4 and 7 directors serve at any time, with terms staggered to ensure continuity. Elections are held at the annual membership…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "confirmation",
+      "concept": "pages",
+      "title": "Payment Confirmation",
+      "permalink": "/confirmation",
+      "summary": "Thank you for your payment. You'll receive a confirmation email shortly.",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "contact",
+      "concept": "pages",
+      "title": "Contact",
+      "permalink": "/contact",
+      "summary": "Send Us a Message :::callout{tone=\"note\"} [The contact form is moving to the new site] The contact form isn't wired up here yet. In the meantime, email board@aksailingclub.org and we'll route your…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "determination-letter",
+      "concept": "pages",
+      "title": "IRS Determination Letter",
+      "permalink": "/determination-letter",
+      "summary": "IRS letter confirming the Alaska Sailing Club's tax-exempt status under Section 501(c)(3) of the Internal Revenue Code. Document: IRS Determination Letter 947 Effective: April 28, 2008 Issued:…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "directory",
+      "concept": "pages",
+      "title": "Member Directory",
+      "permalink": "/directory",
+      "summary": "The member directory is moving from MembershipWorks to the new site as part of the club's phase-2 work, and isn't ready yet. :::callout{tone=\"note\"} [In the meantime] Looking for a committee chair or…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "discord-server",
+      "concept": "pages",
+      "title": "Discord Server",
+      "permalink": "/discord-server",
+      "summary": "The ASC Discord server is where members ask rigging questions, report dock issues, share photos, and stay connected between visits to Big Lake. It's informal, friendly, and entirely optional:…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "donate",
+      "concept": "pages",
+      "title": "Donate",
+      "permalink": "/donate",
+      "summary": "Sailing under the Midnight Sun, on Big Lake's clear waters, is one of Alaska's great joys. Since 1972, the Alaska Sailing Club has been sharing that experience, teaching hundreds of Alaskans to sail,…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "education",
+      "concept": "pages",
+      "title": "Education",
+      "permalink": "/education",
+      "summary": "The Alaska Sailing Club is an education-focused 501(c)(3). Each summer, we teach a four-day beginner sailing course in two tracks, one for adults and teens and one for youth, making it easy for whole…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "elections",
+      "concept": "pages",
+      "title": "Director Elections",
+      "permalink": "/elections",
+      "summary": "ASC is a member-governed nonprofit. The directors you elect set the club's direction, manage the budget, and make decisions on behalf of the membership. Elections happen each fall. Here's how the…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "events",
+      "concept": "pages",
+      "title": "Events",
+      "permalink": "/events",
+      "summary": "The ASC season runs from Memorial Day through Labor Day, with regattas, Wet Wednesdays, classes, potlucks, and work parties throughout the summer. Most events are family-friendly weekends with…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "get-involved",
+      "concept": "pages",
+      "title": "Get Involved",
+      "permalink": "/get-involved",
+      "summary": "Committees are how we get things done: teaching classes, running races, building docks, and keeping the boats in shape. Participation is the path to real relationships at the club and a genuine say…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "governance",
+      "concept": "pages",
+      "title": "Governance",
+      "permalink": "/governance",
+      "summary": "The ASC is a 501(c)(3) nonprofit with a mission to promote sailing education, water safety, and the practice of the sport for Alaskans. We're member-run: you elect the board, and the board manages…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "issues-and-support",
+      "concept": "pages",
+      "title": "Issues & Support",
+      "permalink": "/issues-and-support",
+      "summary": "Report a problem, ask a billing question, submit a reimbursement request, or ask about storage availability below. Boat problems route to #fleet on Discord, harbor issues to #harbor, and site issues…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "it-request",
+      "concept": "pages",
+      "title": "IT & Infrastructure Requests",
+      "permalink": "/it-request",
+      "summary": "Need help with your club email, website login, Discord access, or something not working right on the site? Submit a request below and we'll get back to you. For boat, dock, or clubhouse issues, use…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "join",
+      "concept": "pages",
+      "title": "Join the Club",
+      "permalink": "/join",
+      "summary": "The Alaska Sailing Club is a community of sailors, families, and friends who share a beautiful lakeside property on Big Lake (about an hour north of Anchorage). Whether you're here to learn to sail,…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "long-term-rv-parking-guidelines",
+      "concept": "pages",
+      "title": "Long-Term RV Parking Guidelines",
+      "permalink": "/long-term-rv-parking-guidelines",
+      "summary": "Long-term RV spaces are on Trailer Row. Most are occupied year-round by active members. Spaces are in high demand: waitlists commonly span multiple years. Long-term parking is a seasonal commitment…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "mat-su-borough-land-management-agreement",
+      "concept": "pages",
+      "title": "Mat-Su Borough Land Management Agreement",
+      "permalink": "/mat-su-borough-land-management-agreement",
+      "summary": "25-year land management agreement between the Mat-Su Borough and the Alaska Sailing Club governing the tenting area, Trailer Row, and trailered boat parking. Document: Management Agreement MSB006789…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "member-expectations",
+      "concept": "pages",
+      "title": "Member Expectations",
+      "permalink": "/member-expectations",
+      "summary": "These are the rules we all agree to follow at the Alaska Sailing Club. By joining, you agree to abide by these expectations. Failure to do so may result in membership termination per Article III,…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "members",
+      "concept": "pages",
+      "title": "Member Resources",
+      "permalink": "/members",
+      "summary": "Your member hub has everything the Alaska Sailing Club offers its members, in one place. Whether you're planning your first visit, trying to get on the water, managing your membership, or looking up…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "moorings",
+      "concept": "pages",
+      "title": "Moorings",
+      "permalink": "/moorings",
+      "summary": "The ASC has a small number of seasonal moorings for member-owned keelboats. Moorings are managed by the Harbormaster and are among the club's most in-demand resources, waitlists commonly span…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "my-account",
+      "concept": "pages",
+      "title": "My Account",
+      "permalink": "/my-account",
+      "summary": "Membership account management is moving from MembershipWorks to the new site as part of the club's phase-2 work, and isn't ready yet. :::callout{tone=\"note\"} [In the meantime] Email…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "new-member-guide",
+      "concept": "pages",
+      "title": "New Member Guide",
+      "permalink": "/new-member-guide",
+      "summary": "Welcome aboard! The Alaska Sailing Club is busy, informal, and full of unwritten traditions, which can make figuring out \"how things work\" a bit daunting at first. Think of this guide as the friendly…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "official-website",
+      "concept": "pages",
+      "title": "Alaska Sailing Club: Official Website",
+      "permalink": "/official-website",
+      "summary": "The official website of the Alaska Sailing Club is aksailingclub.org. If you arrived here from a search result, you found the right place. If you were previously visiting alaskasailingclub.com, that…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "racing",
+      "concept": "pages",
+      "title": "Racing",
+      "permalink": "/racing",
+      "summary": "Racing at the ASC picks up where our sailing classes leave off, giving experienced sailors a fleet to plug into when they move to Anchorage. Graduates of our Introduction to Dinghy Sailing course…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "rack-storage",
+      "concept": "pages",
+      "title": "Rack Storage",
+      "permalink": "/rack-storage",
+      "summary": "The ASC offers rack storage for kayaks, paddleboards, canoes, and small sailboats (Lasers, Sunfish, Optimists, and similar). At $50/season, rack storage is the most accessible of our storage options:…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "renewing-your-membership",
+      "concept": "pages",
+      "title": "Renewing Your Membership",
+      "permalink": "/renewing-your-membership",
+      "summary": "If you're past due, your benefits are on hold but your account stays open. Seasonal storage (moorings, RV, boat parking, rack) renews separately, so contact the Harbormaster for moorings or the Site…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "seasonal-storage",
+      "concept": "pages",
+      "title": "Seasonal Storage",
+      "permalink": "/seasonal-storage",
+      "summary": "The ASC offers seasonal storage for members who want to keep a boat or RV at the club. These arrangements, moorings, long-term RV parking, trailered boat parking, and rack storage, are available for…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "trailered-boat-parking",
+      "concept": "pages",
+      "title": "Trailered Boat Parking",
+      "permalink": "/trailered-boat-parking",
+      "summary": "We have space for member-owned trailered boats during the sailing season. Spaces are $100/season and are intended for boats that sail actively, this is not long-term storage for boats that don't go…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "transient-rv-parking",
+      "concept": "pages",
+      "title": "Transient RV Parking",
+      "permalink": "/transient-rv-parking",
+      "summary": "The Alaska Sailing Club welcomes members to bring RVs to the club for short stays. We have space for 3-4 RVs on Trailer Row, first-come, first-served. No reservation needed for stays up to four days.…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "visiting-the-club",
+      "concept": "pages",
+      "title": "Visiting the Club",
+      "permalink": "/visiting-the-club",
+      "summary": "Use this page as a quick reference when you're planning a trip out to the club. If this is your first visit, start with the New Member Guide: it covers everything here and more, including club…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "waitlists",
+      "concept": "pages",
+      "title": "Storage Waitlists",
+      "permalink": "/waitlists",
+      "summary": "Current waitlist status for all four seasonal storage options. We update this page each season. If something looks outdated, let us know through the Issues & Support form. ASC is a working sailing…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "welcome",
+      "concept": "pages",
+      "title": "Welcome to the Alaska Sailing Club!",
+      "permalink": "/welcome",
+      "summary": "Your membership is active from this moment. Check your email now (and your spam folder): your welcome message is on its way with your class credit, a Discord invite, and a link to your member…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "2024-04-21-spring-2024-big-update",
+      "concept": "posts",
+      "title": "Spring 2024 Big Update",
+      "date": "2024-04-21",
+      "permalink": "/posts/spring-2024-big-update",
+      "summary": "The 2024 sailing season is coming up fast. We’ve been a little quiet on the update front, but we’ve had a lot of people working hard at work in the background,",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club"
+      ]
+    },
+    {
+      "id": "2024-05-18-new-transient-rv-parking-guidelines",
+      "concept": "posts",
+      "title": "New Transient RV Parking Guidelines",
+      "date": "2024-05-18",
+      "permalink": "/posts/new-transient-rv-parking-guidelines",
+      "summary": "The season is just around the corner, and we’re excited to see everybody in person at the spring work party next Saturday. (We’ll be posting more details about",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club"
+      ]
+    },
+    {
+      "id": "2024-05-19-new-statewide-harbor-ladder-requirement",
+      "concept": "posts",
+      "title": "New Statewide Harbor Ladder Requirement",
+      "date": "2024-05-19",
+      "permalink": "/posts/new-statewide-harbor-ladder-requirement",
+      "summary": "On Wednesday, the Alaska Beacon reported that the Alaska Senate approved House Bill 345, which requires the ladders in all harbor projects that receive money fr",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club"
+      ]
+    },
+    {
+      "id": "2024-06-01-icebreaker-social-friday-report",
+      "concept": "posts",
+      "title": "Icebreaker Social Friday Report",
+      "date": "2024-06-01",
+      "permalink": "/posts/icebreaker-social-friday-report",
+      "summary": "Well, it’s not exactly “shorts and t-shirt” weather, but the sailing’s fine! The Ensign’s already been out sailing twice (first with Anthony & sons, and again w",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club"
+      ]
+    },
+    {
+      "id": "2024-06-25-late-june-goings-on",
+      "concept": "posts",
+      "title": "Late June Goings-On",
+      "date": "2024-06-25",
+      "permalink": "/posts/late-june-goings-on",
+      "summary": "Good evening, Sailors! Alaska's weather has not disappointed the past two weeks; even the water is warming up! We have a lot going on at the club right now.",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club",
+        "education"
+      ]
+    },
+    {
+      "id": "2024-07-04-firecracker-regatta-intermediate-sailing-recap-more",
+      "concept": "posts",
+      "title": "Firecracker Regatta, Intermediate Sailing Recap, & more!",
+      "date": "2024-07-04",
+      "permalink": "/posts/firecracker-regatta-intermediate-sailing-recap-more",
+      "summary": "Ahoy, crew! Now that July is here, we’re in the thick of the sailing season. The Firecracker Regatta is coming up this weekend. We just finished our first class",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club",
+        "education",
+        "racing"
+      ]
+    },
+    {
+      "id": "2024-07-04-firecracker-regatta-sailing-instructions",
+      "concept": "posts",
+      "title": "Firecracker Regatta Sailing Instructions",
+      "date": "2024-07-04",
+      "permalink": "/posts/firecracker-regatta-sailing-instructions",
+      "summary": "It's time for our Annual Firecracker Regatta, and I can’t wait to see you all on the course this weekend! Be ready for our first race to start at 1:00 pm on Sat",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "racing"
+      ]
+    },
+    {
+      "id": "2024-07-05-barbaras-epic-sailing-adventure",
+      "concept": "posts",
+      "title": "Barbara’s Epic Sailing Adventure",
+      "date": "2024-07-05",
+      "permalink": "/posts/barbaras-epic-sailing-adventure",
+      "summary": "Well, the forecast for Saturday sucks (1/2” of rain), but we’re still gonna have an awesome regatta weekend, especially with the unexpected early arrival of sai",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club"
+      ]
+    },
+    {
+      "id": "2024-07-09-youth-sailing-class-openings",
+      "concept": "posts",
+      "title": "Youth Sailing Class Openings",
+      "date": "2024-07-09",
+      "permalink": "/posts/youth-sailing-class-openings",
+      "summary": "We've had a few last-minute cancellations for our \"Youth Introduction to Sailing\" courses. One seat is available in our class starting Thursday the 11th, and th",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "education"
+      ]
+    },
+    {
+      "id": "2024-07-10-firecracker-regatta-results-introduction-to-sailing",
+      "concept": "posts",
+      "title": "Firecracker Regatta Results & Introduction to Sailing",
+      "date": "2024-07-10",
+      "permalink": "/posts/firecracker-regatta-results-introduction-to-sailing",
+      "summary": "Ahoy sailors! Those who defied the weather forecast and made it to the regatta were rewarded with a pretty outstanding weekend. The weather dramatically outperf",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "education",
+        "results"
+      ]
+    },
+    {
+      "id": "2024-07-17-1st-class-recap-and-2nd-class-starting",
+      "concept": "posts",
+      "title": "1st Class Recap and 2nd Class Starting",
+      "date": "2024-07-17",
+      "permalink": "/posts/1st-class-recap-and-2nd-class-starting",
+      "summary": "Well, that class was spectacular! I honestly don’t know where to start, so here’s an unordered list of my personal standout memories:",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "education"
+      ]
+    },
+    {
+      "id": "2024-07-19-2024-pirate-race",
+      "concept": "posts",
+      "title": "2024 Pirate Race",
+      "date": "2024-07-19",
+      "permalink": "/posts/2024-pirate-race",
+      "summary": "If ye dare to join this year's Pirate Race, set yer course for 61.5°N, -149.9°W (ASC) on the twenty-seventh day of July. Be ready to hear the rules at 1300 hour",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club",
+        "racing"
+      ]
+    },
+    {
+      "id": "2024-07-31-a-second-discord-accord",
+      "concept": "posts",
+      "title": "A Second Discord Accord",
+      "date": "2024-07-31",
+      "permalink": "/posts/a-second-discord-accord",
+      "summary": "Between the new sailors who have joined ASC through our classes and quite a few existing sailors who have just found the club, we have a lot of new members this",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club"
+      ]
+    },
+    {
+      "id": "2024-08-01-2024-pirate-race-wrap-up-and-photos",
+      "concept": "posts",
+      "title": "2024 Pirate Race Wrap Up & Photos!",
+      "date": "2024-08-01",
+      "permalink": "/posts/2024-pirate-race-wrap-up-and-photos",
+      "summary": "Arrr, there was plunderin', there was trickery, there were traitors aplenty, and a heap o' puzzles to be solved! The 2024 Pirate Race was a grand success!",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club",
+        "racing",
+        "results"
+      ]
+    },
+    {
+      "id": "2024-08-08-fireweed-ladies-race-and-more",
+      "concept": "posts",
+      "title": "Fireweed Ladies Race (and more!)",
+      "date": "2024-08-08",
+      "permalink": "/posts/fireweed-ladies-race-and-more",
+      "summary": "Hey Ladies (and gentlemen): It’s once again time for the Fireweed Ladies Race! We also have updates about some informal Friday night racing, as well as a full f",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "racing"
+      ]
+    },
+    {
+      "id": "2024-08-30-gov-cup-and-august-recap",
+      "concept": "posts",
+      "title": "Gov Cup and August Recap",
+      "date": "2024-08-30",
+      "permalink": "/posts/gov-cup-and-august-recap",
+      "summary": "Ahoy, sailors! As promised, here’s a recap of some August happening at the ASC, plus details about the 57th annual Governor's Cup coming this weekend:",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club",
+        "education",
+        "racing",
+        "results"
+      ]
+    },
+    {
+      "id": "2024-09-05-gov-cup-winners-and-bnac-2024",
+      "concept": "posts",
+      "title": "Gov Cup Winners and BNAC 2024",
+      "date": "2024-09-05",
+      "permalink": "/posts/gov-cup-winners-and-bnac-2024",
+      "summary": "Ahoy Sailors! We had an epic Gov Cup this year. The weather dramatically outperformed the forecast on Saturday. We managed five races in a fairly steady 5-10 kn",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club",
+        "results"
+      ]
+    },
+    {
+      "id": "2024-09-16-september-last-hurrah-2025-ak-bnac",
+      "concept": "posts",
+      "title": "September Last Hurrah & 2025 AK BNAC",
+      "date": "2024-09-16",
+      "permalink": "/posts/september-last-hurrah-2025-ak-bnac",
+      "summary": "Ahoy, sailors! It’s been a rainy September so far, but we still have a bit more planned excitement at the club, including the Northern Lights Regatta on Saturda",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club",
+        "racing"
+      ]
+    },
+    {
+      "id": "2024-09-26-northern-lights-results-work-party-thanks",
+      "concept": "posts",
+      "title": "Northern Lights Results & Work Party Thanks",
+      "date": "2024-09-26",
+      "permalink": "/posts/northern-lights-results-work-party-thanks",
+      "summary": "Wow! We couldn’t have asked for a better weekend to close out the 2024 season. On Saturday, we had sunshine and just enough wind to run the largest Northern Lig",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club",
+        "results"
+      ]
+    },
+    {
+      "id": "2024-12-22-bylaws-board-candidates-and-annual-meeting-reminder",
+      "concept": "posts",
+      "title": "Bylaws, Board Candidates, and Annual Meeting Reminder",
+      "date": "2024-12-22",
+      "permalink": "/posts/bylaws-board-candidates-and-annual-meeting-reminder",
+      "summary": "Ahoy sailors! I hope everybody is having a wonderful holiday season filled with friends, family, and good cheer. I assume you’ve all been good, and the Santa wi",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club"
+      ]
+    },
+    {
+      "id": "2025-05-17-spring-work-party-this-saturday",
+      "concept": "posts",
+      "title": "Spring Work Party This Saturday",
+      "date": "2025-05-17",
+      "permalink": "/posts/spring-work-party-this-saturday",
+      "summary": "Ahoy, sailors! It's finally time to open the club for the season. This Saturday is our spring work party, and as usual, there's a lot to do get the club ready.",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club"
+      ]
+    },
+    {
+      "id": "2025-08-06-regatta-results-roundup",
+      "concept": "posts",
+      "title": "Regatta Results Roundup",
+      "date": "2025-08-06",
+      "permalink": "/posts/regatta-results-roundup",
+      "summary": "Ahoy, sailors! Between regattas, BNAC, classes, weddings, dock building, sauna renovation, and grounds clean-up it’s been one of the busiest summers at the ASC",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club",
+        "results"
+      ]
+    },
+    {
+      "id": "2025-08-09-fireweed-ladies-race-sailing-instructions",
+      "concept": "posts",
+      "title": "Fireweed Ladies Race Sailing Instructions",
+      "date": "2025-08-09",
+      "permalink": "/posts/fireweed-ladies-race-sailing-instructions",
+      "summary": "This event is designed to be fun and welcoming for sailors of all experience levels. Ladies only at the helm!",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "racing"
+      ]
+    },
+    {
+      "id": "2025-08-25-gov-cup-and-asc-swag",
+      "concept": "posts",
+      "title": "Gov Cup & ASC Swag!",
+      "date": "2025-08-25",
+      "permalink": "/posts/gov-cup-and-asc-swag",
+      "summary": "Ahoy, sailors! The Gov Cup — usually the biggest regatta of the season — is this weekend. And all the details are below in the Sailing Instructions (SIs), which are",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "racing"
+      ]
+    },
+    {
+      "id": "2025-09-03-regatta-results-dock-party",
+      "concept": "posts",
+      "title": "Regatta Results & Dock Party",
+      "date": "2025-09-03",
+      "permalink": "/posts/regatta-results-dock-party",
+      "summary": "Ahoy, sailors! Below are the results for both the Fireweed Ladies Race and the Governor’s Cup. (Apologies for the delay in posting the Fireweed results.) Both r",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club",
+        "results"
+      ]
+    },
+    {
+      "id": "2025-09-08-dock-building-progress-update",
+      "concept": "posts",
+      "title": "Dock-Building Progress Update",
+      "date": "2025-09-08",
+      "permalink": "/posts/dock-building-progress-update",
+      "summary": "Sunday was a full day at the club, with hammers swinging and frames coming together. We started at 11:00 in the morning and kept at it until about 6:30 in the e",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club"
+      ]
+    },
+    {
+      "id": "2025-09-08-northern-lights-regatta-nor",
+      "concept": "posts",
+      "title": "Northern Lights Regatta NOR",
+      "date": "2025-09-08",
+      "permalink": "/posts/northern-lights-regatta-nor",
+      "summary": "But wait, what the heck is a NOR? If you’re new to sailboat racing, you may not have seen a “Notice of Race” (NOR) before.",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "racing"
+      ]
+    },
+    {
+      "id": "2025-09-16-pulling-together-for-the-fall-work-party",
+      "concept": "posts",
+      "title": "Pulling Together at the Fall Work Party",
+      "date": "2025-09-16",
+      "permalink": "/posts/pulling-together-for-the-fall-work-party",
+      "summary": "This season has been a banner year for volunteer effort at the Alaska Sailing Club. Together, members have:",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club"
+      ]
+    },
+    {
+      "id": "2025-09-17-northern-lights-regatta-sis",
+      "concept": "posts",
+      "title": "Northern Lights SIs",
+      "date": "2025-09-17",
+      "permalink": "/posts/northern-lights-regatta-sis",
+      "summary": "Ahoy sailors! The SIs for the Northern Lights Regatta are below. And note that we moved the start time up by an hour, so the skippers meeting is at 3:00 p.m. See",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "racing"
+      ]
+    },
+    {
+      "id": "2025-09-30-northern-lights-results-work-party-recap",
+      "concept": "posts",
+      "title": "Northern Lights Results & Work Party Recap",
+      "date": "2025-09-30",
+      "permalink": "/posts/northern-lights-results-work-party-recap",
+      "summary": "Wow! What an amazing way to close out the racing season. We couldn’t have asked for better conditions — we had mixed sun and clouds, with 5-10 knots of breeze.",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club",
+        "results"
+      ]
+    },
+    {
+      "id": "2026-02-27-welcome-new-website",
+      "concept": "posts",
+      "title": "Welcome to the New Website",
+      "date": "2026-02-27",
+      "permalink": "/posts/welcome-new-website",
+      "summary": "We've rebuilt the ASC website from the ground up on a new platform. We've been working on this since last fall, and it's finally live!",
+      "draft": false,
+      "links": [],
+      "tags": [
+        "club"
+      ]
     },
     {
       "id": "2026-07-06-welcome",

@@ -1,15 +1,13 @@
 import type { RequestHandler } from './$types';
-import { sitemapResponse, type SitemapUrl } from '@glw907/cairn-cms/delivery';
+import { sitemapResponse, sitemapView, siteDescriptors } from '@glw907/cairn-cms/delivery';
 import { site, ORIGIN } from '$chassis/content';
+import { cairn, siteConfig } from '$theme/cairn.config';
 
 export const prerender = true;
 
-// The `notifications` concept routes 'embedded' (no per-entry public page), so site.all()
-// already excludes it; nothing needs filtering out by hand.
+// sitemapView projects only the `routable` concepts (the `notifications` concept routes
+// 'embedded' and is excluded by design), with the home page as the one extra, non-concept route.
 export const GET: RequestHandler = () => {
-  const urls: SitemapUrl[] = [
-    { loc: ORIGIN + '/' },
-    ...site.all().map((s) => ({ loc: ORIGIN + s.permalink, ...(s.date ? { lastmod: s.date } : {}) })),
-  ];
+  const urls = sitemapView(site, siteDescriptors(cairn, siteConfig), ORIGIN, ['/']);
   return sitemapResponse(urls);
 };
