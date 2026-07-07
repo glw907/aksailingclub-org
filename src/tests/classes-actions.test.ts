@@ -226,15 +226,22 @@ describe('classes actions: instructor assignment', () => {
 
   const asAdmin = { allResults: { 'FROM club_roles': [{ role: 'club-admin' }] } };
 
-  it('assignInstructor inserts only the assignment row and audits it', async () => {
-    const { db, calls } = fakeD1(asAdmin);
+  it('assignInstructor resolves the real member id, then inserts only the assignment row, ' +
+    'and audits it', async () => {
+    const { db, calls } = fakeD1({
+      ...asAdmin,
+      firstResults: { 'FROM members WHERE email': { id: 'mem-1', household_id: 'hh-1' } },
+    });
     const sink = vi.fn();
     const result = await detailActions.assignInstructor(
       postEvent(admin, { email: 'coach@example.com', name: 'Coach' }, { db, auditSink: sink }),
     );
     expect(result).toEqual({ ok: true });
-    expect(calls).toHaveLength(2); // the role check, then the one insert
-    expect(calls.some((c) => c.sql.startsWith('INSERT INTO class_instructors'))).toBe(true);
+    // the role check, ensureMember's own lookup, then the one class_instructors insert
+    // (the fixture's already-known member means ensureMember writes nothing of its own)
+    expect(calls).toHaveLength(3);
+    const insert = calls.find((c) => c.sql.startsWith('INSERT INTO class_instructors'));
+    expect(insert?.args).toEqual(['fleet-tune-up-weekend', 'mem-1', 'Coach']);
     expect(calls.some((c) => c.sql.startsWith('UPDATE') || c.sql.startsWith('DELETE'))).toBe(false);
     expect(sink).toHaveBeenCalledWith({
       action: 'assign',
@@ -262,7 +269,10 @@ describe('classes actions: instructor assignment', () => {
     expect(result).toEqual({ ok: true });
     expect(calls).toEqual([
       expect.objectContaining({ sql: expect.stringContaining('FROM club_roles') }),
-      { sql: 'DELETE FROM class_instructors WHERE class_id = ?1 AND member_id = ?2', args: ['fleet-tune-up-weekend', 'coach@example.com'] },
+      {
+        sql: 'DELETE FROM class_instructors WHERE class_id = ?1 AND member_id = (SELECT id FROM members WHERE email = ?2)',
+        args: ['fleet-tune-up-weekend', 'coach@example.com'],
+      },
     ]);
     expect(sink).toHaveBeenCalledWith({
       action: 'unassign',

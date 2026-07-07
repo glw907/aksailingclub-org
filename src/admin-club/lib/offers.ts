@@ -18,6 +18,7 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import { getClass, getClassWithCounts } from './classes-store';
 import { getOfferWindowHours } from './club-settings';
+import { ensureMember } from './people';
 
 /** How an offer was last resolved; `null` (the `class_offers.resolved` column's own default)
  *  means it is still pending. */
@@ -88,9 +89,12 @@ function toOfferRow(row: OfferRawRow): OfferRow {
   };
 }
 
-/** Every offer ever made for a class, most recent first: the detail screen's own need, so a
- *  resolved offer keeps rendering as a history chip rather than disappearing once claimed,
- *  declined, or expired. */
+/** Every offer ever made for a class, most recent first: the detail screen's own need. A declined
+ *  or expired offer keeps rendering as a history chip against its still-live waitlist entry; a
+ *  claimed offer's own waitlist row no longer exists (this module's own header on `claimOffer`),
+ *  so the detail screen's `waitlistView` derivation never has an entry left to attach a claimed
+ *  offer's chip to (`class_offers.waitlist_id` itself cascades away with that row, migration
+ *  0006_offer_cascade_on_waitlist_delete). */
 export async function listOffersForClass(db: D1Database, classId: string): Promise<OfferRow[]> {
   const { results } = await db
     .prepare(`SELECT ${RAW_ROW_COLUMNS} FROM class_offers WHERE class_id = ?1 ORDER BY offered_at DESC`)
@@ -301,16 +305,33 @@ export async function claimOffer(db: D1Database, token: string): Promise<OfferCl
   if ((consume.meta.changes ?? 0) !== 1) return { error: 'This offer has already been used.' };
 
   const waitlistRow = await db
-    .prepare('SELECT id, applicant_name, applicant_email, member_id FROM class_waitlist WHERE id = ?1 LIMIT 1')
+    .prepare('SELECT id, applicant_name, applicant_email, applicant_phone, member_id FROM class_waitlist WHERE id = ?1 LIMIT 1')
     .bind(preview.waitlist_id)
-    .first<{ id: string; applicant_name: string | null; applicant_email: string | null; member_id: string | null }>();
-  // Pre-2.2, `class_enrollments.member_id` reuses the person's own email as a natural key, the
-  // same workaround migration 0002's header documents for `class_instructors.member_id`: there is
-  // no real `members` row yet to reference, and an email is unique and stable in its place. The
-  // offer is already marked claimed at this point (the consume above committed); a missing
-  // waitlist row or identity here is an inconsistent-data edge case, not a normal refusal, so this
-  // still answers honestly rather than pretending to succeed.
-  const enrollMemberId = waitlistRow?.member_id ?? waitlistRow?.applicant_email;
+    .first<{
+      id: string;
+      applicant_name: string | null;
+      applicant_email: string | null;
+      applicant_phone: string | null;
+      member_id: string | null;
+    }>();
+  // The waitlist row's own CHECK guarantees exactly one identity edge: either `member_id` is
+  // already set (the person joined as a known member), or `applicant_email` is (a public signup
+  // who was not a member yet, resolved to a real `members.id` here through `ensureMember`,
+  // migration 0005_member_domain's arrival). The offer is already marked claimed at this point
+  // (the consume above committed); a missing waitlist row or identity here is an inconsistent-data
+  // edge case, not a normal refusal, so this still answers honestly rather than pretending to
+  // succeed.
+  let enrollMemberId: string | null = null;
+  if (waitlistRow?.member_id) {
+    enrollMemberId = waitlistRow.member_id;
+  } else if (waitlistRow?.applicant_email) {
+    const member = await ensureMember(db, {
+      name: waitlistRow.applicant_name ?? waitlistRow.applicant_email,
+      email: waitlistRow.applicant_email,
+      phone: waitlistRow.applicant_phone,
+    });
+    enrollMemberId = member.memberId;
+  }
   if (!waitlistRow || !enrollMemberId) {
     console.error('admin/club: claimOffer consumed a token with no valid waitlist identity', preview.waitlist_id);
     return { error: 'Something went wrong completing your claim. Contact the club for help.' };

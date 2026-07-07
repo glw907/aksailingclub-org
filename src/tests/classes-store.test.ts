@@ -190,32 +190,47 @@ describe('listClassesWithCounts', () => {
 });
 
 describe('listInstructors', () => {
-  it('maps member_id/member_name to email/name', async () => {
-    const { db } = fakeD1({
-      allResults: { 'FROM class_instructors': [{ email: 'coach@example.com', name: 'Coach' }] },
+  it('joins members for the real email, keeping member_name as the display name', async () => {
+    const { db, calls } = fakeD1({
+      allResults: { 'FROM class_instructors ci': [{ email: 'coach@example.com', name: 'Coach' }] },
     });
     await expect(listInstructors(db, '1st_adult_teen_intro')).resolves.toEqual([
       { email: 'coach@example.com', name: 'Coach' },
     ]);
+    expect(calls[0].sql).toContain('JOIN members');
   });
 });
 
 describe('addInstructor / removeInstructor', () => {
-  it('addInstructor inserts (class_id, email, name), only that row', async () => {
-    const { db, calls } = fakeD1();
+  it('addInstructor resolves a real member id through ensureMember, then inserts (class_id, ' +
+    'member_id, name)', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: { 'FROM members WHERE email': { id: 'mem-1', household_id: 'hh-1' } },
+    });
     await addInstructor(db, '1st_adult_teen_intro', 'coach@example.com', 'Coach');
-    expect(calls).toHaveLength(1);
-    expect(calls[0].sql).toContain('INSERT INTO class_instructors');
-    expect(calls[0].sql).toContain('ON CONFLICT');
-    expect(calls[0].args).toEqual(['1st_adult_teen_intro', 'coach@example.com', 'Coach']);
+    const insert = calls.find((c) => c.sql.startsWith('INSERT INTO class_instructors'));
+    expect(insert?.sql).toContain('ON CONFLICT');
+    expect(insert?.args).toEqual(['1st_adult_teen_intro', 'mem-1', 'Coach']);
+    // No member/household INSERT: ensureMember found an existing row and wrote nothing.
+    expect(calls.some((c) => c.sql.startsWith('INSERT INTO members'))).toBe(false);
   });
 
-  it('removeInstructor deletes only the one (class_id, email) row', async () => {
+  it('addInstructor creates a member (falling back to the email as ensureMember\'s required ' +
+    'name) when no display name is given for a brand-new instructor', async () => {
+    const { db, calls } = fakeD1({ firstResults: { 'FROM members WHERE email': null } });
+    await addInstructor(db, '1st_adult_teen_intro', 'coach@example.com', null);
+    const memberInsert = calls.find((c) => c.sql.startsWith('INSERT INTO members'));
+    expect((memberInsert?.args as unknown[])[2]).toBe('coach@example.com'); // the name column
+    const insert = calls.find((c) => c.sql.startsWith('INSERT INTO class_instructors'));
+    expect((insert?.args as unknown[])[2]).toBeNull(); // member_name itself stays null
+  });
+
+  it('removeInstructor deletes by class_id and a member_id resolved from email, only that row', async () => {
     const { db, calls } = fakeD1();
     await removeInstructor(db, '1st_adult_teen_intro', 'coach@example.com');
     expect(calls).toEqual([
       {
-        sql: 'DELETE FROM class_instructors WHERE class_id = ?1 AND member_id = ?2',
+        sql: 'DELETE FROM class_instructors WHERE class_id = ?1 AND member_id = (SELECT id FROM members WHERE email = ?2)',
         args: ['1st_adult_teen_intro', 'coach@example.com'],
       },
     ]);

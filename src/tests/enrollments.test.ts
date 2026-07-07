@@ -22,6 +22,12 @@ const CLASS_ROW = {
 
 const INVISIBLE_CLASS_ROW = { ...CLASS_ROW, visible: 0 as const };
 
+/** An existing `members` row for `INPUT.email`: most enrolled-branch tests below give
+ *  `signUpForClass` a member `ensureMember` already knows, so they exercise the enrollment logic
+ *  without also asserting on `ensureMember`'s own creation path (covered by `people.test.ts`, and
+ *  by the dedicated "resolves a brand-new member" test below). */
+const MEMBER_ROW = { id: 'mem-1', household_id: 'hh-1' };
+
 const INPUT = {
   classId: CLASS_ROW.id,
   name: 'Jamie Rivera',
@@ -50,6 +56,7 @@ describe('signUpForClass', () => {
       return fakeD1({
         firstResults: {
           'FROM classes WHERE id': CLASS_ROW,
+          'FROM members WHERE email': MEMBER_ROW,
           'FROM class_enrollments WHERE class_id': (args: unknown[]) =>
             args.length === 2 ? (alreadyEnrolled ? { n: 1 } : null) : { n: 9 },
           'FROM class_waitlist WHERE class_id': { n: 0 },
@@ -57,18 +64,19 @@ describe('signUpForClass', () => {
       });
     }
 
-    it('enrolls and records the enrolled-branch waiver acceptance in the same batch, auditing public:signup', async () => {
+    it('enrolls with the real member id (ensureMember resolves it first) and records the ' +
+      'enrolled-branch waiver acceptance in the same batch, auditing public:signup', async () => {
       const { db, calls } = fakeDbFreeCapacity();
       const result = await signUpForClass(db, INPUT);
       expect(result).toEqual({ outcome: 'enrolled' });
 
       const enrollInsert = calls.find((c) => c.sql.startsWith('INSERT INTO class_enrollments'));
-      expect(enrollInsert?.args).toEqual([expect.any(String), CLASS_ROW.id, INPUT.email]);
+      expect(enrollInsert?.args).toEqual([expect.any(String), CLASS_ROW.id, MEMBER_ROW.id]);
 
       const audit = calls.find((c) => c.sql.startsWith('INSERT INTO audit_log'));
-      // The phone is never retained on the enrolled path: no column to write it to, and not
-      // folded into the audit detail either (a phone number is PII with no place in a log meant
-      // to be safe to paste).
+      // The phone is not folded into the audit detail (a phone number is PII with no place in a
+      // log meant to be safe to paste); it does now have a real home on the member row itself,
+      // via ensureMember, covered by the dedicated "resolves a brand-new member" test below.
       expect(audit?.args).toEqual([
         'public:signup',
         'enroll',
@@ -80,8 +88,31 @@ describe('signUpForClass', () => {
       const waiverInsert = calls.find((c) => c.sql.startsWith('INSERT INTO waiver_acceptances'));
       expect(waiverInsert?.args).toEqual([expect.any(String), INPUT.name, INPUT.email, INPUT.waiverVersion]);
 
-      // All three land in one batch call, never as three separate .run()s.
+      // All three land in one batch call, never as three separate .run()s. (An already-known
+      // member, MEMBER_ROW here, adds no INSERT of its own: ensureMember only writes for a
+      // brand-new person, see the dedicated test below.)
       expect(calls.filter((c) => c.sql.startsWith('INSERT'))).toHaveLength(3);
+    });
+
+    it('resolves a brand-new member through ensureMember, passing the signup\'s own phone to ' +
+      'its create path, before enrolling', async () => {
+      const { db, calls } = fakeD1({
+        firstResults: {
+          'FROM classes WHERE id': CLASS_ROW,
+          'FROM members WHERE email': null, // unknown to ensureMember: it must create one
+          'FROM class_enrollments WHERE class_id': (args: unknown[]) => (args.length === 2 ? null : { n: 9 }),
+          'FROM class_waitlist WHERE class_id': { n: 0 },
+        },
+      });
+      const result = await signUpForClass(db, INPUT);
+      expect(result).toEqual({ outcome: 'enrolled' });
+
+      const memberInsert = calls.find((c) => c.sql.startsWith('INSERT INTO members'));
+      expect(memberInsert?.args).toEqual([expect.any(String), expect.any(String), INPUT.name, INPUT.email, INPUT.phone]);
+
+      const enrollInsert = calls.find((c) => c.sql.startsWith('INSERT INTO class_enrollments'));
+      // The enrollment's member_id is the SAME id ensureMember just minted, not the raw email.
+      expect((enrollInsert?.args as unknown[])[2]).toBe((memberInsert?.args as unknown[])[0]);
     });
 
     it('refuses a repeat signup from the same email', async () => {

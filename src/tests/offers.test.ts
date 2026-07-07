@@ -32,6 +32,11 @@ const FULL = { 'FROM classes WHERE id': CLASS_ROW, 'FROM class_enrollments WHERE
 
 const WAITLIST_ID = 'wait-1';
 
+/** The `ensureMember`-resolved id `claimOffer` mints (or finds) for a waitlist entry that joined
+ *  by `applicant_email`, not an already-known `member_id`: see the `claimOffer` tests below that
+ *  key `'FROM members WHERE email'` to this row. */
+const MEMBER_ROW = { id: 'mem-1', household_id: 'hh-1' };
+
 describe('offerSpot', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -126,7 +131,8 @@ describe('claimOffer', () => {
     resolved_at: null,
   };
 
-  it('enrolls the waitlisted person and removes their waitlist row, auditing public:claim', async () => {
+  it('enrolls the waitlisted applicant by resolving a real member id through ensureMember, ' +
+    'removes their waitlist row, and audits public:claim', async () => {
     const { db, calls } = fakeD1({
       firstResults: {
         'FROM class_offers WHERE token': ACTIVE_OFFER_ROW,
@@ -134,9 +140,11 @@ describe('claimOffer', () => {
           id: WAITLIST_ID,
           applicant_name: 'Jamie Rivera',
           applicant_email: 'jamie@example.com',
+          applicant_phone: null,
           member_id: null,
         },
         'FROM classes WHERE id': CLASS_ROW,
+        'FROM members WHERE email': MEMBER_ROW,
       },
     });
     const result = await claimOffer(db, 'plaintext-token');
@@ -149,11 +157,36 @@ describe('claimOffer', () => {
     });
 
     const enrollInsert = calls.find((c) => c.sql.startsWith('INSERT INTO class_enrollments'));
-    expect(enrollInsert?.args).toEqual([(result as { enrollmentId: string }).enrollmentId, CLASS_ROW.id, 'jamie@example.com']);
+    expect(enrollInsert?.args).toEqual([(result as { enrollmentId: string }).enrollmentId, CLASS_ROW.id, MEMBER_ROW.id]);
     expect(calls.some((c) => c.sql === 'DELETE FROM class_waitlist WHERE id = ?1')).toBe(true);
     expect(calls.some((c) => c.sql.startsWith("UPDATE class_offers SET resolved = 'claimed'"))).toBe(true);
     const audit = calls.find((c) => c.sql.startsWith('INSERT INTO audit_log'));
     expect(audit?.args).toEqual(['public:claim', 'claim', 'offer', WAITLIST_ID, `class=${CLASS_ROW.id}`]);
+  });
+
+  it('enrolls straight onto an already-known member_id, never calling ensureMember (no ' +
+    'applicant_email to resolve)', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: {
+        'FROM class_offers WHERE token': ACTIVE_OFFER_ROW,
+        'FROM class_waitlist WHERE id': {
+          id: WAITLIST_ID,
+          applicant_name: null,
+          applicant_email: null,
+          applicant_phone: null,
+          member_id: 'mem-already-a-member',
+        },
+        'FROM classes WHERE id': CLASS_ROW,
+      },
+    });
+    const result = await claimOffer(db, 'plaintext-token');
+    expect('enrollmentId' in result).toBe(true);
+
+    const enrollInsert = calls.find((c) => c.sql.startsWith('INSERT INTO class_enrollments'));
+    expect(enrollInsert?.args).toEqual([(result as { enrollmentId: string }).enrollmentId, CLASS_ROW.id, 'mem-already-a-member']);
+    expect(calls.some((c) => c.sql.startsWith('INSERT INTO households') || c.sql.startsWith('INSERT INTO members'))).toBe(
+      false,
+    );
   });
 
   it('refuses a second claim of an already-resolved token', async () => {
@@ -225,9 +258,11 @@ describe('claimOffer', () => {
           id: WAITLIST_ID,
           applicant_name: 'Jamie Rivera',
           applicant_email: 'jamie@example.com',
+          applicant_phone: null,
           member_id: null,
         },
         'FROM classes WHERE id': CLASS_ROW,
+        'FROM members WHERE email': MEMBER_ROW,
       },
     });
     db.batch = () =>

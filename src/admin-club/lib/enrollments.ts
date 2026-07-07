@@ -4,15 +4,24 @@
 // accepting an admin-offered spot later; this module is the FIRST signup, before any waitlist
 // entry exists.
 //
-// A free-capacity signup enrolls immediately; a full class waitlists instead. Both branches also
-// write a `waiver_acceptances` row in the same `db.batch()` (the gap analysis's item 1): the
-// signer's acceptance of the current liability-release wording is atomic with their signup, never
-// a second round-trip that could land one row without the other. Every write here audits as actor
-// `'public:signup'` (offers.ts's own `'public:claim'`/`'public:decline'` convention, for the same
-// reason: a public submission has no signed-in editor behind it, so `adminAction`'s `ctx.audit` is
-// never available and this module writes its own `audit_log` row directly).
+// A free-capacity signup enrolls immediately; a full class waitlists instead. The enrolled branch
+// resolves a real `members.id` through `ensureMember` (migration 0005_member_domain's arrival)
+// before writing `class_enrollments.member_id`, and passes the signup's own phone along: an
+// enrolled signup's phone finally has a real home (`members.phone`) on the create path, where pre-
+// 0005 there was no column for it at all. The waitlist branch is deliberately NOT a member lookup:
+// a public waitlist join may not be a member yet, and `class_waitlist.member_id` stays NULL with
+// the person identified by `applicant_name`/`applicant_email`/`applicant_phone` instead (the
+// table's own CHECK, `(member_id IS NOT NULL) OR (applicant_email IS NOT NULL)`, already allows
+// this). Both branches also write a `waiver_acceptances` row in the same `db.batch()` (the gap
+// analysis's item 1): the signer's acceptance of the current liability-release wording is atomic
+// with their signup, never a second round-trip that could land one row without the other. Every
+// write here audits as actor `'public:signup'` (offers.ts's own `'public:claim'`/`'public:decline'`
+// convention, for the same reason: a public submission has no signed-in editor behind it, so
+// `adminAction`'s `ctx.audit` is never available and this module writes its own `audit_log` row
+// directly).
 import type { D1Database } from '@cloudflare/workers-types';
 import { getClassWithCounts } from './classes-store';
+import { ensureMember } from './people';
 
 /** A signup's outcome: `'enrolled'` when the class had a free spot, `'waitlisted'` (with the new
  *  entry's queue position) when it was already full. */
@@ -30,14 +39,14 @@ export interface SignUpForClassInput {
   classId: string;
   name: string;
   email: string;
-  /** Optional: the schema's own only truly optional field. Asc-club's `class_enrollments` table
-   *  carries no phone column at all (pre-2.2, a real member row does not exist yet to hold one;
-   *  `guardian_contact` is a distinct youth-track field, not a general contact number), so an
-   *  enrolled signup's phone is simply not retained: no column to write it to, and never folded
-   *  into the audit log either (a phone number is PII that has no place in a log meant to be safe
-   *  to read and paste, per `docs/reference/log-events.md`'s own convention). A waitlisted
-   *  signup's phone DOES have a home (`class_waitlist.applicant_phone`), and is stored there in
-   *  full. */
+  /** Optional: the schema's own only truly optional field. An enrolled signup's phone now has a
+   *  real home, `members.phone`, written by `ensureMember` when it creates a fresh member row
+   *  (migration 0005_member_domain's arrival; `guardian_contact` stays a distinct youth-track
+   *  field, not a general contact number, and is never folded from this). It is still never
+   *  folded into the audit log (a phone number is PII with no place in a log meant to be safe to
+   *  read and paste, per `docs/reference/log-events.md`'s own convention). A waitlisted signup's
+   *  phone has its own separate home, `class_waitlist.applicant_phone`, and is stored there in
+   *  full regardless of member status. */
   phone?: string;
   /** The wording version to stamp the `waiver_acceptances` row with: the caller reads this from
    *  `club-settings.ts`'s `getWaiverTextVersion` at the moment of submission, never here. */
@@ -86,9 +95,11 @@ export async function signUpForClass(
 
   try {
     if (!cls.isFull) {
+      const member = await ensureMember(db, { name: input.name, email: input.email, phone: input.phone });
+
       const already = await db
         .prepare('SELECT 1 AS n FROM class_enrollments WHERE class_id = ?1 AND member_id = ?2 LIMIT 1')
-        .bind(input.classId, input.email)
+        .bind(input.classId, member.memberId)
         .first<{ n: number }>();
       if (already) return { error: 'You are already enrolled in this class.' };
 
@@ -97,7 +108,7 @@ export async function signUpForClass(
       await db.batch([
         db
           .prepare('INSERT INTO class_enrollments (id, class_id, member_id) VALUES (?1, ?2, ?3)')
-          .bind(enrollmentId, input.classId, input.email),
+          .bind(enrollmentId, input.classId, member.memberId),
         db
           .prepare('INSERT INTO audit_log (actor, action, entity, entity_id, detail) VALUES (?1, ?2, ?3, ?4, ?5)')
           .bind('public:signup', 'enroll', 'enrollment', enrollmentId, detail),

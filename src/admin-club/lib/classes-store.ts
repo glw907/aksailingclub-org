@@ -12,11 +12,16 @@
 // (unlike, say, an enrollment-vs-cancelled state machine elsewhere might), so every row for a
 // class counts toward its cap; there is nothing to filter.
 //
-// `class_instructors` assigns by email (see migration 0002_instructor_display_name's own header
-// for why `member_id` holds the email rather than a real `members.id`, which does not exist
-// until 2.2): this module's `ClassInstructor` type names that column `email`, not `memberId`, so
-// the admin screen never has to re-explain the pre-2.2 workaround at its own call sites.
+// `class_instructors` assigns by email: the assignment form only ever collects an email and a
+// display name, never a member id directly. `0002_instructor_display_name`'s interim workaround
+// (reusing `member_id` to hold the email itself, since `members` did not exist yet) is retired by
+// migration 0005_member_domain's arrival (see that migration's own README for the full story);
+// `addInstructor`/`removeInstructor` below now resolve a real `members.id` through `ensureMember`
+// (`people.ts`) before writing or matching `member_id`. This module's `ClassInstructor` type still
+// names its email field `email`, not `memberId`: the admin screen never has to know a real id
+// exists underneath, since every read here joins back to `members` for the address to show.
 import type { D1Database } from '@cloudflare/workers-types';
+import { ensureMember } from './people';
 
 /** The `classes.track` CHECK constraint's exact vocabulary (forward.sql). */
 export const CLASS_TRACKS = ['adult-teen', 'youth'] as const;
@@ -83,9 +88,9 @@ export interface ClassWrite {
   visible: boolean;
 }
 
-/** One instructor assigned to a class: `email` is `class_instructors.member_id` (see this
- *  module's own header for why), `name` is the nullable `member_name` the assignment form
- *  collects alongside it. */
+/** One instructor assigned to a class: `email` is read off the real `members` row `member_id`
+ *  now resolves to (a join, not the column's own stored value; see this module's own header),
+ *  `name` is the nullable `member_name` display cache the assignment form collects alongside it. */
 export interface ClassInstructor {
   email: string;
   name: string | null;
@@ -284,35 +289,49 @@ export async function deleteClass(db: D1Database, id: string): Promise<void> {
 }
 
 /** Every instructor assigned to a class, alphabetical by name (an unnamed row, which should not
- *  happen once the assignment form always collects one, sorts last by email instead). */
+ *  happen once the assignment form always collects one, sorts last by email instead). Joins
+ *  `members` for the real email `class_instructors.member_id` now resolves to (this module's own
+ *  header): the column itself stopped holding the email directly once migration 0005_member_domain
+ *  retired 0002_instructor_display_name's interim workaround. */
 export async function listInstructors(db: D1Database, classId: string): Promise<ClassInstructor[]> {
   const { results } = await db
     .prepare(
-      `SELECT member_id AS email, member_name AS name FROM class_instructors
-       WHERE class_id = ?1 ORDER BY member_name IS NULL, member_name ASC, email ASC`,
+      `SELECT m.email AS email, ci.member_name AS name FROM class_instructors ci
+       JOIN members m ON m.id = ci.member_id
+       WHERE ci.class_id = ?1 ORDER BY ci.member_name IS NULL, ci.member_name ASC, m.email ASC`,
     )
     .bind(classId)
     .all<{ email: string; name: string | null }>();
   return results;
 }
 
-/** Assign an instructor by email, with a display name. Re-assigning an email already on the
- *  class updates its stored name rather than erroring (the primary key is `(class_id,
- *  member_id)`, so a repeat email is a name correction, not a duplicate). */
+/** Assign an instructor by email, with a display name: resolves (or creates) a real `members.id`
+ *  through `ensureMember` first, then writes it as `class_instructors.member_id` (this module's own
+ *  header). A missing display name falls back to the email itself for `ensureMember`'s own
+ *  required `name` (only relevant the first time this email is ever seen; an existing member's
+ *  stored name is untouched either way, `ensureMember`'s own contract). Re-assigning an email
+ *  already on the class updates its stored `member_name` rather than erroring (the primary key is
+ *  `(class_id, member_id)`, so a repeat email is a name correction, not a duplicate). */
 export async function addInstructor(db: D1Database, classId: string, email: string, name: string | null): Promise<void> {
+  const member = await ensureMember(db, { name: name ?? email, email });
   await db
     .prepare(
       `INSERT INTO class_instructors (class_id, member_id, member_name) VALUES (?1, ?2, ?3)
        ON CONFLICT (class_id, member_id) DO UPDATE SET member_name = excluded.member_name`,
     )
-    .bind(classId, email, name)
+    .bind(classId, member.memberId, name)
     .run();
 }
 
-/** Remove one instructor's assignment from a class; the row for any other email or any other
- *  class is untouched. */
+/** Remove one instructor's assignment from a class by email; the row for any other email or any
+ *  other class is untouched. Resolves `member_id` from `email` in the same statement (a subquery
+ *  against `members`, this module's own header) rather than calling `ensureMember`: unassigning
+ *  someone who was never a member at all is simply a no-op delete, not a reason to create one. */
 export async function removeInstructor(db: D1Database, classId: string, email: string): Promise<void> {
-  await db.prepare('DELETE FROM class_instructors WHERE class_id = ?1 AND member_id = ?2').bind(classId, email).run();
+  await db
+    .prepare('DELETE FROM class_instructors WHERE class_id = ?1 AND member_id = (SELECT id FROM members WHERE email = ?2)')
+    .bind(classId, email)
+    .run();
 }
 
 /** The class's enrolled roster, oldest enrollment first, read-only this pass (Task 8's public
