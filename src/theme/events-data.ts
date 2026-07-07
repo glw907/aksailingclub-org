@@ -60,9 +60,14 @@ const EVENTS_QUERY = `SELECT id, title, slug, category AS event_type, start_date
  *  nor `registration_status` is a stored column (registration is now the internal
  *  enrollment/waitlist machine): the signup link is computed directly from the class's own `id`
  *  (collapsing the slug-join Task 8 did against a separate CLUB_DB read, now redundant since this
- *  query already reads CLUB_DB), and the status derives from live enrollment vs `capacity`, the
- *  same fullness rule `$admin-club/lib/classes-store.ts`'s `isFull` already uses, rather than a
- *  stored flag. `hero_image`/`hero_image_alt` select as real columns (migration
+ *  query already reads CLUB_DB), and the status derives from the freed-spot rule
+ *  (`$admin-club/lib/classes-store.ts`'s `isPubliclyOpen`, expressed here as one SQL `CASE` rather
+ *  than a second round trip): `full` when enrollment has reached capacity, `closed` (reusing the
+ *  existing "Closed (Waitlist Open)" label below, originally meant for events) when there is free
+ *  capacity but anyone is still queued — a nonempty waitlist or a live, unresolved offer — and
+ *  `open` only when none of that holds. A freed spot with anyone still queued never reopens to the
+ *  public; only a drop that empties the queue does. `hero_image`/`hero_image_alt` select as real
+ *  columns (migration
  *  `0003_class_images`, a rider closing the regression this pass first shipped with a literal
  *  `NULL` here): the five imported classes' own photography, already in the media library via
  *  `$theme/event-images.ts`'s `EVENT_IMAGE_TOKENS`, renders again. `classes` carries no
@@ -72,8 +77,18 @@ const CLASSES_QUERY = `SELECT id, name AS title, slug, 'class' AS event_type, st
                                NULL AS date_history, location, NULL AS short_description,
                                description AS long_description, hero_image, hero_image_alt,
                                '/classes/' || id || '/signup' AS registration_url,
-                               CASE WHEN (SELECT COUNT(*) FROM class_enrollments e WHERE e.class_id = classes.id) >= capacity
-                                    THEN 'full' ELSE 'open' END AS registration_status,
+                               CASE
+                                 WHEN (SELECT COUNT(*) FROM class_enrollments e WHERE e.class_id = classes.id) >= capacity
+                                   THEN 'full'
+                                 WHEN (SELECT COUNT(*) FROM class_waitlist w WHERE w.class_id = classes.id) > 0
+                                   THEN 'closed'
+                                 WHEN EXISTS (
+                                   SELECT 1 FROM class_offers o
+                                   WHERE o.class_id = classes.id AND o.resolved IS NULL AND o.expires_at > datetime('now')
+                                 )
+                                   THEN 'closed'
+                                 ELSE 'open'
+                               END AS registration_status,
                                fee
                         FROM classes WHERE visible = 1`;
 

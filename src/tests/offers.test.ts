@@ -5,6 +5,7 @@ import {
   claimOffer,
   declineOffer,
   expireStaleOffers,
+  hasActiveOfferForClass,
   hashOfferToken,
   offerSpot,
 } from '$admin-club/lib/offers';
@@ -464,5 +465,17 @@ describe('expireStaleOffers', () => {
     const result = await expireStaleOffers(db);
     expect(result).toEqual({ expiredCount: 0 });
     expect(calls.some((c) => c.sql.startsWith('UPDATE'))).toBe(false);
+  });
+});
+
+describe('hasActiveOfferForClass', () => {
+  it('is true when an unresolved, unexpired offer row exists for the class', async () => {
+    const { db } = fakeD1({ firstResults: { 'FROM class_offers WHERE class_id': { n: 1 } } });
+    await expect(hasActiveOfferForClass(db, CLASS_ROW.id)).resolves.toBe(true);
+  });
+
+  it('is false when no such row exists (resolved, expired, or never offered)', async () => {
+    const { db } = fakeD1({ firstResults: { 'FROM class_offers WHERE class_id': null } });
+    await expect(hasActiveOfferForClass(db, CLASS_ROW.id)).resolves.toBe(false);
   });
 });

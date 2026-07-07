@@ -123,6 +123,55 @@ describe('signUpForClass', () => {
     });
   });
 
+  describe('the freed-spot rule: free capacity alone is not enough', () => {
+    it('waitlists (never enrolls) a technically-free spot when the waitlist is nonempty', async () => {
+      const { db, calls } = fakeD1({
+        firstResults: {
+          'FROM classes WHERE id': CLASS_ROW,
+          // 9 enrolled of 10 capacity: a free spot by the naive rule, but the waitlist has 2
+          // ahead of a brand-new signup, so the freed-spot rule must still waitlist.
+          'FROM class_enrollments WHERE class_id': { n: 9 },
+          "COALESCE(MAX(position)": { next_position: 3 },
+          'FROM class_waitlist WHERE class_id': (args: unknown[]) => (args.length === 2 ? null : { n: 2 }),
+        },
+      });
+      const result = await signUpForClass(db, INPUT);
+      expect(result).toEqual({ outcome: 'waitlisted', position: 3 });
+      expect(calls.some((c) => c.sql.startsWith('INSERT INTO class_enrollments'))).toBe(false);
+    });
+
+    it('waitlists (never enrolls) a technically-free, unqueued spot when a live offer is outstanding', async () => {
+      const { db, calls } = fakeD1({
+        firstResults: {
+          'FROM classes WHERE id': CLASS_ROW,
+          'FROM class_enrollments WHERE class_id': { n: 9 },
+          "COALESCE(MAX(position)": { next_position: 1 },
+          'FROM class_waitlist WHERE class_id': (args: unknown[]) => (args.length === 2 ? null : { n: 0 }),
+          // The other queue-signal: no waitlist entries, but an offer is currently live on the
+          // spot that just freed (the offer chain is still working it privately).
+          'FROM class_offers WHERE class_id': { n: 1 },
+        },
+      });
+      const result = await signUpForClass(db, INPUT);
+      expect(result).toEqual({ outcome: 'waitlisted', position: 1 });
+      expect(calls.some((c) => c.sql.startsWith('INSERT INTO class_enrollments'))).toBe(false);
+    });
+
+    it('enrolls once the queue is truly empty: free capacity, no waitlist, no active offer', async () => {
+      const { db, calls } = fakeD1({
+        firstResults: {
+          'FROM classes WHERE id': CLASS_ROW,
+          'FROM members WHERE email': MEMBER_ROW,
+          'FROM class_enrollments WHERE class_id': (args: unknown[]) => (args.length === 2 ? null : { n: 9 }),
+          'FROM class_waitlist WHERE class_id': { n: 0 },
+        },
+      });
+      const result = await signUpForClass(db, INPUT);
+      expect(result).toEqual({ outcome: 'enrolled' });
+      expect(calls.some((c) => c.sql.startsWith('INSERT INTO class_enrollments'))).toBe(true);
+    });
+  });
+
   describe('when the class is full', () => {
     function fakeDbFull(opts: { alreadyWaitlisted?: boolean; existingMaxPosition?: number } = {}) {
       const { alreadyWaitlisted = false, existingMaxPosition = 2 } = opts;

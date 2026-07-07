@@ -227,6 +227,20 @@ export async function countWaitlist(db: D1Database, classId: string): Promise<nu
   return row?.n ?? 0;
 }
 
+/**
+ * The freed-spot rule (`docs/2026-07-07-member-portal-design.md`): a class is publicly open for a
+ * fresh signup iff it is not full, its waitlist is empty, and no offer is currently outstanding —
+ * never the naive `enrolled < capacity` alone. A freed spot with anyone still queued (a waitlist
+ * entry or a live offer) stays closed to the public while the offer chain works the queue
+ * privately; only a drop that empties the queue re-opens it. `hasActiveOffer` is the caller's own
+ * read (`offers.ts`'s `hasActiveOfferForClass`), kept as a plain argument here so this stays a
+ * pure function every consumer (the public signup route, the portal, the events listing SQL) can
+ * reason about without each re-deriving the same three-way AND.
+ */
+export function isPubliclyOpen(cls: ClassWithCounts, hasActiveOffer: boolean): boolean {
+  return !cls.isFull && cls.waitlistCount === 0 && !hasActiveOffer;
+}
+
 /** Insert a new class row. `id` is the caller's chosen stable identifier: the create action
  *  derives it from the submitted slug, the same `id = slug` convention `events-store.ts`'s
  *  `createEvent` already uses. `season` is read by the caller from `getCurrentSeason`

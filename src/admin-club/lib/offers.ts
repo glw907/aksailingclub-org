@@ -91,6 +91,24 @@ function toOfferRow(row: OfferRawRow): OfferRow {
   };
 }
 
+/**
+ * Whether a class currently has a live (unresolved, unexpired) offer outstanding: the freed-spot
+ * rule's third gate (design doc: "open iff enrolled < capacity AND the waitlist is empty AND no
+ * offer is outstanding"), alongside `ClassWithCounts.isFull` and `waitlistCount`. A deliberately
+ * cheap read, not a lazy-expiry sweep (`expireStaleOffers` is the sweep; this only reads): a
+ * stale, past-expiry offer still counts as "live" here for the brief window before something else
+ * sweeps it, which only ever makes public signup MORE conservative (waitlisting instead of
+ * enrolling), never less safe.
+ */
+export async function hasActiveOfferForClass(db: D1Database, classId: string): Promise<boolean> {
+  const now = toSqliteDatetime(new Date());
+  const row = await db
+    .prepare('SELECT 1 AS n FROM class_offers WHERE class_id = ?1 AND resolved IS NULL AND expires_at > ?2 LIMIT 1')
+    .bind(classId, now)
+    .first<{ n: number }>();
+  return row !== null;
+}
+
 /** Every offer ever made for a class, most recent first: the detail screen's own need. A declined
  *  or expired offer keeps rendering as a history chip against its still-live waitlist entry; a
  *  claimed offer's own waitlist row no longer exists (this module's own header on `claimOffer`),
