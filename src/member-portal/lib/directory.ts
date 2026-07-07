@@ -7,6 +7,7 @@
 // is no per-field suppression column, so a `partial` row's contact fields are simply `null` here
 // rather than the caller having to know which state means what.
 import type { D1Database } from '@cloudflare/workers-types';
+import type { DirectoryVisibility } from './household';
 
 /** One listed member, as the directory renders it. `email`/`phone` are `null` for a `partial`
  *  listing (name only) as well as for a member who genuinely has neither on file; the caller does
@@ -35,7 +36,7 @@ interface DirectoryRow {
   member_name: string;
   email: string | null;
   phone: string | null;
-  directory_visibility: string;
+  directory_visibility: DirectoryVisibility;
 }
 
 /**

@@ -12,16 +12,16 @@ club's scale (roughly 210 members) a client-side filter is plenty, no pagination
 
   let query = $state('');
 
-  const filteredHouseholds = $derived(
-    data.households === null
-      ? []
-      : data.households
-          .map((household) => ({
-            ...household,
-            members: household.members.filter((member) => member.name.toLowerCase().includes(query.trim().toLowerCase())),
-          }))
-          .filter((household) => household.members.length > 0),
-  );
+  const filteredHouseholds = $derived.by(() => {
+    if (data.households === null) return [];
+    const needle = query.trim().toLowerCase();
+    return data.households
+      .map((household) => ({
+        ...household,
+        members: household.members.filter((member) => member.name.toLowerCase().includes(needle)),
+      }))
+      .filter((household) => household.members.length > 0);
+  });
 
   const totalShown = $derived(filteredHouseholds.reduce((sum, household) => sum + household.members.length, 0));
 </script>
@@ -74,15 +74,10 @@ club's scale (roughly 210 members) a client-side filter is plenty, no pagination
           </h2>
           <ul class="mt-xs flex flex-col gap-2xs text-step--1">
             {#each household.members as member (member.id)}
+              {@const contact = [member.email, member.phone].filter(Boolean).join(' · ')}
               <li class="flex flex-wrap items-baseline gap-xs">
                 <span class="text-base-content">{member.name}</span>
-                {#if member.email || member.phone}
-                  <span class="text-muted">
-                    {#if member.email}{member.email}{/if}
-                    {#if member.email && member.phone} · {/if}
-                    {#if member.phone}{member.phone}{/if}
-                  </span>
-                {/if}
+                {#if contact}<span class="text-muted">{contact}</span>{/if}
               </li>
             {/each}
           </ul>
