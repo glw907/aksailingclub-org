@@ -48,23 +48,98 @@
     level: 2 | 3;
   }
 
+  // Named HTML entities the render pipeline's stringify step can emit inside heading text (the
+  // five XML-predefined entities, plus the non-breaking space markdown sometimes carries).
+  const NAMED_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+
+  /** Decode a numeric (`&#38;`/`&#x26;`) or named (`&amp;`) HTML entity back to its character.
+   *  extractToc pulls heading text out of already-serialized HTML by stripping tags with a plain
+   *  regex, which leaves any entity the stringifier wrote (rehype-stringify entity-encodes `&` in
+   *  text nodes) undecoded; left alone, that raw markup lands in a Svelte text expression and
+   *  prints literally ("Adult &amp; Teen Track") instead of the character it stands for. */
+  function decodeEntities(text: string): string {
+    return text.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (match, body: string) => {
+      if (body[0] === '#') {
+        const codePoint = body[1] === 'x' || body[1] === 'X' ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10);
+        return Number.isNaN(codePoint) ? match : String.fromCodePoint(codePoint);
+      }
+      return body in NAMED_ENTITIES ? NAMED_ENTITIES[body] : match;
+    });
+  }
+
   function extractToc(html: string): TocItem[] {
     const items: TocItem[] = [];
     const headingRe = /<h([23]) id="([^"]+)"[^>]*>([\s\S]*?)<\/h\1>/g;
     for (const match of html.matchAll(headingRe)) {
       const level = Number(match[1]) as 2 | 3;
-      const text = match[3].replace(/<[^>]*>/g, '').trim();
+      const text = decodeEntities(match[3].replace(/<[^>]*>/g, '').trim());
       if (text) items.push({ level, id: match[2], text });
     }
     return items;
   }
 
+  // The pitch/reference genre split (the design-polish pass, 2026-07-07): a page named here
+  // renders everything ABOVE the given heading id as a plain, photography-paced flow (no panels,
+  // no TOC, the persuasive pitch a prospective member reads start to finish), and scopes the
+  // density-gated panel + sticky-TOC treatment below to everything from that heading on (the
+  // reference material a reader navigates rather than reads straight through). Keyed by the
+  // pages concept's own flat slug, the same key GOVERNANCE_SUBPAGE_SLUGS uses. A page not listed
+  // here (every other long document, bylaws included) keeps the single-flow density-gated
+  // template unchanged.
+  const PITCH_SPLIT_HEADING_ID: Record<string, string> = {
+    education: 'swim-test-capsize-drill-and-life-jackets',
+  };
+
+  /** Splits rendered HTML immediately before the heading carrying `headingId`: everything before
+   *  that heading's own opening tag is `above`, that heading through the end of the document is
+   *  `below`. Falls back to putting the WHOLE document in `below` (never in `above`) when the id
+   *  is not found, so a content edit that renames or removes the split heading degrades to the
+   *  old single-flow, fully-panelized template rather than silently dropping the tail of the
+   *  page. */
+  function splitAtHeadingId(html: string, headingId: string): { above: string; below: string } {
+    const match = new RegExp(`<h[23] id="${headingId}"`).exec(html);
+    if (!match) return { above: '', below: html };
+    return { above: html.slice(0, match.index), below: html.slice(match.index) };
+  }
+
+  const pitchSplitId = $derived(
+    data.entry.concept === 'pages' ? PITCH_SPLIT_HEADING_ID[data.entry.slug] : undefined,
+  );
+  const pitchSplit = $derived(pitchSplitId ? splitAtHeadingId(data.html, pitchSplitId) : null);
+  // On a split page, only the material below the split heading is subject to the density gate
+  // and the panel/TOC treatment; on every other page `referenceHtml` is the whole document,
+  // matching the template's pre-split behavior exactly.
+  const referenceHtml = $derived(pitchSplit ? pitchSplit.below : data.html);
+  const pitchHtml = $derived(pitchSplit ? pitchSplit.above : '');
+
+  /** Wraps the pitch in alternating full-bleed bands, split at each top-level `<h2>` (the design-
+   *  polish pass, 2026-07-07): a persuasive pitch this long (hero through the last registration
+   *  card, on education) read as one uninterrupted white column with no section pacing at all
+   *  (A1's band recipe: "bands mark sections"). The intro paragraph ahead of the first heading
+   *  joins that first heading's own band rather than getting a sliver band of its own. `.prose`
+   *  itself stays a plain reading column even on a split page (`site.css`'s "no bands on content
+   *  pages" rule is unchanged for every non-pitch page); a `.pitch-band` breaks out of it the same
+   *  way `site.css`'s `.cairn-place-full` already does for a full-bleed figure. */
+  function bandPitch(html: string): string {
+    const starts = [...html.matchAll(/<h2 id="[^"]+"[^>]*>/g)].map((match) => match.index);
+    if (starts.length === 0) return html;
+    const chunks = starts.map((start, i) => html.slice(start, starts[i + 1] ?? html.length));
+    const preamble = html.slice(0, starts[0]);
+    if (preamble.trim()) chunks[0] = preamble + chunks[0];
+    return chunks
+      .map((chunk, i) => `<div class="pitch-band ${i % 2 === 0 ? 'pitch-band-a' : 'pitch-band-b'}">${chunk}</div>`)
+      .join('');
+  }
+
+  const pitchBandedHtml = $derived(bandPitch(pitchHtml));
+
   // Gated on a heading count, not a hardcoded slug list, so this generalizes to any page that
   // grows into a long reference document rather than special-casing bylaws and the new-member
   // guide by name (spec B1: "in-page TOCs on the longest pages"). Eight or more h2/h3 headings is
   // the density where a document reads as a reference to navigate rather than prose to read
-  // straight through.
-  const toc = $derived(extractToc(data.html));
+  // straight through. Computed over `referenceHtml`, not the raw document, so a split page's TOC
+  // both scopes to and covers the material it actually governs, complete rather than truncated.
+  const toc = $derived(extractToc(referenceHtml));
   const showToc = $derived(toc.length >= 8);
   // The section-panel treatment (the presentation round's Strand 2) is the pages concept's own
   // template device, not a general density-gated feature: a long post or bulletin still earns the
@@ -94,8 +169,12 @@
     return `<section class="content-panel">${withLede}</section>`;
   }
 
-  const split = $derived(showToc ? splitAtH2(data.html) : null);
-  const preambleHtml = $derived(split ? split.preamble : data.html);
+  // Splits `referenceHtml`, not the raw document: on a split page that is already just the
+  // material below the pitch/reference boundary, so `preambleHtml` (rare there, since the split
+  // heading is itself an h2) and `sectionsHtml` only ever cover the reference material this
+  // template panelizes.
+  const split = $derived(showToc ? splitAtH2(referenceHtml) : null);
+  const preambleHtml = $derived(split ? split.preamble : referenceHtml);
   const sectionsHtml = $derived(
     split ? split.sections.map((section) => (showPanels ? toPanel(section) : section)).join('') : '',
   );
@@ -179,6 +258,20 @@
     {/if}
     {@render titleBlock()}
   {/if}
+  {#if pitchSplitId}
+    <!-- The pitch: everything above the split heading, banded into alternating sections (the
+         design-polish pass, 2026-07-07) with no panels and no TOC. -->
+    {@html pitchBandedHtml}
+    <!-- The pitch-to-reference hand-off (the design-polish pass, 2026-07-07): the genre shift
+         from persuasion prose to a boxed, navigable reference section was previously silent and
+         abrupt (a finding against education, where the pitch ends mid-registration and the
+         reference material starts at "Swim Test, Capsize Drill..."). A labeled divider announces
+         the shift explicitly instead of leaving the reader to infer it from the narrower measure
+         and the panel chrome alone. -->
+    <div class="pitch-reference-divider not-prose">
+      <span class="pitch-reference-label">Reference &amp; policies</span>
+    </div>
+  {/if}
   {#if showToc}
     <details class="toc mobile-toc">
       <summary>Table of contents</summary>
@@ -259,6 +352,77 @@
   .page-subtitle {
     margin: 0 0 var(--spacing-m);
     font-size: var(--text-step-0);
+    color: var(--color-muted);
+  }
+
+  /* The pitch's section bands (the design-polish pass, 2026-07-07): each `.pitch-band` breaks out
+     to the full viewport width the same way `site.css`'s `.cairn-place-full` already does for a
+     figure (`left: 50%` plus a matching negative `transform`, which centers a 100vw box on the
+     viewport regardless of this ancestor's own padding, as long as the ancestor itself is
+     centered, which `.site-main` always is). The band's own vertical padding carries the section
+     rhythm; adjacent bands touch directly, reading as one continuous strip whose background
+     alternates at the seam, the same "no gap, color does the work" reading `bg-base-200`
+     home-page sections without a border already use. Every selector reaching into this raw-HTML
+     content is `:global()`, the same reason `.content-panel`'s own rules below are: Svelte's
+     scoped-CSS hash never reaches an element `{@html}` injects. */
+  .prose :global(.pitch-band) {
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: var(--spacing-xl) var(--spacing-m);
+  }
+  .prose :global(.pitch-band-b) {
+    background: var(--color-base-200);
+  }
+  /* Re-centers the band's own content to the plain reading measure and reapplies the owl-selector
+     flow rhythm one level deeper than `.prose > * + *` reaches now that a band wraps each
+     section: the same re-declaration `.content-panel`'s own rules use below, so a heading's
+     `--flow-space` (prose.css) still governs the gap above it exactly as it did as a direct
+     child. */
+  .prose :global(.pitch-band > *) {
+    max-width: var(--container-measure);
+    margin-inline: auto;
+  }
+  /* A card grid re-centers to the WIDE measure, not the plain reading measure the rule above
+     gives every other band child (a regression the round-2 review caught, 2026-07-07): the
+     reading-measure cap starves `.asc-cards`' own `repeat(auto-fill, minmax(14rem, 1fr))`
+     (asc-components.css) of the columns it needs, dropping a three-across card row to two with
+     the third card orphaned onto its own line. `--container-measure-wide` matches what the
+     card grid rendered at before the band wrapped it (this page always earns the wide prose
+     measure, since it always carries a TOC), and the band itself is already a full-bleed strip,
+     so a wider child here never overflows it. */
+  .prose :global(.pitch-band > .asc-cards) {
+    max-width: var(--container-measure-wide);
+  }
+  .prose :global(.pitch-band > * + *) {
+    margin-top: var(--flow-space);
+  }
+
+  /* The pitch-to-reference hand-off: a labeled rule announcing the reference section starts here,
+     rather than the reader inferring the genre shift from the narrower measure and panel chrome
+     alone (the design-polish pass's finding, 2026-07-07). Sits in the plain reading column (no
+     band of its own); the reference material past it stays exactly as before. */
+  .pitch-reference-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-s);
+    margin-top: var(--spacing-l);
+  }
+  .pitch-reference-divider::before,
+  .pitch-reference-divider::after {
+    content: '';
+    flex: 1 1 auto;
+    height: var(--border);
+    background: var(--color-card-border);
+  }
+  .pitch-reference-label {
+    flex: 0 0 auto;
+    font-family: var(--font-display);
+    font-size: var(--text-step--1);
+    font-weight: 700;
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
     color: var(--color-muted);
   }
 
@@ -411,20 +575,6 @@
      competing against the h2 immediately above it. */
   .prose :global(.content-panel .panel-lede) {
     font-weight: 450;
-  }
-  /* The craft pass's requiet (2026-07-07): a panelized page's FIRST panel is the first thing a
-     reader sees on scrolling past the title, so an interim "not built yet" callout sitting there
-     (education's Class Schedule opens with exactly one) reads as the page's loudest element even
-     though it already follows the panel's own lede sentence. The note tone's blue-tinted ground and
-     ink title are right for a callout competing with plain prose elsewhere on the page; muting them
-     here, scoped to only the first panel's own callout, keeps the notice honest (still a bordered
-     box, still says what it says) without letting it out-shout the page's own opening content. */
-  .article-sections > :global(.content-panel:first-child .callout-note) {
-    border-left-color: var(--color-card-border);
-    background: var(--color-base-200);
-  }
-  .article-sections > :global(.content-panel:first-child .callout-note .callout-title) {
-    color: var(--color-muted);
   }
   @media (min-width: 48rem) {
     .article-sections:has(:global(.content-panel)) {

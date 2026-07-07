@@ -47,9 +47,15 @@ html {
 }
 
 /* The site-wide band rule (the design-polish pass's audit, 2026-07-07): only the landing-style
-   home page composes full-bleed alternating bands; every long-form content page (education,
-   racing, governance, join, events, contact, donate, posts, tags) stays plain article or list
-   flow inside the shared reading column, with no bands at all, uniformly.
+   home page composes full-bleed alternating bands AT THE PAGE-SHELL LEVEL (this rule, below);
+   every long-form content page (racing, governance, join, events, contact, donate, posts, tags)
+   stays plain article or list flow inside the shared reading column, with no bands at all,
+   uniformly. Education is a documented, narrower exception (a second design-polish finding,
+   2026-07-07): its own persuasive pitch section bands itself with a different, smaller-scale
+   mechanism ([...path]/+page.svelte's own `.pitch-band`, breaking out per-element the same way
+   `.cairn-place-full` does below), never touching `.site-main`'s own box the way this rule does;
+   the reference material past its split heading keeps the plain reading column this rule
+   describes, unchanged.
 
    The home template breaks the shared reading-column contract deliberately: the north star's
    bands are full-bleed to the viewport (alternating white/tinted/navy sections), never framed to
