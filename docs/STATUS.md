@@ -1,9 +1,10 @@
 # asc-site status
 
 Rolling status for the Alaska Sailing Club's cairn rebuild. Canonical plan:
-`~/Projects/cairn-cms/docs/superpowers/plans/2026-07-06-asc-phase-1-build.md`, executing
-`~/Projects/cairn-cms/docs/superpowers/specs/2026-07-06-asc-phase-1-design.md`. Read this file
-first for where the work stands before picking up the next task.
+`~/Projects/cairn-cms/docs/superpowers/plans/2026-07-06-asc-phase-1-build.md`. The design contract
+this build executes has a durable local copy in this repo: `docs/2026-07-06-asc-phase-1-design.md`
+and the blessed home-page example, `docs/2026-07-06-asc-home-northstar.html`. Read this file first
+for where the work stands before picking up the next task.
 
 ## Where things stand (2026-07-06)
 
@@ -29,8 +30,20 @@ itself is untouched, still bound at `staging.aksailingclub.org`. **Production
 (`aksailingclub.org`, the live Hugo site) is untouched**; the apex DNS cutover is a deliberate,
 separate act gated on Geoff's before/after review, per the design spec.
 
+## The punch list (found on the dev walkthrough, not yet fixed)
+
+- **News-card cover images render as placeholders.** The content-migration pass (Task 2, see
+  `docs/content-migration-findings.md`) uploaded 29 of 31 posts' real photography into the media
+  library and pushed the bytes to both the local and remote `asc-site-media` R2 bucket, and the
+  `posts` concept declares an `image` field. On dev, the News & Updates cards still show the
+  broken-image placeholder instead of those photos. Not yet root-caused; the fix pass should check
+  the `image` field's shape against what the card component actually reads, and whether the
+  deployed Worker's `/media` route resolves the content hash correctly, before assuming the R2
+  bytes themselves are missing.
+
 ## What is NOT done yet
 
+- **The punch-list fix above**, first.
 - **The apex cutover.** `aksailingclub.org` still serves the old Hugo/GCE site. This is Geoff's
   call, not an engineering task: the design spec gates it on his explicit go after a live review
   of dev, and the GCE origin retires only after a soak period following that cutover.
@@ -57,7 +70,10 @@ separate act gated on Geoff's before/after review, per the design spec.
 
 ## Next action
 
-Land the ASC harvest review (see `pre-beta-harvest.md` in cairn-cms), then wait for Geoff's
-before/after review of dev before scoping the apex cutover as its own small task. Clearing the
-GitHub Actions billing block is a standing prerequisite for either CI or the deploy workflow to
-run automatically again.
+**Geoff's dev walkthrough first** (a live review of `dev.aksailingclub.org`, the trigger for
+everything below it): the news-card image punch list above is what it has surfaced so far, and
+the walkthrough may surface more. **Then the punch-list fix pass** (the image bug at minimum, plus
+anything else the walkthrough finds). **Then the production apex cutover, on Geoff's explicit
+go**, per the design spec's before/after-approval gate — never bundled with a routine push to
+`main`. Clearing the GitHub Actions billing block is a standing prerequisite for either CI or the
+deploy workflow to run automatically again, independent of the above.
