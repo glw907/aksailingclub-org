@@ -65,6 +65,13 @@ redirect coverage, feeds (cleaner than live's).
     improvement).
 
 ### The events deep-look (Geoff: "look carefully at the events page")
+**USER-VALIDATED LAYOUT (Geoff, 2026-07-06): ASC users enjoy the CURRENT live events
+page's layout — the new page preserves its SHAPE (the month filter tabs, the
+category/status badge placement, per-event description blocks with register links, the
+calendar-subscribe block, the meetings section's position) and re-expresses only the
+SKIN in the north-star design language (the club-grounds colors, the type, the band
+rhythm). Layout similarity to live is a grading criterion, not a suggestion: the
+verifier compares the new page's structure against live's side by side.**
 The completion pass treats live /events/ as its own mini-manifest: re-enumerate the page
 directly and exhaustively (the walk's 8-feature list is the floor, not the ceiling —
 filters, badges, statuses, descriptions, locations, register links, calendar-subscribe,
