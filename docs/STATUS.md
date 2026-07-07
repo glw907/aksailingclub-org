@@ -1,5 +1,14 @@
 # asc-site status
 
+**THE FULL-SITE WALKTHROUGH LANDED (2026-07-06, three verifier chunks, every page):
+docs/ORIGINAL-MANIFEST.md is the completion pass's checklist — 7 go-live blockers
+(events stub, dead forms, notifications unwired, the WRONG LOGO, home news images,
+bulletins missing, news wayfinding), 5 must-fixes, 4 sanction questions for Geoff.
+The guides/informational pages verified strong; the design direction ratified; the
+fidelity layer is the work. NOTHING ships to Geoff's eyes until every manifest line
+is checked. Next action: the completion pass against the manifest.**
+
+
 Rolling status for the Alaska Sailing Club's cairn rebuild. Canonical plan:
 `~/Projects/cairn-cms/docs/superpowers/plans/2026-07-06-asc-phase-1-build.md`. The design contract
 this build executes has a durable local copy in this repo: `docs/2026-07-06-asc-phase-1-design.md`
