@@ -1,0 +1,134 @@
+import { describe, expect, it, vi } from 'vitest';
+import { isActionFailure } from '@sveltejs/kit';
+import type { Editor } from '@glw907/cairn-cms';
+import type { AdminActionAuditRecord } from '@glw907/cairn-cms/sveltekit';
+import { actions } from '../routes/admin/club/settings/+page.server';
+import { fakeD1 } from './_fake-d1';
+
+const admin: Editor = { email: 'admin@example.com', displayName: 'Admin', role: 'editor' };
+const owner: Editor = { email: 'owner@example.com', displayName: 'Owner', role: 'editor' };
+
+const CSRF_COOKIE_NAME = '__Host-cairn_csrf';
+const CSRF_TOKEN = 'test-csrf-token';
+
+type SettingsActionEvent = Parameters<typeof actions.setRole>[0];
+
+/** A fake POST event carrying exactly what `adminAction` and these handlers read, plus the
+ *  `CLUB_DB` binding the handlers resolve off `event.platform.env` (see `resolveClubDb`'s own
+ *  header comment for why that read needs a cast rather than a typed field). */
+function postEvent(
+  editor: Editor | null,
+  fields: Record<string, string>,
+  opts: { db?: unknown; auditSink?: (record: AdminActionAuditRecord) => void } = {},
+): SettingsActionEvent {
+  const formData = new FormData();
+  formData.set('csrf', CSRF_TOKEN);
+  for (const [key, value] of Object.entries(fields)) formData.set(key, value);
+  const url = 'https://x.dev/admin/club/settings';
+  const request = new Request(url, { method: 'POST', body: formData });
+  return {
+    url: new URL(url),
+    request,
+    cookies: {
+      get: (name: string) => (name === CSRF_COOKIE_NAME ? CSRF_TOKEN : undefined),
+      set: () => undefined,
+      delete: () => undefined,
+    },
+    platform: { env: { CLUB_DB: opts.db } },
+    locals: { editor, auditSink: opts.auditSink },
+  } as unknown as SettingsActionEvent;
+}
+
+describe('club settings actions: owner gate', () => {
+  it('setRole refuses a club admin (403), auditing the rejected attempt', async () => {
+    const { db } = fakeD1({ allResults: { 'FROM club_roles': [{ role: 'club-admin' }] } });
+    const sink = vi.fn();
+    const result = await actions.setRole(
+      postEvent(admin, { email: 'new@example.com', role: 'admin' }, { db, auditSink: sink }),
+    );
+    expect(isActionFailure(result)).toBe(true);
+    expect((result as { status: number }).status).toBe(403);
+    expect(sink).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'set-role', entity: 'club-role', editor: admin.email }),
+    );
+  });
+
+  it('setRole succeeds for an owner and audits the grant', async () => {
+    const { db, calls } = fakeD1({ allResults: { 'FROM club_roles': [{ role: 'owner' }] } });
+    const sink = vi.fn();
+    const result = await actions.setRole(
+      postEvent(owner, { email: 'new@example.com', role: 'admin' }, { db, auditSink: sink }),
+    );
+    expect(result).toEqual({ ok: true });
+    expect(calls.some((c) => c.sql.startsWith('INSERT INTO club_roles') && c.args[0] === 'new@example.com')).toBe(
+      true,
+    );
+    expect(sink).toHaveBeenCalledWith({
+      action: 'set-role',
+      entity: 'club-role',
+      entityId: 'new@example.com',
+      detail: 'admin',
+      editor: owner.email,
+    });
+  });
+
+  it('removeRole refuses a club admin (403)', async () => {
+    const { db } = fakeD1({ allResults: { 'FROM club_roles': [{ role: 'club-admin' }] } });
+    const result = await actions.removeRole(postEvent(admin, { email: 'gone@example.com' }, { db }));
+    expect(isActionFailure(result)).toBe(true);
+    expect((result as { status: number }).status).toBe(403);
+  });
+
+  it('removeRole succeeds for an owner and audits the revoke', async () => {
+    const { db, calls } = fakeD1({ allResults: { 'FROM club_roles': [{ role: 'owner' }] } });
+    const sink = vi.fn();
+    const result = await actions.removeRole(postEvent(owner, { email: 'gone@example.com' }, { db, auditSink: sink }));
+    expect(result).toEqual({ ok: true });
+    expect(calls.some((c) => c.sql.startsWith('DELETE FROM club_roles') && c.args[0] === 'gone@example.com')).toBe(
+      true,
+    );
+    expect(sink).toHaveBeenCalledWith({
+      action: 'remove-role',
+      entity: 'club-role',
+      entityId: 'gone@example.com',
+      editor: owner.email,
+    });
+  });
+
+  it('updateOfferWindow refuses a club admin (403)', async () => {
+    const { db } = fakeD1({ allResults: { 'FROM club_roles': [{ role: 'club-admin' }] } });
+    const result = await actions.updateOfferWindow(postEvent(admin, { offerWindowHours: '48' }, { db }));
+    expect(isActionFailure(result)).toBe(true);
+    expect((result as { status: number }).status).toBe(403);
+  });
+
+  it('updateOfferWindow fails 400 on a non-positive-integer value, still audited', async () => {
+    const { db } = fakeD1({ allResults: { 'FROM club_roles': [{ role: 'owner' }] } });
+    const sink = vi.fn();
+    const result = await actions.updateOfferWindow(
+      postEvent(owner, { offerWindowHours: 'not-a-number' }, { db, auditSink: sink }),
+    );
+    expect(isActionFailure(result)).toBe(true);
+    expect((result as { status: number }).status).toBe(400);
+    expect(sink).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'update-offer-window', entity: 'setting', editor: owner.email }),
+    );
+  });
+
+  it('updateOfferWindow succeeds for an owner and audits the new value', async () => {
+    const { db, calls } = fakeD1({ allResults: { 'FROM club_roles': [{ role: 'owner' }] } });
+    const sink = vi.fn();
+    const result = await actions.updateOfferWindow(
+      postEvent(owner, { offerWindowHours: '48' }, { db, auditSink: sink }),
+    );
+    expect(result).toEqual({ ok: true });
+    expect(calls.some((c) => c.sql.startsWith('UPDATE settings') && c.args[0] === '48')).toBe(true);
+    expect(sink).toHaveBeenCalledWith({
+      action: 'update-offer-window',
+      entity: 'setting',
+      entityId: 'offer_window_hours',
+      detail: '48',
+      editor: owner.email,
+    });
+  });
+});

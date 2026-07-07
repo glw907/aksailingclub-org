@@ -27,8 +27,9 @@ export const { renderMarkdown } = createRenderer(ascRegistry);
 // The Club section (docs/superpowers/specs/2026-07-06-asc-phase-2-design-suite.md, Part B): the
 // ops-absorption screens present inside cairn's admin as custom /admin/club/* routes, one
 // collapsible sidebar group (Part C item 4's engine seam) beside the built-in Core section. Icon
-// picks stay inside cairn's nine-name allowlist.
-const clubAdminNav: AdminNavSection = {
+// picks stay inside cairn's nine-name allowlist. Exported so `cairn.server.ts`'s `navFilter`
+// (Task 4) can match this section by its own `label` rather than a second, driftable string.
+export const clubAdminNav: AdminNavSection = {
   label: 'Club',
   children: [
     { label: 'Events', icon: 'calendar', href: '/admin/club/events' },
@@ -37,6 +38,11 @@ const clubAdminNav: AdminNavSection = {
     { label: 'Signups', icon: 'list', href: '/admin/club/signups' },
     { label: 'Assets', icon: 'package', href: '/admin/club/assets' },
     { label: 'Email', icon: 'inbox', href: '/admin/club/email' },
+    // Task 4: role management + the offer-window setting; the layout guard admits any club role
+    // here, but the screen's own write actions are owner-only (see the settings route's header
+    // comment). `ownerOnly` stays unset: an admin should still SEE the link and the current
+    // state, even though most of its actions refuse them server-side.
+    { label: 'Settings', icon: 'wrench', href: '/admin/club/settings' },
   ],
 };
 
