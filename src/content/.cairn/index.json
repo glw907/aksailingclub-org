@@ -856,19 +856,6 @@
       "tags": [
         "club"
       ]
-    },
-    {
-      "id": "2026-07-06-welcome",
-      "concept": "posts",
-      "title": "Welcome to the new site",
-      "date": "2026-07-06",
-      "permalink": "/posts/welcome",
-      "summary": "This site is under construction; the club's full content is on its way.",
-      "draft": false,
-      "links": [],
-      "tags": [
-        "news"
-      ]
     }
   ]
 }
