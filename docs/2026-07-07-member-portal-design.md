@@ -119,6 +119,15 @@ and class signup proceed as short single-question steps rather than one long for
 - The primary designation shown; reassignment is an admin action (the portal links to
   contact, doesn't self-serve it in v1).
 
+## The accessibility floor (WCAG 2.2 AA, strict on the two forms that matter)
+
+Magic-link auth is itself a W3C-listed sufficient technique for Accessible Authentication
+(3.3.8/G218). The floor, applied hardest to sign-in and payment: visible persistent labels
+(never placeholder-only), inline named errors that say the fix, correct `autocomplete`
+tokens on every identity field, a review-and-confirm step before any charge (3.3.4), no
+session timeout mid-payment (2.2.1), and GOV.UK-register copy (short words, one question
+at a time). The offer countdown never conveys urgency by color alone.
+
 ## The auth surface
 
 - Member sign-in page at `/my-account` when signed out: one email field, one button, the
@@ -135,15 +144,19 @@ The research band (MGI association benchmarks: big associations run 6-7 touches 
 months out; diminishing-returns evidence thin; 30-90 days post-lapse is the win-back window)
 against Geoff's "far fewer, well-chosen":
 
-- **Four touches, all season-anchored, all deep-linking to /my-account/renew:**
-  1. Window opens (~8 weeks before the season boundary): the warm one. What the season
-     holds, renew when ready.
-  2. Mid-window (~3 weeks out): the practical one. Price, credits, one click.
-  3. Boundary week: the factual one. "Your membership lapses <date>."
-  4. The single post-lapse touch (~4 weeks after): the door-open one. Credits survive,
+- **Four touches, all season-anchored, all deep-linking to /my-account/renew** (the
+  research's evidence band: associations run ~6-7 touches from ~3.9 months out with no
+  measured annoyance threshold; four sits inside the band while honoring "far fewer,
+  well-chosen"):
+  1. ~30 days before the boundary: the warm one. Value first, never opening with the ask;
+     the magic link lands on the renewal step directly.
+  2. ~7 days before: the short practical one. Price, credits, one click.
+  3. Day-of (or just after): the factual one. "Your membership lapses <date>."
+  4. The single post-lapse touch (~30 days after): the door-open one. Credits survive,
      rejoining is one click, and this is the last reminder — said plainly (the "we'll stop
      emailing you about this" line; the research found no evidence either way, so the
-     club's own courtesy wins).
+     club's own courtesy wins). Past ~90 days any outreach is a differently-framed
+     win-back, not another reminder.
 - Every touch suppressed instantly on renewal (segment = not-yet-renewed, resolved at send
   time); auto-renewed members (if that ever ships) never see dunning copy.
 - Offsets are `settings` rows; the committee tunes without code. Per-recipient send rows in
