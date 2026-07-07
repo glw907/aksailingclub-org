@@ -384,6 +384,17 @@
     max-width: var(--container-measure);
     margin-inline: auto;
   }
+  /* A card grid re-centers to the WIDE measure, not the plain reading measure the rule above
+     gives every other band child (a regression the round-2 review caught, 2026-07-07): the
+     reading-measure cap starves `.asc-cards`' own `repeat(auto-fill, minmax(14rem, 1fr))`
+     (asc-components.css) of the columns it needs, dropping a three-across card row to two with
+     the third card orphaned onto its own line. `--container-measure-wide` matches what the
+     card grid rendered at before the band wrapped it (this page always earns the wide prose
+     measure, since it always carries a TOC), and the band itself is already a full-bleed strip,
+     so a wider child here never overflows it. */
+  .prose :global(.pitch-band > .asc-cards) {
+    max-width: var(--container-measure-wide);
+  }
   .prose :global(.pitch-band > * + *) {
     margin-top: var(--flow-space);
   }
