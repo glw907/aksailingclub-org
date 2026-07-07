@@ -8,8 +8,7 @@ description: "Complete text of the Bylaws governing The Alaska Sailing Club, Inc
 
 [Download the PDF](/uploads/2024/04/bylaws-of-the-alaska-sailing-club-inc.pdf)
 
-:::callout{tone="note"}
-[Plain-English summary]
+:::callout[Plain-English Summary]{tone="note"}
 The bylaws are the primary operating document of the Alaska Sailing Club. They govern how membership works, how the board is structured and elected, and how the club makes binding decisions. When a question isn't covered by board policy or established practice, the bylaws are the authority.
 
 **What this means for members:**
