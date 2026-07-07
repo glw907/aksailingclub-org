@@ -103,6 +103,7 @@ know, the system sends it.** The full send inventory, each with its trigger:
 | Storage confirm-your-spot | Retention window opens | With the request machinery |
 | Renewal reminders (the four touches) | Cron, per-household rolling dates | Needs the job runner |
 | Class reminder SET (Geoff, 2026-07-07): welcome-on-signup, ~7 days out, day-before, after-with-next-steps | Signup (welcome) + cron T-minus per class start_date (the rest) | The job runner build; per-participant, guardian-routed for kids, each a settings-configurable template with a class-specific override slot, sent once (a per-enrollment per-touch marker) |
+| Refund-window-closing notice (Geoff, 2026-07-07) | Cron, a FEW DAYS before the refund cutoff (cutoff = start_date − refund_window_days, default 14, a settings row; the notice offset also a setting, default 3 days before the cutoff) | The job runner; only ENROLLED PAID participants (a free-clinic or credit-only enrollee has nothing to refund); copy states the exact cutoff date + the withdraw link + the refund-or-voucher choice; per-enrollment once-marker; guardian-routed for kids |
 | Approved-asset "pay to confirm" + window reminder | Approval; cron mid-window | With requests + job runner |
 | New-signup nudge to the membership committee | Signup lands | With the attention strip |
 | Admin notice: class withdrawal + where the auto-offer went | Member withdraws (Geoff, 2026-07-07) | With the withdrawal build |
