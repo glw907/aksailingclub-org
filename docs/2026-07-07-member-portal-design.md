@@ -1,0 +1,168 @@
+# The member portal design suite (pass 2.2's member-facing face)
+
+Authored on Fable, 2026-07-07 (the extended window's overnight run), against the phase-2
+design suite's member-model rulings, Geoff's 2026-07-07 rulings (episodic use; lean data;
+primary-controls-household-listings; retention-without-pestering reminders), the
+MembershipWorks teardown, and the portal-UX research sweep (exemplars cited inline where the
+research grounds a choice). The mockup set that accompanies this document is the ratification
+artifact; this document is the reasoning it stands on.
+
+## The governing constraint: episodic use
+
+Geoff's own line: members RARELY touch their membership info; it happens at signup and
+renewal. The design consequence reaches everything:
+
+- **Every visit is a first visit.** No learned navigation may be assumed. The portal has no
+  concept of a power user; nothing lives behind an icon a visitor must remember.
+- **Task-first, not dashboard-first.** The median account page greets a returning user with
+  stat tiles. Our member arrives with exactly one intention (renew; register for a class;
+  update a phone number; occasionally "am I current?"). The landing screen is an answer plus
+  a short task list, not a dashboard.
+- **The email IS the front door.** For an episodic user, the renewal reminder and the
+  magic-link sign-in are the navigation. The reminder email deep-links into the renewal flow;
+  the portal never depends on someone thinking "I should go check the portal."
+- **MembershipWorks sets a low bar and two traps to avoid** (from the teardown): its login is
+  a manual password-by-email round-trip with documented failure modes (our magic link is the
+  same gesture done right), and its portal wayfinding is the top verified complaint. We beat
+  it by having fewer places, not better signage.
+
+## What the portal is
+
+`my-account` on the public site, behind member magic-link auth (the same lean D1 token
+discipline as the admin's, against the member store; the site-brings-its-own-auth seam eating
+its own dogfood). One surface, five jobs, frequency-ordered:
+
+1. **Renew and pay** (annual; the reminder email lands here with one intermediate screen).
+2. **Register for a class** (credit redemption automatic and visible; waitlist join when
+   full; "My classes" thereafter, including the instructor's roster view when the member
+   instructs — that view rides this surface, 2.2+).
+3. **See standing at a glance** (current / lapses <date> / lapsed, tier, who's covered).
+4. **Edit contact info + directory visibility** (one email, one phone, E.164; visibility with
+   a "what others see" preview).
+5. **Manage the household** (primary only: add/edit household members, set any household
+   member's directory listing — Geoff's 2026-07-07 ruling — and hold the renewal/payment
+   power; non-primary adults self-serve their own profile and visibility only).
+
+Explicitly NOT in the portal: payment-method vaulting (annual manual renewal is the club's
+rhythm; no stored cards in v1), invoice archaeology beyond simple receipts, any admin
+function, any content function.
+
+## Information architecture: one landing, task pages under it
+
+```
+/my-account                     the landing: standing card + task list + household card
+/my-account/renew               the renewal flow (also the reminder email's deep link)
+/my-account/classes             register / my classes / waitlist status (+ roster view when instructor)
+/my-account/profile             contact info + directory visibility (with preview)
+/my-account/household           primary only: members, listings, primary reassignment request
+```
+
+One level deep, no tabs-within-tabs, every page reachable from the landing in one click and
+returning to it in one click. The landing answers "am I current, who's covered, is anything
+due" in the first screenful; the GOV.UK one-thing-per-page doctrine governs the flows (renewal
+and class signup proceed as short single-question steps rather than one long form).
+
+## Screen-by-screen (the mockup set's contract)
+
+### 1. The landing (`/my-account`)
+
+- **The standing card** leads: tier, season, plain-words status line ("Current through
+  April 30, 2027 · Family membership · 2 class credits available"). Status colors follow the
+  club-grounds palette's semantic trio only.
+- **The task list** below it, rendered ONLY when a task exists: "Renew for 2027" (in the
+  renewal window), "Use your class credit" (unspent credit + open registration), "Confirm
+  your household's directory listings" (one-time nudges, dismissible). No tasks = the list is
+  absent, not an empty state.
+- **The household card** (family memberships): who's covered, one line each, the primary
+  marked; the primary sees the manage link.
+- Receipts live as a short list at the foot (date, what, amount, view/print) — the
+  self-serve receipt history MW members already expect.
+
+### 2. Renewal (`/my-account/renew`)
+
+- Standing BEFORE money: the flow opens by saying what renewing buys ("2027 season ·
+  Family · $500 · includes 2 class credits") before any payment control.
+- One decision per screen; Stripe Checkout carries the card step (the ops-proven pattern,
+  consolidated); the receipt lands by email and in the receipts list.
+- The reminder email deep-links here; the flow works identically from a cold magic-link
+  sign-in mid-window.
+- Lapsed members get the same flow with honest copy (no penalty framing; credits survived,
+  say so: "your 1 unused class credit is still yours").
+
+### 3. Classes (`/my-account/classes`)
+
+- Open sessions listed with seats-remaining honesty; a member with an unspent credit sees
+  the credit APPLIED by default at confirmation ("Using 1 class credit — $0 due today");
+  no credit = the $100 fee line and Checkout.
+- Full session → one-click waitlist join; the member's waitlist position and any live offer
+  (with its 72-hour countdown) render here; claiming an offer lands in the same confirmation
+  flow.
+- After registration: "My classes" rows (dates, location, what to bring link). A member
+  holding the instructor role additionally sees their assigned classes' rosters here (2.2+,
+  the privacy-floor fields only).
+
+### 4. Profile (`/my-account/profile`)
+
+- The lean fields only: name, one email, one phone (E.164 stored, formatted on render),
+  birthdate (shown as "used for class age groups and the young-adult rate; never shown to
+  other members"), household address (edit routes the primary's copy on non-primaries).
+- **Directory visibility as consent UI**: the member's own row previewed exactly as other
+  members will see it, a single visible/partial/hidden control beside it, per-field
+  suppression under "partial". Changing it updates the preview live. Hidden is one click, no
+  confirmation friction.
+
+### 5. Household (`/my-account/household`, primary only)
+
+- The covered members, each with: profile summary, directory listing control (the primary
+  can set any household member's listing — the ruling; minors' rows say so plainly), and
+  remove/add (add = the welcome page's "add each household member" promise, fulfilled here).
+- The primary designation shown; reassignment is an admin action (the portal links to
+  contact, doesn't self-serve it in v1).
+
+## The auth surface
+
+- Member sign-in page at `/my-account` when signed out: one email field, one button, the
+  same quiet voice as the admin's login. The magic link email copy names the club and the
+  action, nothing else.
+- Sessions modest-lived (the admin's session discipline); signing out is visible but
+  unnecessary (episodic use = sessions simply age out).
+- A signed-in EDITOR is not a member session and vice versa; the two stores never blur (the
+  access-tier ruling's member-facing mirror).
+
+## Renewal reminders (the retention-without-pestering system)
+
+The research band (MGI association benchmarks: big associations run 6-7 touches from ~4
+months out; diminishing-returns evidence thin; 30-90 days post-lapse is the win-back window)
+against Geoff's "far fewer, well-chosen":
+
+- **Four touches, all season-anchored, all deep-linking to /my-account/renew:**
+  1. Window opens (~8 weeks before the season boundary): the warm one. What the season
+     holds, renew when ready.
+  2. Mid-window (~3 weeks out): the practical one. Price, credits, one click.
+  3. Boundary week: the factual one. "Your membership lapses <date>."
+  4. The single post-lapse touch (~4 weeks after): the door-open one. Credits survive,
+     rejoining is one click, and this is the last reminder — said plainly (the "we'll stop
+     emailing you about this" line; the research found no evidence either way, so the
+     club's own courtesy wins).
+- Every touch suppressed instantly on renewal (segment = not-yet-renewed, resolved at send
+  time); auto-renewed members (if that ever ships) never see dunning copy.
+- Offsets are `settings` rows; the committee tunes without code. Per-recipient send rows in
+  `email_log` (ops's convention carried).
+
+## What the mockups must show (the build contract)
+
+Eight frames: signed-out sign-in; landing (current, with tasks); landing (family primary,
+no tasks); renewal step 1 + confirmation; classes with credit-applied confirmation; waitlist
+row with live offer countdown; profile with visibility preview (partial state); household
+(primary view). Warm Stone admin idiom does NOT apply here — this is the PUBLIC site's
+member surface, so it wears the club-grounds theme (the site's own type scale, bands, and
+buttons), reading as club pages, not as admin chrome.
+
+## Open items riding to ratification
+
+1. The four-touch cadence and its copy registers (above) — approve or adjust.
+2. Receipts: email-only vs the in-portal list (drafted: both, list minimal).
+3. The lapsed-directory grace: MW hides a listing N days after lapse; drafted as
+   "directory requires current standing, immediately" for simplicity. Softer?
+4. Class refund/cancel self-service: drafted OUT of v1 (the education page's existing
+   human-contact policy stands).
