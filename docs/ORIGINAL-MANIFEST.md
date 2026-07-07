@@ -27,12 +27,31 @@ redirect coverage, feeds (cleaner than live's).
 2. **Contact + Donate forms are placeholders** — the two conversion paths dead (donate:
    presets + custom + Turnstile; contact: routed message form). Donate also lost its
    hero photo.
+   **RESOLVED (2026-07-06, the completion pass):** both forms are live, hydrated islands
+   (`ContactForm.svelte`, `DonateForm.svelte`) over a plain mailto fallback for a reader
+   with no JavaScript. Contact posts through `sendMessage`, routing by category to the
+   right volunteer committee (`contact-routing.ts`, ported from the retiring Worker's own
+   routing map). Donate offers the four live presets plus a custom amount and an optional
+   note, and posts through `createDonationCheckout`, which creates a Stripe Checkout
+   Session (`donate-pricing.ts`); its hero photo is restored via the pages concept's own
+   `image` field. Both run Turnstile and degrade to a graceful message when their secrets
+   aren't provisioned yet.
 3. **The notifications concept does not render** — the home banner strip absent; the
    concept's display path is unwired.
+   **RESOLVED (2026-07-06):** the home banner strip now reads a pure, unit-tested
+   `activeNotification` (`active-notification.ts`), extracted from the page load and
+   proven against the concept's own expiry rule (an expired entry is honest silence, not
+   a bug).
 4. **THE LOGO IS WRONG** — an invented navy badge replaces the club's crescent-and-star-
    trail mark, sitewide. Identity item; restore the real mark everywhere.
+   **RESOLVED (2026-07-06):** the club's real logo (aksailingclub.org's own `/img/logo.png`
+   and its dark-theme variant) replaces the invented badge in the site header, the only
+   place the placeholder mark appeared.
 5. **News feature images missing on the home cards** (posts render them fine — the home
    card image path is the gap); read-times dropped too.
+   **RESOLVED (2026-07-06):** `post-cards.ts` resolves each shown post's real frontmatter
+   hero photo through the media manifest and computes a reading time from its word count;
+   the News & Updates cards on the home page show both.
 6. **The bulletins concept is missing** — two live URLs 404 with no redirect.
    **RESOLVED (2026-07-06, the completion pass): a real `bulletins` concept**, both live
    bulletins migrated with their exact `/bulletins/<slug>/` URLs (no redirect needed; the

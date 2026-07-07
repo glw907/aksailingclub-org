@@ -3,10 +3,11 @@
 **THE FULL-SITE WALKTHROUGH LANDED (2026-07-06, three verifier chunks, every page):
 docs/ORIGINAL-MANIFEST.md is the completion pass's checklist — 7 go-live blockers
 (events stub, dead forms, notifications unwired, the WRONG LOGO, home news images,
-bulletins missing, news wayfinding), 5 must-fixes, 4 sanction questions for Geoff.
-The guides/informational pages verified strong; the design direction ratified; the
-fidelity layer is the work. NOTHING ships to Geoff's eyes until every manifest line
-is checked. Next action: the completion pass against the manifest.**
+bulletins missing, news wayfinding), 5 must-fixes, 4 sanction questions for Geoff. **All
+7 go-live blockers and the 3 sanctioned photo restores are now done** (2026-07-06); the 5
+must-fixes (search, the responsive table, TOCs, the legacy RSS redirect, facilities/footer
+gaps) are what remains before the apex cutover. NOTHING ships to Geoff's eyes until every
+manifest line is checked.**
 
 
 Rolling status for the Alaska Sailing Club's cairn rebuild. Canonical plan:
@@ -48,24 +49,25 @@ Governance, type and registration-status badges, descriptions, register links, p
 photography, a real `/events/calendar.ics` feed), built against `docs/events-manifest.md`'s
 exhaustive re-enumeration of the live page. `$theme/events-data.ts`, `$theme/ics.ts`,
 `EventsListing.svelte`, `EventCard.svelte`; unit-tested; the site-visual e2e baseline
-regenerated. The rest of the manifest's items (the dead forms, the wrong logo, the
-notifications wire-up, the bulletins concept, the other go-live blockers and must-fixes)
-remain open.
+regenerated.
 
-## The punch list (found on the dev walkthrough, not yet fixed)
-
-- **News-card cover images render as placeholders.** The content-migration pass (Task 2, see
-  `docs/content-migration-findings.md`) uploaded 29 of 31 posts' real photography into the media
-  library and pushed the bytes to both the local and remote `asc-site-media` R2 bucket, and the
-  `posts` concept declares an `image` field. On dev, the News & Updates cards still show the
-  broken-image placeholder instead of those photos. Not yet root-caused; the fix pass should check
-  the `image` field's shape against what the card component actually reads, and whether the
-  deployed Worker's `/media` route resolves the content hash correctly, before assuming the R2
-  bytes themselves are missing.
+**Items 2 through 7, 13, 14, and 15 are also done.** The contact and donate forms are live,
+hydrated islands over a mailto fallback, routing by category and creating a Stripe
+Checkout Session respectively; the home notification banner reads a pure, unit-tested
+`activeNotification`; the club's real logo replaces the invented badge in the site header;
+the News & Updates cards resolve each post's real hero photo and a reading time; the
+`bulletins` concept restores the two missing live URLs; the news index carries its stats
+bar, Browse-by-Topic grid, and per-topic `/tags/[tag]/` pages; and the What-do-we-do band,
+the home hero, and the guide/hub heroes all restore their live photography (the crop rule
+verified image by image). See `docs/ORIGINAL-MANIFEST.md` for each item's own resolution
+note. The remaining must-fixes (search, the packing-checklist table, in-page TOCs, the
+legacy RSS redirect, the facilities amenity list and footer links) stay open.
 
 ## What is NOT done yet
 
-- **The punch-list fix above**, first.
+- **The remaining must-fixes** in `docs/ORIGINAL-MANIFEST.md` (search, the responsive
+  packing-checklist table, in-page TOCs, the `/index.xml` redirect, and the facilities
+  amenity list and footer links).
 - **The apex cutover.** `aksailingclub.org` still serves the old Hugo/GCE site. This is Geoff's
   call, not an engineering task: the design spec gates it on his explicit go after a live review
   of dev, and the GCE origin retires only after a soak period following that cutover.
@@ -92,10 +94,9 @@ remain open.
 
 ## Next action
 
-**Geoff's dev walkthrough first** (a live review of `dev.aksailingclub.org`, the trigger for
-everything below it): the news-card image punch list above is what it has surfaced so far, and
-the walkthrough may surface more. **Then the punch-list fix pass** (the image bug at minimum, plus
-anything else the walkthrough finds). **Then the production apex cutover, on Geoff's explicit
-go**, per the design spec's before/after-approval gate — never bundled with a routine push to
-`main`. Clearing the GitHub Actions billing block is a standing prerequisite for either CI or the
-deploy workflow to run automatically again, independent of the above.
+**The remaining must-fixes in `docs/ORIGINAL-MANIFEST.md`** (search, the responsive
+packing-checklist table, in-page TOCs, the legacy `/index.xml` redirect, and the
+facilities/footer gaps), then **the production apex cutover, on Geoff's explicit go**, per
+the design spec's before/after-approval gate — never bundled with a routine push to
+`main`. Clearing the GitHub Actions billing block is a standing prerequisite for either CI
+or the deploy workflow to run automatically again, independent of the above.
