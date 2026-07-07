@@ -1,5 +1,22 @@
 # asc-site status
 
+**PASS 2.1 COMPLETE ON pass-2-1 (2026-07-07, the extended-Fable overnight): all ten plan
+tasks plus five riders. asc-club carries 15 tables (migrations 0001-0006, every one
+scratch-proven then verified live), ops's 12 events + 5 classes imported and photo-parity
+restored, the admin runs events/classes/waitlists/offers/settings on live D1 through
+0.82.0's engine seams, the public class signup/waitlist/offer-claim routes are live with
+waiver-version acceptance, the dev events read repoints to asc-club (rollback = repoint
+back; the ops 410 patch PREPARED at docs/plans/assets/ops-events-410.md, HELD for Geoff).
+The close ran the three-reviewer Opus fan-out; all confirmed findings fixed (the signups
+role gate, the atomic offer consume + capacity re-check, the atomic last-owner guard,
+awaited audits, the Anchorage timezone pin, security headers, migration 0004's integrity
+indexes). The 2.2 member-domain substrate landed early (0005) because remote D1 enforces
+REFERENCES existence: the harvest (docs/plans/2026-07-07-pass-2-1-harvest.md) carries
+that lesson and eleven others. PUBLIC-CUTOVER BLOCKERS, named: TURNSTILE_SECRET_KEY set +
+rate limit on the public forms (dev is safe behind Access). Gate at close: check 0/0 (651
+files), 260 tests exit 0, build green, the real-D1 write-path proof green.**
+
+
 **PASS 2.1 EXECUTING OVERNIGHT (2026-07-07, the extended Fable session; Geoff sleeping ~9h):
 the plan is `docs/plans/2026-07-07-pass-2-1-events-classes.md` (committed). Ruled tonight:
 0.82.0 cut authorized (consumer-needs-it); ops 410 PREPARED but HELD for Geoff; 2.2 substrate
