@@ -45,7 +45,12 @@ redirect coverage, feeds (cleaner than live's).
     dot jams mid-sentence; footer missing Discord + Contact links.
 
 ### Sanctions RESOLVED (Geoff, 2026-07-06)
-13. The "What do we do?" band: **RESTORE** (with its three icon images).
+13. The "What do we do?" band: **RESTORE, IMPROVED (Geoff, 2026-07-06): the live icons
+    "suck" — the band returns with PHOTOS instead** — three real club photographs (a
+    learning/class shot, a racing shot, a social/relax shot) from the club's assets,
+    each crop-verified per the broadened rule, alt-texted, via the media library. The
+    band's structure and copy restore from live; only icons->photos is the sanctioned
+    change.
 14. The home hero: **RESTORE** live's photo and treatment. **BROADENED (Geoff): cropping
     was wrong on ALL front-page images** — every home image (hero, fleet, facilities,
     news cards when they land) gets the live site's asset AND crop/focal treatment
