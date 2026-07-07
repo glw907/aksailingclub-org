@@ -42,3 +42,18 @@ refuted finding dies. No majority voting.
 
 The main loop reads the final renders itself (the one-check rule), then Geoff receives the
 surviving ranked list with evidencing crops, never the raw fan-out output.
+
+## Amendments (2026-07-07 evening, from the education dev-review misses)
+
+Three green panel rounds still shipped a broken hero, ragged day cards, and the docs-frame
+TOC to Geoff's dev review. The fixes are binding:
+
+1. **The deployed surface is the review surface.** Once the branch is pushed and dev serves
+   it, the final read (the orchestrator's and any last lens round) grades DEV through the
+   Access service token, never only local captures. Geoff reads dev; grade what he sees.
+2. **Top-of-page crops are mandatory.** Every capture set includes a native-resolution crop
+   of the hero/header region per width. Full-page downscale on a long page hides hero
+   composition entirely; that is exactly where the education miss lived.
+3. **A panel-flagged taste or genre question goes to Geoff as a question at the review
+   ping.** Parking it in a backlog note ("a genre decision, yours") ships the un-decided
+   default as if it were chosen. One sentence at the ping costs seconds.
