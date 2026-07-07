@@ -9,8 +9,7 @@ description: "IRS letter confirming the Alaska Sailing Club's tax-exempt status 
 
 [Download the PDF](/uploads/2024/04/irs-determination-letter-947.pdf)
 
-:::callout{tone="note"}
-[Plain-English summary]
+:::callout[Plain-English Summary]{tone="note"}
 This letter is the IRS's formal confirmation that the Alaska Sailing Club is exempt from federal income tax under Section 501(c)(3) of the Internal Revenue Code. It is the authoritative proof of the club's tax-exempt status — more definitive than the Articles of Incorporation, which establish the intent but not the IRS's acceptance of it.
 
 **What this means for members:**
