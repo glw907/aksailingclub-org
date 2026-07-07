@@ -146,6 +146,13 @@ and class signup proceed as short single-question steps rather than one long for
 - Full session → one-click waitlist join; the member's waitlist position and any live offer
   (with its 72-hour countdown) render here; claiming an offer lands in the same confirmation
   flow.
+- **The freed-spot rule (Geoff, 2026-07-07): a freed spot never publicly re-opens the
+  class while anyone waits.** Public state derives as: open iff enrolled < capacity AND
+  the waitlist is empty AND no offer is outstanding; otherwise the class stays "full —
+  join the waitlist" while the offer chain works the queue privately. Only a drop with an
+  empty queue re-opens public signup. (This replaces the naive enrolled-vs-capacity
+  derivation everywhere it renders: the signup route, the events listing chips, the
+  per-event pages.)
 - **Withdraw (Geoff, 2026-07-07): a member drops their own class registration from
   my-classes** (confirm-gated, honest copy about timing per the cancellation policy).
   Withdrawal frees the spot, appends a reversing credit grant when the enrollment redeemed
