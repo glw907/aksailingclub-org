@@ -175,6 +175,22 @@ row with live offer countdown; profile with visibility preview (partial state); 
 member surface, so it wears the club-grounds theme (the site's own type scale, bands, and
 buttons), reading as club pages, not as admin chrome.
 
+## The two canonical journeys (Geoff, 2026-07-07; the build contract's acceptance tests)
+
+1. **Join-then-class, one visit.** Most membership is class-driven, so the join flow's Done
+   screen is not "back to my account": for a new member it leads with "Register for your
+   class — your membership includes a credit," landing in the class flow with the credit
+   pre-applied (frame 05's arithmetic). The public class signup likewise detects a
+   non-member and routes join-first, RETURNING to the class after payment with the intent
+   preserved. The journey is one continuous path or it fails its purpose.
+2. **The free-clinic RSVP.** An existing member signing up for Fleet Tune-Up: fee 0, no
+   payment language anywhere, the signup framed as the roster ("so we know you're
+   coming"), one click from the event's own page. Shipped on the public flow 2026-07-07
+   (fee-aware confirmation); the portal's my-classes view lists it like any registration.
+
+Both journeys are the review panel's walkthrough scripts and the e2e suite's canonical
+paths.
+
 ## Open items riding to ratification
 
 1. The four-touch cadence and its copy registers (above) — approve or adjust.
