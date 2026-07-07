@@ -69,6 +69,11 @@ The portal gains "Your assets" once both halves exist:
   free slot), deny carries a required reason. Every transition audited. When an asset
   frees, the grant-to-next-in-queue reuses the offer machine's token discipline (a
   time-limited claim, decline passes it down) rather than inventing a third mechanism.
+- **The admin's at-a-glance (Geoff, 2026-07-07):** the /admin/club landing carries a
+  "needs attention" strip — pending signup reviews, pending asset requests, offers
+  nearing expiry — each a count clicking through to its inbox (the dashboard spec's
+  every-number-drills rule). This ships WITH the request inbox (the strip is its front
+  door); the fuller reporting dashboard grows around it later.
 - Model note: requests are a small state machine in front of the existing asset_waitlist
   (pending → queued | assigned | denied); the waitlist itself stays the continuous,
   never-reset queue the suite mandates.
