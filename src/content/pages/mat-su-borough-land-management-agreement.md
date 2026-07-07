@@ -10,8 +10,7 @@ description: "25-year land management agreement between the Mat-Su Borough and t
 
 [Download the PDF](/uploads/2024/04/management-agreement-msb006789.pdf) · [Managed Area Plat (MSB Plat 94-80)](/uploads/2024/04/matsu-plat-94-80.pdf)
 
-:::callout{tone="note"}
-[Plain-English summary]
+:::callout[Plain-English Summary]{tone="note"}
 This is a 25-year agreement (2022–2047) between the Alaska Sailing Club and the Matanuska-Susitna Borough. Under it, the club manages a strip of adjacent borough-owned land that includes the tenting area, Trailer Row, and trailered boat parking. The club did not purchase this land — we manage it on the Borough's behalf under terms the Borough can enforce.
 
 **What this means for members:**
