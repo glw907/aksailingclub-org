@@ -82,8 +82,7 @@ Already a member? Renewing is straightforward: log in to your account and comple
 
 ### Apply Now
 
-:::callout{tone="note"}
-[Joining is moving to the new site]
+:::callout[Joining Is Moving to the New Site]{tone="interim"}
 Online signup isn't wired up here yet. In the meantime, email `board@aksailingclub.org` to join,
 and we'll get you started.
 :::
