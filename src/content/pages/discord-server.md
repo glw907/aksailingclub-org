@@ -2,6 +2,8 @@
 title: "Discord Server"
 ---
 
+![The ASC Discord server icon: Discord's mascot dressed as a pirate.](media:discord-server-mascot.eddf290d698eba44)
+
 The ASC Discord server is where members ask rigging questions, report dock issues, share photos, and stay connected between visits to Big Lake. It's informal, friendly, and entirely optional: official club updates always go out by email and on the website. You should have received an invitation link with your membership welcome email. If not, request one below.
 
 ## Getting Started
@@ -50,6 +52,8 @@ Channels are topic-specific conversation rooms listed in the sidebar. Unlike a g
 The ASC Discord is quiet by default: you'll only be notified when someone mentions you directly (types `@YourUsername` in a message to ping you) or when a message goes to `@everyone`.
 
 New posts published to the website are announced automatically in `#general`, or `#racing` for race reports and results, by **Boson Bot**, the club's automated helper. These show up as *embeds*: a boxed card with a title, a short excerpt, and a link to the full post, rather than a plain chat message. Boson Bot sends them with an `@everyone` ping, so you'll receive them without any extra setup.
+
+![Boson Bot, the Discord server automated helper.](media:boson-bot-avatar.80aada3ca9cc0d0a)
 
 If you want notifications beyond `@everyone` messages, say, every post in `#racing` or `#education`, you can opt in per channel or per member.
 

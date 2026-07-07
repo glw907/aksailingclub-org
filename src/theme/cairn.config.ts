@@ -69,6 +69,30 @@ export const cairn = defineAdapter({
       routing: 'page',
       fields: fieldset({
         title: fields.text({ label: 'Title', required: true }),
+        // Optional, matching the live site's own "primary" page template (donate, join): most
+        // pages carry no hero at all, and createPublicRoutes derives `heroImage` from any
+        // entry's `image` field with no per-concept wiring, the same free seam the posts
+        // concept's own hero already uses.
+        image: fields.image({ label: 'Hero image', seo: true }),
+      }),
+    }),
+    // The bulletins concept: short, time-sensitive announcements with their own permalinked page
+    // (the live site's `/bulletins/<slug>/`, a completion-pass restoration; the earlier content
+    // migration folded these into the `notifications` banner alone and dropped the pages
+    // themselves, which 404'd with no redirect). `routing: 'feed'` gives each entry a real page
+    // and the default `/bulletins/:slug` permalink; the two migrated ids carry only a
+    // year-month prefix (no day), which the default `day` datePrefix does not strip, so the slug
+    // stays the id verbatim and matches the live URLs exactly with no redirect needed. A future
+    // bulletin created through the editor gets a full day-granularity id instead, a reasonable
+    // step up, not a mismatch to paper over.
+    bulletins: defineConcept({
+      dir: 'src/content/bulletins',
+      label: 'Bulletins',
+      singular: 'Bulletin',
+      routing: 'feed',
+      fields: fieldset({
+        title: fields.text({ label: 'Title', required: true }),
+        date: fields.date({ label: 'Date', required: true }),
       }),
     }),
     // The site-declared notifications concept: a time-boxed announcement rendered as the home

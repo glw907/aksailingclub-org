@@ -14,6 +14,7 @@ before the photography existed, never a broken image. -->
   import type { PageData } from './$types';
   import { CairnHead } from '@glw907/cairn-cms/delivery/head';
   import SeasonList from '$theme/components/SeasonList.svelte';
+  import { ICON_PATHS } from '$theme/markdown/icons';
 
   let { data }: { data: PageData } = $props();
 
@@ -22,6 +23,14 @@ before the photography existed, never a broken image. -->
   function formatDate(iso: string): string {
     return dateFmt.format(new Date(iso));
   }
+
+  // The What-do-we-do band's three photo placeholders (manifest item 13): the label, link, and
+  // the alt text the eventual real photo should carry, ready for Geoff to wire once uploaded.
+  const WHAT_WE_DO = [
+    { label: 'Learn', cta: 'Courses & clinics', href: '/education/', altPreview: 'A sailing instructor coaching a student aboard a club dinghy.' },
+    { label: 'Race', cta: 'Regattas & events', href: '/racing/', altPreview: 'Club boats racing close together under spinnaker on Big Lake.' },
+    { label: 'Relax', cta: 'Facilities & membership', href: '/join/', altPreview: 'Members relaxing at the clubhouse grounds after a day on the water.' },
+  ];
 </script>
 
 <CairnHead seo={data.seo} titleTemplate={(title) => title} />
@@ -94,6 +103,41 @@ before the photography existed, never a broken image. -->
       <p class="mt-m">
         <a href="/posts/" class="font-semibold text-primary underline underline-offset-[3px]">View all news &rarr;</a>
       </p>
+    </div>
+  </section>
+
+  <!-- What do we do?: restored from live (manifest item 13), sanctioned with one change. Live's
+       three icon tiles read weak in the walkthrough; Geoff's call replaces them with real
+       photography instead, and since that photography does not exist yet, each tile ships as a
+       clearly-labeled placeholder (a dashed frame, the "photo coming" glyph, and the alt text the
+       real shot will carry) rather than a silent gradient like the hero/fleet/facilities panels
+       use for the same gap. Geoff drops the real photo into each slot through the media library. -->
+  <section class="py-l">
+    <div class="mx-auto max-w-measure-wide px-m">
+      <h2 class="m-0 font-display text-step-3 font-semibold text-base-content">What do we do?</h2>
+      <p class="mt-xs max-w-[70ch] text-base-content">
+        The Alaska Sailing Club is a welcoming environment with beautiful lakeside grounds and
+        plenty to do for new sailors and old salts alike. Whether you&rsquo;re here to develop
+        your skills, compete on the water, or enjoy our facilities and community, the ASC offers
+        something for everyone under the midnight sun.
+      </p>
+      <div class="what-we-do-grid mt-m grid grid-cols-1 gap-m sm:grid-cols-3">
+        {#each WHAT_WE_DO as tile (tile.label)}
+          <div class="what-we-do-tile">
+            <div class="photo-placeholder aspect-[4/3] rounded-box border border-dashed border-card-border bg-base-200">
+              <svg class="h-8 w-8 text-muted" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"
+                ><path d={ICON_PATHS.image} /></svg
+              >
+              <span class="text-step--1 font-semibold text-muted">Photo coming</span>
+              <span class="photo-placeholder-alt text-step--2 text-muted">{tile.altPreview}</span>
+            </div>
+            <h3 class="mt-xs mb-0 font-display text-step-1 font-semibold text-base-content">{tile.label}</h3>
+            <p class="mt-[0.2rem]">
+              <a href={tile.href} class="font-semibold text-primary underline underline-offset-[3px]">{tile.cta} &rarr;</a>
+            </p>
+          </div>
+        {/each}
+      </div>
     </div>
   </section>
 
@@ -232,6 +276,23 @@ before the photography existed, never a broken image. -->
   .hero-figure.has-photo,
   .panel-figure.has-photo {
     background: none;
+  }
+
+  /* The What-do-we-do band's placeholder tiles (manifest item 13): a dashed frame distinct from
+     the hero/fleet/facilities panels' silent gradient, since these are genuinely waiting on a
+     photo rather than degrading gracefully from one that may never come. */
+  .photo-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    text-align: center;
+    padding: var(--spacing-s);
+  }
+  .photo-placeholder-alt {
+    max-width: 22ch;
+    font-style: italic;
   }
 
   /* News cards: the one place body content gets real chrome (A1); the gentle hover lift is the

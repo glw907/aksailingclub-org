@@ -16,6 +16,7 @@ export default defineConfig({
       content: {
         posts: '/src/content/posts/*.md',
         pages: '/src/content/pages/*.md',
+        bulletins: '/src/content/bulletins/*.md',
         notifications: '/src/content/notifications/*.md',
       },
       manifestPath: '/src/content/.cairn/index.json',

@@ -16,6 +16,13 @@ const pagesRaw = import.meta.glob('/src/content/pages/*.md', {
   import: 'default',
   eager: true,
 }) as Record<string, string>;
+// Bulletins: short, dated announcements with their own permalinked page (see cairn.config.ts's
+// routing declaration).
+const bulletinsRaw = import.meta.glob('/src/content/bulletins/*.md', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
 // Notifications route as 'embedded': no per-entry public page, read by the home template as the
 // banner strip instead (see cairn.config.ts's routing declaration).
 const notificationsRaw = import.meta.glob('/src/content/notifications/*.md', {
@@ -27,12 +34,14 @@ const notificationsRaw = import.meta.glob('/src/content/notifications/*.md', {
 const indexes = createSiteIndexes(cairn, siteConfig, {
   posts: postsRaw,
   pages: pagesRaw,
+  bulletins: bulletinsRaw,
   notifications: notificationsRaw,
 });
 
 export const site = indexes.site;
 export const posts = indexes.posts;
 export const pages = indexes.pages;
+export const bulletins = indexes.bulletins;
 export const notifications = indexes.notifications;
 
 export const ORIGIN = 'https://dev.aksailingclub.org';

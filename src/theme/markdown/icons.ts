@@ -77,4 +77,10 @@ export const ICON_PATHS: Record<string, string> = {
   // Hugo equivalent; the old cta shortcodes used a plain text arrow instead of a glyph.
   'arrow-right':
     'M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z',
+  // The "photo coming" placeholder glyph (completion-pass manifest item 13, the What-do-we-do
+  // band's icon-to-photo sanction). No Hugo equivalent; sourced verbatim from Phosphor's
+  // regular-weight "image" icon (@phosphor-icons/core 2.1.1), the same upstream set every other
+  // glyph in this file traces back to.
+  image:
+    'M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,16V158.75l-26.07-26.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L40,149.37V56ZM40,172l52-52,80,80H40Zm176,28H194.63l-36-36,20-20L216,181.38V200ZM144,100a12,12,0,1,1,12,12A12,12,0,0,1,144,100Z',
 };

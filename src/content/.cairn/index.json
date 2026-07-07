@@ -2,6 +2,26 @@
   "version": 1,
   "entries": [
     {
+      "id": "2026-02-notice-of-race-spring-series",
+      "concept": "bulletins",
+      "title": "Notice of Race: Spring Series 2026",
+      "date": "2026-02-05",
+      "permalink": "/bulletins/2026-02-notice-of-race-spring-series",
+      "summary": "The Alaska Sailing Club is pleased to announce the Spring Racing Series 2026. Registration is now open for all club members and qualified visiting sailors. Series Schedule: May 24: Icebreaker Regatta…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "2026-03-membership-open",
+      "concept": "bulletins",
+      "title": "Membership Open for 2026",
+      "date": "2026-03-02",
+      "permalink": "/bulletins/2026-03-membership-open",
+      "summary": "Membership signups are open! New members can join here; returning members can renew through My Account. Storage Spaces Mooring, long-term RV, and trailered boat parking signup is no longer part of…",
+      "draft": false,
+      "links": []
+    },
+    {
       "id": "2026-03-membership-open",
       "concept": "notifications",
       "title": "Membership open for 2026",
@@ -115,7 +135,11 @@
       "permalink": "/discord-server",
       "summary": "The ASC Discord server is where members ask rigging questions, report dock issues, share photos, and stay connected between visits to Big Lake. It's informal, friendly, and entirely optional:…",
       "draft": false,
-      "links": []
+      "links": [],
+      "mediaRefs": [
+        "80aada3ca9cc0d0a",
+        "eddf290d698eba44"
+      ]
     },
     {
       "id": "donate",
@@ -232,7 +256,10 @@
       "permalink": "/members",
       "summary": "Your member hub has everything the Alaska Sailing Club offers its members, in one place. Whether you're planning your first visit, trying to get on the water, managing your membership, or looking up…",
       "draft": false,
-      "links": []
+      "links": [],
+      "mediaRefs": [
+        "123c6cd3c2758c8c"
+      ]
     },
     {
       "id": "moorings",
@@ -259,7 +286,10 @@
       "permalink": "/new-member-guide",
       "summary": "Welcome aboard! The Alaska Sailing Club is busy, informal, and full of unwritten traditions, which can make figuring out \"how things work\" a bit daunting at first. Think of this guide as the friendly…",
       "draft": false,
-      "links": []
+      "links": [],
+      "mediaRefs": [
+        "a3eb128eddab3e3a"
+      ]
     },
     {
       "id": "official-website",

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { MediaEntry, MediaManifest } from '@glw907/cairn-cms/media';
 import { homeImages } from '$theme/home-images';
 
-const HERO_HASH = 'ee278d04cc0db8e2';
+const HERO_HASH = 'eb71d593c9eaf136';
 const FLEET_HASH = 'aced8df0a45f9553';
 
 function entry(hash: string, alt: string): MediaEntry {

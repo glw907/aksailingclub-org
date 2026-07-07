@@ -1,5 +1,8 @@
 ---
 title: "New Member Guide"
+image:
+  src: "media:new-member-orientation.a3eb128eddab3e3a"
+  alt: "Club kids in a canopied paddle boat, laughing as one balances on the bow."
 ---
 
 Welcome aboard! The Alaska Sailing Club is busy, informal, and full of unwritten traditions, which can make figuring out "how things work" a bit daunting at first. Think of this guide as the friendly local who shows you around, introduces you to a few people, and makes sure you know where everything is.

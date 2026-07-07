@@ -6,6 +6,9 @@
   let { data }: { data: PageData } = $props();
 
   const isPost = $derived(data.entry.concept === 'posts');
+  // Bulletins are dated the same as posts (a bulletin's date is its whole point), but carry no
+  // tags field of their own, so the date line is shared while the tags list below stays post-only.
+  const showDate = $derived(isPost || data.entry.concept === 'bulletins');
 
   const dateFmt = new Intl.DateTimeFormat('en-US', {
     day: 'numeric',
@@ -31,7 +34,7 @@
       {/if}
     </figure>
   {/if}
-  {#if isPost && data.entry.date}
+  {#if showDate && data.entry.date}
     <p class="post-date">{formatDate(data.entry.date)}</p>
   {/if}
   <h1>{data.entry.title}</h1>

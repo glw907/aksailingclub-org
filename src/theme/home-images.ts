@@ -21,7 +21,10 @@ export interface HomeImages {
   facilities?: HomeImage;
 }
 
-const HERO_TOKEN = 'media:sunset-sail-dock.ee278d04cc0db8e2';
+// The completion pass's restore (manifest item 14): the live site's own home hero
+// (`site-header-4x3.jpeg`, already in the library as `site-header-big-lake` from donate.md's own
+// hero), not the sunset photo the Task 3 build had picked instead.
+const HERO_TOKEN = 'media:site-header-big-lake.eb71d593c9eaf136';
 const FLEET_TOKEN = 'media:fleet-racing-spinnakers.aced8df0a45f9553';
 const FACILITIES_TOKEN = 'media:clubhouse-and-grounds.ead9645a4e60dd76';
 
