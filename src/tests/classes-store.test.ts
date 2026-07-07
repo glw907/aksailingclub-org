@@ -8,6 +8,7 @@ import {
   deleteClass,
   getClass,
   getClassWithCounts,
+  isPubliclyOpen,
   listClasses,
   listClassesWithCounts,
   listEnrollments,
@@ -15,6 +16,7 @@ import {
   listWaitlist,
   removeInstructor,
   updateClass,
+  type ClassWithCounts,
   type ClassWrite,
 } from '$admin-club/lib/classes-store';
 
@@ -285,5 +287,52 @@ describe('listEnrollments', () => {
     await expect(listEnrollments(db, '1st_adult_teen_intro')).resolves.toEqual([
       { id: 'enr-1', memberId: 'member-1', enrolledAt: '2026-05-01 00:00:00', feePaid: true, guardianContact: null },
     ]);
+  });
+});
+
+describe('isPubliclyOpen (the freed-spot rule)', () => {
+  const BASE: ClassWithCounts = {
+    id: 'fleet-tune-up-weekend',
+    season: 2026,
+    name: 'Fleet Tune-Up Weekend',
+    slug: 'fleet-tune-up-weekend',
+    track: 'adult-teen',
+    capacity: 10,
+    fee: 100,
+    startDate: null,
+    endDate: null,
+    location: null,
+    description: null,
+    instructorNotes: null,
+    heroImage: null,
+    heroImageAlt: null,
+    visible: true,
+    createdAt: '2026-01-01 00:00:00',
+    updatedAt: '2026-01-01 00:00:00',
+    enrolledCount: 5,
+    waitlistCount: 0,
+    isFull: false,
+  };
+
+  it('is open with free capacity, an empty waitlist, and no active offer', () => {
+    expect(isPubliclyOpen(BASE, false)).toBe(true);
+  });
+
+  it('is closed once full, regardless of the waitlist or offer state', () => {
+    expect(isPubliclyOpen({ ...BASE, enrolledCount: 10, isFull: true }, false)).toBe(false);
+  });
+
+  it('is closed with free capacity but a nonempty waitlist: a freed spot never publicly ' +
+    'reopens while anyone queues', () => {
+    expect(isPubliclyOpen({ ...BASE, waitlistCount: 1 }, false)).toBe(false);
+  });
+
+  it('is closed with free capacity, an empty waitlist, but a live offer outstanding: the offer ' +
+    'chain works the queue privately first', () => {
+    expect(isPubliclyOpen(BASE, true)).toBe(false);
+  });
+
+  it('is closed when every gate would independently close it (full, queued, AND offered)', () => {
+    expect(isPubliclyOpen({ ...BASE, enrolledCount: 10, isFull: true, waitlistCount: 2 }, true)).toBe(false);
   });
 });

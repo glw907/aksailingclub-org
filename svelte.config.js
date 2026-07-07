@@ -16,6 +16,10 @@ export default {
     // layer (src/member-auth/): the site-brings-its-own-auth seam for /my-account, deliberately
     // its own tree rather than living inside $admin-club (member auth vs. the club-admin
     // surface are two different axes; see src/member-auth/lib/auth.ts's own header).
+    // $member-portal resolves the portal's own business logic (src/member-portal/): the
+    // signed-in member's self-service actions (classes, household, profile, assets), built on
+    // top of $member-auth's identity/standing and $admin-club's data-access layer (offers,
+    // classes-store, assets-store, club-email, club-settings), never duplicating them.
     alias: {
       $chassis: 'src/chassis',
       '$chassis/*': 'src/chassis/*',
@@ -25,6 +29,8 @@ export default {
       '$admin-club/*': 'src/admin-club/*',
       '$member-auth': 'src/member-auth',
       '$member-auth/*': 'src/member-auth/*',
+      '$member-portal': 'src/member-portal',
+      '$member-portal/*': 'src/member-portal/*',
     },
     // handleHttpError: 'warn' downgrades a prerender error to a warning. The cairnManifest()
     // plugin verifies the manifest in buildStart, outside the prerender lifecycle, so a stale

@@ -25,6 +25,7 @@ import {
   type WaitlistRow,
 } from '$admin-club/lib/classes-store';
 import { cancelActiveOffer, expireStaleOffers, listOffersForClass, offerSpot, type OfferRow } from '$admin-club/lib/offers';
+import { adminDropEnrollment } from '$member-portal/lib/classes';
 import { parseClassForm } from '../class-form-input';
 
 /** See `events/[id]/+page.server.ts`'s identical `routeId` for why this narrow cast is safe. */
@@ -174,5 +175,31 @@ export const actions: Actions = {
       return { ok: true };
     },
     { action: 'cancel-offer', entity: 'offer', deniedMessage: DENIED_MESSAGE },
+  ),
+
+  // portal-capstone: the admin's own drop action, reusing the exact freed-spot-aware, reversing-
+  // credit, auto-offering withdrawal a member's own self-service withdraw performs
+  // (`$member-portal/lib/classes.ts`'s `adminDropEnrollment`), never a second copy of that logic.
+  dropEnrollment: clubAdminAction(
+    async ({ event, form, ctx }) => {
+      const enrollmentId = form.get('enrollmentId');
+      if (typeof enrollmentId !== 'string' || !enrollmentId.trim()) {
+        ctx.audit({ action: 'drop', entity: 'enrollment', detail: 'rejected: missing enrollmentId' });
+        return fail(400, { error: 'An enrollment is required.' });
+      }
+      const platformEnv = event.platform?.env;
+      const origin = platformEnv?.PUBLIC_ORIGIN;
+      const result = await adminDropEnrollment(ctx.db, {
+        enrollmentId,
+        notify: platformEnv && origin ? { env: platformEnv, origin } : undefined,
+      });
+      if ('error' in result) {
+        ctx.audit({ action: 'drop', entity: 'enrollment', entityId: enrollmentId, detail: `rejected: ${result.error}` });
+        return fail(400, { error: result.error });
+      }
+      ctx.audit({ action: 'drop', entity: 'enrollment', entityId: enrollmentId, detail: result.autoOfferedTo ? `auto-offered:${result.autoOfferedTo}` : 'no-queue' });
+      return { ok: true, dropped: true as const };
+    },
+    { action: 'drop', entity: 'enrollment', deniedMessage: DENIED_MESSAGE },
   ),
 };

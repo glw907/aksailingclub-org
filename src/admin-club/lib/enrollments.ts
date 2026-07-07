@@ -20,7 +20,8 @@
 // `adminAction`'s `ctx.audit` is never available and this module writes its own `audit_log` row
 // directly).
 import type { D1Database } from '@cloudflare/workers-types';
-import { getClassWithCounts } from './classes-store';
+import { getClassWithCounts, isPubliclyOpen } from './classes-store';
+import { hasActiveOfferForClass } from './offers';
 import { ensureMember } from './people';
 
 /** A signup's outcome: `'enrolled'` when the class had a free spot, `'waitlisted'` (with the new
@@ -85,10 +86,13 @@ function waiverAcceptanceInsert(db: D1Database, input: SignUpForClassInput) {
  * Sign up for a class: refuses when the class does not exist or is not visible (asc-club's
  * `classes` table carries no separate registration-open/closed column post-import, per
  * `ops-classes.mjs`'s own header, so "signup closed" collapses to "not visible" here, the schema's
- * only gating field). Otherwise enrolls immediately if the class has a free spot, or joins the
- * waitlist if it is already full; either branch also records the liability-release acceptance,
- * atomically with the signup, in the same `db.batch()`. A batch failure (a constraint violation,
- * a transient D1 error) surfaces as a refusal rather than a false "you're in" success.
+ * only gating field). Otherwise enrolls immediately if the class is publicly open (the freed-spot
+ * rule, `classes-store.ts`'s `isPubliclyOpen`: free capacity AND an empty waitlist AND no live
+ * offer), or joins the waitlist otherwise — a class with a technically-free spot but anyone
+ * already queued waitlists a new signup too, never enrolls past the queue. Either branch also
+ * records the liability-release acceptance, atomically with the signup, in the same `db.batch()`.
+ * A batch failure (a constraint violation, a transient D1 error) surfaces as a refusal rather than
+ * a false "you're in" success.
  */
 export async function signUpForClass(
   db: D1Database,
@@ -98,7 +102,8 @@ export async function signUpForClass(
   if (!cls || !cls.visible) return { error: 'This class is not open for signup.' };
 
   try {
-    if (!cls.isFull) {
+    const hasActiveOffer = await hasActiveOfferForClass(db, input.classId);
+    if (isPubliclyOpen(cls, hasActiveOffer)) {
       const member = await ensureMember(db, { name: input.name, email: input.email, phone: input.phone });
 
       const already = await db

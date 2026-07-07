@@ -48,11 +48,11 @@ configured, matching the family's own ContactForm/DonateForm precedent. -->
   <p class="mt-m max-w-measure-wide text-step-0 text-base-content">{data.cls.description}</p>
 {/if}
 
-<p class="mt-s max-w-measure-wide text-step-0" class:text-warning={data.cls.isFull} class:text-success={!data.cls.isFull}>
-  {#if data.cls.isFull}
-    This class is full. Join the waitlist below and we'll email you if a spot opens.
-  {:else}
+<p class="mt-s max-w-measure-wide text-step-0" class:text-warning={!data.open} class:text-success={data.open}>
+  {#if data.open}
     {spotsLeft} {spotsLeft === 1 ? 'spot' : 'spots'} open.
+  {:else}
+    This class is full. Join the waitlist below and we'll email you if a spot opens.
   {/if}
 </p>
 
@@ -142,10 +142,10 @@ configured, matching the family's own ContactForm/DonateForm precedent. -->
     <button type="submit" class="btn btn-primary self-start" disabled={!!joinClass.pending}>
       {#if joinClass.pending}
         Submitting…
-      {:else if data.cls.isFull}
-        Join the waitlist
-      {:else}
+      {:else if data.open}
         Sign up
+      {:else}
+        Join the waitlist
       {/if}
     </button>
   </form>
