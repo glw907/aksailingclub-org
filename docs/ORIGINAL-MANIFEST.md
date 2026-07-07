@@ -34,7 +34,16 @@ redirect coverage, feeds (cleaner than live's).
 5. **News feature images missing on the home cards** (posts render them fine — the home
    card image path is the gap); read-times dropped too.
 6. **The bulletins concept is missing** — two live URLs 404 with no redirect.
+   **RESOLVED (2026-07-06, the completion pass): a real `bulletins` concept**, both live
+   bulletins migrated with their exact `/bulletins/<slug>/` URLs (no redirect needed; the
+   default day-granularity datePrefix does not strip a month-only id), rendering through
+   the same catch-all template as posts and pages.
 7. **News index lost its wayfinding** — the stats bar and the eight-topic Browse grid.
+   **RESOLVED (2026-07-06): a stats bar** (post count, topic count, year range) **and a
+   Browse-by-Topic grid** on `/posts/`, plus a `/tags/[tag]/` destination per topic. Reads
+   the site's own five-value curated vocabulary (news/racing/results/education/club), not
+   live's now-superseded eight-tag set — the content migration already collapsed the three
+   extra tags into `club`, a prior editorial call this pass didn't relitigate.
 
 ### Must-fix before "done"
 8. Header feature gaps: **site search absent** (/search 404s), the **Donate heart
@@ -59,12 +68,25 @@ redirect coverage, feeds (cleaner than live's).
     "photo coming" treatment, alt-text slots ready) so he drops the real shots in via
     the media library. The band's structure and copy restore from live; icons->photo-
     placeholders is the sanctioned change.
+    **SHIPPED (2026-07-06):** the band restores between News & updates and The Season
+    (live's own position), heading and copy verbatim, three dashed-frame placeholder
+    tiles (a "photo coming" glyph plus the intended alt text) in place of `icon-learn`/
+    `icon-race`/`icon-relax`. Geoff wires the real photos through the media library later.
 14. The home hero: **RESTORE** live's photo and treatment. **BROADENED (Geoff): cropping
     was wrong on ALL front-page images** — every home image (hero, fleet, facilities,
     news cards when they land) gets the live site's asset AND crop/focal treatment
     verified individually, not just "a photo loads."
+    **SHIPPED (2026-07-06):** the hero now resolves to live's own `site-header-4x3.jpeg`
+    (already in the library as `site-header-big-lake`), replacing the wrong sunset photo
+    the theme build had picked; fleet and facilities were individually checked against
+    their own real club photography and left as-is. News-card images are item 5's own
+    scope, tracked separately.
 15. Guide/hub heroes: **RESTORE** (the members group photo, the kayak hero, the Discord
     images).
+    **SHIPPED (2026-07-06):** the members hub's group photo, the new member guide's
+    orientation photo (the canopied paddle boat, live's `getting-started-hero.jpg`), and
+    the Discord server's mascot and Boson Bot images, all pulled from live into the media
+    library (local + remote R2, committed manifest).
 16. Post hero treatment: **KEEP dev's** (contained rounded image — the one sanctioned
     improvement).
 
