@@ -97,10 +97,14 @@ before the photography existed, never a broken image. -->
     </section>
   {/if}
 
+  <!-- Every section h2 on this page reads `text-step-4` (the design-polish pass, 2026-07-07):
+       `text-step-3` sat only one modest step above the body text's own `text-step-0`, reading
+       as a weak break between sections. One shared class across all six headings keeps the
+       page's own hierarchy consistent rather than singling out a few. -->
   <!-- News & updates: cards mark objects (A1); the one place body content gets real card chrome. -->
   <section id="news" class="border-y border-card-border bg-base-200 py-xl">
     <div class="mx-auto max-w-measure-wide px-m">
-      <h2 class="m-0 font-display text-step-3 font-semibold leading-tight text-base-content">News &amp; updates</h2>
+      <h2 class="m-0 font-display text-step-4 font-semibold leading-tight text-base-content">News &amp; updates</h2>
       {#if data.news.length > 0}
         <div class="news-grid mt-xs grid grid-cols-1 gap-m">
           {#each data.news as post (post.id)}
@@ -155,7 +159,7 @@ before the photography existed, never a broken image. -->
        hero/fleet/facilities panels use, not a placeholder box. -->
   <section class="py-xl">
     <div class="mx-auto max-w-measure-wide px-m">
-      <h2 class="m-0 font-display text-step-3 font-semibold leading-tight text-base-content">What do we do?</h2>
+      <h2 class="m-0 font-display text-step-4 font-semibold leading-tight text-base-content">What do we do?</h2>
       <p class="mt-xs max-w-[65ch] text-step-0 text-base-content">
         The Alaska Sailing Club is a welcoming environment with beautiful lakeside grounds and
         plenty to do for new sailors and old salts alike. Whether you&rsquo;re here to develop
@@ -189,8 +193,8 @@ before the photography existed, never a broken image. -->
        is an educational 501(c)(3)). Live D1 events (Task 4), same markup Task 3 built. -->
   <section class="py-xl">
     <div class="mx-auto max-w-measure-wide px-m">
-      <h2 class="m-0 font-display text-step-3 font-semibold leading-tight text-base-content">The Season</h2>
-      <p class="mt-xs mb-m text-step--2 text-muted">
+      <h2 class="m-0 font-display text-step-4 font-semibold leading-tight text-base-content">The Season</h2>
+      <p class="mt-xs mb-m text-step--2 text-muted season-subtitle">
         Racing runs May through September. Social events bookend the year, and a
         <span class="season-dot mr-[0.3rem] inline-block" aria-hidden="true"></span>marks classes and clinics.
         <a href="/events/" class="arrow-link font-semibold text-primary underline underline-offset-[3px]">See all events &rarr;</a>
@@ -203,7 +207,7 @@ before the photography existed, never a broken image. -->
   <section class="border-y border-card-border bg-base-200 py-xl">
     <div class="mx-auto grid max-w-measure-wide grid-cols-1 items-center gap-l px-m twocol-panel">
       <div>
-        <h2 class="m-0 font-display text-step-3 font-semibold leading-tight text-base-content">Our fleet</h2>
+        <h2 class="m-0 font-display text-step-4 font-semibold leading-tight text-base-content">Our fleet</h2>
         <p class="mt-xs text-step-0 text-base-content">
           The ASC has a well-maintained collection of club boats for sailors of all ages and
           abilities: six Lido 14s, three Lasers, a Laser II, five Optimists &mdash; plus a
@@ -246,7 +250,7 @@ before the photography existed, never a broken image. -->
         {/if}
       </div>
       <div>
-        <h2 class="m-0 font-display text-step-3 font-semibold leading-tight text-base-content">Our facilities</h2>
+        <h2 class="m-0 font-display text-step-4 font-semibold leading-tight text-base-content">Our facilities</h2>
         <p class="mt-xs text-step-0 text-base-content">
           To the best of our knowledge, the ASC is the northernmost sailing club in the United
           States. But despite this (or maybe because of it?) we have facilities that would be the
@@ -274,7 +278,7 @@ before the photography existed, never a broken image. -->
   <section class="closing-band bg-flag-navy-deep py-xl">
     <div class="mx-auto grid max-w-measure-wide grid-cols-1 items-center gap-l px-m closing-grid">
       <div>
-        <h2 class="m-0 font-display text-step-3 font-semibold leading-tight text-white">Interested in learning more?</h2>
+        <h2 class="m-0 font-display text-step-4 font-semibold leading-tight text-white">Interested in learning more?</h2>
         <p class="mt-xs max-w-[50ch] text-step-0 text-footer-ink">
           Whether you&rsquo;re brand-new to sailing or looking for a community of fellow sailors,
           we&rsquo;d love to meet you.
@@ -456,6 +460,15 @@ before the photography existed, never a broken image. -->
     vertical-align: 1px;
   }
 
+  /* The Season's subtitle: plain `text-muted` (the same token every other quiet caption on the
+     page reads) sat too faint directly under this section's own bold heading (the design-polish
+     pass's finding, 2026-07-07). A darker mix keeps the line reading as a quiet caption, not body
+     text, while giving it enough weight to read as an intentional sub-line rather than a washed-
+     out afterthought. */
+  .season-subtitle {
+    color: color-mix(in oklab, var(--color-muted) 55%, var(--color-base-content) 45%);
+  }
+
   /* The facilities amenity list (manifest item 12): the live site's own 9-item list, restored in
      place of the summarizing paragraph the theme build had substituted, and restyled off the
      browser-default disc marker (the design-polish pass's finding) onto a real two-column grid.
@@ -483,6 +496,9 @@ before the photography existed, never a broken image. -->
     align-items: baseline;
     gap: 0.65rem;
     padding-block: 0.3rem;
+    /* Only matters once the two-column rule below switches the list to CSS multi-column: keeps a
+       single amenity from splitting its own two lines across the column break. */
+    break-inside: avoid;
   }
   /* align-self: flex-start plus a top offset centers the marker on the item's FIRST line rather
      than the item's full (possibly two-line, once wrapped) box, matching a bullet's usual
@@ -500,9 +516,17 @@ before the photography existed, never a broken image. -->
     border-radius: 999px;
     background: var(--color-primary);
   }
+  /* CSS multi-column, not a second grid track: a 9-item list split into a 5/4 grid ran the two
+     columns row-major (item 1 and 2 side by side, 3 and 4 below them, and so on), which read as a
+     zigzag rather than the familiar top-to-bottom-per-column list, and left the shorter column's
+     last row dangling well above the taller one's (the design-polish pass's finding, 2026-07-07).
+     `columns` reads top-to-bottom per column and balances the two columns' total height on its
+     own (`column-fill: balance`, the default for an unconstrained-height container). */
   @media (min-width: 40rem) {
     .amenity-list {
-      grid-template-columns: repeat(2, 1fr);
+      display: block;
+      columns: 2;
+      column-gap: var(--spacing-l);
     }
   }
 

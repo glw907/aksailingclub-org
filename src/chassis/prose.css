@@ -375,6 +375,23 @@
   .prose tbody tr:nth-child(even) {
     background: color-mix(in oklab, var(--color-base-200) 60%, transparent);
   }
+  /* A narrow viewport (390 and below) squeezed a short header word ("Class credits") onto two
+     ragged lines while its neighbors stayed on one, an inconsistent, cramped-looking head row
+     (the design-polish pass's finding, 2026-07-07, against education's four-column Pricing
+     table). A tighter type scale buys back room, and pinning the header to one line moves any
+     remaining overflow onto `.table-scroll`'s own horizontal scroll, the affordance that is
+     already there to carry exactly this case, rather than a wrapped, uneven head row. Body cells
+     keep wrapping (prose.css's own table comment explains why): only the header row goes
+     single-line. */
+  @media (max-width: 40rem) {
+    .prose table {
+      font-size: var(--text-step--2);
+    }
+    .prose thead th {
+      white-space: nowrap;
+      padding: 0.45rem 0.55rem;
+    }
+  }
 
   /* --------------------------------------------------------------------------
      Horizontal rule. The default is a plain hairline. The signature Waymark

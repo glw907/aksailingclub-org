@@ -112,6 +112,27 @@
   const referenceHtml = $derived(pitchSplit ? pitchSplit.below : data.html);
   const pitchHtml = $derived(pitchSplit ? pitchSplit.above : '');
 
+  /** Wraps the pitch in alternating full-bleed bands, split at each top-level `<h2>` (the design-
+   *  polish pass, 2026-07-07): a persuasive pitch this long (hero through the last registration
+   *  card, on education) read as one uninterrupted white column with no section pacing at all
+   *  (A1's band recipe: "bands mark sections"). The intro paragraph ahead of the first heading
+   *  joins that first heading's own band rather than getting a sliver band of its own. `.prose`
+   *  itself stays a plain reading column even on a split page (`site.css`'s "no bands on content
+   *  pages" rule is unchanged for every non-pitch page); a `.pitch-band` breaks out of it the same
+   *  way `site.css`'s `.cairn-place-full` already does for a full-bleed figure. */
+  function bandPitch(html: string): string {
+    const starts = [...html.matchAll(/<h2 id="[^"]+"[^>]*>/g)].map((match) => match.index);
+    if (starts.length === 0) return html;
+    const chunks = starts.map((start, i) => html.slice(start, starts[i + 1] ?? html.length));
+    const preamble = html.slice(0, starts[0]);
+    if (preamble.trim()) chunks[0] = preamble + chunks[0];
+    return chunks
+      .map((chunk, i) => `<div class="pitch-band ${i % 2 === 0 ? 'pitch-band-a' : 'pitch-band-b'}">${chunk}</div>`)
+      .join('');
+  }
+
+  const pitchBandedHtml = $derived(bandPitch(pitchHtml));
+
   // Gated on a heading count, not a hardcoded slug list, so this generalizes to any page that
   // grows into a long reference document rather than special-casing bylaws and the new-member
   // guide by name (spec B1: "in-page TOCs on the longest pages"). Eight or more h2/h3 headings is
@@ -238,9 +259,18 @@
     {@render titleBlock()}
   {/if}
   {#if pitchSplitId}
-    <!-- The pitch: everything above the split heading, rendered as plain, photography-paced
-         flow with no panels and no TOC (the design-polish pass, 2026-07-07). -->
-    {@html pitchHtml}
+    <!-- The pitch: everything above the split heading, banded into alternating sections (the
+         design-polish pass, 2026-07-07) with no panels and no TOC. -->
+    {@html pitchBandedHtml}
+    <!-- The pitch-to-reference hand-off (the design-polish pass, 2026-07-07): the genre shift
+         from persuasion prose to a boxed, navigable reference section was previously silent and
+         abrupt (a finding against education, where the pitch ends mid-registration and the
+         reference material starts at "Swim Test, Capsize Drill..."). A labeled divider announces
+         the shift explicitly instead of leaving the reader to infer it from the narrower measure
+         and the panel chrome alone. -->
+    <div class="pitch-reference-divider not-prose">
+      <span class="pitch-reference-label">Reference &amp; policies</span>
+    </div>
   {/if}
   {#if showToc}
     <details class="toc mobile-toc">
@@ -322,6 +352,66 @@
   .page-subtitle {
     margin: 0 0 var(--spacing-m);
     font-size: var(--text-step-0);
+    color: var(--color-muted);
+  }
+
+  /* The pitch's section bands (the design-polish pass, 2026-07-07): each `.pitch-band` breaks out
+     to the full viewport width the same way `site.css`'s `.cairn-place-full` already does for a
+     figure (`left: 50%` plus a matching negative `transform`, which centers a 100vw box on the
+     viewport regardless of this ancestor's own padding, as long as the ancestor itself is
+     centered, which `.site-main` always is). The band's own vertical padding carries the section
+     rhythm; adjacent bands touch directly, reading as one continuous strip whose background
+     alternates at the seam, the same "no gap, color does the work" reading `bg-base-200`
+     home-page sections without a border already use. Every selector reaching into this raw-HTML
+     content is `:global()`, the same reason `.content-panel`'s own rules below are: Svelte's
+     scoped-CSS hash never reaches an element `{@html}` injects. */
+  .prose :global(.pitch-band) {
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: var(--spacing-xl) var(--spacing-m);
+  }
+  .prose :global(.pitch-band-b) {
+    background: var(--color-base-200);
+  }
+  /* Re-centers the band's own content to the plain reading measure and reapplies the owl-selector
+     flow rhythm one level deeper than `.prose > * + *` reaches now that a band wraps each
+     section: the same re-declaration `.content-panel`'s own rules use below, so a heading's
+     `--flow-space` (prose.css) still governs the gap above it exactly as it did as a direct
+     child. */
+  .prose :global(.pitch-band > *) {
+    max-width: var(--container-measure);
+    margin-inline: auto;
+  }
+  .prose :global(.pitch-band > * + *) {
+    margin-top: var(--flow-space);
+  }
+
+  /* The pitch-to-reference hand-off: a labeled rule announcing the reference section starts here,
+     rather than the reader inferring the genre shift from the narrower measure and panel chrome
+     alone (the design-polish pass's finding, 2026-07-07). Sits in the plain reading column (no
+     band of its own); the reference material past it stays exactly as before. */
+  .pitch-reference-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-s);
+    margin-top: var(--spacing-l);
+  }
+  .pitch-reference-divider::before,
+  .pitch-reference-divider::after {
+    content: '';
+    flex: 1 1 auto;
+    height: var(--border);
+    background: var(--color-card-border);
+  }
+  .pitch-reference-label {
+    flex: 0 0 auto;
+    font-family: var(--font-display);
+    font-size: var(--text-step--1);
+    font-weight: 700;
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
     color: var(--color-muted);
   }
 

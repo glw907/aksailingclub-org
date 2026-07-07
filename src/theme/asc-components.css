@@ -46,6 +46,11 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
     gap: var(--spacing-m);
+    /* Grid's own default (stretch) equal-heights every row: a short card (education's "Arrival"
+       day, "For Current Members") stretched to match a much longer sibling, leaving a tall empty
+       lower half (the design-polish pass's finding, 2026-07-07). Cards mark objects that size to
+       their own content; `start` lets each card end where its own content ends. */
+    align-items: start;
   }
   .prose .asc-card {
     display: block;

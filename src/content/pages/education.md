@@ -9,13 +9,13 @@ The Alaska Sailing Club is an education-focused 501(c)(3). Each summer, we teach
 
 ## Class Schedule
 
-Registration is handled through MembershipWorks and requires an active ASC membership. See [How to Register](#how-to-register) below for details on joining and class credits.
+Registration requires an active ASC membership. See [How to Register](#how-to-register) below for details on joining and class credits.
 
-:::callout{tone="interim"}
-[The class schedule table is moving to the new site]
-The live, up-to-date class schedule reads from the club's own class data and isn't wired up on
-this page yet (a separate build step). Ask in `#education` on [Discord](/discord-server/) for the
-current dates.
+:::callout{tone="note"}
+[See the current schedule]
+Class dates, openings, and sign-up links live on the [events page](/events/), pulled straight
+from the club's own calendar and kept current. Open a class there for its dates and a link to
+sign up.
 :::
 
 **Classes fill fast**, sessions typically sell out within a week of registration opening in mid-March, and some fill in days. If you're planning to take a class this summer, register as soon as registration opens.
@@ -57,7 +57,7 @@ Participants in our intro classes will learn all the following:
 - Basic right-of-way rules
 - Introduction to the rules and basic tactics of sailboat racing
 
-### Class Schedule
+### A Typical Course Weekend
 
 A rough schedule for the four-day Introduction to Dinghy Sailing course. We adjust for weather and wind, so treat the times as a plan, not a promise. Class runs to 6:00 p.m. Thursday through Saturday; most students camp at the club for the duration, and instructors often take a sunset sail on the club's Ensign 22 after dinner.
 
@@ -242,14 +242,11 @@ If you need to cancel, please give us as much notice as possible. Courses at the
 
 Our Learn to Sail classes fill up quickly! If a class session is full, join the waitlist below. The Program Committee will contact you when a spot opens up. Cancellations are common in the weeks before class. Waitlisted students frequently get in.
 
-:::callout{tone="interim"}
-[The waitlist form is moving to the new site]
-The class waitlist form isn't wired up here yet. In the meantime, email
-`program-committee@aksailingclub.org` with your name, contact info, and which class session you
-want, and we'll add you to the list.
+:::callout{tone="note"}
+[Join the waitlist]
+Find your class on the [events page](/events/) and open its listing. A full class shows a "Join
+the waitlist" option in place of Sign Up, right on the same page, no separate form.
 :::
-
-You can also check the class schedule on our [events page](/events/) to see which sessions still have openings.
 
 ## Questions?
 
