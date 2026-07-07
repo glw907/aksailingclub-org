@@ -39,6 +39,19 @@ itself is untouched, still bound at `staging.aksailingclub.org`. **Production
 (`aksailingclub.org`, the live Hugo site) is untouched**; the apex DNS cutover is a deliberate,
 separate act gated on Geoff's before/after review, per the design spec.
 
+## The completion pass (2026-07-06 full-site walkthrough against the live original)
+
+`docs/ORIGINAL-MANIFEST.md` is the completion pass's checklist against `aksailingclub.org`
+itself, worked item by item. **Item 1 / the events deep-look is done:** the events page's
+D1 stub is now the full detailed listing (month sections, Off-Season, Meetings &
+Governance, type and registration-status badges, descriptions, register links, per-event
+photography, a real `/events/calendar.ics` feed), built against `docs/events-manifest.md`'s
+exhaustive re-enumeration of the live page. `$theme/events-data.ts`, `$theme/ics.ts`,
+`EventsListing.svelte`, `EventCard.svelte`; unit-tested; the site-visual e2e baseline
+regenerated. The rest of the manifest's items (the dead forms, the wrong logo, the
+notifications wire-up, the bulletins concept, the other go-live blockers and must-fixes)
+remain open.
+
 ## The punch list (found on the dev walkthrough, not yet fixed)
 
 - **News-card cover images render as placeholders.** The content-migration pass (Task 2, see

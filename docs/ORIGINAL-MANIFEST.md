@@ -20,6 +20,10 @@ redirect coverage, feeds (cleaner than live's).
 1. **The events page is a stub** — the entire D1 detail listing unbuilt: month filter
    tabs, category + status badges, per-event descriptions and locations, Register links,
    calendar-subscribe (iCal/Google), the Meetings & Governance section.
+   **RESOLVED (2026-07-06, the events deep-look pass): the full detailed listing is built**
+   (month sections, Off-Season, Meetings & Governance, type and registration-status
+   badges, descriptions, register links, per-event photography, a real `.ics` feed) —
+   see the events deep-look section below and `docs/events-manifest.md`.
 2. **Contact + Donate forms are placeholders** — the two conversion paths dead (donate:
    presets + custom + Turnstile; contact: routed message form). Donate also lost its
    hero photo.
@@ -66,6 +70,17 @@ directly and exhaustively (the walk's 8-feature list is the floor, not the ceili
 filters, badges, statuses, descriptions, locations, register links, calendar-subscribe,
 the meetings section, plus anything the walk missed: per-event images? recurring-date
 history? empty-state behavior between seasons?) before building the listing.
+
+**DONE (2026-07-06):** `docs/events-manifest.md` is that re-enumeration (live page walked
+with Playwright, cross-checked against the legacy Worker's own source and the live
+`asc-ops` schema). The full listing is built against it: month sections, Off-Season, and
+Meetings & Governance (a meeting pulled out by type regardless of date), the type and
+registration-status badges, descriptions (short plain text, long markdown), register
+links, a type-colored placeholder glyph or a real photo (14 event/class images migrated
+into the media library), a real `/events/calendar.ics` feed (iCal/Apple and Google
+Calendar both read it), and one added empty-state line the live page itself never had.
+`$theme/events-data.ts` and `$theme/ics.ts`, unit-tested; `EventsListing.svelte` and
+`EventCard.svelte`.
 
 ### Noted, no action
 - The pirate post's empty gallery is live's own inherited TODO (parity).
