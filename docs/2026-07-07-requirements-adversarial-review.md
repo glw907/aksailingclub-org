@@ -113,6 +113,8 @@ know, the system sends it.** The full send inventory, each with its trigger:
 | Support/reimbursement acknowledgments | 2.3's forms | Filed to 2.3 |
 | Election/bylaws notices | Deliberately manual (legal-formal, rare) | Recorded as chosen |
 
+**Template editing (Geoff, 2026-07-07, PROMOTED into today's wave from 2.3):** every template above is an admin-editable `email_templates` row, not code. The admin Email screen gains an edit-and-save form (markdown body, a visible variable palette per template's own vocabulary, a sample-data preview, reset-to-shipped-default), all owner-or-admin through `clubAdminAction`, audited, versioned enough to reset. The per-class reminder OVERRIDE slot (a class-specific custom note the reminder templates interpolate) edits on the class detail. This closes the parity audit's email-template-editing GAP.
+
 Every automated send writes email_log per recipient and honors the coming preferences
 opt-out (bulk classes of mail only; transactional confirmations always send).
 
