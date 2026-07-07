@@ -9,6 +9,22 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import type { DirectoryVisibility } from './household';
 
+/** A stored E.164 `+1` number (10 digits after the country code), the shape `profile.ts`'s own
+ *  `validatePhone` accepts and the only one this club's members have. */
+const US_E164 = /^\+1(\d{3})(\d{3})(\d{4})$/;
+
+/**
+ * Format a stored E.164 number for human reading: `+19075550142` becomes `+1 (907) 555-0142`.
+ * A number outside that one shape (a non-`+1` country code, or anything that fails to parse)
+ * renders as its own raw string; the directory has no reason to reformat what it cannot parse.
+ */
+export function formatPhone(phone: string): string {
+  const match = US_E164.exec(phone);
+  if (!match) return phone;
+  const [, area, prefix, line] = match;
+  return `+1 (${area}) ${prefix}-${line}`;
+}
+
 /** One listed member, as the directory renders it. `email`/`phone` are `null` for a `partial`
  *  listing (name only) as well as for a member who genuinely has neither on file; the caller does
  *  not need to distinguish the two, since both render the same way (no contact line). */

@@ -3,10 +3,14 @@
 member's own directory-visibility choice ($member-portal/lib/directory.ts already excludes a
 hidden or archived member; a `partial` member's card row carries no contact line). The search
 field filters by name only, entirely client-side: the whole list is already in `data`, and at the
-club's scale (roughly 210 members) a client-side filter is plenty, no pagination needed. -->
+club's scale (roughly 210 members) a client-side filter is plenty, no pagination needed. Each
+member's contact stacks under their name (a shared left edge regardless of name length) in the
+page's own reading ink, `text-base-content`: the member came here to read it, so it carries the
+same weight as the name, not the lighter `text-muted` metadata tone the household's city keeps. -->
 <script lang="ts">
   import type { PageData } from './$types';
   import { siteConfig } from '$theme/cairn.config';
+  import { formatPhone } from '$member-portal/lib/directory';
 
   let { data }: { data: PageData } = $props();
 
@@ -72,12 +76,21 @@ club's scale (roughly 210 members) a client-side filter is plenty, no pagination
             <span>{household.name}</span>
             {#if household.city}<span class="text-muted">· {household.city}</span>{/if}
           </h2>
-          <ul class="mt-xs flex flex-col gap-2xs text-step--1">
+          <ul class="mt-xs flex flex-col gap-s text-step--1">
             {#each household.members as member (member.id)}
-              {@const contact = [member.email, member.phone].filter(Boolean).join(' · ')}
-              <li class="flex flex-wrap items-baseline gap-xs">
+              <li class="flex flex-col gap-3xs">
                 <span class="text-base-content">{member.name}</span>
-                {#if contact}<span class="text-muted">{contact}</span>{/if}
+                {#if member.email || member.phone}
+                  <p class="m-0 flex flex-wrap items-center gap-2xs text-base-content">
+                    {#if member.email}
+                      <a href="mailto:{member.email}" class="underline-offset-2 hover:text-primary hover:underline">{member.email}</a>
+                    {/if}
+                    {#if member.email && member.phone}<span class="text-muted" aria-hidden="true">·</span>{/if}
+                    {#if member.phone}
+                      <a href="tel:{member.phone}" class="underline-offset-2 hover:text-primary hover:underline">{formatPhone(member.phone)}</a>
+                    {/if}
+                  </p>
+                {/if}
               </li>
             {/each}
           </ul>

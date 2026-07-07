@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fakeD1 } from './_fake-d1';
-import { listDirectory } from '$member-portal/lib/directory';
+import { formatPhone, listDirectory } from '$member-portal/lib/directory';
 import { setDirectoryVisibility } from '$member-portal/lib/household';
 
 describe('listDirectory', () => {
@@ -130,5 +130,16 @@ describe('listDirectory', () => {
 
     const households = await listDirectory(db);
     expect(households[0].members[0]).toMatchObject({ id: 'mem-kaija', email: 'kaija@example.com' });
+  });
+});
+
+describe('formatPhone', () => {
+  it('formats a +1 E.164 number for human reading', () => {
+    expect(formatPhone('+19075550142')).toBe('+1 (907) 555-0142');
+  });
+
+  it('falls back to the raw string for anything that is not a +1 number', () => {
+    expect(formatPhone('+447911123456')).toBe('+447911123456');
+    expect(formatPhone('not a phone number')).toBe('not a phone number');
   });
 });
