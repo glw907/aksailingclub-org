@@ -5,13 +5,26 @@
 // degrade when unbound) into one helper every consumer shares, rather than each payment kind
 // hand-rolling its own fetch call the way the donate flow did before this module existed.
 //
-// TEST MODE ONLY until Geoff sets STRIPE_SECRET_KEY (see this worktree's own README): every
-// caller degrades to the stub signal below, never throwing for a simply unconfigured secret, the
-// same posture every other optional site secret already takes (TURNSTILE_SECRET_KEY, EMAIL).
+// STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are both already set on the live worker, sandbox
+// mode (see this worktree's own README): a caller with no key still degrades to the stub signal
+// below rather than throwing, the same posture every other optional site secret already takes
+// (TURNSTILE_SECRET_KEY, EMAIL), for any environment (a preview deploy, a future site fork) that
+// has not provisioned its own key yet.
 //
 // Every session this helper creates carries `metadata[kind]`/`metadata[refId]`: the webhook
 // (`src/routes/(site)/api/stripe/webhook/+server.ts`) reads those two fields back, and only
 // those two, to decide which row a completed session reconciles.
+//
+// DEFERRED CONSUMERS (not wired in this worktree, both `portal-capstone`'s own work): the join/
+// renewal flow that would create an unpaid `memberships` row and immediately call
+// `createCheckout({ kind: 'dues', refId: membership.id, ... })` (the seam's natural landing spot
+// is `/my-account`, near `getMemberStanding`'s own `'grace'`/`'lapsed'` states, see that route's
+// own comment), and the approved-asset-request "pay to confirm" screen that would call
+// `createCheckout({ kind: 'asset-fee', refId: assignment.id, ... })` once an `asset_requests` row
+// resolves to a real `asset_assignments` row (see `assets-store.ts`'s own header on why that
+// table carries no "pending payment" status to gate on). The webhook's own reconciliation for
+// both kinds (`stripe-reconcile.ts`) is already built and tested; only the call sites that CREATE
+// the session are missing, deliberately left to the worktree that owns those screens.
 
 /** The three kinds of payment the club collects through Stripe Checkout today. */
 export const PAYMENT_KINDS = ['dues', 'class-fee', 'asset-fee'] as const;

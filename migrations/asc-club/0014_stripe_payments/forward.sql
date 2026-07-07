@@ -14,12 +14,21 @@
 -- `ref_id` are carried alongside the session id purely for an operator's own audit trail (which
 -- row this session paid for), not read back by any code path.
 --
--- `payment_receipt` is the one new `email_templates` row this migration seeds: the member-facing
--- receipt every reconciled payment sends (dues, class fee, or asset fee alike), carrying the
--- 501(c)(3) substantiation language the gap analysis's item 5 asks for
+-- `stripe_payment_receipt` is the one new `email_templates` row this migration seeds: the
+-- member-facing receipt every reconciled payment sends (dues, class fee, or asset fee alike),
+-- carrying the 501(c)(3) substantiation language the gap analysis's item 5 asks for
 -- (docs/2026-07-07-membership-functionality-gap-analysis.md). `INSERT OR IGNORE` matches
 -- migration 0010's own idempotent-seed convention: re-running this file changes nothing already
 -- there, and an owner who has since edited the template's wording keeps their edit.
+--
+-- NAMED `stripe_payment_receipt`, not the more obvious `payment_receipt`: the real database
+-- already carries a `payment_receipt` row (`scripts/import/ops-email-templates.mjs`'s own
+-- import:ops seed), a narrower asset-fee-specific notice keyed to `{{asset_type_name}}`/
+-- `{{season}}` and no live code path sends it yet. `INSERT OR IGNORE` under the SAME id would
+-- have silently kept that ops row and dropped this migration's own 501(c)(3) wording forever
+-- (checked against the real database before landing, see this migration's own README). The
+-- two templates are free to converge or merge in a later pass; this migration only adds a new
+-- row, never touches the existing one.
 CREATE TABLE processed_stripe_sessions (
   session_id TEXT PRIMARY KEY,
   kind TEXT NOT NULL CHECK (kind IN ('dues', 'class-fee', 'asset-fee')),
@@ -28,7 +37,7 @@ CREATE TABLE processed_stripe_sessions (
 );
 
 INSERT OR IGNORE INTO email_templates (id, subject, reply_to, body, updated_by) VALUES (
-  'payment_receipt',
+  'stripe_payment_receipt',
   'Your payment receipt -- {{item_display_name}}',
   'finance-committee@aksailingclub.org',
   'Hi {{person_name}},
@@ -47,4 +56,4 @@ aksailingclub.org',
 
 INSERT INTO audit_log (actor, action, entity, entity_id, detail) VALUES
   ('system', 'migration.seed', 'settings', NULL,
-   '0014_stripe_payments: processed_stripe_sessions created, payment_receipt template seeded');
+   '0014_stripe_payments: processed_stripe_sessions created, stripe_payment_receipt template seeded');
