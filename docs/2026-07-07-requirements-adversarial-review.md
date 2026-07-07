@@ -121,3 +121,27 @@ All four RULED (Geoff, 2026-07-07): A. the job runner builds now (blessed via th
 auto-email principle); B. early access = 7 days, a Club setting; C. one global 30-day
 payment window (the RV prose edited to match); D. participation tracking deferred
 entirely.
+
+## Ops parity audit verdict (2026-07-07, the 410-readiness report)
+
+**GO to retire ops's EVENT/CLASS routes now.** The 12 events + 5 classes match exactly,
+every guarded route has a verified home (parity or documented supersession), the 410
+patch's route set is a precise 1:1 match with zero leakage, and both excluded routes
+(`/images`, `/api/schema`) have real live reasons to stay (the handbook fetches
+`/api/schema` cross-origin). One rationale refresh owed: `/images` has no live consumer
+anymore (the 14 hero images migrated), but keeping it is zero-risk.
+
+**HOLD on retiring the REST of ops** until these gaps close (ranked):
+1. **Asset fee COLLECTION — the real blocker.** `recordPayment` only logs money already
+   received; ops's Stripe-payment-link generation + prefilled email has NO home. This is
+   how RV/mooring/parking fees get paid. Gates on the Stripe key + the payment build; it
+   is the top priority of the payment integration, not an afterthought.
+2. **Members/Signups on demo fixtures** — being replaced by the portal capstone (the real
+   member store) as this lands.
+3. **Discord notifications** absent (payment-request, waitlist events) — a committee
+   visibility loss; wire to the auto-email/Discord layer.
+4. Asset-type fee editing (no writer); class-waitlist manual reorder; waitlist admin
+   notes; email-template editing (deferred to 2.3); post-create assignment-note editing.
+
+Every gap is known and named; none is a silent miss. This matches the incremental-
+absorption plan: events/classes is the first wave actually done.
