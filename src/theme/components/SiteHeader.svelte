@@ -78,6 +78,16 @@ state. -->
   }
 </script>
 
+{#snippet donateHeart()}
+  <!-- The live site's own Donate heart shortcut (Phosphor "heart", assets/icons/heart.svg),
+       shared by the header trigger and the narrow-viewport drawer entry below. -->
+  <svg class="h-5 w-5" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+    <path
+      d="M178,40c-20.65,0-38.73,8.88-50,23.89C116.73,48.88,98.65,40,78,40a62.07,62.07,0,0,0-62,62c0,70,103.79,126.66,108.21,129a8,8,0,0,0,7.58,0C136.21,228.66,240,172,240,102A62.07,62.07,0,0,0,178,40ZM128,214.8C109.74,204.16,32,155.69,32,102A46.06,46.06,0,0,1,78,56c19.45,0,35.78,10.36,42.6,27a8,8,0,0,0,14.8,0c6.82-16.67,23.15-27,42.6-27a46.06,46.06,0,0,1,46,46C224,155.61,146.24,204.15,128,214.8Z"
+    />
+  </svg>
+{/snippet}
+
 {#snippet themeIcon()}
   {#if theme === 'asc-dark'}
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -143,7 +153,7 @@ state. -->
               id="members-menu"
               style="position-anchor:--members-menu"
               ontoggle={(e) => (membersMenuOpen = e.newState === 'open')}
-              class="members-dropdown menu menu-sm rounded-box border border-card-border bg-base-100 p-1 shadow-[var(--cairn-shadow)]"
+              class="members-dropdown dropdown menu menu-sm rounded-box border border-card-border bg-base-100 p-1 shadow-[var(--cairn-shadow)]"
             >
               {#each item.children as child (child.url ?? child.label)}
                 <li><a href={child.url}>{child.label}</a></li>
@@ -208,45 +218,58 @@ state. -->
 
   {#if mobileOpen}
     <div class="mobile-menu mx-auto max-w-measure-wide border-t border-card-border px-m py-2xs">
-      {#each nav as item (item.url ?? item.label)}
-        {@const current = item.url ? isCurrent(item.url) : false}
-        <a
-          href={item.url}
-          class="mobile-link"
-          class:active={current}
-          aria-current={current ? 'page' : undefined}
-          onclick={closeMobile}
-        >
-          {item.label}
+      <div class="mobile-menu-links">
+        {#each nav as item (item.url ?? item.label)}
+          {@const current = item.url ? isCurrent(item.url) : false}
+          <a
+            href={item.url}
+            class="mobile-link"
+            class:active={current}
+            aria-current={current ? 'page' : undefined}
+            onclick={closeMobile}
+          >
+            {item.label}
+          </a>
+          {#if hasChildren(item)}
+            <!-- No toggle needed here: the drawer is already a full-screen overlay, so the seven
+                 sub-links inline directly under their parent rather than hiding behind a second tap. -->
+            <div class="mobile-submenu">
+              {#each item.children as child (child.url ?? child.label)}
+                <a href={child.url} class="mobile-sublink" onclick={closeMobile}>{child.label}</a>
+              {/each}
+            </div>
+          {/if}
+        {/each}
+      </div>
+      <!-- Below 420px the header row collapses Donate and the theme toggle out of
+           `.mobile-controls` (the full club name cannot shrink, and the row has no other
+           slack); this section restores both as reachable drawer entries, shown only at
+           that same narrow range (see the `.mobile-menu-actions` media query below). -->
+      <div class="mobile-menu-actions">
+        <a href="/donate/" class="mobile-link mobile-action" onclick={closeMobile}>
+          {@render donateHeart()}
+          Donate
         </a>
-        {#if hasChildren(item)}
-          <!-- No toggle needed here: the drawer is already a full-screen overlay, so the seven
-               sub-links inline directly under their parent rather than hiding behind a second tap. -->
-          <div class="mobile-submenu">
-            {#each item.children as child (child.url ?? child.label)}
-              <a href={child.url} class="mobile-sublink" onclick={closeMobile}>{child.label}</a>
-            {/each}
-          </div>
-        {/if}
-      {/each}
+        <button type="button" class="mobile-link mobile-action" onclick={toggleTheme}>
+          {@render themeIcon()}
+          {theme === 'asc-dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        </button>
+      </div>
     </div>
   {/if}
 </header>
 
 {#snippet donateLink()}
-  <!-- The live site's own Donate heart shortcut (Phosphor "heart", assets/icons/heart.svg),
-       restored beside the search trigger in the same position the old header used. -->
+  <!-- The header's icon-only trigger, restored beside the search trigger in the same position
+       the old header used; the narrow-viewport drawer entry above renders the same heart with
+       a visible label instead. -->
   <a
     href="/donate/"
     aria-label="Donate"
     title="Donate"
     class="donate-link inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-field text-muted hover:text-primary"
   >
-    <svg class="h-5 w-5" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
-      <path
-        d="M178,40c-20.65,0-38.73,8.88-50,23.89C116.73,48.88,98.65,40,78,40a62.07,62.07,0,0,0-62,62c0,70,103.79,126.66,108.21,129a8,8,0,0,0,7.58,0C136.21,228.66,240,172,240,102A62.07,62.07,0,0,0,178,40ZM128,214.8C109.74,204.16,32,155.69,32,102A46.06,46.06,0,0,1,78,56c19.45,0,35.78,10.36,42.6,27a8,8,0,0,0,14.8,0c6.82-16.67,23.15-27,42.6-27a46.06,46.06,0,0,1,46,46C224,155.61,146.24,204.15,128,214.8Z"
-      />
-    </svg>
+    {@render donateHeart()}
   </a>
 {/snippet}
 
@@ -324,6 +347,12 @@ state. -->
   .members-dropdown {
     min-width: 12rem;
   }
+  /* DaisyUI's menu class sets display: flex as an author style, which overrides the UA
+     popover stylesheet's [popover]:not(:popover-open) { display: none }, so the closed
+     panel would otherwise paint at 0,0 on every page. Restate the hidden state here. */
+  .members-dropdown:not(:popover-open) {
+    display: none;
+  }
   .members-dropdown a {
     text-decoration: none;
     color: var(--color-base-content);
@@ -331,6 +360,34 @@ state. -->
 
   .mobile-controls {
     display: flex;
+  }
+
+  /* The club name (whitespace-nowrap, the brand, never truncated) plus the full four-button
+     row overflow the viewport below ~420px. Donate and the theme toggle drop out of the row
+     there; `.mobile-menu-actions` below restores both as drawer entries in that same range. */
+  @media (max-width: 419px) {
+    .mobile-controls .donate-link,
+    .mobile-controls .theme-toggle {
+      display: none;
+    }
+  }
+
+  .mobile-menu-actions {
+    display: none;
+  }
+  @media (max-width: 419px) {
+    .mobile-menu-actions {
+      display: flex;
+      flex-direction: column;
+    }
+  }
+  .mobile-action {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+  }
+  .mobile-action:last-child {
+    border-bottom: none;
   }
 
   /* A parent link immediately followed by its own submenu drops its divider, so the group reads
@@ -370,6 +427,10 @@ state. -->
     display: flex;
     flex-direction: column;
   }
+  .mobile-menu-links {
+    display: flex;
+    flex-direction: column;
+  }
   .mobile-link {
     font-weight: 500;
     color: var(--color-base-content);
@@ -377,7 +438,7 @@ state. -->
     padding-block: 0.8rem;
     border-bottom: 1px solid var(--color-card-border);
   }
-  .mobile-link:last-child {
+  .mobile-menu-links > .mobile-link:last-child {
     border-bottom: none;
   }
   .mobile-link:focus-visible {
