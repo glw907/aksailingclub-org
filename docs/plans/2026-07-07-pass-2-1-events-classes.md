@@ -247,3 +247,17 @@ baselines.
   port; member auth first); T8's copy handles the interim honestly.
 - Type consistency: `CLUB_DB` binding name used in T1/T5/T6/T9; `adminAction` engine shape
   stated once in T3 and consumed by T5-T8.
+
+## Post-mortem (at close, 2026-07-07)
+
+Executed overnight in one session: ten tasks + five riders (the clubAdminAction wrapper,
+the auditSink wiring, class-image parity, the review-fix batch, the pulled-forward 0005
+member domain), thirteen commits, 129 files, 260 tests at close. The plan's one wrong
+assumption — that the layout guard covers actions — was caught by an implementer reading
+SvelteKit's source and became the wrapper rider plus a guide item. The close fan-out
+(three Opus reviewers + fix batch) caught one HIGH auth gap and two independent atomicity
+defects; the scripted real-D1 proof then caught two more defects invisible to every unit
+test (FK-target existence; the missing offer cascade). Full findings and lessons:
+2026-07-07-pass-2-1-harvest.md. Budget: roughly 2.6M subagent tokens across 14
+implementer/reviewer dispatches for the pass proper; zero human interaction points
+consumed (the authorizations were all front-loaded before sleep).

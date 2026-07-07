@@ -1,5 +1,22 @@
 # asc-site status
 
+**PASS 2.1 COMPLETE ON pass-2-1 (2026-07-07, the extended-Fable overnight): all ten plan
+tasks plus five riders. asc-club carries 15 tables (migrations 0001-0006, every one
+scratch-proven then verified live), ops's 12 events + 5 classes imported and photo-parity
+restored, the admin runs events/classes/waitlists/offers/settings on live D1 through
+0.82.0's engine seams, the public class signup/waitlist/offer-claim routes are live with
+waiver-version acceptance, the dev events read repoints to asc-club (rollback = repoint
+back; the ops 410 patch PREPARED at docs/plans/assets/ops-events-410.md, HELD for Geoff).
+The close ran the three-reviewer Opus fan-out; all confirmed findings fixed (the signups
+role gate, the atomic offer consume + capacity re-check, the atomic last-owner guard,
+awaited audits, the Anchorage timezone pin, security headers, migration 0004's integrity
+indexes). The 2.2 member-domain substrate landed early (0005) because remote D1 enforces
+REFERENCES existence: the harvest (docs/plans/2026-07-07-pass-2-1-harvest.md) carries
+that lesson and eleven others. PUBLIC-CUTOVER BLOCKERS, named: TURNSTILE_SECRET_KEY set +
+rate limit on the public forms (dev is safe behind Access). Gate at close: check 0/0 (651
+files), 260 tests exit 0, build green, the real-D1 write-path proof green.**
+
+
 **PASS 2.1 EXECUTING OVERNIGHT (2026-07-07, the extended Fable session; Geoff sleeping ~9h):
 the plan is `docs/plans/2026-07-07-pass-2-1-events-classes.md` (committed). Ruled tonight:
 0.82.0 cut authorized (consumer-needs-it); ops 410 PREPARED but HELD for Geoff; 2.2 substrate
@@ -14,6 +31,16 @@ is a first-class deliverable: episodic-use design (signup + renewal, zero learne
 design suite + mockups due for Geoff's morning ratification. asc-club D1 CREATED:
 643edae4-bdc1-42ab-976e-fa014ef2eac1. The engine Part C seams merged at cairn 69a2908; the
 club-admin scaffold merged here at 5549d19 (simplifier folded, 0623682).**
+
+**Task 1 landed (2026-07-07): the asc-club migration 0001_substrate.** Ten tables (events,
+classes, class_instructors, class_enrollments, class_waitlist, class_offers, club_roles,
+settings, audit_log, plus the waiver_acceptances rider folded in early from Task 8's gap
+analysis) are live on the real `asc-club` D1, proven first on a scratch database
+(forward, verify, rollback, verify-empty, delete) per the migration pattern. Seeds: settings
+current_season=2026 (read off asc-ops's own live 2026 events/classes rows), offer_window_hours=72,
+waiver_text_version=2026-01; club_roles one row, geoff-login@907.life as owner (the ratified
+DDL's club_roles enum was extended with 'owner' to match Task 4's typed contract). The
+CLUB_DB binding is in `wrangler.toml`. Task 2 (the ops import scripts) is next.
 
 **THE FULL-SITE WALKTHROUGH LANDED (2026-07-06, three verifier chunks, every page):
 docs/ORIGINAL-MANIFEST.md is the completion pass's checklist — 7 go-live blockers

@@ -11,7 +11,7 @@ function row(overrides: Partial<EventDetailRow>): EventDetailRow {
   return {
     title: 'An event',
     slug: 'an-event',
-    event_type: 'regatta',
+    event_type: 'racing',
     start_date: null,
     end_date: null,
     date_history: null,
@@ -27,9 +27,9 @@ function row(overrides: Partial<EventDetailRow>): EventDetailRow {
 }
 
 describe('buildEventsPage', () => {
-  it('pulls a meeting out of its month bucket entirely, regardless of date', async () => {
+  it('pulls a governance row out of its month bucket entirely, regardless of date', async () => {
     const data = await buildEventsPage(
-      [row({ title: 'June Meeting', slug: 'june-meeting', event_type: 'meeting', start_date: '2026-06-10' })],
+      [row({ title: 'June Meeting', slug: 'june-meeting', event_type: 'governance', start_date: '2026-06-10' })],
       { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
     );
     expect(data.monthSections).toEqual([]);
@@ -72,7 +72,7 @@ describe('buildEventsPage', () => {
         row({
           title: 'A Regatta With A Link',
           slug: 'a-regatta',
-          event_type: 'regatta',
+          event_type: 'racing',
           start_date: '2026-06-19',
           registration_url: 'https://example.com',
         }),
@@ -86,12 +86,28 @@ describe('buildEventsPage', () => {
     expect(regatta.registrationUrl).toBe('https://example.com');
   });
 
+  it('carries a class row\'s registrationUrl straight through: the signup route is computed upstream by the CLUB_DB query, not this pure function', async () => {
+    const data = await buildEventsPage(
+      [
+        row({
+          title: 'Intro Class',
+          slug: 'intro-class',
+          event_type: 'class',
+          start_date: '2026-06-18',
+          registration_url: '/classes/abc123/signup',
+        }),
+      ],
+      { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+    );
+    expect(data.monthSections[0].events[0].registrationUrl).toBe('/classes/abc123/signup');
+  });
+
   it('only lists a TOC link for a section that actually has events, in order', async () => {
     const data = await buildEventsPage(
       [
         row({ title: 'July event', slug: 'july-event', start_date: '2026-07-10' }),
         row({ title: 'BNAC', slug: 'bnac', start_date: '2026-10-09' }),
-        row({ title: 'Meeting', slug: 'meeting', event_type: 'meeting', start_date: '2026-11-14' }),
+        row({ title: 'Meeting', slug: 'meeting', event_type: 'governance', start_date: '2026-11-14' }),
       ],
       { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
     );

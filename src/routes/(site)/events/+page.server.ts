@@ -4,6 +4,9 @@
 // exact same plumbing the catch-all uses, via the shared `routes` in $theme/public-routes), while
 // the full calendar below it is the events deep-look pass's own detailed listing
 // ($theme/events-data.ts, against docs/events-manifest.md's re-enumeration of the live page).
+// Repointed to asc-club by pass 2.1's Task 9: the listing and every class's signup link now read
+// one database (CLUB_DB), so the separate slug-join Task 8 needed against a second read is gone
+// (see events-data.ts's own header on the query that now computes it directly).
 import type { PageServerLoad } from './$types';
 import { routes } from '$theme/public-routes';
 import { ORIGIN } from '$chassis/content';
@@ -16,8 +19,9 @@ export const prerender = false;
 
 export const load: PageServerLoad = async ({ url, platform }) => {
   const entry = await routes.entryLoad({ url });
-  const db = platform?.env.EVENTS_DB;
+  const db = platform?.env.CLUB_DB;
   const rows = db ? await readEventRows(db) : [];
+
   const events = await buildEventsPage(rows, {
     resolveMedia: publicMediaResolver,
     renderMarkdown: (md) => renderMarkdown(md),
