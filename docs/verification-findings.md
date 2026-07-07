@@ -99,7 +99,18 @@ candidate, not solved here.
 9 tests: light and dark home, the family five-viewport matrix on home (320/390/768/1440/2560),
 the education page, and the D1-backed events page. `.github/workflows/ci.yml` (new) runs
 `check`/`test`/`build`/`test:e2e` on every push and pull request, with a `workflow_dispatch`
-regen mode mirroring the cairn-cms showcase's own rider.
+regen mode mirroring the cairn-cms showcase's own rider. Verified locally end to end (the suite
+green against a genuinely clean `.wrangler/` state twice in a row, simulating a fresh CI runner)
+before committing the baselines, since a first pass had accidentally captured them against this
+workstation's own already-populated local R2 replica (real photos instead of the broken-image
+glyph a fresh runner produces), which would have failed on its first real CI run.
+
+**GitHub Actions itself could not run after the push**: both this new `ci.yml` and the pre-existing
+`deploy.yml` fail in 2-5 seconds with "recent account payments have failed or your spending limit
+needs to be increased" (`gh run view`). This is a pre-existing account-billing condition, not
+something this pass introduced or can fix: the two prior pushes (Tasks 1 and 2, before this pass)
+show the identical `deploy.yml` failure at the same timing. The workflow files are correct and
+locally proven; they need Geoff to clear the GitHub billing block before they can run for real.
 
 ## The dev takeover
 
