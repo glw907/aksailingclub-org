@@ -96,4 +96,21 @@ export async function setTierPrice(db: D1Database, tier: MembershipTier, dollars
     .prepare("UPDATE settings SET value = ?1, updated_at = datetime('now'), updated_by = ?2 WHERE key = ?3")
     .bind(String(dollars), updatedBy, TIER_PRICE_KEY[tier])
     .run();
+
+/** The migration's own seed value (`migrations/asc-club/0009_member_auth`): used only if the row
+ *  is ever missing, which should not happen post-migration. */
+const DEFAULT_RENEWAL_GRACE_DAYS = 30;
+
+/**
+ * How many days after a household's own renewal boundary (`memberships.paid_at` plus one year)
+ * it stays in a 'grace' standing before reading as fully 'lapsed' (Geoff's 2026-07-07
+ * rolling-renewal ruling: standing derives from a household's own paid date, not a season
+ * boundary). `src/member-auth/lib/standing.ts`'s `getMemberStanding` is the one reader today; a
+ * future renewal-reminder cadence and an asset-retention rule are both expected to key on the
+ * same value, per the ruling's own reasoning, hence a Club setting rather than a constant.
+ */
+export async function getRenewalGraceDays(db: D1Database): Promise<number> {
+  const row = await db.prepare("SELECT value FROM settings WHERE key = 'renewal_grace_days'").first<{ value: string }>();
+  const parsed = row ? Number(row.value) : NaN;
+  return Number.isFinite(parsed) ? parsed : DEFAULT_RENEWAL_GRACE_DAYS;
 }
