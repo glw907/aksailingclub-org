@@ -198,7 +198,11 @@ public surfaces.
 
 **Scope:** an open class accepts a signup (into `class_enrollments`, status per the schema); a
 full class offers the waitlist join; both write attributed rows (name/email, the public-form
-actor convention in `audit_log`). NO payment in this pass (class fees ride 2.2's payment
+actor convention in `audit_log`). The signup form carries the liability-release acceptance
+(the gap analysis's item 1): a `waiver_acceptances` table (person context, waiver text
+version, timestamp, signer name) plus the versioned waiver text as a settings row; the class
+form's checkbox records against the current version. Land the table in this task's migration
+rider so 2.2's join flow reuses it. NO payment in this pass (class fees ride 2.2's payment
 consolidation; the form records intent + the education page's existing pay-later reality).
 Credit redemption is 2.2's (needs member auth); the form copy says what happens next honestly.
 
