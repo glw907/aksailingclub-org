@@ -1,0 +1,46 @@
+name: CI
+
+# The standing quality gate: svelte-check, vitest, the build, and the pixel-diff visual-fidelity
+# rider (plan Task 5). Separate from deploy.yml, which only runs on a push to main and never
+# blocks on these checks itself; this workflow is the one a pull request actually gates on.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      update_snapshots:
+        description: Regenerate the site-visual baseline snapshots instead of asserting against them
+        type: boolean
+        default: false
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Run the visual-fidelity suite
+        if: ${{ !(github.event_name == 'workflow_dispatch' && github.event.inputs.update_snapshots == 'true') }}
+        run: npm run test:e2e
+      # Manual regen mode: a dispatcher ticks `update_snapshots` after a deliberate rendering
+      # change, and the resulting PNGs upload as a build artifact for a maintainer to review and
+      # copy back into the repo; nothing here commits the baselines itself.
+      - name: Regenerate the visual baseline snapshots
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.update_snapshots == 'true' }}
+        run: npm run test:e2e -- --update-snapshots
+      - name: Upload the regenerated site-visual baselines
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.update_snapshots == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-visual-baselines
+          path: e2e/site-visual.spec.ts-snapshots/
