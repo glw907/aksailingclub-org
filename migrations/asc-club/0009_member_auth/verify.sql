@@ -2,7 +2,7 @@
 -- for a verify script; a value starting with the two characters `--` also makes wrangler's flag
 -- parser mistake the SQL for a bare `--` terminator, so the leading comment lines are stripped
 -- before this file is passed through):
---   npx wrangler d1 execute asc-club --remote --command "$(grep -v '^--' migrations/asc-club/0008_member_auth/verify.sql | grep -v '^\s*$')"
+--   npx wrangler d1 execute asc-club --remote --command "$(grep -v '^--' migrations/asc-club/0009_member_auth/verify.sql | grep -v '^\s*$')"
 --
 -- Expect two rows naming the new tables, then four rows naming the new indexes, then one row
 -- showing the seeded renewal_grace_days setting.

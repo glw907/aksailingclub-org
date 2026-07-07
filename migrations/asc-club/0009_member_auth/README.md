@@ -67,13 +67,13 @@ member-portal write path has shipped yet), so there was no existing data to reco
 ## How to run
 
 ```sh
-npx wrangler d1 execute asc-club --remote --file migrations/asc-club/0008_member_auth/forward.sql
+npx wrangler d1 execute asc-club --remote --file migrations/asc-club/0009_member_auth/forward.sql
 ```
 
 ## Verify
 
 ```sh
-npx wrangler d1 execute asc-club --remote --command "$(grep -v '^--' migrations/asc-club/0008_member_auth/verify.sql | grep -v '^\s*$')"
+npx wrangler d1 execute asc-club --remote --command "$(grep -v '^--' migrations/asc-club/0009_member_auth/verify.sql | grep -v '^\s*$')"
 ```
 
 Expect two rows naming the new tables, then four rows naming the new indexes, then one row
@@ -82,7 +82,7 @@ showing `renewal_grace_days = '30'`.
 ## Rollback
 
 ```sh
-npx wrangler d1 execute asc-club --remote --file migrations/asc-club/0008_member_auth/rollback.sql
+npx wrangler d1 execute asc-club --remote --file migrations/asc-club/0009_member_auth/rollback.sql
 ```
 
 Safe only before any real member token, session, or renewal-standing data exists: no write path

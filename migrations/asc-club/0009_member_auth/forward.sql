@@ -51,4 +51,4 @@ CREATE INDEX idx_member_sessions_expiry ON member_sessions(expires_at);
 INSERT INTO settings (key, value, updated_by) VALUES ('renewal_grace_days', '30', 'system');
 
 INSERT INTO audit_log (actor, action, entity, entity_id, detail) VALUES
-  ('system', 'migration.seed', 'settings', NULL, '0008_member_auth: renewal_grace_days=30');
+  ('system', 'migration.seed', 'settings', NULL, '0009_member_auth: renewal_grace_days=30');

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Scripted end-to-end proof that the member-auth write path (migration
- * 0008_member_auth) actually works against REAL (remote) D1, not just the `fakeD1` test double
+ * 0009_member_auth) actually works against REAL (remote) D1, not just the `fakeD1` test double
  * every unit test in this pass uses. Mirrors `scripts/verify/real-d1-write-path.mjs`'s own method
  * exactly (same header rationale): this does not import `src/member-auth/lib/{auth,store}.ts`
  * directly (those type their `db` parameter as `D1Database`, the Worker runtime binding object, a
@@ -93,7 +93,7 @@ async function main() {
       '0005_member_domain',
       '0006_offer_cascade_on_waitlist_delete',
       '0007_assets_email',
-      '0008_member_auth',
+      '0009_member_auth',
     ]) {
       wrangler(['d1', 'execute', DB_NAME, '--remote', '--file', `migrations/asc-club/${m}/forward.sql`]);
       console.log(`  applied ${m}`);
