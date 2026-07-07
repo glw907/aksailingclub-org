@@ -15,7 +15,16 @@ import { getMemberStanding } from '$member-auth/lib/standing';
 import { getCurrentSeason } from '$admin-club/lib/club-settings';
 import { getHouseholdInfo, listHouseholdMembers } from '$member-portal/lib/household';
 import { getCreditBalance } from '$member-portal/lib/credits';
-import { listHouseholdAssignments, listHouseholdWaitlistEntries, listHouseholdRequests, cancelAssetRequest, releaseHouseholdAssignment, payForApprovedRequest } from '$member-portal/lib/assets';
+import {
+  cancelAssetRequest,
+  createAssetRequest,
+  listHouseholdAssignments,
+  listHouseholdWaitlistEntries,
+  listHouseholdRequests,
+  listRequestableAssetTypes,
+  payForApprovedRequest,
+  releaseHouseholdAssignment,
+} from '$member-portal/lib/assets';
 import { listReceipts } from '$member-portal/lib/receipts';
 import { buildTaskList } from '$member-portal/lib/tasks';
 import { portalAction } from '$member-portal/lib/portal-action';
@@ -36,7 +45,7 @@ export const load: PageServerLoad = async (event) => {
   const db = resolveMemberDb(event.platform?.env);
   if (!db) return { member, csrf, standing: null };
 
-  const [standing, householdInfo, householdMembers, creditBalance, currentSeason, waitlistEntries, requests, receipts] = await Promise.all([
+  const [standing, householdInfo, householdMembers, creditBalance, currentSeason, waitlistEntries, requests, receipts, assetTypes] = await Promise.all([
     getMemberStanding(db, member.id),
     getHouseholdInfo(db, member.householdId),
     listHouseholdMembers(db, member.householdId),
@@ -45,6 +54,7 @@ export const load: PageServerLoad = async (event) => {
     listHouseholdWaitlistEntries(db, member.householdId),
     listHouseholdRequests(db, member.householdId),
     listReceipts(db, member.householdId),
+    listRequestableAssetTypes(db),
   ]);
   const assignments = await listHouseholdAssignments(db, member.householdId, currentSeason);
   const isPrimary = householdInfo?.primaryMemberId === member.id;
@@ -63,6 +73,7 @@ export const load: PageServerLoad = async (event) => {
     requests,
     receipts,
     tasks,
+    assetTypes,
   };
 };
 
@@ -121,6 +132,17 @@ export const actions: Actions = {
     const result = await cancelAssetRequest(ctx.db, requestId, ctx.member.householdId, ctx.member.id);
     if ('error' in result) return fail(400, { error: result.error });
     return { cancelled: true as const };
+  }),
+
+  // Request an asset (design doc's own "Request an asset": a type picker plus a one-line note; any
+  // adult member may). Always `kind: 'new'` here: the year-to-year retention ask surfaces IN the
+  // renewal flow instead (this pass's own scope note), not from this general request form.
+  requestAsset: portalAction(async ({ form, ctx }) => {
+    const assetType = String(form.get('assetType') ?? '').trim();
+    if (!assetType) return fail(400, { error: 'Please choose an asset type.' });
+    const note = String(form.get('note') ?? '').trim() || null;
+    await createAssetRequest(ctx.db, { assetType, householdId: ctx.member.householdId, requestedBy: ctx.member.id, kind: 'new', note });
+    return { requested: true as const };
   }),
 
   payRequest: portalAction(async ({ form, ctx }) => {

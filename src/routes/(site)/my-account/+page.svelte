@@ -126,7 +126,7 @@ on-screen, per this task's own instruction. -->
     </div>
   {/if}
 
-  {#if (data.assignments && data.assignments.length > 0) || (data.waitlistEntries && data.waitlistEntries.length > 0) || (data.requests && data.requests.length > 0)}
+  {#if (data.assignments && data.assignments.length > 0) || (data.waitlistEntries && data.waitlistEntries.length > 0) || (data.requests && data.requests.length > 0) || (data.assetTypes && data.assetTypes.length > 0)}
     <div id="assets" class="mt-l max-w-measure-wide rounded-box border border-card-border bg-base-100 p-m">
       <h2 class="m-0 text-step-0 font-semibold text-base-content">Your assets</h2>
 
@@ -173,6 +173,29 @@ on-screen, per this task's own instruction. -->
           {/if}
         </div>
       {/each}
+
+      {#if form && 'requested' in form && form.requested}
+        <p class="mt-xs border-t border-card-border pt-xs text-step--1 text-base-content">
+          Your request is in — the club will review it and follow up.
+        </p>
+      {:else if data.assetTypes && data.assetTypes.length > 0}
+        <form method="POST" action="?/requestAsset" class="mt-xs flex flex-wrap items-end gap-xs border-t border-card-border pt-xs">
+          <input type="hidden" name="csrf" value={data.csrf} />
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">Request an asset</legend>
+            <select class="select select-sm" name="assetType" required>
+              {#each data.assetTypes as type (type.id)}
+                <option value={type.id}>{type.name}</option>
+              {/each}
+            </select>
+          </fieldset>
+          <fieldset class="fieldset grow">
+            <legend class="fieldset-legend">Note (optional)</legend>
+            <input class="input input-sm w-full" type="text" name="note" placeholder="A word about why" />
+          </fieldset>
+          <button type="submit" class="btn btn-primary btn-sm">Request</button>
+        </form>
+      {/if}
     </div>
   {/if}
 
