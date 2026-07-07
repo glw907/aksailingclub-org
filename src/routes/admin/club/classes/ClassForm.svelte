@@ -5,7 +5,10 @@ the edit screen (`classes/[id]`), the same one-copy shape `events/EventForm.svel
 established for this section. `capacity` and `fee` are plain numeric text inputs (whole
 numbers only, `class-form-input.ts` validates); `season` is not a field here (assigned once at
 creation from the current season, see `classes-store.ts`'s `createClass`, never edited
-afterward).
+afterward). `heroImage`/`heroImageAlt` render read-only, the same recipe `EventForm.svelte`
+already established: no media-library picker seam is wired for this custom `/admin/club`
+screen yet, so the field only ever displays whatever image reference migration 0003's backfill
+carried.
 -->
 <script lang="ts">
   import { FieldLabel, SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
@@ -23,6 +26,8 @@ afterward).
     description = $bindable(),
     instructorNotes = $bindable(),
     visible = $bindable(),
+    heroImage = null,
+    heroImageAlt = null,
   }: {
     name: string;
     slug: string;
@@ -35,6 +40,8 @@ afterward).
     description: string;
     instructorNotes: string;
     visible: boolean;
+    heroImage?: string | null;
+    heroImageAlt?: string | null;
   } = $props();
 
   const trackOptions = CLASS_TRACKS.map((value) => ({ value, label: CLASS_TRACK_LABEL[value] }));
@@ -73,3 +80,15 @@ afterward).
     ></textarea>
   </FieldLabel>
 </div>
+
+{#if heroImage}
+  <!-- Read-only this pass: the media-library picker reuse seam (design suite Part B) is not
+       wired for a custom /admin/club screen yet, so the hero image only displays what migration
+       0003's backfill carried. Replacing or clearing it needs the picker seam, a later pass's
+       work (the same recipe EventForm.svelte's own comment documents). -->
+  <div class="flex flex-wrap items-center gap-2 border-t border-[var(--cairn-card-border)] p-6 text-sm">
+    <span class="font-medium text-muted">Hero image (read-only):</span>
+    <span>{heroImage}</span>
+    {#if heroImageAlt}<span class="text-muted">&middot; {heroImageAlt}</span>{/if}
+  </div>
+{/if}

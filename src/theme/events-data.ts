@@ -43,25 +43,25 @@ const EVENTS_QUERY = `SELECT title, slug, category AS event_type, start_date, en
                               hero_image, hero_image_alt, NULL AS registration_url,
                               NULL AS registration_status
                        FROM events WHERE visible = 1`;
-/** The classes table's full-detail SELECT, tagged with the synthesized `'class'` category. Three
- *  differences from the events query above, all forced by the ratified `classes` schema
+/** The classes table's full-detail SELECT, tagged with the synthesized `'class'` category. Two
+ *  differences from the events query above, both forced by the ratified `classes` schema
  *  (`migrations/asc-club/0001_substrate/`), which was never designed to carry the public listing's
  *  richer row shape: (1) `classes` has one merged `description` column, not a short/long pair (see
  *  `scripts/import/ops-classes.README.md`: asc-club joined ops's `short_description` and
  *  `long_description` into it at import time), so the whole thing selects as `long_description`
- *  (markdown-rendered) and `short_description` is a literal `NULL`; (2) `classes` carries no
- *  `hero_image`/`hero_image_alt` at all (unlike `events`), so every class card falls back to the
- *  type-colored placeholder, a real loss against the ops-sourced read (5 of the imported classes
- *  had a photo there) this pass does not recover; (3) neither `registration_url` nor
- *  `registration_status` is a stored column (registration is now the internal enrollment/waitlist
- *  machine): the signup link is computed directly from the class's own `id` (collapsing the
- *  slug-join Task 8 did against a separate CLUB_DB read, now redundant since this query already
- *  reads CLUB_DB), and the status derives from live enrollment vs `capacity`, the same fullness
- *  rule `$admin-club/lib/classes-store.ts`'s `isFull` already uses, rather than a stored flag. */
+ *  (markdown-rendered) and `short_description` is a literal `NULL`; (2) neither `registration_url`
+ *  nor `registration_status` is a stored column (registration is now the internal
+ *  enrollment/waitlist machine): the signup link is computed directly from the class's own `id`
+ *  (collapsing the slug-join Task 8 did against a separate CLUB_DB read, now redundant since this
+ *  query already reads CLUB_DB), and the status derives from live enrollment vs `capacity`, the
+ *  same fullness rule `$admin-club/lib/classes-store.ts`'s `isFull` already uses, rather than a
+ *  stored flag. `hero_image`/`hero_image_alt` select as real columns (migration
+ *  `0003_class_images`, a rider closing the regression this pass first shipped with a literal
+ *  `NULL` here): the five imported classes' own photography, already in the media library via
+ *  `$theme/event-images.ts`'s `EVENT_IMAGE_TOKENS`, renders again. */
 const CLASSES_QUERY = `SELECT name AS title, slug, 'class' AS event_type, start_date, end_date,
                                NULL AS date_history, location, NULL AS short_description,
-                               description AS long_description, NULL AS hero_image,
-                               NULL AS hero_image_alt,
+                               description AS long_description, hero_image, hero_image_alt,
                                '/classes/' || id || '/signup' AS registration_url,
                                CASE WHEN (SELECT COUNT(*) FROM class_enrollments e WHERE e.class_id = classes.id) >= capacity
                                     THEN 'full' ELSE 'open' END AS registration_status

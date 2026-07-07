@@ -31,7 +31,11 @@ export const CLASS_TRACK_LABEL: Record<ClassTrack, string> = {
   youth: 'Youth',
 };
 
-/** One `classes` row, camelCased for the admin screens. */
+/** One `classes` row, camelCased for the admin screens. Hero image fields are read here but
+ *  never written by `createClass`/`updateClass`: the media-library picker reuse seam (design
+ *  suite Part B) is not wired for a custom `/admin/club` screen this pass, the same reasoning
+ *  `events-store.ts`'s own `EventRow` documents, so the detail form renders whatever image
+ *  reference migration 0003's backfill carried, read-only. */
 export interface ClassRow {
   id: string;
   season: number;
@@ -45,6 +49,8 @@ export interface ClassRow {
   location: string | null;
   description: string | null;
   instructorNotes: string | null;
+  heroImage: string | null;
+  heroImageAlt: string | null;
   visible: boolean;
   createdAt: string;
   updatedAt: string;
@@ -61,7 +67,8 @@ export interface ClassWithCounts extends ClassRow {
 /** The create/edit form's payload: every column a Club screen may write. `season` is not here:
  *  it is assigned once at creation from `settings.current_season` (see `createClass`), never
  *  edited afterward (a season's rollover, a later pass, creates a new row rather than mutating
- *  this one's season in place). */
+ *  this one's season in place). Excludes the hero image columns (read-only this pass, see
+ *  `ClassRow`'s own comment). */
 export interface ClassWrite {
   name: string;
   slug: string;
@@ -123,6 +130,8 @@ interface ClassRawRow {
   location: string | null;
   description: string | null;
   instructor_notes: string | null;
+  hero_image: string | null;
+  hero_image_alt: string | null;
   visible: 0 | 1;
   created_at: string;
   updated_at: string;
@@ -142,6 +151,8 @@ function toClassRow(row: ClassRawRow): ClassRow {
     location: row.location,
     description: row.description,
     instructorNotes: row.instructor_notes,
+    heroImage: row.hero_image,
+    heroImageAlt: row.hero_image_alt,
     visible: row.visible === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -149,7 +160,8 @@ function toClassRow(row: ClassRawRow): ClassRow {
 }
 
 const SELECT_COLUMNS = `id, season, name, slug, track, capacity, fee, start_date, end_date,
-  location, description, instructor_notes, visible, created_at, updated_at`;
+  location, description, instructor_notes, hero_image, hero_image_alt, visible, created_at,
+  updated_at`;
 
 const ORDER_BY = 'ORDER BY start_date IS NULL, start_date ASC, name ASC';
 

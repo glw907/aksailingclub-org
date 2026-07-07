@@ -92,6 +92,8 @@ section posts to this route's own actions, independent of the main edit form bel
         bind:description
         bind:instructorNotes
         bind:visible
+        heroImage={data.class.heroImage}
+        heroImageAlt={data.class.heroImageAlt}
       />
       <div class="flex justify-end gap-2 border-t border-[var(--cairn-card-border)] p-6">
         <CsrfField />

@@ -2,16 +2,20 @@
 -- screens and the import scripts own; wrangler d1 execute --local writes only to the gitignored
 -- .wrangler/state/v3 replica the CI runner starts empty). Repointed by pass 2.1's Task 9: this
 -- fixture used to recreate asc-ops's own `events`/`classes` shape; it now mirrors asc-club's
--- ratified DDL (migrations/asc-club/0001_substrate/forward.sql), the site's real read source as
--- of this pass. The column set is trimmed to exactly what $theme/season-data.ts's and
--- $theme/events-data.ts's queries touch, still with one row per card feature the events deep-look
--- pass's detailed listing renders: a racing event (image placeholder, plain-ink badge), a class
--- (a merged description, a derived registration-status badge, a computed register link), an
--- operations entry in the season bucket, an off-season social (compact variant, still badged), and
--- a governance entry (compact, no badge, the Meetings & Governance section) -- everything
--- docs/events-manifest.md's re-enumeration found on the live page except a real photo (the local R2
--- replica the CI runner starts carries no media objects regardless) and a class photo (asc-club's
--- `classes` table carries no hero_image column at all, see events-data.ts's own header on this).
+-- ratified DDL (migrations/asc-club/0001_substrate/forward.sql plus the 0003_class_images
+-- rider), the site's real read source as of this pass. The column set is trimmed to exactly what
+-- $theme/season-data.ts's and $theme/events-data.ts's queries touch, still with one row per card
+-- feature the events deep-look pass's detailed listing renders: a racing event (image
+-- placeholder, plain-ink badge), a class (a real hero_image/hero_image_alt, one of the four
+-- actual filenames migration 0003's backfill copied off asc-ops, a merged description, a derived
+-- registration-status badge, and a computed register link), an operations entry in the season
+-- bucket, an off-season social (compact variant, still badged), and a governance entry (compact,
+-- no badge, the Meetings & Governance section) -- everything docs/events-manifest.md's
+-- re-enumeration found on the live page except a real photo's bytes (the local R2 replica the CI
+-- runner starts carries no media objects regardless, so the class card's image slot renders the
+-- browser's broken-image glyph rather than the actual photograph; the DOM shape and the query
+-- path are still exercised end to end, matching the suite's own already-documented limitation on
+-- a real event photo).
 --
 -- Fixed dates, not "whenever CI runs": events-data.ts groups by the real calendar year at request
 -- time, so this fixture must be refreshed to the current year whenever the site-visual baselines
@@ -46,6 +50,7 @@ CREATE TABLE classes (
   start_date TEXT, end_date TEXT,
   location TEXT,
   description TEXT,
+  hero_image TEXT, hero_image_alt TEXT,
   visible INTEGER NOT NULL DEFAULT 1 CHECK (visible IN (0,1))
 );
 
@@ -85,12 +90,14 @@ INSERT INTO events (
   );
 
 INSERT INTO classes (
-  id, name, slug, capacity, start_date, end_date, location, description, visible
+  id, name, slug, capacity, start_date, end_date, location, description, hero_image, hero_image_alt, visible
 ) VALUES
   (
     'test-intro-class', 'Test Intro Class', 'test-intro-class', 8, '2026-06-20', '2026-06-22', 'Alaska Sailing Club',
     'Four-day fixture class for the visual suite.
 
 Covers the fundamentals of dinghy sailing over a long weekend.',
+    'adult-intro-class-1.jpg',
+    'Student at the tiller of a club Buccaneer sailboat with an instructor, sailing on the lake during class',
     1
   );

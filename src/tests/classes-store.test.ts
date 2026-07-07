@@ -31,6 +31,8 @@ const RAW_ROW = {
   location: 'Clubhouse',
   description: 'Learn to sail.',
   instructor_notes: null,
+  hero_image: 'adult-intro-class-1.jpg',
+  hero_image_alt: 'Student at the tiller with an instructor.',
   visible: 1 as const,
   created_at: '2026-01-01 00:00:00',
   updated_at: '2026-01-01 00:00:00',
@@ -67,7 +69,13 @@ describe('getClass', () => {
   it('maps the found row', async () => {
     const { db } = fakeD1({ firstResults: { 'FROM classes WHERE id': RAW_ROW } });
     await expect(getClass(db, '1st_adult_teen_intro')).resolves.toEqual(
-      expect.objectContaining({ name: '1st Adult Intro Class', capacity: 10, fee: 100 }),
+      expect.objectContaining({
+        name: '1st Adult Intro Class',
+        capacity: 10,
+        fee: 100,
+        heroImage: 'adult-intro-class-1.jpg',
+        heroImageAlt: 'Student at the tiller with an instructor.',
+      }),
     );
   });
 
@@ -78,11 +86,12 @@ describe('getClass', () => {
 });
 
 describe('createClass', () => {
-  it('inserts every writable column plus the season and id', async () => {
+  it('inserts every writable column plus the season and id, excluding the hero image fields', async () => {
     const { db, calls } = fakeD1();
     await createClass(db, 'fleet-tune-up-weekend', 2026, WRITE);
     expect(calls).toHaveLength(1);
     expect(calls[0].sql).toContain('INSERT INTO classes');
+    expect(calls[0].sql).not.toContain('hero_image');
     expect(calls[0].args).toEqual([
       'fleet-tune-up-weekend',
       2026,
@@ -102,12 +111,13 @@ describe('createClass', () => {
 });
 
 describe('updateClass', () => {
-  it('updates every writable column by id, never touching season', async () => {
+  it('updates every writable column by id, never touching season or the hero image fields', async () => {
     const { db, calls } = fakeD1();
     await updateClass(db, 'fleet-tune-up-weekend', { ...WRITE, visible: false });
     expect(calls).toHaveLength(1);
     expect(calls[0].sql).toContain('UPDATE classes SET');
     expect(calls[0].sql).not.toContain('season');
+    expect(calls[0].sql).not.toContain('hero_image');
     expect(calls[0].args.at(-1)).toBe('fleet-tune-up-weekend');
     expect(calls[0].args.at(-2)).toBe(0);
   });
