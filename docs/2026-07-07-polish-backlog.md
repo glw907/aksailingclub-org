@@ -84,8 +84,10 @@ not done today Geoff tackles on Opus tomorrow; hand this file to that session.
   `email_templates` rows now that the editor exists.
 - **The directory-listing-confirm nudge**: the portal deferred it for lack of a dismissal
   column; add the column + the dismissible nudge.
-- **Turnstile**: provision the widget + secret (I can do this via the CF API) so the public
-  forms gate spam rather than degrading open.
+- **Turnstile: PROVISIONED 2026-07-07** — widget created for aksailingclub.org + dev; secret set
+  on the asc-site worker (TURNSTILE_SECRET_KEY). Remaining: wire the PUBLIC sitekey
+  `0x4AAAAAADxia9mnjaUA0nfx` into the forms' config (contact/donate/class-signup) so the widget
+  renders; the server-side verify already exists (donate pattern). A small config edit, post-merge.
 - **CONTACT_EMAIL / sender onboarding**: confirm the EMAIL sender domain is onboarded for
   all the new transactional sends (the durable Cloudflare-email gotcha).
 - **The `/images` 410-rationale refresh**: the parity audit found the ops `/images` route
