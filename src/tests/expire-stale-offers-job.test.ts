@@ -69,7 +69,7 @@ describe('expireStaleOffersJob.run', () => {
     // no waitlist never reaches it.
     const activeOfferChecks = calls.filter((c) => c.sql.includes('FROM class_offers WHERE class_id'));
     expect(activeOfferChecks).toHaveLength(1);
-    expect(activeOfferChecks[0].args).toEqual([OPEN_CLASS.id]);
+    expect(activeOfferChecks[0].args).toEqual([OPEN_CLASS.id, expect.any(String)]);
   });
 
   it('skips a class that already has an active offer outstanding, offering nothing new', async () => {

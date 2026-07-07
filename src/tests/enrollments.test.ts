@@ -168,7 +168,7 @@ describe('signUpForClass', () => {
         },
       });
       const result = await signUpForClass(db, INPUT);
-      expect(result).toEqual({ outcome: 'enrolled' });
+      expect(result).toEqual({ outcome: 'enrolled', enrollmentId: expect.any(String) });
       expect(calls.some((c) => c.sql.startsWith('INSERT INTO class_enrollments'))).toBe(true);
     });
   });
