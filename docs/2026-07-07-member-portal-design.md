@@ -116,6 +116,10 @@ and class signup proceed as short single-question steps rather than one long for
 - The covered members, each with: profile summary, directory listing control (the primary
   can set any household member's listing — the ruling; minors' rows say so plainly), and
   remove/add (add = the welcome page's "add each household member" promise, fulfilled here).
+- **Override precedence, disclosed both ways (round-two critique):** an adult member and
+  the primary can both write the member's listing; the latest change wins, the member's
+  own profile says the primary can change it, and the household page says the member can.
+  No silent overrides.
 - The primary designation shown; reassignment is an admin action (the portal links to
   contact, doesn't self-serve it in v1).
 
