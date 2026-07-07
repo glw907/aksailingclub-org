@@ -32,11 +32,17 @@ export const { renderMarkdown } = createRenderer(ascRegistry);
 export const clubAdminNav: AdminNavSection = {
   label: 'Club',
   children: [
+    // portal-capstone: the section's own landing, the needs-attention strip's front door
+    // (pending signup reviews, pending asset requests, offers nearing expiry). First in the
+    // list: the section's "home", not just another screen.
+    { label: 'Overview', icon: 'anchor', href: '/admin/club' },
     { label: 'Events', icon: 'calendar', href: '/admin/club/events' },
     { label: 'Classes', icon: 'clipboard-list', href: '/admin/club/classes' },
     { label: 'Members', icon: 'users', href: '/admin/club/members' },
     { label: 'Signups', icon: 'list', href: '/admin/club/signups' },
     { label: 'Assets', icon: 'package', href: '/admin/club/assets' },
+    // portal-capstone: the asset-request review inbox (the signup queue's own pattern).
+    { label: 'Requests', icon: 'table', href: '/admin/club/asset-requests' },
     { label: 'Email', icon: 'inbox', href: '/admin/club/email' },
     // Task 4: role management + the offer-window setting; the layout guard admits any club role
     // here, but the screen's own write actions are owner-only (see the settings route's header

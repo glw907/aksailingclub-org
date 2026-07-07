@@ -147,14 +147,22 @@ section posts to this route's own actions, independent of the main edit form bel
     <div class="border-b border-[var(--cairn-card-border)] p-6">
       <h2 class="text-sm font-semibold">Roster</h2>
       <p class="mt-1 text-sm text-muted">
-        {data.class.enrolledCount} enrolled, {data.class.waitlistCount} on the waitlist. Read-only this pass.
+        {data.class.enrolledCount} enrolled, {data.class.waitlistCount} on the waitlist. Dropping an
+        enrollee frees the spot; a nonempty waitlist gets an automatic offer.
       </p>
     </div>
     <ul class="divide-y divide-[var(--cairn-card-border)]">
       {#each data.enrollments as enrollment (enrollment.id)}
         <li class="flex items-center justify-between gap-4 px-6 py-3 text-sm">
           <span>{enrollment.memberId}</span>
-          <span class="text-muted">{enrollment.feePaid ? 'Paid' : 'Unpaid'}</span>
+          <span class="flex items-center gap-3">
+            <span class="text-muted">{enrollment.feePaid ? 'Paid' : 'Unpaid'}</span>
+            <form method="post" action="?/dropEnrollment">
+              <input type="hidden" name="enrollmentId" value={enrollment.id} />
+              <CsrfField />
+              <button type="submit" class="btn btn-ghost btn-xs">Drop</button>
+            </form>
+          </span>
         </li>
       {:else}
         <li class="px-6 py-6 text-center text-sm text-muted">No one is enrolled yet.</li>

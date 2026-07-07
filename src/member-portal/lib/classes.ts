@@ -295,6 +295,26 @@ export async function withdrawFromClass(
   return { ok: true, autoOfferedTo };
 }
 
+/**
+ * The admin's own class-drop action (this task's own scope item 6: "the admin class-drop
+ * action"): the identical freed-spot-aware, reversing-credit, auto-offering withdrawal
+ * `withdrawFromClass` performs for a member's own self-service withdrawal, reused rather than
+ * duplicated — an admin needs no household-ownership gate (they may drop any enrollment), so this
+ * resolves the enrollment's OWN real household id first, then delegates to `withdrawFromClass`
+ * with that id, which trivially satisfies its own ownership check.
+ */
+export async function adminDropEnrollment(
+  db: D1Database,
+  args: { enrollmentId: string; notify?: { env: EmailBindingEnv; origin: string } },
+): Promise<{ ok: true; autoOfferedTo: string | null } | ClassActionError> {
+  const row = await db
+    .prepare('SELECT m.household_id FROM class_enrollments e JOIN members m ON m.id = e.member_id WHERE e.id = ?1')
+    .bind(args.enrollmentId)
+    .first<{ household_id: string }>();
+  if (!row) return { error: 'No such enrollment.' };
+  return withdrawFromClass(db, { enrollmentId: args.enrollmentId, householdId: row.household_id, notify: args.notify });
+}
+
 /** One waitlist entry's own live offer, for the portal's claim/pass display (the design doc's
  *  own "live offer display with claim/pass"), resolved by waitlist id (the member is already
  *  authenticated, so the portal never needs the emailed bearer token the public claim route

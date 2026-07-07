@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fakeD1 } from './_fake-d1';
 import {
+  adminDropEnrollment,
   claimOfferFromPortal,
   joinWaitlist,
   leaveWaitlist,
@@ -191,6 +192,29 @@ describe('withdrawFromClass', () => {
     const result = await withdrawFromClass(db, { enrollmentId: 'enr-1', householdId: 'hh-1' });
     expect(result).toEqual({ ok: true, autoOfferedTo: 'wait-next' });
     expect(calls.some((c) => c.sql.startsWith('INSERT INTO class_offers'))).toBe(true);
+  });
+});
+
+describe('adminDropEnrollment (reuses withdrawFromClass against the enrollment\'s own real household)', () => {
+  it('refuses an unknown enrollment', async () => {
+    const { db } = fakeD1({ firstResults: { 'FROM class_enrollments e JOIN members m': null } });
+    await expect(adminDropEnrollment(db, { enrollmentId: 'enr-1' })).resolves.toEqual({ error: 'No such enrollment.' });
+  });
+
+  it('resolves the enrollment\'s own household, then performs the same withdrawal a member\'s own action would', async () => {
+    // adminDropEnrollment's own lookup and withdrawFromClass's own (internally delegated) lookup
+    // share the same table-join substring; one superset row answers both queries' own field needs
+    // (a mock concern only — the real D1 driver projects exactly what each SELECT lists).
+    const { db, calls } = fakeD1({
+      firstResults: {
+        'FROM class_enrollments e JOIN members m': { household_id: 'hh-1', id: 'enr-1', class_id: CLASS_ROW.id, member_name: 'Kid Scratch', class_name: CLASS_ROW.name },
+        'FROM credit_redemptions WHERE enrollment_id': null,
+        "ORDER BY position ASC LIMIT 1": null,
+      },
+    });
+    const result = await adminDropEnrollment(db, { enrollmentId: 'enr-1' });
+    expect(result).toEqual({ ok: true, autoOfferedTo: null });
+    expect(calls.some((c) => c.sql.startsWith('DELETE FROM class_enrollments'))).toBe(true);
   });
 });
 
