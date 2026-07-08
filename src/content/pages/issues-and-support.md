@@ -31,10 +31,9 @@ Club expense receipts (include photo or scan). Routes to the Finance Committee b
 
 ## Report an Issue
 
-:::callout[The Report Form Is Moving to the New Site]{tone="interim"}
-The issue-report form isn't wired up here yet. In the meantime, post in the Discord channel for
-your issue (see below), or email `board@aksailingclub.org` for billing, reimbursement, or storage
-questions.
+:::callout[How to Report an Issue]{tone="note"}
+Report your issue in the matching Discord channel above, or email `board@aksailingclub.org` for
+billing, reimbursement, or storage questions.
 :::
 
 ## Prefer Discord?

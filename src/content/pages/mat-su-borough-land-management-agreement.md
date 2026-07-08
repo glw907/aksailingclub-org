@@ -70,7 +70,7 @@ It is the responsibility of the Club to initiate and secure all sources of fundi
 
 - Clearing within the extents of the property, if needed, may only be authorized by the Borough.
 
-### Section 7. Alterations, Improvements, and Capitol Improvements.
+### Section 7. Alterations, Improvements, and Capital Improvements.
 
 Any major alterations and improvements which are of a permanent nature must be approved by the Borough in advance of work being started. The Borough will require review and acceptance of any construction and/or fixtures as part of the process for approval.
 
@@ -96,7 +96,7 @@ The Club shall submit annually on the anniversary of the date of this Agreement 
 
 - Updated contact information of the Club's representatives, to include updated phone number and address if representatives have changed.
 
-### Section 11. Waste and Injury of Propety.
+### Section 11. Waste and Injury of Property.
 
 The Club, its elected and appointed officers, agents, volunteers, board members, members, employees, subcontractors, or anyone directly or indirectly employed by them, shall not commit waste upon or injury to the property or improvements thereon, or allow third parties to commit such waste or injury. The Club shall be liable for all damage and repair costs during the term of this Agreement.
 

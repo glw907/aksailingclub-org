@@ -2,9 +2,9 @@
 title: "Moorings"
 ---
 
-The ASC has a small number of seasonal moorings for member-owned keelboats. Moorings are managed by the Harbormaster and are among the club's most in-demand resources, waitlists commonly span multiple years. If you're interested in a mooring, the best path is to get involved first: race, volunteer, attend work parties.
+The ASC has a small number of seasonal moorings for member-owned keelboats. Moorings are managed by the Harbormaster and are among the club's most in-demand resources, waitlists commonly span multiple years. If you're interested in a mooring, the best path is to get involved first: [race](/racing/), volunteer, and [attend work parties](/get-involved/).
 
-All mooring spaces require **Active Participating Member** status. See [Seasonal Storage](/seasonal-storage/) for the full eligibility requirements. For current availability, see [Storage Waitlists](/waitlists/).
+All mooring spaces require **[Active Participating Member](/member-expectations/#member-status-definitions)** status. See [Seasonal Storage](/seasonal-storage/) for the full eligibility requirements. For current availability, see [Storage Waitlists](/waitlists/).
 
 ## What We Have
 

@@ -414,6 +414,4 @@ These Bylaws may be altered, amended or repealed and new Bylaws may be adopted b
 
 ---
 
-*KNOW ALL PERSONS BY THESE PRESENTS: That the undersigned Secretary of __________ does hereby certify that the above and foregoing Bylaws were duly adopted [amended] by the Board of Directors on the ____ day of ________________, 201_.*
-
-*Secretary*
+*Certified as adopted by the Board of Directors on January 30, 2024. The signed original is on file with the Secretary; see the [downloadable PDF](/uploads/2024/04/bylaws-of-the-alaska-sailing-club-inc.pdf) above.*

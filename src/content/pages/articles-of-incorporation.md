@@ -126,10 +126,8 @@ These Amended and Restated Articles of Incorporation completely amend the origin
 
 *IN WITNESS WHEREOF, the undersigned have signed these Restated Articles of Incorporation this 19th day of October 2007.*
 
-*Timothy Gould*
-*President*
+*Timothy Gould, President*
 
 *Attested to:*
 
-*Elayne Hunter*
-*Secretary*
+*Elayne Hunter, Secretary*

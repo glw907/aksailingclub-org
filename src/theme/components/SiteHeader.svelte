@@ -64,6 +64,19 @@ state. -->
     return path === target || path.startsWith(`${target}/`);
   }
 
+  /**
+   * Whether a nav item should carry the active-nav mark: its own link matches, or (for Members,
+   * the one item with a `children` list) the visitor is on one of its declared sub-pages. Members'
+   * own `url` (`/members/`) never nests any of its seven children (each is its own flat top-level
+   * route, e.g. `/new-member-guide/`), so `isCurrent(item.url)` alone left the parent unmarked on
+   * every one of its own sub-pages (the craft sweep's finding, 2026-07-07: no "you are here" cue
+   * anywhere under Members).
+   */
+  function isCurrentItem(item: NavNode): boolean {
+    if (item.url && isCurrent(item.url)) return true;
+    return hasChildren(item) && item.children.some((child) => child.url && isCurrent(child.url));
+  }
+
   function closeMobile(): void {
     mobileOpen = false;
   }
@@ -147,7 +160,7 @@ state. -->
          genuinely fitting, verified by a width sweep. -->
     <nav class="desktop-nav items-center gap-s" aria-label="Primary">
       {#each nav as item (item.url ?? item.label)}
-        {@const current = item.url ? isCurrent(item.url) : false}
+        {@const current = isCurrentItem(item)}
         {#if hasChildren(item)}
           <!-- Members: a real link to /members/ plus a caret that opens its seven sub-links as a
                DaisyUI v5 popover dropdown (the EditorToolbar recipe: popovertarget/anchor-name on
@@ -243,7 +256,7 @@ state. -->
     <div class="mobile-menu mx-auto max-w-measure-wide border-t border-card-border px-m py-2xs">
       <div class="mobile-menu-links">
         {#each nav as item (item.url ?? item.label)}
-          {@const current = item.url ? isCurrent(item.url) : false}
+          {@const current = isCurrentItem(item)}
           <a
             href={item.url}
             class="mobile-link"

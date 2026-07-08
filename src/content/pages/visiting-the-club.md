@@ -4,7 +4,9 @@ title: "Visiting the Club"
 
 Use this page as a quick reference when you're planning a trip out to the club. If this is your first visit, start with the [New Member Guide](/new-member-guide/): it covers everything here and more, including club culture, boat qualification, and how things work at the Alaska Sailing Club.
 
-All members and guests are expected to follow club rules while on ASC grounds. The highlights: kids 12 and under wear a life jacket at all times (no exceptions), dogs are welcome but must be supervised and cleaned up after, guests must be accompanied and sign a liability form, and fires are limited to the waterfront pit.
+**Getting there:** Mile 8.2 South Big Lake Road, Big Lake, AK 99654, about an hour north of Anchorage on the Parks Highway. See [Contact](/contact/#our-location) for a map link.
+
+All members and guests are expected to follow club rules while on ASC grounds. The highlights: kids 12 and under wear a life jacket anywhere on club grounds or docks (no exceptions), dogs are welcome but must be supervised and cleaned up after, guests must be accompanied and sign a liability form, and fires are limited to the waterfront pit.
 
 ::::cards
 :::card[Member Expectations]{icon="clipboard-text" href="/member-expectations/"}
@@ -32,7 +34,7 @@ Three Bears grocery store and Lakeside Laundromat (hot showers, water refills) a
 
 ### Tent Camping
 
-Tent camping is included with membership. The tenting area is at the end of Trailer Row, no reservation, no signup, just show up. Ground fires only in the established waterfront fire pit, pack out what you pack in, and children 12 and under must wear a life jacket near the water.
+Tent camping is included with membership. The tenting area is at the end of Trailer Row, no reservation, no signup, just show up. Ground fires only in the established waterfront fire pit, pack out what you pack in, and children 12 and under must wear a life jacket anywhere on club grounds or docks.
 
 ### Transient RV Parking
 

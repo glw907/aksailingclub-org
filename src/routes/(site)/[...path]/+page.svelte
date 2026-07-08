@@ -105,6 +105,20 @@
   const pitchSplitId = $derived(
     data.entry.concept === 'pages' ? PITCH_SPLIT_HEADING_ID[data.entry.slug] : undefined,
   );
+
+  // The craft sweep's band-alternation fix (2026-07-07): a handful of `pages`-concept docs are
+  // long enough to read as one flat, monotonous white column (committees, members, visiting-the-
+  // club) but are editorial/prose content rather than a lookup reference a visitor navigates
+  // section by section, so the panel/TOC treatment below (built for bylaws-style reference
+  // documents) is the wrong device for them — it wraps every short section in identical bordered
+  // white cards, which is exactly the "cards mark objects, bands mark sections, nothing gets
+  // both" violation A1 warns against. These three reuse the pitch mechanism whole-page (bandPitch
+  // below, already proven on education's own pitch) instead: alternating full-bleed bands, no
+  // TOC, no panels. A page not listed here keeps the ordinary density-gated template.
+  const BAND_WHOLE_PAGE_SLUGS = new Set(['committees', 'members', 'visiting-the-club']);
+  const bandWholePage = $derived(
+    data.entry.concept === 'pages' && BAND_WHOLE_PAGE_SLUGS.has(data.entry.slug),
+  );
   const pitchSplit = $derived(pitchSplitId ? splitAtHeadingId(data.html, pitchSplitId) : null);
   // On a split page, only the material below the split heading is subject to the density gate
   // and the panel/TOC treatment; on every other page `referenceHtml` is the whole document,
@@ -133,25 +147,43 @@
 
   const pitchBandedHtml = $derived(bandPitch(pitchHtml));
 
+  // A band-whole-page doc (committees, members, visiting-the-club) reuses bandPitch over its
+  // entire body rather than just a pitch prefix: there is no reference-material tail to hand off
+  // to, so the whole document bands.
+  const bandWholePageHtml = $derived(bandWholePage ? bandPitch(data.html) : '');
+
   // Gated on a heading count, not a hardcoded slug list, so this generalizes to any page that
   // grows into a long reference document rather than special-casing bylaws and the new-member
   // guide by name (spec B1: "in-page TOCs on the longest pages"). Eight or more h2/h3 headings is
   // the density where a document reads as a reference to navigate rather than prose to read
   // straight through. Computed over `referenceHtml`, not the raw document, so a split page's TOC
   // both scopes to and covers the material it actually governs, complete rather than truncated.
-  const toc = $derived(extractToc(referenceHtml));
+  // `bandWholePage` opts out unconditionally: those docs get the band treatment above instead,
+  // regardless of how many headings they carry (committees crosses the 8-heading gate on its
+  // own). `toc` is forced empty for them, which already makes `showToc` false below with no
+  // separate `bandWholePage` check needed.
+  const toc = $derived(bandWholePage ? [] : extractToc(referenceHtml));
   const showToc = $derived(toc.length >= 8);
   // The section-panel treatment (the presentation round's Strand 2) is the pages concept's own
   // template device, not a general density-gated feature: a long post or bulletin still earns the
   // sticky gutter TOC below, but its body stays plain prose, unpanelled.
   const showPanels = $derived(showToc && data.entry.concept === 'pages');
 
-  /** Splits rendered HTML at each top-level `<h2>` boundary: everything before the first h2 (the
-   *  lede under the title) is the preamble, and each h2 through the content up to (but excluding)
-   *  the next h2 is one section. Shares extractToc's assumption that a heading is always a
-   *  top-level block in the render output, never nested inside another element. */
+  /** Splits rendered HTML at each top-level heading boundary: everything before the first such
+   *  heading (the lede under the title) is the preamble, and each heading through the content up
+   *  to (but excluding) the next one is one section. Splits on `<h2>` when the document has any;
+   *  a document whose own sections are numbered one level deeper (the Mat-Su land agreement's
+   *  "Section N" headings are all `###`, with no `##` at all) falls back to `<h3>`, so its
+   *  sections still split into the panel/TOC grid instead of the whole document silently
+   *  collapsing into one giant preamble ahead of an empty section list (the craft sweep's finding,
+   *  2026-07-07: the TOC rendered only after the entire document, since nothing here ever split
+   *  it out). Shares extractToc's assumption that a heading is always a top-level block in the
+   *  render output, never nested inside another element. */
   function splitAtH2(html: string): { preamble: string; sections: string[] } {
-    const starts = [...html.matchAll(/<h2 id="[^"]+"[^>]*>/g)].map((match) => match.index);
+    const level = /<h2 id="[^"]+"[^>]*>/.test(html) ? 2 : 3;
+    const starts = [...html.matchAll(new RegExp(`<h${level} id="[^"]+"[^>]*>`, 'g'))].map(
+      (match) => match.index,
+    );
     if (starts.length === 0) return { preamble: html, sections: [] };
     const preamble = html.slice(0, starts[0]);
     const sections = starts.map((start, i) => html.slice(start, starts[i + 1] ?? html.length));
@@ -258,41 +290,58 @@
     {/if}
     {@render titleBlock()}
   {/if}
-  {#if pitchSplitId}
-    <!-- The pitch: everything above the split heading, banded into alternating sections (the
-         design-polish pass, 2026-07-07) with no panels and no TOC. -->
-    {@html pitchBandedHtml}
-    <!-- The pitch-to-reference hand-off (the design-polish pass, 2026-07-07): the genre shift
-         from persuasion prose to a boxed, navigable reference section was previously silent and
-         abrupt (a finding against education, where the pitch ends mid-registration and the
-         reference material starts at "Swim Test, Capsize Drill..."). A labeled divider announces
-         the shift explicitly instead of leaving the reader to infer it from the narrower measure
-         and the panel chrome alone. -->
-    <div class="pitch-reference-divider not-prose">
-      <span class="pitch-reference-label">Reference &amp; policies</span>
-    </div>
-  {/if}
-  {#if showToc}
-    <details class="toc mobile-toc">
-      <summary>Table of contents</summary>
-      <nav aria-label="Table of contents">
-        {@render tocList(null)}
-      </nav>
-    </details>
-  {/if}
-  {@html preambleHtml}
-  {#if showToc}
-    <div class="article-toc-shell">
-      <div class="article-sections">
-        {@html sectionsHtml}
+  {#if bandWholePage}
+    <!-- The craft sweep's band-whole-page treatment (2026-07-07): the entire body, banded into
+         alternating full-bleed sections like the pitch above, with no TOC and no panel chrome
+         (see BAND_WHOLE_PAGE_SLUGS's own comment for why these three docs opt out of the ordinary
+         panel/TOC template). -->
+    {@html bandWholePageHtml}
+  {:else}
+    {#if pitchSplitId}
+      <!-- The pitch: everything above the split heading, banded into alternating sections (the
+           design-polish pass, 2026-07-07) with no panels and no TOC. -->
+      {@html pitchBandedHtml}
+      <!-- The pitch-to-reference hand-off (the design-polish pass, 2026-07-07): the genre shift
+           from persuasion prose to a boxed, navigable reference section was previously silent and
+           abrupt (a finding against education, where the pitch ends mid-registration and the
+           reference material starts at "Swim Test, Capsize Drill..."). A labeled divider announces
+           the shift explicitly instead of leaving the reader to infer it from the narrower measure
+           and the panel chrome alone. -->
+      <div class="pitch-reference-divider not-prose">
+        <span class="pitch-reference-label">Reference &amp; policies</span>
       </div>
-      <aside class="page-toc-sticky">
-        <p class="page-toc-heading">On this page</p>
+    {/if}
+    {#if showToc}
+      <details class="toc mobile-toc">
+        <summary>Table of contents</summary>
         <nav aria-label="Table of contents">
-          {@render tocList(highlightedId)}
+          {@render tocList(null)}
         </nav>
-      </aside>
+      </details>
+    {/if}
+    <!-- The lede/preamble sits in its own measure-capped wrapper (the craft sweep's fix,
+         2026-07-07): a TOC page's `.prose` box widens past the plain reading measure to make room
+         for the sticky gutter (the media query below and site.css's matching `.site-main` rule),
+         and with no cap of its own the preamble's running prose stretched to that full wide box
+         (up to ~58rem, well past a comfortable line length) while every section below it stayed
+         narrow inside its own panel padding. A no-op on a page with no TOC, since `.prose` never
+         widens there in the first place. -->
+    <div class="prose-lede">
+      {@html preambleHtml}
     </div>
+    {#if showToc}
+      <div class="article-toc-shell">
+        <div class="article-sections">
+          {@html sectionsHtml}
+        </div>
+        <aside class="page-toc-sticky">
+          <p class="page-toc-heading">On this page</p>
+          <nav aria-label="Table of contents">
+            {@render tocList(highlightedId)}
+          </nav>
+        </aside>
+      </div>
+    {/if}
   {/if}
   {#if isPost && data.entry.tags.length > 0}
     <ul class="post-tags" aria-label="Tags">
@@ -348,8 +397,12 @@
   }
 
   /* The subtitle line under the title (manifest item 10): a distinct, quieter line, not another
-     prose paragraph. */
+     prose paragraph. Capped to the plain reading measure (the craft sweep's fix, 2026-07-07): a
+     direct `.prose` child with no max-width of its own, it ran the full wide TOC-gutter measure
+     on a doc like ascca-bylaws or bylaws (`description` doubling as this line), the widest, most
+     prominent line on the page and the one a reader reads as the lede. */
   .page-subtitle {
+    max-width: var(--container-measure);
     margin: 0 0 var(--spacing-m);
     font-size: var(--text-step-0);
     color: var(--color-muted);
@@ -531,6 +584,18 @@
   .article-toc-shell {
     --flow-space: var(--spacing-xl);
   }
+  /* The preamble's own measure cap (the craft sweep, 2026-07-07): see the template comment above
+     this element for why it exists. Capped independent of `.prose`'s own width, which the media
+     query below widens only to make room for the sticky TOC gutter, not to stretch running prose
+     text. The owl-selector flow rhythm is redeclared one level deeper than `.prose > * + *`
+     reaches now that this wrapper sits between them, the same idiom `.content-panel` uses on
+     itself further down. */
+  .prose-lede {
+    max-width: var(--container-measure);
+  }
+  .prose-lede > :global(* + *) {
+    margin-top: var(--flow-space);
+  }
   .article-sections {
     min-width: 0;
   }
@@ -611,10 +676,38 @@
       top: var(--header-clearance);
       max-height: calc(100vh - var(--header-clearance) - var(--spacing-l));
       overflow-y: auto;
-      background: var(--color-base-100);
       border: var(--border) solid var(--color-card-border);
       border-radius: var(--radius-box);
       padding: var(--spacing-s) var(--spacing-m);
+      /* A long reference doc's TOC (bylaws' 76 entries, mat-su's 35) runs well past this box's own
+         max-height; overflow-y:auto already scrolls it, but a static view of the box otherwise
+         gives no cue that more entries sit below the fold (the craft sweep's finding, 2026-07-07:
+         a scrollable TOC read as truncated at the box's own edge, on platforms whose overlay
+         scrollbar only paints on hover). Two devices: an always-rendered thin scrollbar (a no-op
+         on a page short enough to need no scrolling), and the classic four-layer "scroll shadow"
+         background below, which fades and shadows the trailing edge only while there is more list
+         to scroll to (the two inner gradients repaint the background color over the shadow near
+         each edge and scroll WITH the content via `local`; the two radial-gradient shadows stay
+         fixed to the box's own edges via `scroll`, so the visible shadow is only whatever peeks
+         out from under the repainted cover, i.e. nothing at the start/end of the list). */
+      scrollbar-width: thin;
+      scrollbar-color: var(--color-muted) transparent;
+      background:
+        linear-gradient(var(--color-base-100) 30%, transparent) top / 100% 2.5rem local no-repeat,
+        linear-gradient(transparent, var(--color-base-100) 70%) bottom / 100% 2.5rem local no-repeat,
+        radial-gradient(
+            farthest-side at 50% 0,
+            color-mix(in oklab, var(--color-base-content) 20%, transparent),
+            transparent
+          )
+          top / 100% 0.75rem scroll no-repeat,
+        radial-gradient(
+            farthest-side at 50% 100%,
+            color-mix(in oklab, var(--color-base-content) 20%, transparent),
+            transparent
+          )
+          bottom / 100% 0.75rem scroll no-repeat,
+        var(--color-base-100);
     }
   }
   .page-toc-heading {
