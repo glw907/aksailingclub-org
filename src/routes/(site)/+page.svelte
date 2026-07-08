@@ -248,14 +248,14 @@ before the photography existed, never a broken image. -->
             abilities:
           </p>
           <ul class="fleet-list text-step-0 text-base-content">
-            <li>Six Lido 14s</li>
-            <li>Three Lasers</li>
-            <li>A Laser II</li>
-            <li>Five Optimists</li>
-            <li>A Buccaneer 18</li>
-            <li>A Catalina 16.5</li>
-            <li>A Skipjack 15</li>
-            <li>An Ensign 22</li>
+            <li><span class="fleet-count">Six</span> Lido 14s</li>
+            <li><span class="fleet-count">Three</span> Lasers</li>
+            <li><span class="fleet-count">A</span> Laser II</li>
+            <li><span class="fleet-count">Five</span> Optimists</li>
+            <li><span class="fleet-count">A</span> Buccaneer 18</li>
+            <li><span class="fleet-count">A</span> Catalina 16.5</li>
+            <li><span class="fleet-count">A</span> Skipjack 15</li>
+            <li><span class="fleet-count">An</span> Ensign 22</li>
           </ul>
           <p class="mt-xs text-step-0 text-base-content">All available to qualified club members.</p>
           <a href="/club-boat-use-and-qualification/" class="arrow-link mt-s inline-block font-semibold text-primary underline underline-offset-[3px]">
@@ -470,12 +470,20 @@ before the photography existed, never a broken image. -->
     font-weight: 650;
   }
 
-  /* Our fleet's own list (the owner-round-2 fix, 2026-07-07): a plain inventory, not the
-     Facilities amenity list's "included with membership" checkmark (a different meaning; reusing
-     that mark here would blur it). A single short dash reads as a neutral list item rather than an
-     unlabeled bullet, at the same full body ink as the surrounding intro/outro prose, since this
-     list is not being asked to read as subordinate the way Facilities' now is. One column: eight
-     short entries never runs tall enough to need the amenity list's multi-column balance. */
+  /* Our fleet's own list (the fleet-treatment pass, 2026-07-07): the owner flagged the plain en
+     dash as untreated next to Facilities' designed checkmark. This list is the section's PRIMARY
+     content, not subordinate the way Facilities' amenity list reads, so it keeps full body scale
+     and ink (`text-step-0 text-base-content`, unchanged) rather than borrowing Facilities' quieted
+     `text-step--1 text-muted` treatment; only the marker and row rhythm get real design attention.
+     The marker is a small filled diamond in `--color-muted`, the "quiet point in the muted tone"
+     recipe: a designed waypoint mark, not a copy of Facilities' checkmark (a different meaning,
+     "included with membership") or the Season's gold dot, which the club-grounds story reserves
+     for classes/clinics only ("marks and waypoints... never body text" elsewhere) — reusing that
+     hue here would blur the one meaning it carries. The diamond's own shape (not a circle) also
+     keeps it visibly distinct from the Season's dot at a glance. Row spacing steps up from the
+     prior arbitrary 0.2rem to the `--spacing-3xs` token, a touch more generous than Facilities'
+     tight, subordinate rhythm, since this list is the primary read. One column: eight short
+     entries never runs tall enough to need the amenity list's multi-column balance. */
   .fleet-list {
     margin: 0;
     margin-top: var(--spacing-xs);
@@ -483,15 +491,29 @@ before the photography existed, never a broken image. -->
     list-style: none;
   }
   .fleet-list li {
-    padding-block: 0.2rem;
+    padding-block: var(--spacing-3xs);
     padding-left: 1.1rem;
     position: relative;
   }
+  /* `1lh` centers the mark on the item's first line (the amenity checkmark's own technique, see
+     its comment below), so it reads as a bullet at the text's own cap-height rather than floating
+     a few pixels off. */
   .fleet-list li::before {
-    content: '\2013';
+    content: '';
     position: absolute;
-    left: 0;
-    color: var(--color-muted);
+    left: 0.15rem;
+    top: calc((1lh - 6px) / 2);
+    width: 6px;
+    height: 6px;
+    background: var(--color-muted);
+    transform: rotate(45deg);
+  }
+  /* The leading quantity ("Six", "A", "An") steps up half a weight (the same 650 the page's other
+     quiet-emphasis labels use: the news card title, the What-do-we-do label), so a reader scanning
+     straight down the column sees the fleet's own counts at a glance rather than reading each line
+     as a full sentence to find the number. */
+  .fleet-count {
+    font-weight: 650;
   }
 
   /* Our fleet's photo (the owner-round-2 fix, 2026-07-07): unlike Facilities, this crop needs no
