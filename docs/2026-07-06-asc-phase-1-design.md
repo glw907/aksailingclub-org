@@ -201,4 +201,7 @@ the navy closer) only. Photographic and content blocks — image panels, card ro
 the triptych — never exceed the wide content breakout (`--container-measure-wide`): "the
 full-bleed will _never_ look good when stretched across the full screen." A content element
 that wants presence gets height, composition, and placement inside the page's own edges, not
-viewport width.
+viewport width. The rule is width-conditional: at tablet and narrow viewports (where the
+viewport and the content measure converge) edge-to-edge content is fine and often right; at
+wide viewports it never is. In practice: content blocks cap at the wide breakout, which
+below ~lg is the viewport anyway.
