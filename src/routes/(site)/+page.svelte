@@ -621,7 +621,24 @@ before the photography existed, never a broken image. -->
      this same element, would inset the panels 27px from the rounded edge on both sides, leaving a
      blank white margin inside the curve instead of the photo clipping there. The outer wrapper
      still lands the band's outer edges at the page's shared measure; this element is purely the
-     grid plus its own clip. */
+     grid plus its own clip.
+
+     Round-8 (2026-07-08) turns this into a true shared-row grid at the desktop tier, replacing
+     round-7's per-panel `min-height` guess (see `.wdwd-panel-desc`'s own comment for why that
+     mechanism was width-fragile). Four row tracks, shared across all three columns: an `1fr`
+     image-space row, then `auto` title/description/link rows. `.wdwd-panel` becomes a `subgrid`
+     spanning all four rows in its own column (below), so its title/description/link (unwrapped
+     from `.wdwd-panel-caption` via `display: contents`, further below) land as direct items of
+     THESE shared rows rather than three independent per-panel stacks: the description row sizes
+     to the tallest description across all three panels, at any width, so every panel's title and
+     link sit at the same y for free, by construction, instead of a guessed line budget.
+
+     `aspect-ratio: 33 / 20` replaces round-6's per-panel `11 / 20` (see `.wdwd-panel`'s own
+     comment): with three equal 1fr columns and no gap, the whole band's width-to-height ratio is
+     exactly three times a single column's, so this reproduces the identical per-panel height
+     (`bandWidth / (33/20) == columnWidth / (11/20)` when `bandWidth == 3 * columnWidth`) while
+     giving the grid a definite height for the flexible `1fr` image-space row to resolve against
+     (an `auto`-height grid can't distribute `1fr` space without one). */
   .wdwd-triptych {
     display: grid;
     grid-template-columns: 1fr;
@@ -631,29 +648,23 @@ before the photography existed, never a broken image. -->
   @media (min-width: 56.25rem) {
     .wdwd-triptych {
       grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: 1fr auto auto auto;
+      aspect-ratio: 33 / 20;
     }
   }
 
-  /* Each panel's height: a fixed portrait `aspect-ratio` at the three-up desktop tier. Round-6
-     (2026-07-07) restores the weight of the original wdwd-candidates "Candidate A" render Geoff
-     picked "by a mile" (docs/superpowers/plans/assets or the pass's own archived crop), which
-     round-5's containment fix had inadvertently walked back to a short strip: `4 / 5` at this
-     column's own ~291px (1440px) width landed panels around 364px tall, well short of Candidate
-     A's own immersive proportion. `11 / 20` (0.55) lands each panel around 500-560px tall across
-     the container's own clamp range at 1440px, close to Candidate A's page-scale character, while
-     still tying height to the panel's own column width (never the viewport's) so the ratio holds
-     by construction at every desktop width, the property round-5's fix established and this one
-     keeps. The same silent-gradient degrade the hero/fleet/facilities panels use covers a
-     resolver miss (no photo, no scrim, just the gradient panel; the word/description/link still
-     render, so the panel never goes empty).
+  /* Each panel's height at the desktop tier now comes from the band's own `aspect-ratio` (see
+     `.wdwd-triptych`'s comment) rather than a per-panel `11 / 20`: `.wdwd-panel` becomes a
+     `subgrid` spanning all four of the band's shared rows in its own column (round-8,
+     2026-07-08), so its rendered height is whatever those four shared row tracks resolve to,
+     the same 11/20-equivalent total the band's `33 / 20` reproduces. `position: relative` stays
+     so the absolutely-positioned image/scrim (below) still size against this element's own
+     padding box, spanning the full row range regardless of the subgrid's internal row split; a
+     grid item's own `position: relative` is unaffected by also being `display: grid`.
 
-     The stacked (mobile) tier's height grew from round-6's `clamp(12rem, 32vh, 18rem)` to
-     `clamp(20rem, 45vh, 26rem)` (round-7, 2026-07-07): the restored original copy's caption (see
-     `WHAT_WE_DO`'s own comment) needs roughly 280px of its own to hold word, description, and
-     link at any width, and round-6's own 18rem (288px) ceiling left the caption covering nearly
-     the entire panel, no photo visible at all, the same crowding the desktop tier's type and
-     leading work addressed. The new range holds comfortably clear of that floor at ordinary
-     phone heights, giving the photo a real top band again.
+     The stacked (mobile) tier keeps round-7's fixed clamp height and non-grid layout (2026-07-07:
+     restores the original copy's roughly 280px caption footprint after round-6's shorter ceiling
+     crowded the photo out entirely); the desktop-only media query below is where the tier splits.
 
      No `border-radius` here (moved to `.wdwd-triptych`, the group, in round-7: see that rule's own
      comment). `overflow: hidden` stays, since the panel still clips its own absolutely-positioned
@@ -670,7 +681,9 @@ before the photography existed, never a broken image. -->
   @media (min-width: 56.25rem) {
     .wdwd-panel {
       height: auto;
-      aspect-ratio: 11 / 20;
+      display: grid;
+      grid-template-rows: subgrid;
+      grid-row: 1 / -1;
     }
   }
   .wdwd-panel-img {
@@ -719,6 +732,11 @@ before the photography existed, never a broken image. -->
       color-mix(in oklab, var(--color-flag-navy-deep) 0%, transparent) 62%
     );
   }
+  /* The mobile (stacked) tier's caption: an absolutely-positioned, bottom-anchored box, unchanged
+     since round-7. At the desktop tier this box disappears (see the `display: contents` override
+     further below): its three children become direct items of `.wdwd-panel`'s shared-row
+     subgrid instead, so this rule (and its padding/color) governs the mobile tier only in
+     practice, even though it carries no media query of its own. */
   .wdwd-panel-caption {
     position: absolute;
     inset-inline: 0;
@@ -754,16 +772,18 @@ before the photography existed, never a broken image. -->
      roughly the panel's own bottom half at the desktop width, leaving the photo the clear top
      majority the scrim below is tuned for.
 
-     `min-height` reserves the row's own line budget (7 lines, the tallest of the three panels'
-     restored copy at this width) so the word and link stay planted at the same y position across
-     all three panels regardless of each panel's own description length, the row-grid Geoff's own
-     brief called for: a shorter future description leaves blank space in its own row rather than
-     floating the word above it upward, and a longer one grows past the reservation visibly (never
-     silently clipped) rather than breaking alignment without a trace. */
+     Round-7's `min-height` (a guessed 7-line budget) reserved this row's height to keep the word
+     and link planted at the same y across panels, but the guess only held at the widths it was
+     measured against: at 1280/1680/1920 the Race description wrapped one line longer than
+     Learn/Relax, so its title sat 21-23px higher than the others, a width-fragile mechanism by
+     construction. Round-8 (2026-07-08) removes it: `.wdwd-triptych`'s shared-row grid now sizes
+     this row to the tallest description across all three panels AT ANY WIDTH, so alignment holds
+     by construction rather than by a fixed guess (see that rule's own comment). At the mobile
+     tier, with no shared rows (panels stack, not side by side), the row simply sizes to its own
+     content. */
   .wdwd-panel-desc {
     margin: var(--spacing-2xs) 0 0;
     max-width: 30ch;
-    min-height: calc(7 * var(--leading-snug) * 1em);
     font-size: var(--text-step--1);
     line-height: var(--leading-snug);
     color: rgba(255, 255, 255, 0.92);
@@ -788,6 +808,48 @@ before the photography existed, never a broken image. -->
   .wdwd-panel-link:focus-visible {
     outline: 2px solid white;
     outline-offset: 2px;
+  }
+
+  /* The desktop tier's true shared-row placement (round-8, 2026-07-08): `.wdwd-panel-caption`
+     drops its own box (`display: contents`) so its three children reach `.wdwd-panel`'s subgrid
+     directly, each pinned to its own shared row (title/description/link are rows 2/3/4; row 1 is
+     the image-space `1fr` track, occupied by nothing, sized purely from `.wdwd-triptych`'s
+     `grid-template-rows`). The caption's own padding (mobile tier, above) is redistributed across
+     the three children so the box model reads the same either way: horizontal padding on all
+     three, the top gap only above the title, the bottom gap only below the link. `color: white`
+     on the caption still inherits down through `display: contents` (an element with no box still
+     passes inheritable properties to its children), so only the word needs its own explicit
+     `color` here, to not depend on that inheritance path for what the render actually shows.
+
+     `z-index: 1` on all three is load-bearing, not decoration: the image/scrim are absolutely
+     positioned, and the Grid spec explicitly excludes out-of-flow children from being "grid
+     items" (only in-flow children are), so they fall outside the "grid items paint like inline
+     blocks" rule that would otherwise let DOM order alone decide the stack. Without it, the
+     browser's default paint order puts positioned (abspos) descendants after non-positioned
+     in-flow content regardless of DOM order, so the scrim silently painted over the caption text.
+     A z-index on a grid item takes effect even at `position: static` (the Grid spec carve-out),
+     so this alone is enough to lift the caption above the scrim without also positioning it. */
+  @media (min-width: 56.25rem) {
+    .wdwd-panel-caption {
+      display: contents;
+    }
+    .wdwd-panel-word {
+      grid-row: 2;
+      z-index: 1;
+      padding: var(--spacing-m) var(--spacing-m) 0;
+      color: white;
+    }
+    .wdwd-panel-desc {
+      grid-row: 3;
+      z-index: 1;
+      padding-inline: var(--spacing-m);
+    }
+    .wdwd-panel-link {
+      grid-row: 4;
+      z-index: 1;
+      padding-inline: var(--spacing-m);
+      padding-bottom: var(--spacing-l);
+    }
   }
 
   /* Our fleet's own list, plain (the round-6 fix, 2026-07-07, replacing round-5's leader-dot
