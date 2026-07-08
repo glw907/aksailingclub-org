@@ -26,6 +26,8 @@
 DROP TABLE IF EXISTS events;
 DROP TABLE IF EXISTS classes;
 DROP TABLE IF EXISTS class_enrollments;
+DROP TABLE IF EXISTS class_waitlist;
+DROP TABLE IF EXISTS class_offers;
 
 CREATE TABLE events (
   id TEXT PRIMARY KEY,
@@ -61,6 +63,21 @@ CREATE TABLE classes (
 CREATE TABLE class_enrollments (
   id TEXT PRIMARY KEY,
   class_id TEXT NOT NULL
+);
+
+-- Empty: CLASSES_QUERY's registration-status CASE also joins class_waitlist (queue count) and
+-- class_offers (a live, unresolved offer), so both tables must exist even with no fixture rows,
+-- the same reason class_enrollments is here. Trimmed to the columns those two subqueries touch.
+CREATE TABLE class_waitlist (
+  id TEXT PRIMARY KEY,
+  class_id TEXT NOT NULL
+);
+
+CREATE TABLE class_offers (
+  token TEXT PRIMARY KEY,
+  class_id TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  resolved TEXT
 );
 
 INSERT INTO events (
