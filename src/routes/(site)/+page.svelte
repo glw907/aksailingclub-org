@@ -64,21 +64,21 @@ before the photography existed, never a broken image. -->
       cta: 'Learn to sail',
       href: '/education/',
       key: 'learn' as const,
-      desc: 'The ASC offers both introductory and intermediate courses every summer for adults, teens, and kids. Our intro courses require no prior sailing experience and are extremely popular. So, sign up quickly if you want a spot!',
+      desc: 'The ASC offers both introductory and intermediate courses every summer for adults, teens, and kids. Our intro courses require no prior sailing experience and are extremely popular.',
     },
     {
       label: 'Race',
       cta: 'Regatta schedule',
       href: '/racing/',
       key: 'race' as const,
-      desc: 'The ASC puts on six summer regattas, as well as “Wet Wednesday” races and clinics throughout summer. We host the largest Buccaneer 18 fleet in the US, as well as an active Portsmouth rated open fleet where anybody can race.',
+      desc: 'The ASC puts on six summer regattas, as well as “Wet Wednesday” races and clinics throughout summer. We host the largest Buccaneer 18 fleet in the US.',
     },
     {
       label: 'Relax',
       cta: 'Facilities & membership',
       href: '/join/',
       key: 'relax' as const,
-      desc: 'We have a beautiful location with a clubhouse and sauna, trailered boat and RV parking, a tenting area, and moorings for small keelboats. It’s a fantastic spot for casual sailing, swimming, kayaking, and relaxing in the sun.',
+      desc: 'We have a beautiful location with a clubhouse and sauna, a tenting area, and moorings for small keelboats. It’s a fantastic spot for casual sailing, swimming, kayaking, and relaxing in the sun.',
     },
   ];
 
