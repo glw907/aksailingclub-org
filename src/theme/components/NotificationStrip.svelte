@@ -14,8 +14,9 @@ round-3 strip); nothing here enlarges or strengthens beyond that. `parseBoldSegm
 (`$theme/active-notification`) is the one narrow, safe `**bold**` convention the plain-text `body`
 field supports; every segment still renders through Svelte's own escaped text interpolation, never
 `{@html}`. The action link now reads "Read more", not "Join now": a generic call to read the
-notice itself, not an assumption about what action it drives (`+page.svelte`'s own wrapper places
-this card at the hero's own left-column width). -->
+notice itself, not an assumption about what action it drives. `+page.svelte`'s own wrapper spans
+the card the page's full content measure, below both hero columns (the round-6 fix, 2026-07-07,
+superseding round-5's own hero-left-column width, which read as an inadvertent grid cell). -->
 <script lang="ts">
   import { parseBoldSegments, type ActiveNotification } from '$theme/active-notification';
 

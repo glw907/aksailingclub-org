@@ -77,18 +77,20 @@ before the photography existed, never a broken image. -->
     },
   ];
 
-  // Our fleet's own inventory (the leader-dot spec-sheet redesign, 2026-07-07): each class name
-  // singular, since the row itself (a dotted leader to a right-aligned count) carries the
-  // quantity now, the job round-4's plural names ("Lidos 14s") used to do on their own.
-  const FLEET: { name: string; count: number }[] = [
-    { name: 'Lido 14', count: 6 },
-    { name: 'Laser', count: 3 },
-    { name: 'Laser II', count: 1 },
-    { name: 'Optimist', count: 5 },
-    { name: 'Buccaneer 18', count: 1 },
-    { name: 'Catalina 16.5', count: 1 },
-    { name: 'Skipjack 15', count: 1 },
-    { name: 'Ensign 22', count: 1 },
+  // Our fleet's own inventory (the round-6 fix, 2026-07-07, replacing round-5's leader-dot
+  // spec-sheet device): the count emphasis was unnecessary chrome for eight short lines, so the
+  // quantity moves back into each item's own spelled-out text (matching the club's plain,
+  // conversational voice), and the list itself drops to a plain marker, matching the Facilities
+  // list as a sibling rather than a distinct device.
+  const FLEET: string[] = [
+    'Six Lido 14s',
+    'Three Lasers',
+    'A Laser II',
+    'Five Optimists',
+    'A Buccaneer 18',
+    'A Catalina 16.5',
+    'A Skipjack 15',
+    'An Ensign 22',
   ];
 </script>
 
@@ -165,20 +167,19 @@ before the photography existed, never a broken image. -->
        an expired one is correct, honest silence. See NotificationStrip.svelte's own header
        comment for the card itself.
 
-       Placed per the north star's own reference (docs/2026-07-06-asc-home-northstar.html in this
-       repo): a compact card directly below the hero's CTA, in the hero's own left column width,
-       not the page's full `max-w-measure-wide` measure. Reusing `.hero-grid`'s own grid
-       definition (below) rather than a second width value gets that column width for free and
-       exactly right at every viewport: with only one child, the card lands in the grid's first
-       (0.75fr) track at the 900px+ desktop tier and spans the full single column at the mobile
-       tier, pixel-identical to `.hero-text` above it either way. `pt-0` (no separate top gap, and
-       the round-4/round-5 hairline-plus-gap treatment is gone outright): the hero section's own
-       `pb-xl` is the only air between the CTA and the card now, so the two read as one continuous
-       announcement moment rather than a second, separated band; the card's own bounded fill,
-       not a gap, is what still keeps it from reading as hero copy. -->
+       Spans the page's own full `max-w-measure-wide` measure, below both hero columns (the
+       round-6 fix, 2026-07-07, superseding round-5's own `.hero-grid`-matched left-column width):
+       reusing the hero's own column grid gave the card the SAME width as `.hero-text` above it,
+       which read as an inadvertent 2x2 grid (text, photo / card, empty) rather than a single
+       full-width beat, since the card sat flush under the left column with nothing filling the
+       track beside it (Geoff's finding). A plain full-measure wrapper, the same one every other
+       section on the page uses, reads as its own deliberate row between the hero and News instead.
+       `pt-0` (no separate top gap): the hero section's own `pb-xl` is the only air above the card,
+       so the two still read as one continuous announcement moment; the card's own bounded fill,
+       not a gap, is what keeps it from reading as hero copy. -->
   {#if data.notification}
     <section class="pb-xl pt-0">
-      <div class="hero-grid mx-auto grid max-w-measure-wide grid-cols-1 px-m">
+      <div class="mx-auto max-w-measure-wide px-m">
         <NotificationStrip notification={data.notification} />
       </div>
     </section>
@@ -370,17 +371,11 @@ before the photography existed, never a broken image. -->
             abilities:
           </p>
           <ul class="fleet-list text-step--1">
-            {#each FLEET as boat (boat.name)}
-              <li>
-                <span class="fleet-name">{boat.name}</span>
-                <span class="fleet-leader" aria-hidden="true"></span>
-                <span class="fleet-count">{boat.count}</span>
-              </li>
+            {#each FLEET as boat (boat)}
+              <li>{boat}</li>
             {/each}
           </ul>
-          <p class="mt-xs text-step-0 text-base-content">
-            Nineteen boats, all available to qualified club members.
-          </p>
+          <p class="mt-xs text-step-0 text-base-content">All available to qualified club members.</p>
           <a href="/club-boat-use-and-qualification/" class="arrow-link mt-s inline-block font-semibold text-primary underline underline-offset-[3px]">
             Learn about club boat use &rarr;
           </a>
@@ -617,23 +612,32 @@ before the photography existed, never a broken image. -->
     }
   }
 
-  /* Each panel's height: a fixed portrait `aspect-ratio` at the three-up desktop tier (round-5
-     fix, 2026-07-07), replacing round-4's `clamp(16rem, 38vh, 25rem)`. That clamp's middle term
-     tracked the WINDOW's height, not the panel's own width, which is exactly what produced the
-     "ribbon" once the triptych stopped being full-bleed: a fixed clamp height against a suddenly
-     much narrower (contained) column reads as short and wide instead of a composed portrait
-     frame. `aspect-ratio: 4 / 5` ties the panel's height directly to its own column width instead,
-     landing inside the "3:4 to 4:5" portrait-frame target at every desktop width by construction,
-     never a mismatched guess. The stacked (mobile) tier below 900px keeps its own
-     `clamp(12rem, 32vh, 18rem)` height unchanged: a full-width single panel at a 4:5 aspect would
-     run needlessly tall stacked three deep, and Geoff's brief only asked to fix the three-up
-     ribbon, not redesign the mobile stack. The same silent-gradient degrade the hero/fleet/
-     facilities panels use covers a resolver miss (no photo, no scrim, just the gradient panel;
-     the word/description/link still render, so the panel never goes empty). */
+  /* Each panel's height: a fixed portrait `aspect-ratio` at the three-up desktop tier. Round-6
+     (2026-07-07) restores the weight of the original wdwd-candidates "Candidate A" render Geoff
+     picked "by a mile" (docs/superpowers/plans/assets or the pass's own archived crop), which
+     round-5's containment fix had inadvertently walked back to a short strip: `4 / 5` at this
+     column's own ~291px (1440px) width landed panels around 364px tall, well short of Candidate
+     A's own immersive proportion. `11 / 20` (0.55) lands each panel around 500-560px tall across
+     the container's own clamp range at 1440px, close to Candidate A's page-scale character, while
+     still tying height to the panel's own column width (never the viewport's) so the ratio holds
+     by construction at every desktop width, the property round-5's fix established and this one
+     keeps. The stacked (mobile) tier below 900px keeps its own `clamp(12rem, 32vh, 18rem)` height
+     unchanged: a full-width single panel at this ratio would run needlessly tall stacked three
+     deep, and this round's brief only targets the three-up desktop character. The same silent-
+     gradient degrade the hero/fleet/facilities panels use covers a resolver miss (no photo, no
+     scrim, just the gradient panel; the word/description/link still render, so the panel never
+     goes empty).
+
+     `border-radius: var(--radius-box)` (the round-6 fix, 2026-07-07): every other photo on the
+     page (the hero, News cards, Fleet, Facilities) carries this same token via the `rounded-box`
+     utility; the triptych's own sharp corners were the one holdout. Set here rather than as a
+     utility class in the markup, since this rule already owns `overflow: hidden`, the property
+     that makes the radius actually clip the absolutely-positioned image and scrim beneath it. */
   .wdwd-panel {
     position: relative;
     overflow: hidden;
     height: clamp(12rem, 32vh, 18rem);
+    border-radius: var(--radius-box);
     background: linear-gradient(140deg, #7ba7d9 0%, #4a7fb5 55%, #e8956b 100%);
   }
   .wdwd-panel.has-photo {
@@ -642,7 +646,7 @@ before the photography existed, never a broken image. -->
   @media (min-width: 56.25rem) {
     .wdwd-panel {
       height: auto;
-      aspect-ratio: 4 / 5;
+      aspect-ratio: 11 / 20;
     }
   }
   .wdwd-panel-img {
@@ -673,17 +677,22 @@ before the photography existed, never a broken image. -->
   }
 
   /* The scrim: a bottom-anchored gradient in the club-grounds navy (`--color-flag-navy-deep`,
-     the same "brand device" the closing band uses), not a flat tint, so the photo reads clearly
-     through the panel's upper two-thirds and the caption sits on a solid-enough ground for white
-     text to clear WCAG contrast at its own lower third. */
+     the same "brand device" the closing band uses), not a flat tint. Tightened to the caption's
+     own footprint (round-6 composition repair, 2026-07-07): round-5's stops reached 80% up the
+     panel, which flooded the bottom half of all three panels in one continuous dark wash and read
+     as severed photo tops over a merged navy zone, not three distinct pictures (Geoff's own
+     diagnosis against the Candidate A reference). The photo now reads clear through roughly the
+     panel's own top 60%, with the dark wash concentrated in the bottom third where the caption
+     actually sits, so each panel keeps its own photo identity and the caption still lands on a
+     solid-enough ground for white text to clear WCAG contrast. */
   .wdwd-panel-scrim {
     position: absolute;
     inset: 0;
     background: linear-gradient(
       to top,
-      color-mix(in oklab, var(--color-flag-navy-deep) 94%, transparent) 0%,
-      color-mix(in oklab, var(--color-flag-navy-deep) 55%, transparent) 45%,
-      color-mix(in oklab, var(--color-flag-navy-deep) 0%, transparent) 80%
+      color-mix(in oklab, var(--color-flag-navy-deep) 92%, transparent) 0%,
+      color-mix(in oklab, var(--color-flag-navy-deep) 65%, transparent) 30%,
+      color-mix(in oklab, var(--color-flag-navy-deep) 0%, transparent) 62%
     );
   }
   .wdwd-panel-caption {
@@ -708,10 +717,18 @@ before the photography existed, never a broken image. -->
     line-height: var(--leading-tight);
     letter-spacing: calc(var(--tracking-tight) * 1.5);
   }
+  /* The type-care pass (round-6, 2026-07-07): the description's own leading opens to the theme's
+     comfortable-reading token (`--leading-body`, 1.6, the same one the hero lede and body prose
+     use), a touch more than the ambient default it inherited before, so the two-line sentence
+     reads with real air over the photo rather than crowding it. Its own gap from the word above
+     (below, `margin-top`) moves off a bespoke `0.4rem` onto the same `--spacing-2xs` token the
+     link below already uses, so the caption's two internal gaps share one rhythm rather than two
+     different numbers. */
   .wdwd-panel-desc {
-    margin: 0.4rem 0 0;
+    margin: var(--spacing-2xs) 0 0;
     max-width: 30ch;
     font-size: var(--text-step-0);
+    line-height: var(--leading-body);
     color: rgba(255, 255, 255, 0.92);
   }
   /* White, not the fireweed pop: the hero and closing-band CTAs already spend the story's "at
@@ -736,28 +753,18 @@ before the photography existed, never a broken image. -->
     outline-offset: 2px;
   }
 
-  /* Our fleet's own list, a leader-dot spec sheet (the round-5 design, Geoff's own art
-     direction): a class name left, a dotted leader, and a right-aligned count, the classic
-     chandlery spec-card device, reading as one designed sheet rather than a bare table.
-     `.fleet-name` and `.fleet-count` never shrink (`flex-shrink: 0`) so a long class name or the
-     count never crowds the leader out; `.fleet-leader` is the only flexible child (`flex: 1 1
-     auto`), so it is the leader itself that compresses at narrow widths, never the readable text
-     on either side. `align-items: baseline` puts every row's shared baseline through the leader's
-     own empty box, which (carrying no text of its own) sits its bottom margin edge, and so its
-     dotted `border-bottom`, right at that baseline for free, no manual offset needed.
+  /* Our fleet's own list, plain (the round-6 fix, 2026-07-07, replacing round-5's leader-dot
+     spec sheet): the count emphasis "creates unnecessary emphasis" for eight short lines whose
+     quantity now lives in the item text itself ("Six Lido 14s"), so the row markup drops to a bare
+     `<li>` and the marker to a simple dash, the plainest device on the page rather than a bespoke
+     chandlery-sheet gesture.
 
-     Pulled onto the Facilities list's own quieter register (round-5 addendum, 2026-07-07: Geoff's
-     "still too large/loud" and "two totally unrelated list styles" finding). Both lists now share
-     one grammar, `.amenity-list`'s own type step, ink, and row rhythm, so they read as siblings:
-     `text-step--1` (set in the markup) rather than body-scale `text-step-0`, the same mid-muted
-     `color-mix` `.amenity-list` reads (set below, replacing the markup's own `text-base-content`),
-     and the same tight `0.2rem` row `padding-block` (below, replacing the prior `--spacing-2xs`).
-     The count drops its own `font-weight: 650`/`--color-base-content` emphasis (it now just
-     inherits the list's shared ink, keeping only `tabular-nums` for column alignment), and the
-     leader's own dotted line lightens (a `color-mix` fade of the same hairline token, below), so
-     neither device reads louder than the quieter register the two lists now share. Only the
-     device itself still differs by content: fleet keeps its name/leader/count, facilities keeps
-     its checkmarks. */
+     Still the Facilities list's own quieter register (kept from round-5, Geoff's "still too
+     large/loud" and "two totally unrelated list styles" finding): both lists share one grammar,
+     `.amenity-list`'s own type step, ink, and row rhythm, so they read as siblings: `text-step--1`
+     (set in the markup), the same mid-muted `color-mix` ink, and the same tight `0.2rem` row
+     `padding-block`. Only the marker itself still differs by content: fleet keeps a plain dash,
+     facilities keeps its checkmarks. */
   .fleet-list {
     margin: 0;
     margin-top: var(--spacing-xs);
@@ -766,22 +773,14 @@ before the photography existed, never a broken image. -->
     color: color-mix(in oklab, var(--color-muted) 67%, var(--color-base-content) 33%);
   }
   .fleet-list li {
-    display: flex;
-    align-items: baseline;
-    gap: var(--spacing-2xs);
+    position: relative;
     padding-block: 0.2rem;
+    padding-left: 1em;
   }
-  .fleet-name {
-    flex-shrink: 0;
-  }
-  .fleet-leader {
-    flex: 1 1 auto;
-    min-width: var(--spacing-m);
-    border-bottom: 1px dotted color-mix(in oklab, var(--color-card-border) 70%, transparent);
-  }
-  .fleet-count {
-    flex-shrink: 0;
-    font-variant-numeric: tabular-nums;
+  .fleet-list li::before {
+    content: '\2013';
+    position: absolute;
+    left: 0;
   }
 
   /* Our fleet's photo (the owner-round-2 fix, 2026-07-07): unlike Facilities, this crop needs no
