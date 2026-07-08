@@ -114,3 +114,8 @@ not done today Geoff tackles on Opus tomorrow; hand this file to that session.
   hierarchy.
 - Already handled separately: the double-Settings relabel (shipped), the sidebar scroll-bleed
   and auto-collapse-on-navigate (engine fixes in flight).
+- **Members AND Memberships in the sidebar** (Geoff): the club nav needs a Memberships entry
+  alongside Members. This is a screen build, not a relabel — a memberships view (household/tier/
+  paid-through/standing, the dues records the payments webhook reconciles) distinct from the
+  member-people list. Scope it in the admin review round; it connects to the MW-absorption
+  membership-management item.
