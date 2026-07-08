@@ -267,12 +267,12 @@ export function announceChannelOptions(env: DiscordBindingEnv): AnnounceChannelO
 }
 
 /**
- * The channel the Announce form's `<select>` actually binds to on load: `leadership` when it has
- * a webhook configured (the published default), otherwise the first configured channel in
+ * The channel the Announce form's `<select>` actually binds to on load: `general` when it has
+ * a webhook configured (Geoff's ruled default), otherwise the first configured channel in
  * {@link ANNOUNCE_CHANNELS} order, so the form always opens on a channel that can actually send.
- * `leadership` itself still renders in the option list (disabled when unconfigured, via
- * {@link announceChannelOptions}) so the gap stays visible rather than quietly disappearing.
- * Falls back to `leadership` when nothing at all is configured; that selection will simply
+ * An unconfigured channel still renders in the option list (disabled, via
+ * {@link announceChannelOptions}) so a gap stays visible rather than quietly disappearing.
+ * Falls back to `general` when nothing at all is configured; that selection will simply
  * degrade to `notifyDiscord`'s own silent no-op if submitted.
  */
 export function defaultAnnounceChannel(env: DiscordBindingEnv): DiscordChannel {

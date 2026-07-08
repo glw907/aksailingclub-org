@@ -109,8 +109,8 @@ export const ANNOUNCE_CHANNEL_LABEL: Record<string, string> = {
   technology: 'Technology',
 };
 
-/** The Announce screen's own default channel selection. */
-export const DEFAULT_ANNOUNCE_CHANNEL: DiscordChannel = 'leadership';
+/** The Announce screen's own default channel selection (Geoff's ruling, 2026-07-08: #general). */
+export const DEFAULT_ANNOUNCE_CHANNEL: DiscordChannel = 'general';
 
 /** One named, real event this module has a builder for. Drives the embed's color (the
  *  `EMBED_COLORS` map below), kept as its own tag rather than inferred from a notification's

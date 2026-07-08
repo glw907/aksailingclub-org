@@ -162,17 +162,22 @@ describe('/admin/club/announce/[id] detail load', () => {
     expect(result.previous).toBeNull();
   });
 
-  it('marks leadership configured/unconfigured per the env, and defaults accordingly', async () => {
+  it('defaults to general, falling back to the first configured channel when general is not', async () => {
     const { db } = fakeD1();
-    const unconfigured = await runDetailLoad(detailLoadEventFor(admin, REAL_POST.id, db));
-    expect(unconfigured.defaultChannel).toBe('leadership');
-    expect(unconfigured.channelOptions.find((o: AnnounceChannelOption) => o.value === 'leadership')?.configured).toBe(false);
+    const bare = await runDetailLoad(detailLoadEventFor(admin, REAL_POST.id, db));
+    expect(bare.defaultChannel).toBe('general');
+    expect(bare.channelOptions.find((o: AnnounceChannelOption) => o.value === 'general')?.configured).toBe(false);
 
-    const configured = await runDetailLoad(
+    const generalConfigured = await runDetailLoad(
+      detailLoadEventFor(admin, REAL_POST.id, db, { DISCORD_WEBHOOK_GENERAL: 'https://x' }),
+    );
+    expect(generalConfigured.defaultChannel).toBe('general');
+    expect(generalConfigured.channelOptions.find((o: AnnounceChannelOption) => o.value === 'general')?.configured).toBe(true);
+
+    const leadershipOnly = await runDetailLoad(
       detailLoadEventFor(admin, REAL_POST.id, db, { DISCORD_WEBHOOK_LEADERSHIP: 'https://x' }),
     );
-    expect(configured.defaultChannel).toBe('leadership');
-    expect(configured.channelOptions.find((o: AnnounceChannelOption) => o.value === 'leadership')?.configured).toBe(true);
+    expect(leadershipOnly.defaultChannel).toBe('leadership');
   });
 });
 
