@@ -1168,6 +1168,10 @@ before the photography existed, never a broken image. -->
   .arrow-link {
     padding-block: 0.3rem;
     font-size: var(--text-step--1);
+    text-decoration-color: color-mix(in oklab, var(--color-primary) 35%, transparent);
+  }
+  .arrow-link:hover {
+    text-decoration-color: currentColor;
   }
   .arrow-link:focus-visible {
     outline: 2px solid var(--color-primary);

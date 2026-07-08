@@ -59,6 +59,12 @@ superseding round-5's own hero-left-column width, which read as an inadvertent g
     flex-shrink: 0;
     margin-top: 0.2em;
   }
+  .notification-link {
+    text-decoration-color: color-mix(in oklab, var(--color-primary) 35%, transparent);
+  }
+  .notification-link:hover {
+    text-decoration-color: currentColor;
+  }
   .notification-link:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
