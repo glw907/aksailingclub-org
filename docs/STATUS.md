@@ -1,5 +1,24 @@
 # asc-site status
 
+**NIGHT CLOSE (2026-07-08, session f6adeb65 continued): the home page converged through five
+owner-review rounds and is on dev for Geoff's look — the triptych (owner-picked candidate A,
+content-width portrait panels per the new full-bleed ruling), the two-column dotted Season
+(four-category pixel-verified palette, racing marked, quiet legend, calm titles), the unified
+fleet/facilities list register (leader-dot spec sheet), the north-star notification card with
+the pennant and "Read more". THE PUBLISH->ANNOUNCE LOOP IS LIVE END TO END: cairn 0.83.0's
+publishActions seam + this site's adapter declaration + /admin/club/announce/[id] (the feature:
+email all current members + Discord channel pick, #general default, summary prefilled
+description-else-sentence-aware-excerpt, per-medium rendering, announcements table 0017 on the
+real D1). Cairn 0.82.1 fixed the admin sidebar pair Geoff found. DESIGN METHOD CHANGED AND
+BANKED (site-page-review-gate memory 11a): passes over patches, reference renders over
+adjectives, conductor reads per iteration; plus the full-bleed-never-for-content ruling in the
+design doc. GEOFF'S QUEUE: the round-5 home look; webhook mints (LEADERSHIP/EDUCATION/
+BUCCANEER_18); the GitHub Actions billing fix (blocks the live-site Resend->CF email deploy at
+f202870+1e0e0c4; ops worker already live on CF email); ops-410. QUEUED NEXT: the admin review
+round (the filed feedback + Memberships screen), the rate limit on public forms, the education
+TOC-standard propagation to the interior pages, the payments live smoke (deliberate plan),
+member import.**
+
 **THE RECOVERY + POLISH DAY (2026-07-07 evening, session f6adeb65): home and education
 REBUILT and on dev awaiting Geoff's read (one-shot gate passed: panels + conductor's
 dev-surface tiled read). Landed on main: the tool-wave consolidation (error-states merge,
