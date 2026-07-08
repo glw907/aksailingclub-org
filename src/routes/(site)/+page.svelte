@@ -13,10 +13,30 @@ before the photography existed, never a broken image. -->
 <script lang="ts">
   import type { PageData } from './$types';
   import { CairnHead } from '@glw907/cairn-cms/delivery/head';
+  import type { SeasonDotKind } from '$theme/season-data';
   import SeasonList from '$theme/components/SeasonList.svelte';
   import NotificationStrip from '$theme/components/NotificationStrip.svelte';
 
   let { data }: { data: PageData } = $props();
+
+  // The Season legend's own labels (round-4 fix, 2026-07-07): the dot explanation used to live as
+  // a mid-sentence clause in the intro paragraph ("a gold dot marks classes and clinics, a..."),
+  // which read as a run-on rather than a legend. This pulls it into its own quiet row, built only
+  // from whichever dot kinds the live data actually renders (an empty season, or one with no
+  // social events this year, never shows a label for a category with zero rows on the page).
+  // Racing carries no entry: it is the season's plain-ink default with no dot at all, so there is
+  // nothing to key a legend mark to.
+  const SEASON_LEGEND: { kind: SeasonDotKind; label: string }[] = [
+    { kind: 'class', label: 'Classes & clinics' },
+    { kind: 'social', label: 'Social' },
+    { kind: 'business', label: 'Club business' },
+  ];
+  const seasonLegend = $derived.by(() => {
+    const present = new Set(
+      data.season.flatMap((month) => month.events.map((event) => event.dot)).filter((dot): dot is SeasonDotKind => !!dot),
+    );
+    return SEASON_LEGEND.filter((item) => present.has(item.kind));
+  });
 
   const dateFmt = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
@@ -126,9 +146,17 @@ before the photography existed, never a broken image. -->
        gray admonition box (fill, border, bold title prefix) Geoff's live review flagged. Unboxed,
        on the page's own white ground, in the hero's own measure. Only renders while a
        notification is current; an expired one is correct, honest silence. See
-       NotificationStrip.svelte's own header comment. -->
+       NotificationStrip.svelte's own header comment.
+
+       Its own top padding (round-4 fix, 2026-07-07): the strip previously relied entirely on the
+       hero section's own `pb-xl` for separation, which read as the hero's own bottom margin
+       rather than a distinct slot for the notification, so the strip merged visually into the
+       hero above it (Geoff's live read). `pt-l` here is the strip's own explicit gap, added on
+       top of the hero's `pb-xl` rather than borrowed from it, clearly larger than any of the
+       hero's own internal spacing (`mt-xs`/`mt-s`, both an order of magnitude tighter) so the
+       notification now reads as its own line item between the hero and News. -->
   {#if data.notification}
-    <section class="pb-xl">
+    <section class="pb-xl pt-l">
       <div class="mx-auto max-w-measure-wide px-m">
         <NotificationStrip notification={data.notification} />
       </div>
@@ -250,32 +278,42 @@ before the photography existed, never a broken image. -->
     </div>
   </section>
 
-  <!-- The Season: one printed race-calendar (the round-3 rebuild, 2026-07-07), replacing the
-       original per-tier CSS-multicol build Geoff's live review found "messy and disorganized at a
-       casual glance". `SeasonList` carries the calendar itself (one column, month groups as
-       bounded units, all category emphasis in the dot slot); see its own header comment for the
-       full diagnosis and rebuild. Carries its own sage band (the owner-round fix, 2026-07-07): it
-       previously sat on the same transparent ground as "What do we do?" directly above it, reading
-       as one long white stretch (the design probe's own band-sequence line showed two consecutive
-       "—" entries here). Facilities picks up the sage band the Fleet section below gives up
-       (Fleet's own fix, same pass), so the full sequence alternates cleanly top to bottom with no
-       two adjacent sections sharing a ground.
+  <!-- The Season: one printed race-calendar (the round-3 rebuild, 2026-07-07; balanced into two
+       columns and its dot legend pulled out of the intro sentence in round-4, same day). `SeasonList`
+       carries the calendar itself (a balanced two-column split, month groups as bounded units, all
+       category emphasis in the dot slot); see its own header comment for the full diagnosis and
+       rebuild, and the round-4 addendum on the column split. Carries its own sage band (the
+       owner-round fix, 2026-07-07): it previously sat on the same transparent ground as "What do we
+       do?" directly above it, reading as one long white stretch (the design probe's own
+       band-sequence line showed two consecutive "—" entries here). Facilities picks up the sage
+       band the Fleet section below gives up (Fleet's own fix, same pass), so the full sequence
+       alternates cleanly top to bottom with no two adjacent sections sharing a ground.
 
-       The intro sentence reads at full body scale and ink now (`text-step-0 text-base-content`,
-       the round-3 fix), not the caption-scale muted line it was: this is the band's own orienting
-       sentence and its dot legend, naming every color the calendar below uses, so it earns the same
-       reading weight as the event names it explains rather than reading as a footnote beneath
-       them. -->
+       The intro sentence reads at full body scale and ink (`text-step-0 text-base-content`, the
+       round-3 fix): this is the band's own orienting sentence, so it earns the same reading weight
+       as the event names it explains rather than reading as a footnote beneath them. Its own dot
+       legend (round-4 fix, 2026-07-07) used to be a mid-sentence clause here ("a gold dot marks
+       classes and clinics, a..."), which read as a run-on rather than a legend (Geoff's own
+       finding); it is now its own quiet row directly under the intro, one step down in muted ink,
+       built from whichever categories the live data actually renders (`seasonLegend`, above). The
+       per-row `sr-only` label inside `SeasonList` is untouched: the legend below is the sighted
+       channel, never the only one carrying the dot's meaning. -->
   <section class="border-y border-card-border bg-base-200 py-xl">
     <div class="mx-auto max-w-measure-wide px-m">
       <h2 class="m-0 font-display text-step-4 font-semibold leading-tight text-base-content">The Season</h2>
-      <p class="mt-xs mb-s text-step-0 text-base-content">
-        Racing runs May through September. A
-        <span class="season-dot season-dot-class mx-[0.3rem] inline-block" aria-hidden="true"></span>gold dot marks classes and clinics, a
-        <span class="season-dot season-dot-social mx-[0.3rem] inline-block" aria-hidden="true"></span>sage dot marks social events, and a
-        <span class="season-dot season-dot-business mx-[0.3rem] inline-block" aria-hidden="true"></span>slate dot marks club business.
+      <p class="mt-xs mb-2xs text-step-0 text-base-content">
+        Racing runs May through September; social events bookend the year.
         <a href="/events/" class="arrow-link font-semibold text-primary underline underline-offset-[3px]">See all events &rarr;</a>
       </p>
+      {#if seasonLegend.length > 0}
+        <div class="season-legend mb-s">
+          {#each seasonLegend as item (item.kind)}
+            <span class="season-legend-item">
+              <span class="season-dot season-dot-{item.kind}" aria-hidden="true"></span>{item.label}
+            </span>
+          {/each}
+        </div>
+      {/if}
       <SeasonList months={data.season} />
     </div>
   </section>
@@ -305,14 +343,14 @@ before the photography existed, never a broken image. -->
             abilities:
           </p>
           <ul class="fleet-list text-step-0 text-base-content">
-            <li><span class="fleet-count">Six</span> Lido 14s</li>
-            <li><span class="fleet-count">Three</span> Lasers</li>
-            <li><span class="fleet-count">A</span> Laser II</li>
-            <li><span class="fleet-count">Five</span> Optimists</li>
-            <li><span class="fleet-count">A</span> Buccaneer 18</li>
-            <li><span class="fleet-count">A</span> Catalina 16.5</li>
-            <li><span class="fleet-count">A</span> Skipjack 15</li>
-            <li><span class="fleet-count">An</span> Ensign 22</li>
+            <li><span class="fleet-count">6</span><span class="fleet-name">Lido 14s</span></li>
+            <li><span class="fleet-count">3</span><span class="fleet-name">Lasers</span></li>
+            <li><span class="fleet-count">1</span><span class="fleet-name">Laser II</span></li>
+            <li><span class="fleet-count">5</span><span class="fleet-name">Optimists</span></li>
+            <li><span class="fleet-count">1</span><span class="fleet-name">Buccaneer 18</span></li>
+            <li><span class="fleet-count">1</span><span class="fleet-name">Catalina 16.5</span></li>
+            <li><span class="fleet-count">1</span><span class="fleet-name">Skipjack 15</span></li>
+            <li><span class="fleet-count">1</span><span class="fleet-name">Ensign 22</span></li>
           </ul>
           <p class="mt-xs text-step-0 text-base-content">All available to qualified club members.</p>
           <a href="/club-boat-use-and-qualification/" class="arrow-link mt-s inline-block font-semibold text-primary underline underline-offset-[3px]">
@@ -552,15 +590,21 @@ before the photography existed, never a broken image. -->
     }
   }
 
-  /* Each panel: ~55vh on the stacked (mobile) tier, ~64vh on the three-up tier, both clamped
-     against a sane floor and ceiling so an unusually short or an ultra-wide-monitor viewport
-     never produces an absurd height. The same silent-gradient degrade the hero/fleet/facilities
-     panels use covers a resolver miss (no photo, no scrim, just the gradient panel; the
-     word/description/link still render, so the panel never goes empty). */
+  /* Each panel's height (round-4 proportion fix, 2026-07-07): Geoff's live read of the shipped
+     triptych was "OMGLOOKATME" against the rest of the page, a strong beat drowning out
+     everything around it rather than a proportionate highlight. Cut to roughly 58% of the prior
+     ceiling at the three-up tier (672px/42rem down to ~400px/25rem, comfortably inside the
+     directive's 380-420px target), scaled proportionally at the stacked (mobile) tier too
+     (30rem/480px down to 18rem/288px). Both tiers keep their own vh-driven middle clamp term
+     (scaled the same ~0.58 factor) and a sane floor, so an unusually short viewport still gets a
+     readable panel and an ultra-tall one never balloons back toward the old dominance. The same
+     silent-gradient degrade the hero/fleet/facilities panels use covers a resolver miss (no
+     photo, no scrim, just the gradient panel; the word/description/link still render, so the
+     panel never goes empty). */
   .wdwd-panel {
     position: relative;
     overflow: hidden;
-    height: clamp(20rem, 55vh, 30rem);
+    height: clamp(12rem, 32vh, 18rem);
     background: linear-gradient(140deg, #7ba7d9 0%, #4a7fb5 55%, #e8956b 100%);
   }
   .wdwd-panel.has-photo {
@@ -568,7 +612,7 @@ before the photography existed, never a broken image. -->
   }
   @media (min-width: 56.25rem) {
     .wdwd-panel {
-      height: clamp(26rem, 64vh, 42rem);
+      height: clamp(16rem, 38vh, 25rem);
     }
   }
   .wdwd-panel-img {
@@ -619,13 +663,20 @@ before the photography existed, never a broken image. -->
     padding: var(--spacing-m) var(--spacing-m) var(--spacing-l);
     color: white;
   }
+  /* Stepped down one size (round-4 fix): `text-step-4` matched the page's own section h2s, which
+     made a three-word display panel read louder than a heading, not a proportionate accent.
+     `text-step-3` still reads as the loudest mark on the page (nothing else at this weight sits on
+     a photo), just no longer competing with the h2s above and below it. Tracking tightens a touch
+     further than the shared `--tracking-tight` token (no tighter token exists sitewide, so this is
+     a bespoke multiple of it, the same pattern the hero title's own bespoke `calc` already uses),
+     since the smaller size alone read slightly loose against the photo at this scale. */
   .wdwd-panel-word {
     margin: 0;
     font-family: var(--font-display);
-    font-size: var(--text-step-4);
+    font-size: var(--text-step-3);
     font-weight: 650;
     line-height: var(--leading-tight);
-    letter-spacing: var(--tracking-tight);
+    letter-spacing: calc(var(--tracking-tight) * 1.5);
   }
   .wdwd-panel-desc {
     margin: 0.4rem 0 0;
@@ -655,20 +706,18 @@ before the photography existed, never a broken image. -->
     outline-offset: 2px;
   }
 
-  /* Our fleet's own list (the fleet-treatment pass, 2026-07-07): the owner flagged the plain en
-     dash as untreated next to Facilities' designed checkmark. This list is the section's PRIMARY
-     content, not subordinate the way Facilities' amenity list reads, so it keeps full body scale
-     and ink (`text-step-0 text-base-content`, unchanged) rather than borrowing Facilities' quieted
-     `text-step--1 text-muted` treatment; only the marker and row rhythm get real design attention.
-     The marker is a small filled diamond in `--color-muted`, the "quiet point in the muted tone"
-     recipe: a designed waypoint mark, not a copy of Facilities' checkmark (a different meaning,
-     "included with membership") or the Season's gold dot, which the club-grounds story reserves
-     for classes/clinics only ("marks and waypoints... never body text" elsewhere) — reusing that
-     hue here would blur the one meaning it carries. The diamond's own shape (not a circle) also
-     keeps it visibly distinct from the Season's dot at a glance. Row spacing steps up from the
-     prior arbitrary 0.2rem to the `--spacing-3xs` token, a touch more generous than Facilities'
-     tight, subordinate rhythm, since this list is the primary read. One column: eight short
-     entries never runs tall enough to need the amenity list's multi-column balance. */
+  /* Our fleet's own list, redesigned as a plain inventory table (round-4 fix, 2026-07-07): the
+     diamond marker plus spelled-out count words ("Six", "A", "An") read, in Geoff's own words, as
+     designed by "a sweet 70-year-old grandma" — a quaint, decorative treatment for what is really
+     a scannable count. The fix drops decoration entirely: a numeral column
+     (`font-variant-numeric: tabular-nums`, so every digit takes the same fixed width and a run of
+     single- and double-digit counts still lines up edge to edge) sits flush-left, right-aligned in
+     its own narrow track, ahead of the boat name, the classic table-without-borders inventory
+     pattern. This list is still the section's PRIMARY content, not subordinate the way Facilities'
+     amenity list reads, so it keeps full body scale and ink (`text-step-0 text-base-content`,
+     unchanged). Row spacing is generous but tight, `--spacing-2xs` (a touch more breathing room
+     than the diamond version's `--spacing-3xs`, still far short of a loose list), since a bare
+     numeral column reads cleanest with a little more air between rows than a bulleted one needs. */
   .fleet-list {
     margin: 0;
     margin-top: var(--spacing-xs);
@@ -676,29 +725,16 @@ before the photography existed, never a broken image. -->
     list-style: none;
   }
   .fleet-list li {
-    padding-block: var(--spacing-3xs);
-    padding-left: 1.1rem;
-    position: relative;
+    display: grid;
+    grid-template-columns: 1.6rem 1fr;
+    column-gap: var(--spacing-2xs);
+    align-items: baseline;
+    padding-block: var(--spacing-2xs);
   }
-  /* `1lh` centers the mark on the item's first line (the amenity checkmark's own technique, see
-     its comment below), so it reads as a bullet at the text's own cap-height rather than floating
-     a few pixels off. */
-  .fleet-list li::before {
-    content: '';
-    position: absolute;
-    left: 0.15rem;
-    top: calc((1lh - 6px) / 2);
-    width: 6px;
-    height: 6px;
-    background: var(--color-muted);
-    transform: rotate(45deg);
-  }
-  /* The leading quantity ("Six", "A", "An") steps up half a weight (the same 650 the page's other
-     quiet-emphasis labels use: the news card title, the What-do-we-do label), so a reader scanning
-     straight down the column sees the fleet's own counts at a glance rather than reading each line
-     as a full sentence to find the number. */
   .fleet-count {
+    font-variant-numeric: tabular-nums;
     font-weight: 650;
+    text-align: right;
   }
 
   /* Our fleet's photo (the owner-round-2 fix, 2026-07-07): unlike Facilities, this crop needs no
@@ -758,7 +794,7 @@ before the photography existed, never a broken image. -->
   }
 
   /* The Season legend's three dots (the round-3 calendar rebuild): the same three colors
-     SeasonList.svelte's own row dots use (that component's copy of this rule; the intro legend
+     SeasonList.svelte's own row dots use (that component's copy of this rule; the legend row
      above uses the dot outside that component, so this page still needs its own), each spending
      no hue on the event names themselves, marks only. */
   .season-dot {
@@ -775,6 +811,25 @@ before the photography existed, never a broken image. -->
   }
   .season-dot-business {
     background: var(--color-muted);
+  }
+
+  /* The Season legend row (round-4 fix, 2026-07-07): a quiet, unobtrusive key, one step down in
+     muted ink from the intro sentence above it, so it reads as a supporting reference rather than
+     competing with the event names it explains. A slim line directly under the intro sentence
+     (rather than right-aligned on the h2's own line), the simpler placement that stays legible at
+     every width without a header row that has to juggle wrapping between a heading and a legend.
+     Wraps to multiple lines at narrow widths rather than overflowing. */
+  .season-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-2xs) var(--spacing-m);
+    font-size: var(--text-step--1);
+    color: var(--color-muted);
+  }
+  .season-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
   }
 
   /* The facilities amenity list (manifest item 12; restyled again in the owner-round pass,
