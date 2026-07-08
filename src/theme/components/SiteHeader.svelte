@@ -248,20 +248,11 @@ state. -->
           </a>
         {/if}
       {/each}
-      <!-- The icon trio's own divider (round-3 fix, 2026-07-07): the prior gap-ratio-only attempt
-           (a tighter inner `gap-2xs` plus the nav's own `gap-s` as the trio's outer distance)
-           still didn't read as its own group (Geoff's live-review finding), so a conventional
-           hairline now marks the boundary explicitly rather than leaving it to a gap ratio alone.
-           `margin-inline` adds on top of the nav row's own `gap-s` (already applied on both of the
-           divider's sides by the flex `gap`, the same rhythm separating every nav link), so the
-           combined Contact-to-divider and divider-to-trio distances land around 2.6x the trio's own
-           internal `gap-2xs`, comfortably past the >=2.5x floor. Contact itself keeps the plain
-           `gap-s` to Members, its standard inter-link distance, untouched: the extra room lives
-           entirely in this margin, between Contact and the divider, not inside the link cluster
-           (Geoff's second finding, "Contact feels a little too far away from Members" resolves as
-           a relative effect once the trio's own distance grows past it, not from shrinking
-           Members-Contact itself). -->
-      <div class="nav-divider" aria-hidden="true"></div>
+      <!-- The trio's separation from the links is spacing-only (owner ruling, 2026-07-08: the
+           round-3 hairline divider came out once the gap rhythm alone read as a group boundary).
+           The spacer preserves the divider's former footprint: its two margin-inline steps plus
+           the 1px line, so the Contact-to-trio distance the owner approved stays identical. -->
+      <div class="nav-trio-spacer" aria-hidden="true"></div>
 
       <!-- The icon trio (owner-round-2 fix, 2026-07-07): donate, search, and the theme toggle
            previously sat at the nav's own `gap-s`, the same rhythm separating one nav link from
@@ -457,12 +448,9 @@ state. -->
      own bottom border reads, sized to roughly 60% of the nav row's own content height (the icon
      trio's `h-9`/2.25rem boxes, the row's tallest children under `items-center`) rather than the
      full row, so it reads as a mark between two groups, not a full-height rule. */
-  .nav-divider {
-    width: 1px;
-    height: 1.35rem;
+  .nav-trio-spacer {
+    width: calc(1px + 2 * var(--spacing-3xs));
     flex-shrink: 0;
-    background: var(--color-card-border);
-    margin-inline: var(--spacing-3xs);
   }
 
   .nav-item-dropdown {
