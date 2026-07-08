@@ -1,5 +1,17 @@
 # asc-site status
 
+**HOME FINALIZED (2026-07-08, later): rounds 6-8 + the felt-refinement audit closed the home
+page — the triptych group-framed (radius on the band, square seams) with subgrid caption rows
+(title/desc/link y-identical at 1280-2560, measured) carrying the club's ORIGINAL copy (Geoff-
+supplied, two typos fixed, untrimmed), the plain quiet fleet list, the full-measure notification
+card, and the felt pass (38 knobs audited, 29 already right, 5 applied: ::selection navy wash,
+text-wrap balance/pretty, branded focus on the three unbranded link families, cursor affordance
+on icon buttons — all token-level, inherited by every page). PROCESS NOW BINDING: passes over
+patches with reference anchors (gate memory 11a), builders stop for the conductor's render read
+before committing, dev updates only at readiness points, and Geoff's design QUESTIONS get
+answers before execution. NEXT: move on to other pages — the education/interior propagation
+inherits the finished token system; the admin review round is queued.**
+
 **NIGHT CLOSE (2026-07-08, session f6adeb65 continued): the home page converged through five
 owner-review rounds and is on dev for Geoff's look — the triptych (owner-picked candidate A,
 content-width portrait panels per the new full-bleed ruling), the two-column dotted Season
