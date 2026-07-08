@@ -78,14 +78,15 @@
     return items;
   }
 
-  // The pitch/reference genre split (the design-polish pass, 2026-07-07): a page named here
-  // renders everything ABOVE the given heading id as a plain, photography-paced flow (no panels,
-  // no TOC, the persuasive pitch a prospective member reads start to finish), and scopes the
-  // density-gated panel + sticky-TOC treatment below to everything from that heading on (the
-  // reference material a reader navigates rather than reads straight through). Keyed by the
-  // pages concept's own flat slug, the same key GOVERNANCE_SUBPAGE_SLUGS uses. A page not listed
-  // here (every other long document, bylaws included) keeps the single-flow density-gated
-  // template unchanged.
+  // The pitch/reference genre split: a page named here renders everything ABOVE the given
+  // heading id as a plain photography-paced flow (the persuasive pitch a prospective member
+  // reads start to finish) and everything from that heading on as the reference material. Keyed
+  // by the pages concept's own flat slug, the same key GOVERNANCE_SUBPAGE_SLUGS uses. A page not
+  // listed here (every other long document, bylaws included) never splits and keeps the
+  // heading-count-gated panel/TOC template below unchanged. Currently education only: it also
+  // doubles as this page's marker for the long-form navigation rebuild below (the hero-round
+  // pass, 2026-07-07, after Geoff's direct review of dev found the old boxed-panel, narrowed-
+  // measure frame read as a docs app rather than an article).
   const PITCH_SPLIT_HEADING_ID: Record<string, string> = {
     education: 'swim-test-capsize-drill-and-life-jackets',
   };
@@ -112,39 +113,33 @@
   const referenceHtml = $derived(pitchSplit ? pitchSplit.below : data.html);
   const pitchHtml = $derived(pitchSplit ? pitchSplit.above : '');
 
-  /** Wraps the pitch in alternating full-bleed bands, split at each top-level `<h2>` (the design-
-   *  polish pass, 2026-07-07): a persuasive pitch this long (hero through the last registration
-   *  card, on education) read as one uninterrupted white column with no section pacing at all
-   *  (A1's band recipe: "bands mark sections"). The intro paragraph ahead of the first heading
-   *  joins that first heading's own band rather than getting a sliver band of its own. `.prose`
-   *  itself stays a plain reading column even on a split page (`site.css`'s "no bands on content
-   *  pages" rule is unchanged for every non-pitch page); a `.pitch-band` breaks out of it the same
-   *  way `site.css`'s `.cairn-place-full` already does for a full-bleed figure. */
-  function bandPitch(html: string): string {
-    const starts = [...html.matchAll(/<h2 id="[^"]+"[^>]*>/g)].map((match) => match.index);
-    if (starts.length === 0) return html;
-    const chunks = starts.map((start, i) => html.slice(start, starts[i + 1] ?? html.length));
-    const preamble = html.slice(0, starts[0]);
-    if (preamble.trim()) chunks[0] = preamble + chunks[0];
-    return chunks
-      .map((chunk, i) => `<div class="pitch-band ${i % 2 === 0 ? 'pitch-band-a' : 'pitch-band-b'}">${chunk}</div>`)
-      .join('');
-  }
-
-  const pitchBandedHtml = $derived(bandPitch(pitchHtml));
-
   // Gated on a heading count, not a hardcoded slug list, so this generalizes to any page that
   // grows into a long reference document rather than special-casing bylaws and the new-member
   // guide by name (spec B1: "in-page TOCs on the longest pages"). Eight or more h2/h3 headings is
   // the density where a document reads as a reference to navigate rather than prose to read
   // straight through. Computed over `referenceHtml`, not the raw document, so a split page's TOC
   // both scopes to and covers the material it actually governs, complete rather than truncated.
+  //
+  // A split page (`pitchSplitId` set) never uses this boxed-panel frame: it gets the long-form
+  // navigation below instead (a jump list plus, past 1280px, a true gutter rail), covering the
+  // WHOLE document from the top rather than gating on the reference tail alone. Every other long
+  // page that earns this frame by heading count (racing, join, bylaws, and the rest) keeps it
+  // unchanged.
   const toc = $derived(extractToc(referenceHtml));
-  const showToc = $derived(toc.length >= 8);
+  const showToc = $derived(toc.length >= 8 && !pitchSplitId);
   // The section-panel treatment (the presentation round's Strand 2) is the pages concept's own
   // template device, not a general density-gated feature: a long post or bulletin still earns the
   // sticky gutter TOC below, but its body stays plain prose, unpanelled.
   const showPanels = $derived(showToc && data.entry.concept === 'pages');
+
+  // The long-form site TOC standard's own list (Geoff, 2026-07-07): h2 sections only, computed
+  // over the WHOLE document (pitch and reference alike, not just the material past the split
+  // heading), so the navigation is present and complete from the top of the article rather than
+  // appearing only once a reader reaches the reference tail. Read by both `jumpLinks` (the
+  // in-flow list, <1280px and as the printed/no-JS baseline) and `.page-toc-rail` (the fixed
+  // gutter rail, >=1280px) below; the two never render at once, CSS toggles between them by
+  // breakpoint.
+  const jumpLinks = $derived(pitchSplitId ? extractToc(data.html).filter((item) => item.level === 2) : []);
 
   /** Splits rendered HTML at each top-level `<h2>` boundary: everything before the first h2 (the
    *  lede under the title) is the preamble, and each h2 through the content up to (but excluding)
@@ -179,18 +174,19 @@
     split ? split.sections.map((section) => (showPanels ? toPanel(section) : section)).join('') : '',
   );
 
-  // The sticky gutter TOC's active-section highlight (Strand 2): an IntersectionObserver per
-  // heading, biased toward the top of the viewport (a large negative bottom rootMargin), the
-  // standard scrollspy technique, so "active" tracks whichever section is at the top of the
-  // reading area rather than merely anywhere onscreen. No transition is declared on the highlight
-  // style anywhere in this file's style block below, so there is nothing to gate behind
-  // prefers-reduced-motion: the swap is already instant.
+  // The sticky gutter TOC's active-section highlight (Strand 2, and shared by the long-form gutter
+  // rail below): an IntersectionObserver per heading, biased toward the top of the viewport (a
+  // large negative bottom rootMargin), the standard scrollspy technique, so "active" tracks
+  // whichever section is at the top of the reading area rather than merely anywhere onscreen. No
+  // transition is declared on the highlight style anywhere in this file's style block below, so
+  // there is nothing to gate behind prefers-reduced-motion: the swap is already instant.
+  const spyItems = $derived(pitchSplitId ? jumpLinks : toc);
   let activeId: string | null = $state(null);
-  const highlightedId = $derived(activeId ?? toc[0]?.id ?? null);
+  const highlightedId = $derived(activeId ?? spyItems[0]?.id ?? null);
 
   $effect(() => {
-    if (!showToc) return;
-    const headings = toc
+    if (!showToc && !pitchSplitId) return;
+    const headings = spyItems
       .map((item) => document.getElementById(item.id))
       .filter((el): el is HTMLElement => el !== null);
     if (headings.length === 0) return;
@@ -207,9 +203,9 @@
   });
 </script>
 
-{#snippet tocList(activeItemId: string | null)}
+{#snippet tocList(items: TocItem[], activeItemId: string | null)}
   <ul class="m-0 list-none p-0">
-    {#each toc as item (item.id)}
+    {#each items as item (item.id)}
       <li class={item.level === 3 ? 'ml-m' : ''}>
         <a href={`#${item.id}`} class={item.id === activeItemId ? 'toc-active' : ''}>{item.text}</a>
       </li>
@@ -229,7 +225,7 @@
 
 <CairnHead seo={data.seo} titleTemplate={(title) => `${title} — ${siteConfig.siteName}`} />
 
-<article class="prose">
+<article class="prose" class:long-form-page={Boolean(pitchSplitId)}>
   {#if isGovernanceSubpage}
     <a href="/governance/" class="not-prose back-link">
       <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -259,40 +255,55 @@
     {@render titleBlock()}
   {/if}
   {#if pitchSplitId}
-    <!-- The pitch: everything above the split heading, banded into alternating sections (the
-         design-polish pass, 2026-07-07) with no panels and no TOC. -->
-    {@html pitchBandedHtml}
-    <!-- The pitch-to-reference hand-off (the design-polish pass, 2026-07-07): the genre shift
-         from persuasion prose to a boxed, navigable reference section was previously silent and
-         abrupt (a finding against education, where the pitch ends mid-registration and the
-         reference material starts at "Swim Test, Capsize Drill..."). A labeled divider announces
-         the shift explicitly instead of leaving the reader to infer it from the narrower measure
-         and the panel chrome alone. -->
+    {@const pitchIntro = splitAtH2(pitchHtml)}
+    <!-- The long-form page (education, 2026-07-07): a whole-document article, no boxed panels, no
+         measure change. The navigation sits right after the intro, before the first section, so
+         it is present from the top rather than appearing only once a reader reaches the
+         reference tail; `.jump-links` and `.page-toc-rail` render the same list and never both
+         show at once (CSS toggles by breakpoint, `jumpLinks`'s own comment above explains the
+         shared source). -->
+    {@html pitchIntro.preamble}
+    <nav class="jump-links not-prose" aria-label="Jump to section">
+      <span class="jump-links-label">On this page</span>
+      {@render tocList(jumpLinks, null)}
+    </nav>
+    <aside class="page-toc-rail not-prose">
+      <p class="page-toc-heading">On this page</p>
+      <nav aria-label="On this page">
+        {@render tocList(jumpLinks, highlightedId)}
+      </nav>
+    </aside>
+    {@html pitchIntro.sections.join('')}
+    <!-- The pitch-to-reference hand-off: a plain typographic break, not a boxed section start,
+         announcing the shift from persuasion prose to reference material (education's pitch ends
+         mid-registration; the reference material starts at "Swim Test, Capsize Drill..."). -->
     <div class="pitch-reference-divider not-prose">
       <span class="pitch-reference-label">Reference &amp; policies</span>
     </div>
-  {/if}
-  {#if showToc}
-    <details class="toc mobile-toc">
-      <summary>Table of contents</summary>
-      <nav aria-label="Table of contents">
-        {@render tocList(null)}
-      </nav>
-    </details>
-  {/if}
-  {@html preambleHtml}
-  {#if showToc}
-    <div class="article-toc-shell">
-      <div class="article-sections">
-        {@html sectionsHtml}
-      </div>
-      <aside class="page-toc-sticky">
-        <p class="page-toc-heading">On this page</p>
+    {@html referenceHtml}
+  {:else}
+    {#if showToc}
+      <details class="toc mobile-toc">
+        <summary>Table of contents</summary>
         <nav aria-label="Table of contents">
-          {@render tocList(highlightedId)}
+          {@render tocList(toc, null)}
         </nav>
-      </aside>
-    </div>
+      </details>
+    {/if}
+    {@html preambleHtml}
+    {#if showToc}
+      <div class="article-toc-shell">
+        <div class="article-sections">
+          {@html sectionsHtml}
+        </div>
+        <aside class="page-toc-sticky">
+          <p class="page-toc-heading">On this page</p>
+          <nav aria-label="Table of contents">
+            {@render tocList(toc, highlightedId)}
+          </nav>
+        </aside>
+      </div>
+    {/if}
   {/if}
   {#if isPost && data.entry.tags.length > 0}
     <ul class="post-tags" aria-label="Tags">
@@ -355,54 +366,13 @@
     color: var(--color-muted);
   }
 
-  /* The pitch's section bands (the design-polish pass, 2026-07-07): each `.pitch-band` breaks out
-     to the full viewport width the same way `site.css`'s `.cairn-place-full` already does for a
-     figure (`left: 50%` plus a matching negative `transform`, which centers a 100vw box on the
-     viewport regardless of this ancestor's own padding, as long as the ancestor itself is
-     centered, which `.site-main` always is). The band's own vertical padding carries the section
-     rhythm; adjacent bands touch directly, reading as one continuous strip whose background
-     alternates at the seam, the same "no gap, color does the work" reading `bg-base-200`
-     home-page sections without a border already use. Every selector reaching into this raw-HTML
-     content is `:global()`, the same reason `.content-panel`'s own rules below are: Svelte's
-     scoped-CSS hash never reaches an element `{@html}` injects. */
-  .prose :global(.pitch-band) {
-    width: 100vw;
-    position: relative;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: var(--spacing-xl) var(--spacing-m);
-  }
-  .prose :global(.pitch-band-b) {
-    background: var(--color-base-200);
-  }
-  /* Re-centers the band's own content to the plain reading measure and reapplies the owl-selector
-     flow rhythm one level deeper than `.prose > * + *` reaches now that a band wraps each
-     section: the same re-declaration `.content-panel`'s own rules use below, so a heading's
-     `--flow-space` (prose.css) still governs the gap above it exactly as it did as a direct
-     child. */
-  .prose :global(.pitch-band > *) {
-    max-width: var(--container-measure);
-    margin-inline: auto;
-  }
-  /* A card grid re-centers to the WIDE measure, not the plain reading measure the rule above
-     gives every other band child (a regression the round-2 review caught, 2026-07-07): the
-     reading-measure cap starves `.asc-cards`' own `repeat(auto-fill, minmax(14rem, 1fr))`
-     (asc-components.css) of the columns it needs, dropping a three-across card row to two with
-     the third card orphaned onto its own line. `--container-measure-wide` matches what the
-     card grid rendered at before the band wrapped it (this page always earns the wide prose
-     measure, since it always carries a TOC), and the band itself is already a full-bleed strip,
-     so a wider child here never overflows it. */
-  .prose :global(.pitch-band > .asc-cards) {
-    max-width: var(--container-measure-wide);
-  }
-  .prose :global(.pitch-band > * + *) {
-    margin-top: var(--flow-space);
-  }
-
-  /* The pitch-to-reference hand-off: a labeled rule announcing the reference section starts here,
-     rather than the reader inferring the genre shift from the narrower measure and panel chrome
-     alone (the design-polish pass's finding, 2026-07-07). Sits in the plain reading column (no
-     band of its own); the reference material past it stays exactly as before. */
+  /* The pitch-to-reference hand-off: a plain typographic break (a rule plus a small label)
+     announcing the reference section starts here, rather than the reader inferring the genre
+     shift with no signal at all (the design-polish pass's original finding, 2026-07-07; kept as
+     a plain rule rather than a colored band per Geoff's 2026-07-07 ruling that content pages
+     carry no bands at all). Sits in the plain reading column; the reference material past it
+     renders as ordinary article flow, the same measure and heading scale as everything above
+     it. */
   .pitch-reference-divider {
     display: flex;
     align-items: center;
@@ -424,6 +394,113 @@
     letter-spacing: var(--tracking-eyebrow);
     text-transform: uppercase;
     color: var(--color-muted);
+  }
+
+  /* The long-form site TOC standard (Geoff, 2026-07-07): a compact in-flow "on this page" list
+     right after the intro (`.jump-links`) below the width a true gutter rail can hold, and the
+     rail itself (`.page-toc-rail`) past it — never both visible at once. The rail is deliberately
+     unlike the shared `.article-toc-shell` frame above: it sits OUTSIDE the reading column via
+     `position: fixed`, anchored to the viewport rather than a wider ancestor box, so `.prose`
+     never widens to make room for it and the article's own measure is identical whether or not
+     the rail is visible (the frame above widens `.prose` instead, which is exactly what read as
+     a narrowed, docs-app-framed column on education). */
+  .jump-links {
+    --flow-space: var(--spacing-s);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--spacing-2xs) var(--spacing-m);
+    margin: var(--spacing-m) 0;
+    padding: var(--spacing-s) var(--spacing-m);
+    background: var(--color-base-200);
+    border-radius: var(--radius-box);
+  }
+  .jump-links-label {
+    flex: 0 0 100%;
+    font-family: var(--font-display);
+    font-size: var(--text-step--1);
+    font-weight: 700;
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .jump-links :global(ul) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-2xs) var(--spacing-m);
+  }
+  /* site.css's own `.site-main .prose a:not(.asc-card-link)` rule (three classes, unlayered) sets
+     every prose link to the primary link color; matching that weight here (the same technique
+     `.page-toc-sticky`'s own link rules below use) rather than trusting a plain `.jump-links a` to
+     out-specify it. */
+  :global(.site-main) .prose .jump-links a {
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+  :global(.site-main) .prose .jump-links a:hover {
+    text-decoration: underline;
+  }
+
+  .page-toc-rail {
+    display: none;
+  }
+  /* 80rem (1280px), not the ~1200px a plain reading column would need: the rail sits OUTSIDE
+     `.prose`, so the breakpoint has to clear the reading column's own half-width plus its gutter
+     plus the rail's own width with room to spare, not just the column alone. Verified empirically
+     (computed `getBoundingClientRect`) to clear the article with a comfortable margin at 1440. */
+  @media (min-width: 80rem) {
+    .jump-links {
+      display: none;
+    }
+    .page-toc-rail {
+      display: block;
+      position: fixed;
+      top: var(--header-clearance);
+      left: calc(50% + (var(--container-measure) / 2) + var(--spacing-m));
+      width: 14rem;
+      max-height: calc(100vh - var(--header-clearance) - var(--spacing-l));
+      overflow-y: auto;
+      background: var(--color-base-100);
+      border: var(--border) solid var(--color-card-border);
+      border-radius: var(--radius-box);
+      padding: var(--spacing-s) var(--spacing-m);
+    }
+  }
+  :global(.site-main) .prose .page-toc-rail a {
+    display: block;
+    padding: 0.25rem 0;
+    color: var(--color-base-content);
+    text-decoration: none;
+  }
+  :global(.site-main) .prose .page-toc-rail a:hover {
+    color: var(--color-primary);
+  }
+  /* The rail's current-section mark: flag-navy text plus a star-gold underline, the same
+     "waypoint" device the header's own active-nav link uses (SiteHeader.svelte), rather than the
+     plain primary-color highlight the shared `.page-toc-sticky` frame above uses — gold marks a
+     live location, per the club-grounds color story ("marks and waypoints only, never body
+     text"). Scoped to the rail alone; the shared frame's own `.toc-active` rule below is
+     unchanged. */
+  :global(.site-main) .prose .page-toc-rail .toc-active {
+    color: var(--color-primary);
+    font-weight: 650;
+    box-shadow: 0 2px 0 var(--color-star-gold);
+  }
+
+  /* The long-form page's one card grid (the Registration Path, education's only remaining card
+     use): a per-element wide breakout, the same technique site.css's own `.cairn-place-wide`
+     figure role uses, so three content-sized cards read as one row at desktop while the reading
+     measure around it stays exactly `container-measure` (rule 1 of the information-presentation
+     rebuild: "the column width never changes mid-page," with a per-element exception for a card
+     row that needs it). `min(...)` clamps the breakout to the viewport itself below the width
+     where there is no room to spare, so it never overflows a narrower viewport; the grid's own
+     `repeat(auto-fill, minmax(14rem, 1fr))` (asc-components.css) still governs how many columns
+     actually fit at whatever width this resolves to. */
+  .long-form-page :global(.asc-cards) {
+    width: min(var(--container-measure-wide), 100vw - 3rem);
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
   }
 
   /* Strand 3 (the presentation round): the pages concept's title-adjacent hero, adapted from the
@@ -460,7 +537,12 @@
   @media (min-width: 48rem) {
     .page-title-hero {
       flex-direction: row;
-      align-items: center;
+      /* Was `center`: with a two-line title's ~50-95px against a full aspect-ratio photo running
+         200-300px, centering floated the title in the middle of a mostly-empty left column (the
+         hero-round pass's finding, 2026-07-07 — "a title floating in a giant area of space next
+         to the header image"). Top-aligning anchors the title to the photo's own top edge, the
+         plain, common photo-beside-title reading. */
+      align-items: flex-start;
     }
     .page-title-hero-text {
       flex: 1 1 auto;
@@ -474,6 +556,15 @@
        photo-beside-the-title device, without letting it dominate a short one- or two-line title. */
     .page-title-hero-figure {
       flex: 0 0 44%;
+    }
+    /* The compact-banner fix (hero-round pass, 2026-07-07): a fixed height replaces the
+       aspect-ratio box past this breakpoint, so the row itself stays tight (band, not tower)
+       regardless of the column's own width — the reading-measure cap otherwise let the row grow
+       past 300px tall at the wide TOC measure. `object-fit: cover` still crops to fill exactly
+       this box, the same as the aspect-ratio version did. */
+    .page-title-hero-figure img {
+      aspect-ratio: auto;
+      height: 17.5rem;
     }
   }
 
