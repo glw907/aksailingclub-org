@@ -458,6 +458,28 @@ state. -->
   .nav-item-dropdown {
     position: relative;
   }
+  /* Members-to-Contact optical fix (round 4, 2026-07-07): every plain nav pair's flex `gap-s`
+     already sits directly between two words with nothing else in the way, so the WORD-to-word
+     whitespace equals the box gap. Members' own caret box breaks that: it sits between the word
+     and the gap, so Members' word-to-word distance to Contact was `gap-3xs` (the caret's own
+     label-tuck) plus the caret's full `w-6` (1.5rem) box plus `gap-s`, measured at 47.5px at
+     1440px against every other pair's identical 18.08px box gap (confirmed via
+     `getBoundingClientRect` on the link text itself, which carries no horizontal padding, so its
+     box IS the word's own edge). Fully canceling the caret's box width would pull Contact's own
+     link box left of the caret's right edge (the box gap, 18px, is narrower than the caret's own
+     24px box), overlapping two separate interactive hit targets, so this cancels only the shared
+     `gap-s` itself, leaving Contact flush against the caret's box with no added margin: the
+     caret's own glyph is inset about 6px from its box's right edge (a 24px hit target around a
+     12px chevron), so that inset alone reads as a small natural buffer close to the nav's own
+     `gap-3xs` tuck, without any control overlap. The caret's own tuck to "Members" (`gap-3xs`,
+     the wrapper's own inline gap) is untouched, matching Geoff's own ruling that the tuck itself
+     is fine. Scoped to this one pair via the adjacent-sibling selector, never the nav's own shared
+     `gap-s` rhythm elsewhere; it depends on Members' dropdown wrapper being immediately followed
+     by one plain nav link in `site.config.yaml`'s own menu order, true as of this pass (Members,
+     then Contact). */
+  .nav-item-dropdown + .nav-link {
+    margin-left: calc(-1 * var(--spacing-s));
+  }
   /* The dropdown panel: a plain link list (not an ARIA menu), positioned under its own caret via
      the popover anchor pair set inline above. */
   .members-dropdown {

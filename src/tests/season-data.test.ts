@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildSeasonMonths, routeIdOf } from '$theme/season-data';
+import { buildSeasonMonths, routeIdOf, splitSeasonColumns } from '$theme/season-data';
+import type { SeasonMonth } from '$theme/season-data';
 
 const CURRENT_YEAR = 2026;
 
@@ -158,5 +159,65 @@ describe('routeIdOf', () => {
 
   it("routes a class on its id, since a class's slug is only unique within its season", () => {
     expect(routeIdOf({ event_type: 'class', slug: 'adult-intro', id: 'class-row-id' })).toBe('class-row-id');
+  });
+});
+
+describe('splitSeasonColumns', () => {
+  // A month with `count` placeholder events, only their number matters for balancing.
+  function month(label: string, count: number): SeasonMonth {
+    return {
+      label,
+      events: Array.from({ length: count }, (_, i) => ({
+        dateRange: `${label} ${i + 1}`,
+        name: `${label} event ${i + 1}`,
+        routeId: `${label}-${i}`,
+      })),
+    };
+  }
+
+  it('keeps every month intact, never splitting one across columns', () => {
+    const months = [month('May', 3), month('June', 5), month('July', 2)];
+    const [left, right] = splitSeasonColumns(months);
+    const allMonths = [...left, ...right];
+    expect(allMonths.map((m) => m.label)).toEqual(['May', 'June', 'July']);
+    for (const m of allMonths) {
+      const original = months.find((om) => om.label === m.label);
+      expect(m.events).toEqual(original?.events);
+    }
+  });
+
+  it('preserves chronological order across both columns', () => {
+    const months = [month('May', 4), month('June', 4), month('July', 4), month('August', 4)];
+    const [left, right] = splitSeasonColumns(months);
+    expect(left.map((m) => m.label)).toEqual(['May', 'June']);
+    expect(right.map((m) => m.label)).toEqual(['July', 'August']);
+  });
+
+  it('balances an uneven distribution by total row count, not month count', () => {
+    // May carries most of the season's rows; splitting by month count alone (2/2) would leave
+    // column one far taller than column two. The nearest-to-half boundary puts May alone on the
+    // left (10 rows) against June+July+August (3+2+1=6) rather than an even month-count split.
+    const months = [month('May', 10), month('June', 3), month('July', 2), month('August', 1)];
+    const [left, right] = splitSeasonColumns(months);
+    expect(left.map((m) => m.label)).toEqual(['May']);
+    expect(right.map((m) => m.label)).toEqual(['June', 'July', 'August']);
+  });
+
+  it('falls back to a single column for one month', () => {
+    const months = [month('May', 3)];
+    expect(splitSeasonColumns(months)).toEqual([months, []]);
+  });
+
+  it('falls back to a single (empty) column for no months', () => {
+    expect(splitSeasonColumns([])).toEqual([[], []]);
+  });
+
+  it('guarantees at least one month per column when there are two or more months', () => {
+    // All the weight is on the first month, so a naive "closest to half" search could otherwise
+    // put every month on the left and leave the right column empty.
+    const months = [month('May', 20), month('June', 1)];
+    const [left, right] = splitSeasonColumns(months);
+    expect(left.length).toBeGreaterThan(0);
+    expect(right.length).toBeGreaterThan(0);
   });
 });

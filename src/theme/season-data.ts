@@ -229,6 +229,35 @@ export function buildSeasonMonths(rows: EventRow[], currentYear: number): Season
   return months;
 }
 
+/** Splits a month-grouped season into a balanced two-column pair for the home band's own compact
+ *  layout (the round-4 proportion fix, 2026-07-07: the prior single-column calendar read as a
+ *  scroll marathon, "The Season Keeps Going"). Deliberately NOT the CSS-multicolumn approach the
+ *  round-3 rebuild rejected for its own opaque, unpredictable balance against a real, unevenly
+ *  sized club calendar; this is a plain contiguous prefix split; picked by finding the month
+ *  boundary whose cumulative event count lands closest to half the season's total, so a month
+ *  group is never split across columns (SeasonList's own two-column grid renders each returned
+ *  array as one column) and the chronological order (May through the trailing off-season bucket)
+ *  is preserved in both columns. Falls back to a single column (an empty second array) for zero or
+ *  one month of events, since there is nothing sensible to balance. */
+export function splitSeasonColumns(months: SeasonMonth[]): [SeasonMonth[], SeasonMonth[]] {
+  const totalEvents = months.reduce((sum, month) => sum + month.events.length, 0);
+  if (months.length < 2 || totalEvents === 0) return [months, []];
+
+  const target = totalEvents / 2;
+  let splitIndex = 1;
+  let bestDiff = Infinity;
+  let running = 0;
+  for (let i = 0; i < months.length - 1; i++) {
+    running += months[i].events.length;
+    const diff = Math.abs(running - target);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      splitIndex = i + 1;
+    }
+  }
+  return [months.slice(0, splitIndex), months.slice(splitIndex)];
+}
+
 /** Read the live events and classes tables and group them into the Season shape. On any D1
  *  failure (a binding hiccup, a query error) this degrades to an empty season rather than
  *  throwing, the same safe failure this theme already uses for a missing photo (`home-images.ts`):
