@@ -48,7 +48,9 @@ export const clubAdminNav: AdminNavSection = {
     // here, but the screen's own write actions are owner-only (see the settings route's header
     // comment). `ownerOnly` stays unset: an admin should still SEE the link and the current
     // state, even though most of its actions refuse them server-side.
-    { label: 'Settings', icon: 'wrench', href: '/admin/club/settings' },
+    // "Club Settings", not "Settings": cairn's own sidebar already carries a Settings entry,
+    // and two identical labels in one nav read as a defect (Geoff, 2026-07-07 admin review).
+    { label: 'Club Settings', icon: 'wrench', href: '/admin/club/settings' },
   ],
 };
 
