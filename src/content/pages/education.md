@@ -69,30 +69,17 @@ A rough schedule for the four-day Introduction to Dinghy Sailing course. We adju
 | Saturday | 10:00 a.m.–6:00 p.m. | Advanced drills; right-of-way, docking, telltales, heavy weather |
 | Sunday | 10:00 a.m.–5:00 p.m. | Racing basics and a few fun class races; ends an hour early |
 
-::::cards
-:::card[Arrival]
-Come any time before class starts; some students arrive a day early to set up camp and pitch in on rigging. Arriving the day of class, plan on 45 minutes to set up your tent or RV before start time.
-:::
-:::card[Day one (Thursday), 1:00-6:00 p.m.]
-Class starts at 1:00 p.m. with introductions and a walking tour, then hands-on rigging, where you'll learn the names of every part of a dinghy. Once the boats are launched, everyone runs the capsize drill. A short classroom session covers sailing theory and basic maneuvers (tacking and jibing), followed by dry-land tiller practice, a Q&A, and derigging.
-:::
-:::card[Day two (Friday), 10:00 a.m.-6:00 p.m.]
-As much water time as the wind allows. Rig and launch, a quick classroom review, then the first drill: beam reaching and tacking around two marks. After a classroom session on upwind and downwind technique and a lunch break, the rest of the day is upwind/downwind practice, typically the hardest skill for a beginner. Ends with Q&A and put-away.
-:::
-:::card[Day three (Saturday), 10:00 a.m.-6:00 p.m.]
-More on-water time with harder drills: tack-on-the-whistle, jibe-on-the-whistle, follow the leader. After a classroom debrief and lunch, advanced topics:
+Here's what each day actually looks like:
 
-- Right-of-way
-- Safe docking procedures
-- Sailing with telltales
-- Sailing in extreme conditions (too much wind, too little wind)
+**Arrival.** Come any time before class starts; some students arrive a day early to set up camp and pitch in on rigging. Arriving the day of class, plan on 45 minutes to set up your tent or RV before start time.
 
-Ends with Q&A and put-away.
-:::
-:::card[Day four (Sunday), 10:00 a.m.-5:00 p.m.]
-Rig and launch, then straight into advanced drills, followed by a classroom session on the basics of sailboat racing (enough to join an ASC regatta). The afternoon is low-key racing drills and a few fun class races. Ends about an hour earlier than the other days.
-:::
-::::
+**Thursday.** Class starts at 1:00 p.m. with introductions and a walking tour, then hands-on rigging, where you'll learn the names of every part of a dinghy. Once the boats are launched, everyone runs the capsize drill. A short classroom session covers sailing theory and basic maneuvers (tacking and jibing), followed by dry-land tiller practice, a Q&A, and derigging.
+
+**Friday.** As much water time as the wind allows. Rig and launch, a quick classroom review, then the first drill: beam reaching and tacking around two marks. After a classroom session on upwind and downwind technique and a lunch break, the rest of the day is upwind/downwind practice, typically the hardest skill for a beginner. Ends with Q&A and put-away.
+
+**Saturday.** More on-water time with harder drills: tack-on-the-whistle, jibe-on-the-whistle, follow the leader. After a classroom debrief and lunch, advanced topics: right-of-way, safe docking procedures, sailing with telltales, and sailing in extreme conditions (too much wind, too little wind). Ends with Q&A and put-away.
+
+**Sunday.** Rig and launch, then straight into advanced drills, followed by a classroom session on the basics of sailboat racing (enough to join an ASC regatta). The afternoon is low-key racing drills and a few fun class races. Ends about an hour earlier than the other days.
 
 ### Youth Class Special Notes
 
@@ -184,11 +171,7 @@ Ready to register! Check the class schedule on our [events page](/events/) and s
 
 ### Ready to Join?
 
-::::cards
-:::card[Join the Club]{icon="user-plus" href="/join/"}
-Learn about membership and join, membership is active immediately upon payment.
-:::
-::::
+[Join the club](/join/) — membership is active immediately upon payment.
 
 ## Swim Test, Capsize Drill, and Life Jackets
 
@@ -228,7 +211,9 @@ Our tenting area is located at the end of "trailer row" and we always have plent
 
 ### Amenities
 
-We have a grill, a microwave, a coffee maker, a hot water heater, a shared fridge (for day use, volunteers empty it each weekend, so don't leave food), outhouses, electricity, a clubhouse, and a sauna. We don't have showers or running water, but there are a few emergency gallons of drinking water in the clubhouse, use them sparingly and help refill if you use any. There is a Three Bears grocery store about ten minutes away from the club if you need supplies. Lakeside Laundromat is across the street from Three Bears and has hot showers and a sink where you can fill water coolers.
+We have a grill, a microwave, a coffee maker, a hot water heater, a shared fridge (for day use, volunteers empty it each weekend, so don't leave food), outhouses, electricity, a clubhouse, and a sauna. We don't have showers or running water, but there are a few emergency gallons of drinking water in the clubhouse, use them sparingly and help refill if you use any.
+
+There is a Three Bears grocery store about ten minutes away from the club if you need supplies. Lakeside Laundromat is across the street from Three Bears and has hot showers and a sink where you can fill water coolers.
 
 ## Cancelation and Refund Policy
 
@@ -250,10 +235,4 @@ the waitlist" option in place of Sign Up, right on the same page, no separate fo
 
 ## Questions?
 
-If you have any questions or concerns regarding our classes, please email us to reach our instructors.
-
-::::cards
-:::card[Ask away!]{icon="envelope-simple" href="/contact/"}
-Email us to reach our instructors and program committee.
-:::
-::::
+If you have any questions or concerns regarding our classes, [email us](/contact/) to reach our instructors and program committee.
