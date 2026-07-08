@@ -82,7 +82,7 @@ You don't need to own a boat. Club boats available to Open Fleet sailors include
 
 ### Buccaneer 18 Fleet
 
-Sixteen boats, the largest individual Buccaneer 18 fleet in North America. One-design racing where boat handling and tactics decide the results, not equipment differences. Starts and mark roundings get loud. The club hosted the 2025 BNAC and sends sailors to the championship annually. If you want close racing with a national competitive pathway, this is it.
+Sixteen boats, the largest individual Buccaneer 18 fleet in North America. One-design racing where boat handling and tactics decide the results, not equipment differences. Starts and mark roundings get loud. See [the BNAC](#the-season) above; if you want close racing with a national competitive pathway, this is it.
 
 Many new sailors get their first Buccaneer experience crewing for an experienced skipper. It's a great way to learn the boat, but the Buccaneer Fleet isn't the ideal place to skipper your first race. Start in the Open Fleet, build your starts and mark roundings there, then move up.
 

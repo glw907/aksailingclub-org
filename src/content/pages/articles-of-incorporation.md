@@ -8,8 +8,7 @@ description: "Amended and Restated Articles of Incorporation for The Alaska Sail
 
 [Download the PDF](/uploads/2024/04/amended-and-restated-articles-of-incorporation-of-alaska-sailing-club-inc.pdf)
 
-:::callout{tone="note"}
-[Plain-English summary]
+:::callout[Plain-English Summary]{tone="note"}
 The Articles of Incorporation are the founding document of the Alaska Sailing Club. Filed with the State of Alaska, they formally establish the club as a nonprofit corporation and define its legal existence, tax status, and mission. Everything else — the bylaws, the board, the committees — rests on this foundation.
 
 **What this means for members:**
@@ -127,10 +126,8 @@ These Amended and Restated Articles of Incorporation completely amend the origin
 
 *IN WITNESS WHEREOF, the undersigned have signed these Restated Articles of Incorporation this 19th day of October 2007.*
 
-*Timothy Gould*
-*President*
+*Timothy Gould, President*
 
 *Attested to:*
 
-*Elayne Hunter*
-*Secretary*
+*Elayne Hunter, Secretary*

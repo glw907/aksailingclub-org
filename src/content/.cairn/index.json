@@ -69,7 +69,7 @@
       "concept": "pages",
       "title": "Class Registration",
       "permalink": "/class-registration",
-      "summary": "Sign in to your MembershipWorks account below to register for a class. Not yet a member? Join first, since membership is required for all classes. For class details, schedules, and what to bring, see…",
+      "summary": "Class registration happens on the Events page: find your class in the calendar and register directly from its listing. Not yet a member? Join first, since membership is required for all classes.…",
       "draft": false,
       "links": []
     },
@@ -132,7 +132,7 @@
       "concept": "pages",
       "title": "Member Directory",
       "permalink": "/directory",
-      "summary": "The member directory is moving from MembershipWorks to the new site as part of the club's phase-2 work, and isn't ready yet. :::callout{tone=\"note\"} [In the meantime] Looking for a committee chair or…",
+      "summary": "The online member directory isn't ready yet: it's being rebuilt as part of the club's phase-2 work. :::callout[In the Meantime]{tone=\"note\"} Looking for a committee chair or another member? Ask in…",
       "draft": false,
       "links": []
     },
@@ -218,7 +218,7 @@
       "concept": "pages",
       "title": "Issues & Support",
       "permalink": "/issues-and-support",
-      "summary": "Report a problem, ask a billing question, submit a reimbursement request, or ask about storage availability below. Boat problems route to #fleet on Discord, harbor issues to #harbor, and site issues…",
+      "summary": "Report a problem, ask a billing question, submit a reimbursement request, or ask about storage availability. Boat problems route to #fleet on Discord, harbor issues to #harbor, and site issues to…",
       "draft": false,
       "links": []
     },
@@ -227,7 +227,7 @@
       "concept": "pages",
       "title": "IT & Infrastructure Requests",
       "permalink": "/it-request",
-      "summary": "Need help with your club email, website login, Discord access, or something not working right on the site? Submit a request below and we'll get back to you. For boat, dock, or clubhouse issues, use…",
+      "summary": "Need help with your club email, website login, Discord access, or something not working right on the site? Here's how to reach us. For boat, dock, or clubhouse issues, use Issues & Support instead.…",
       "draft": false,
       "links": []
     },
@@ -308,7 +308,7 @@
       "concept": "pages",
       "title": "Alaska Sailing Club: Official Website",
       "permalink": "/official-website",
-      "summary": "The official website of the Alaska Sailing Club is aksailingclub.org. If you arrived here from a search result, you found the right place. If you were previously visiting alaskasailingclub.com, that…",
+      "summary": "The official website of the Alaska Sailing Club is aksailingclub.org. If you arrived here from a search result, you're in the right place. Not aksailingclub.org? If you were previously visiting…",
       "draft": false,
       "links": []
     },

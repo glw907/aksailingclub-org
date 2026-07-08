@@ -7,6 +7,22 @@ The Board of Directors manages the affairs of the corporation. Between 4 and 7 d
 
 The board establishes committees to handle specific areas of club operations. Two standing committees have formal authority defined in the bylaws. The rest are established committees: they run the programs, facilities, and activities that make the club work.
 
+## At a Glance
+
+| Role | Who |
+|---|---|
+| Commodore | Nancy Black |
+| Vice Commodore | Dave Johnson |
+| Secretary | Angie Oberlitner |
+| Treasurer | Matt Flickinger |
+| Finance Committee | Matt Flickinger |
+| Board Development Committee | Geoff Wright |
+| Program Committee | Christopher Cryan |
+| Membership Committee | Jonathan Ramirez, Emily Ramirez (co-chair) |
+| Site Committee | Geoff Wright |
+| Harbor Committee | TL Stanbro |
+| Fleet Committee | Steve Ryan |
+
 ## Officers
 
 The bylaws define four officer positions. The board elects officers annually from among the directors.

@@ -2,7 +2,7 @@
 title: "Issues & Support"
 ---
 
-Report a problem, ask a billing question, submit a reimbursement request, or ask about storage availability below. Boat problems route to `#fleet` on Discord, harbor issues to `#harbor`, and site issues to `#site`; billing, reimbursements, and storage inquiries go to the relevant committee by email.
+Report a problem, ask a billing question, submit a reimbursement request, or ask about storage availability. Boat problems route to `#fleet` on Discord, harbor issues to `#harbor`, and site issues to `#site`; billing, reimbursements, and storage inquiries go to the relevant committee by email.
 
 For website problems or IT requests, use the [IT Request form](/it-request/) instead.
 
@@ -31,10 +31,8 @@ Club expense receipts (include photo or scan). Routes to the Finance Committee b
 
 ## Report an Issue
 
-:::callout{tone="note"}
-[The report form is moving to the new site]
-The issue-report form isn't wired up here yet. In the meantime, post directly in the Discord
-channel for your issue (`#fleet`, `#site`, or `#harbor`), or email `board@aksailingclub.org` for
+:::callout[How to Report an Issue]{tone="note"}
+Report your issue in the matching Discord channel above, or email `board@aksailingclub.org` for
 billing, reimbursement, or storage questions.
 :::
 

@@ -2,11 +2,14 @@
 title: "Class Registration"
 ---
 
-Sign in to your MembershipWorks account below to register for a class. Not yet a member? [Join first](/join/), since membership is required for all classes.
+Class registration happens on the [Events](/events/) page: find your class in the calendar and register directly from its listing. Not yet a member? [Join first](/join/), since membership is required for all classes.
 
-For class details, schedules, and what to bring, see the [Education](/education/) page.
-
-:::membershipworks{open="!event-list"}
+::::cards
+:::card[Browse classes on the Events calendar]{icon="calendar-dots" href="/events/"}
+Find your class, check dates, and register directly from its listing.
 :::
+::::
+
+For what to bring, what to expect, and the cancellation policy, see the [Education](/education/) page.
 
 **Questions about classes?** Ask in `#education` on [Discord](/discord-server/). **Technical issues?** [Submit an IT request](/it-request/).

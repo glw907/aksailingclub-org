@@ -2,9 +2,9 @@
 title: "Alaska Sailing Club: Official Website"
 ---
 
-The official website of the Alaska Sailing Club is **aksailingclub.org**.
+The official website of the Alaska Sailing Club is **aksailingclub.org**. If you arrived here from a search result, you're in the right place.
 
-If you arrived here from a search result, you found the right place. If you were previously visiting **alaskasailingclub.com**, that site is not affiliated with the Alaska Sailing Club. It is operated by a third party and serves advertisements. This site is pulling old ASC content in an attempt to appear real, and is providing misleading and inaccurate information.
+**Not aksailingclub.org?** If you were previously visiting **alaskasailingclub.com**, that site is not affiliated with the Alaska Sailing Club: it's run by a third party, carries advertisements, and its content is outdated and unreliable.
 
 ## About the Alaska Sailing Club
 

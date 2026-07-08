@@ -52,6 +52,15 @@
        their own content; `start` lets each card end where its own content ends. */
     align-items: start;
   }
+  /* A grid with exactly one card (a single closing "Contact us" or "Renew your membership" link
+     at the end of a section) still computes `auto-fill` columns for the section's full width, so
+     the lone card fills only the first track and strands a large empty gap beside it (the craft
+     sweep's finding, 2026-07-07). One column, centered, in that case: the card keeps its own
+     content-sized width instead of stretching edge to edge, but no longer reads as an orphan. */
+  .prose .asc-cards:has(> :only-child) {
+    grid-template-columns: minmax(14rem, 28rem);
+    justify-content: center;
+  }
   .prose .asc-card {
     display: block;
     background: var(--color-base-100);
