@@ -1,6 +1,32 @@
 # asc-site status
 
-**HANDOFF (2026-07-08 afternoon, session f6adeb65 closes): education round 2 is MERGED and
+**HANDOFF (2026-07-09, education round 3 closes; NEXT SESSION = the design-loop brainstorm):
+education round 3 is MERGED TO MAIN and LIVE ON DEV (0827c06 + machinery at ed8c317). The
+round: fixed the round-2 hydration DUPLICATION bug (split-before-wrap invariant + regression
+test), band now holds only How to Register & Pricing, third divider group "Preparing for
+class", the PROMISE HERO (owner-delegated pick from 3 static-mock candidates), valley-first
+lede, right-of-way under Seamanship, checkmark membership grid, full-width Questions card,
+badge/rhythm/divider fixes. Full detail + all owner process rulings:
+docs/design-benchmark/decisions.md (round-3 entry + PROCESS entry — READ IT FIRST).
+**THE NEXT SESSION'S JOB: brainstorm the machine-local cheap-fast design-iteration loop**
+(Geoff: "this review process is very broken"; 10-15 iterations/arc, minutes per turn, fully
+local, NO GitHub/Cloudflare deploys until finalize, no per-tweak ceremony). Already settled:
+Geoff reviews in a LIVE LOCALHOST TAB (vite dev HMR, port free-choice; he picked this over
+screenshots), machinery already working = `npm run dev` + `scripts/sync-media-local.mjs`
+(seeds .dev-media; 53/53 photos serve locally) + the vite `devMediaFallback` middleware
+(works around the cairn media-route onlyIf-Headers bug, filed in cairn ROADMAP). Open forks
+for the brainstorm: iteration edit ownership (main-loop tweaks vs builder dispatches),
+per-iteration self-check cadence (my crops per tweak vs settle-only), the settle ritual's
+exact contents (gate + simplifier + baseline regen + deploy), whether to package the loop as
+a skill/npm script, and whether it generalizes to the other cairn-family sites. KNOWN DEBT:
+the education-light visual BASELINE is stale on CI (regenerate via ci.yml workflow_dispatch
+before the next PR); the design-refinement skill needs an exploratory-iteration mode (its
+dispatch-builders shape failed Geoff's iteration economics — his words banked in
+decisions.md); home hero headroom (minor, unflagged by Geoff) left alone.
+Elsewhere: cairn 0.83.0 published; Geoff's queue: webhook mints x3, GitHub Actions billing,
+ops-410.**
+
+**PRIOR HANDOFF (2026-07-08 afternoon, session f6adeb65 closes): education round 2 is MERGED and
 ON DEV (9f6bd4a, all gates green) awaiting Geoff's detailed review. THE NEXT DESIGN ROUND
 RUNS IN A FRESH SESSION via the new user-scoped `design-refinement` skill (its cold trial):
 artifacts are banked in docs/design-benchmark/ (benchmark PNGs + ledger.md + decisions.md
