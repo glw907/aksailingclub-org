@@ -96,7 +96,8 @@ Dates are 2026-07-07/08 (the home convergence arc) unless noted.
 - **PROCESS (owner rulings, 2026-07-09, binding on every future round)**: owner notes are
   exploratory probes, not settled directives ("an opportunity for you to change and try out");
   expect 10-15 fast iterations per arc. Iteration is FULLY LOCAL: `npm run dev` plus the
-  `.dev-media` fallback (seed once with `node scripts/sync-media-local.mjs`); the owner reviews
+  `.dev-media` fallback (seed once with `node scripts/sync-media-local.mjs`; seeding is now
+  `npm run media:seed`, the shipped `cairn-media-seed` bin, engine 0.84.1); the owner reviews
   on localhost; nothing deploys to GitHub or Cloudflare until the design is finalized.
   Per-iteration ceremony is banned: no code-simplifier, no full gate, no e2e per tweak — the
   simplifier and the whole gate run ONCE when the arc settles and the branch merges.
@@ -106,7 +107,12 @@ Dates are 2026-07-07/08 (the home convergence arc) unless noted.
   route passes the request `Headers` as R2 `get`'s `onlyIf`; production accepts it, but
   miniflare's dev platform proxy cannot serialize `Headers`, so every `/media` read 500s under
   a consumer's `vite dev`. The site carries a dev-only middleware workaround
-  (vite.config.ts `devMediaFallback`) that retires when the fixed engine ships.
+  (vite.config.ts `devMediaFallback`) that retires when the fixed engine ships. Retired
+  2026-07-08 with the `@glw907/cairn-cms` 0.84.1 upgrade: 0.84.0 fixed the `onlyIf`/`range`
+  call site but left a second one (`obj.writeHttpMetadata(headers)` still marshaled a live
+  `Headers` instance across the same RPC boundary), which 0.84.1 fixed by reading plain
+  `httpMetadata` fields instead. The engine fix landed and the `devMediaFallback` middleware,
+  `scripts/sync-media-local.mjs`, and `.dev-media/` are gone.
 
 ## Benchmark provenance
 

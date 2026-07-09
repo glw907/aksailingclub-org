@@ -17,7 +17,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "probe:design": "node scripts/design-probe.mjs"
+    "probe:design": "node scripts/design-probe.mjs",
+    "media:seed": "cairn-media-seed --from https://dev.aksailingclub.org --header \"CF-Access-Client-Id: $ASC_ACCESS_CLIENT_ID\" --header \"CF-Access-Client-Secret: $ASC_ACCESS_CLIENT_SECRET\""
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260405.1",
@@ -41,7 +42,7 @@
     "wrangler": "^4.93.1"
   },
   "dependencies": {
-    "@glw907/cairn-cms": "^0.83.0",
+    "@glw907/cairn-cms": "^0.84.1",
     "valibot": "^1.4.2"
   }
 }
