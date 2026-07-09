@@ -5,7 +5,7 @@ image:
   alt: "A sailing instructor laughing with three kids aboard a club boat, everyone in life jackets."
 ---
 
-Come learn to sail on an Alaska lake, families welcome. Every summer we run a four-day beginner course for adults, teens, and kids, with both tracks timed together so you can learn side by side. We're on Big Lake, about an hour and 15 minutes north of Anchorage (about 25 minutes from Wasilla, 45 from Palmer, if you're closer to the Mat-Su). [See class dates →](/events/)
+Families welcome. Every summer we run a four-day beginner course for adults, teens, and kids, with both tracks timed together so you can learn side by side. We're on Big Lake, about 25 minutes from Wasilla, 45 from Palmer, and an hour and 15 minutes north of Anchorage. [See class dates →](/events/)
 
 The Alaska Sailing Club is an education-focused 501(c)(3). Teaching people to sail is core to our mission, not an add-on. Our volunteer instructors are US Sailing certified, with decades of combined sailing experience between them, and several race competitively at the national level. Once you've taken a beginner class, come back for the free [Fleet Tune-Up Weekend](#fleet-tune-up-weekend) each June to sharpen your skills before racing season.
 
@@ -66,14 +66,14 @@ Here's everything you'll learn in the four days:
 
 - How to right a capsized boat safely
 - Essential sailing knots, including the double figure eight, the double half-hitch, the bowline, and the cleat knot
+- Basic right-of-way rules
 
 </div>
 
 <div class="learn-cluster learn-cluster-wide">
 
-<p class="learn-cluster-label">Rules of the water</p>
+<p class="learn-cluster-label">Racing basics</p>
 
-- Basic right-of-way rules
 - An introduction to the rules and basic tactics of sailboat racing
 
 </div>
@@ -198,11 +198,15 @@ When you join as a new member, your membership includes credit for your first cl
 
 ### What Membership Includes (Beyond Classes)
 
+<div class="membership-benefits not-prose">
+
 - **Use of club boats** after qualification: included in your beginner class
 - **Participation in regattas and races** throughout the summer season
 - **Tent camping** at our beautiful Big Lake property: unlimited weekend visits
 - **Member directory and Discord community:** connect with 100+ sailors
 - **Support a 501(c)(3) nonprofit** dedicated to making sailing accessible
+
+</div>
 
 Many members discover us through classes and stay for the boats, the racing, and the community. Your $250 individual membership pays for itself in 2-3 uses of club boats (equivalent to commercial rentals at other facilities).
 
@@ -258,8 +262,6 @@ We recommend the following gear for all of our classes:
 | Plenty of towels | You will get wet. |
 | Waterproof watch with timer | For Sunday's race start drills. Any watch with a countdown timer works, nothing fancy needed. |
 
-<p class="pullquote">You will get wet. It's fun, we promise.</p>
-
 ## Camping at the ASC
 
 We welcome class members to camp during the class. Staying the night saves you time and gas, and you can spend more time with your classmates and instructors. If we have decent wind, we'll also take some time during the evenings to informally explore the lake and take a few "round the island" tours.
@@ -294,8 +296,4 @@ Find your class on the [events page](/events/) and open its listing. A full clas
 
 ## Questions?
 
-::::cards
-:::card[Get in touch]{icon="envelope-simple"}
 Not finding what you need? We're real people, happy to talk sailing, just [email us](/contact/) any time.
-:::
-::::
