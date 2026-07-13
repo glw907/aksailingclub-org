@@ -331,6 +331,7 @@ describe('claimOffer', () => {
           applicant_email: 'jamie@example.com',
           applicant_phone: null,
           member_id: null,
+          notes: 'Spinnaker work',
         },
         'FROM classes WHERE id': CLASS_ROW,
         'FROM members WHERE email': MEMBER_ROW,
@@ -346,7 +347,7 @@ describe('claimOffer', () => {
     });
 
     const enrollInsert = calls.find((c) => c.sql.startsWith('INSERT INTO class_enrollments'));
-    expect(enrollInsert?.args).toEqual([(result as { enrollmentId: string }).enrollmentId, CLASS_ROW.id, MEMBER_ROW.id]);
+    expect(enrollInsert?.args).toEqual([(result as { enrollmentId: string }).enrollmentId, CLASS_ROW.id, MEMBER_ROW.id, 'Spinnaker work']);
     expect(calls.some((c) => c.sql === 'DELETE FROM class_waitlist WHERE id = ?1')).toBe(true);
     expect(calls.some((c) => c.sql.startsWith("UPDATE class_offers SET resolved = 'claimed'"))).toBe(true);
     const audit = calls.find((c) => c.sql.startsWith('INSERT INTO audit_log'));
@@ -364,6 +365,7 @@ describe('claimOffer', () => {
           applicant_email: null,
           applicant_phone: null,
           member_id: 'mem-already-a-member',
+          notes: null,
         },
         'FROM classes WHERE id': CLASS_ROW,
       },
@@ -372,7 +374,7 @@ describe('claimOffer', () => {
     expect('enrollmentId' in result).toBe(true);
 
     const enrollInsert = calls.find((c) => c.sql.startsWith('INSERT INTO class_enrollments'));
-    expect(enrollInsert?.args).toEqual([(result as { enrollmentId: string }).enrollmentId, CLASS_ROW.id, 'mem-already-a-member']);
+    expect(enrollInsert?.args).toEqual([(result as { enrollmentId: string }).enrollmentId, CLASS_ROW.id, 'mem-already-a-member', null]);
     expect(calls.some((c) => c.sql.startsWith('INSERT INTO households') || c.sql.startsWith('INSERT INTO members'))).toBe(
       false,
     );
