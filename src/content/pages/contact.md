@@ -1,5 +1,6 @@
 ---
 title: "Contact"
+promise: "We'd love to hear from you."
 ---
 
 ## Send Us a Message
