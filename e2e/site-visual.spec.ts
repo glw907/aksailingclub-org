@@ -53,8 +53,10 @@ test('education — light', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/education/');
   // Round 3, pass C (the promise hero): the page's own title ("Education") demotes to an eyebrow
-  // above the h1, and the display promise takes the h1 role instead.
-  await expect(page.getByRole('heading', { level: 1, name: 'Come learn to sail on an Alaska lake.' })).toBeVisible();
+  // above the h1, and the display promise takes the h1 role instead. Text matches the frontmatter
+  // `promise` field (education.md), updated by a later headline pass (ad590de) that this
+  // assertion had fallen behind.
+  await expect(page.getByRole('heading', { level: 1, name: 'Come learn to sail with us.' })).toBeVisible();
   await expect(page).toHaveScreenshot('education-light.png', { fullPage: true });
 });
 

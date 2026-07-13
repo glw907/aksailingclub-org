@@ -3,6 +3,7 @@
   import { CairnHead } from '@glw907/cairn-cms/delivery/head';
   import { siteConfig } from '$theme/cairn.config';
   import { GOVERNANCE_SUBPAGE_SLUGS } from '$theme/redirects';
+  import { isPrimaryPage } from '$theme/page-tiers';
 
   let { data }: { data: PageData } = $props();
 
@@ -78,14 +79,14 @@
     return items;
   }
 
-  // The long-form page device: a page named here renders as a whole-document article, no boxed
-  // panels, no measure change, its own jump list plus a true gutter rail (past 1280px), and (the
+  // The long-form template device: a page renders as a whole-document article, no boxed panels,
+  // no measure change, its own jump list plus a true gutter rail (past 1280px), and (the
   // 2026-07-08 benchmark-alignment pass) its own document merged into the title-adjacent hero and
-  // grouped by GROUP_HEADINGS below. Keyed by the pages concept's own flat slug, the same key
-  // GOVERNANCE_SUBPAGE_SLUGS uses. A page not listed here (every other long document, bylaws
-  // included) keeps the heading-count-gated panel/TOC template below unchanged. Currently
-  // education only.
-  const LONG_FORM_PAGE_SLUGS = new Set(['education']);
+  // grouped by GROUP_HEADINGS below. The page-template pass (Task 4) generalized the gate from a
+  // hardcoded slug set (education only) to the nav-rank tier itself, `isPrimaryPage` (page-tiers.ts):
+  // any page promoted into `menus.primary` picks up this whole template with no edit here. A
+  // secondary page (every page outside the primary tier, bylaws included) keeps the
+  // heading-count-gated panel/TOC template below unchanged.
 
   // The presentation round's "promise hero" (round 3, pass C): a long-form page named here trades
   // the title-adjacent hero for a whole-column composition, eyebrow, an italic display promise as
@@ -146,7 +147,7 @@
   };
 
   const longFormSlug = $derived(
-    data.entry.concept === 'pages' && LONG_FORM_PAGE_SLUGS.has(data.entry.slug) ? data.entry.slug : undefined,
+    data.entry.concept === 'pages' && isPrimaryPage(data.entry.slug) ? data.entry.slug : undefined,
   );
 
   // The promise hero (round 3, pass C; Task 3 moved its data into frontmatter): set only for a
@@ -440,6 +441,11 @@
 
 <CairnHead seo={data.seo} titleTemplate={(title) => `${title} — ${siteConfig.siteName}`} />
 
+<!-- `.long-form-page` doubles as the primary tier's own marker class post-generalization
+     (Task 4): it fires for `longFormSlug`, which is now `isPrimaryPage` gated rather than a
+     hardcoded education-only set, so every primary page picks up both the long-form template
+     below and the gold waypoint rule (see `article.prose.long-form-page :global(h2)::before`)
+     from this one class. -->
 <article class="prose" class:long-form-page={Boolean(longFormSlug)}>
   {#if isGovernanceSubpage}
     <a href="/governance/" class="not-prose back-link">
@@ -472,10 +478,14 @@
            site chrome padding) needs at ordinary desktop widths, not just 390px. No whitespace
            between the tags below either: a flex container turns even a single collapsed space
            between inline children into its own anonymous flex item, widening the row for no
-           visible reason. -->
-      <p class="promise-hero-facts">
-        {#each longFormHero.facts as fact (fact)}<span class="promise-hero-fact">{fact}</span>{/each}
-      </p>
+           visible reason. Gated on a non-empty list (Task 4, the light-variant primary hero, a
+           promise with no facts of its own): an unconditional empty strip would still occupy its
+           own margin-top in the flow with nothing inside it to show for that space. -->
+      {#if longFormHero.facts.length > 0}
+        <p class="promise-hero-facts">
+          {#each longFormHero.facts as fact (fact)}<span class="promise-hero-fact">{fact}</span>{/each}
+        </p>
+      {/if}
     </div>
   {:else if isPageHero}
     <div class="page-title-hero not-prose" class:hero-has-lede={mergeLedeIntoHero}>
@@ -501,11 +511,12 @@
     {@render titleBlock()}
   {/if}
   {#if longFormSlug}
-    <!-- The long-form page (education, 2026-07-07): a whole-document article, no boxed panels, no
-         measure change. The navigation sits right after the intro, before the first section, so
-         it is present from the top rather than appearing only once a reader reaches the tail;
-         `.jump-links` and `.page-toc-rail` render the same list and never both show at once (CSS
-         toggles by breakpoint, `jumpLinks`'s own comment above explains the shared source). -->
+    <!-- The long-form template (originally education-only, 2026-07-07; every primary page since
+         Task 4's generalization): a whole-document article, no boxed panels, no measure change.
+         The navigation sits right after the intro, before the first section, so it is present
+         from the top rather than appearing only once a reader reaches the tail; `.jump-links` and
+         `.page-toc-rail` render the same list and never both show at once (CSS toggles by
+         breakpoint, `jumpLinks`'s own comment above explains the shared source). -->
     {@html longFormPreamble}
     <!-- Round 2 (owner's live read, 2026-07-08): "the expanded nine-item TOC eats a viewport before
          content" at narrow widths. A <details> collapsed by default (the same chevron-disclosure
@@ -617,6 +628,25 @@
     margin: 0 0 var(--spacing-m);
     font-size: var(--text-step-0);
     color: var(--color-muted);
+  }
+
+  /* The gold waypoint rule (Task 4, the page-template pass's primary-tier marker): a short rule
+     above every h2 marks it as its own waypoint down a primary page, kin to
+     EventsListing.svelte's own `.spine-waypoint-marker` (the same gold token family; theme.css's
+     "marks and waypoints only" story). Applied once, off the tier class already on the article
+     wrapper (`.long-form-page`, now set for every primary page, not per-heading markup), so it
+     reaches every h2 in the document uniformly, including ones inside the education-only
+     program/registration/closing wraps. `--color-star-gold-dot`, not the brighter
+     `--color-star-gold`: a non-text mark needs the WCAG-legible variant, the same bar every other
+     dot on the site holds to. */
+  article.prose.long-form-page :global(h2)::before {
+    content: '';
+    display: block;
+    width: 2.5rem;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--color-star-gold-dot);
+    margin-bottom: var(--spacing-2xs);
   }
 
   /* A long-form page's group hand-off (axis B, 2026-07-08): a plain typographic break (a rule
