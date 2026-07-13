@@ -1,6 +1,17 @@
 # asc-site status
 
-**HANDOFF (2026-07-09, education round 3 closes; NEXT SESSION = the design-loop brainstorm):
+**ACTIVE (2026-07-12): the page template system pass is EXECUTING (spec ratified by Geoff
+2026-07-12: `docs/2026-07-12-page-template-system.md`; plan:
+`docs/plans/2026-07-12-page-template-system.md`, tasks T1-T7 on branch
+design/education-round-4). Recovered from the 2026-07-11 crashed brainstorm. The model:
+shared type spine (step-1 pinned to clamp(1.19rem, 1.17rem + 0.1vw, 1.25rem); prose h2 →
+weight 700), nav-rank tiers (primary = top-level menus.primary destinations), adaptive
+primary hero from new pages frontmatter (promise/facts), gold waypoint rule on primary h2s.
+Posts/bulletins composition = phased follow-up spec. If this session dies mid-pass: the
+plan file is the resume point; per-task commits carry state; T7's before/after package for
+Geoff is the deploy gate.**
+
+**PRIOR HANDOFF (2026-07-09, education round 3 closes; NEXT SESSION = the design-loop brainstorm):
 education round 3 is MERGED TO MAIN and LIVE ON DEV (0827c06 + machinery at ed8c317). The
 round: fixed the round-2 hydration DUPLICATION bug (split-before-wrap invariant + regression
 test), band now holds only How to Register & Pricing, third divider group "Preparing for
