@@ -1,15 +1,23 @@
 # asc-site status
 
-**ACTIVE (2026-07-12): the page template system pass is EXECUTING (spec ratified by Geoff
-2026-07-12: `docs/2026-07-12-page-template-system.md`; plan:
-`docs/plans/2026-07-12-page-template-system.md`, tasks T1-T7 on branch
-design/education-round-4). Recovered from the 2026-07-11 crashed brainstorm. The model:
-shared type spine (step-1 pinned to clamp(1.19rem, 1.17rem + 0.1vw, 1.25rem); prose h2 →
-weight 700), nav-rank tiers (primary = top-level menus.primary destinations), adaptive
-primary hero from new pages frontmatter (promise/facts), gold waypoint rule on primary h2s.
-Posts/bulletins composition = phased follow-up spec. If this session dies mid-pass: the
-plan file is the resume point; per-task commits carry state; T7's before/after package for
-Geoff is the deploy gate.**
+**ACTIVE (2026-07-12): the page template system pass, Tasks 1-6 LANDED on
+design/education-round-4 (spec: `docs/2026-07-12-page-template-system.md`, now marked
+implemented; plan: `docs/plans/2026-07-12-page-template-system.md`). Recovered from the
+2026-07-11 crashed brainstorm. Shipped: the shared type spine (`--text-step-1` repinned to
+`clamp(1.19rem, 1.17rem + 0.1vw, 1.25rem)`, strictly between body and h3; `.prose h2`
+weight 600 → 700), the nav-rank tier selector (`src/theme/page-tiers.ts`, `isPrimaryPage`,
+primary = top-level `menus.primary` destinations), hero data moved off a code map into
+pages frontmatter (`promise`/`facts`), the adaptive primary hero (full promise hero, light
+variant, or plain title hero per page) plus the gold waypoint rule on every primary page's
+h2s, and promise lines for all six primary pages (Education, Racing, Events, Join, Members,
+Contact). `docs/design-benchmark/education-round-4-arc.md` is distilled into
+`decisions.md` and removed. Gate at Task 6: check 0/0 (782 files), 725 tests exit 0, build
+green. **NEXT ACTION = Task 7**, the orchestrator-run visual verification fan-out (design-
+probe captures at 390/1440 plus 320/2560 spot-checks on home and education, fresh-context
+visual-verifier reads against the pinned home benchmark and education's pre-pass render,
+the hierarchy and light-variant checks) and Geoff's before/after at the deploy gate; nothing
+deploys from this pass without it. If this session dies mid-pass: the plan file is the
+resume point and per-task commits carry state.**
 
 **PRIOR HANDOFF (2026-07-09, education round 3 closes; NEXT SESSION = the design-loop brainstorm):
 education round 3 is MERGED TO MAIN and LIVE ON DEV (0827c06 + machinery at ed8c317). The

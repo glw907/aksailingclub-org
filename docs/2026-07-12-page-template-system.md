@@ -1,7 +1,8 @@
 # The page template system: a shared spine, five templates, nav-rank tiers
 
-Status: spec ratified in brainstorm (Geoff, 2026-07-12); awaiting his read of this
-write-up before an implementation plan is written. Surfaced from the education
+Status: implemented (2026-07-12), Tasks 1-6 of
+`docs/plans/2026-07-12-page-template-system.md` on branch `design/education-round-4`.
+Task 7 (visual verification and the deploy gate) is next. Surfaced from the education
 design-refinement arc (rounds 1-4, `docs/design-benchmark/`).
 
 ## The problem

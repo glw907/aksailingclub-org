@@ -114,6 +114,22 @@ Dates are 2026-07-07/08 (the home convergence arc) unless noted.
   `httpMetadata` fields instead. The engine fix landed and the `devMediaFallback` middleware,
   `scripts/sync-media-local.mjs`, and `.dev-media/` are gone.
 
+- **Header hierarchy, resolved (page template system pass, 2026-07-12)**: the round-4 arc's
+  open item ("h2 vs h3 reads as one weak step") traced to a root cause, not a per-page fix:
+  `--text-step-1` (the lede family) was a literal duplicate of `--text-step-2` (h3's own
+  size), so the promise-hero standfirst and h3 rendered identically. Shipped both arc
+  candidates together: **A** (`--text-step-1` repinned to `clamp(1.19rem, 1.17rem + 0.1vw,
+  1.25rem)`, strictly between body and h3; `.prose h2` weight 600 → 700, so h2 differs from
+  h3 in size and weight) plus **B** (a short gold waypoint rule above each `.prose h2`,
+  kin to `EventsListing.svelte`'s spine marker). The fix is spine-wide, not education-only:
+  the education-only `LONG_FORM_PAGE_SLUGS` gate generalized into a nav-rank tier selector
+  (`src/theme/page-tiers.ts`, `isPrimaryPage`), deriving primary status from
+  `menus.primary` with no per-page bookkeeping. Every primary page (Education, Racing,
+  Events, Join, Members, Contact) now carries the composed hero and the gold marker; the
+  hero itself moved from a code map (`LONG_FORM_HERO`) into pages frontmatter (`promise`,
+  `facts`) and degrades to a light variant (no photo slot) when a page has no hero photo.
+  Bands stay home-only, unaffected.
+
 ## Benchmark provenance
 
 Pinned by the owner 2026-07-08 ("that's our new design benchmark"): the home page at commit
