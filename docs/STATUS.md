@@ -1,5 +1,21 @@
 # asc-site status
 
+**LIVE ROUND 5 (2026-07-13 afternoon, run from the cairn-cms session; work moves HERE now —
+Geoff's ruling at handoff): seven education-page probes on `design/education-round-4`, all
+PROVISIONAL-KEEP (Geoff iterated forward on each; no per-item ratification yet), logged
+one-per-line in `docs/design-benchmark/education-round-5-arc.md` (READ IT FIRST on resume):
+the 2x2 "What You'll Learn" reorganization (four two-item clusters, Rules & Racing new), the
+course-weekend TIMELINE (grid + duplicate narrative merged; gold class-day stops on one
+measured axis; rail through Sunday), the Fleet Tune-Up de-bulleting, the SITEWIDE `.page-cta`
+closing panel (supersedes the round-3 education closing card; rollout to the five other
+Questions-style pages QUEUED behind ratification, home exempt), the two FIREWEED action
+buttons (`.asc-cta-btn`, the color story's full budget: the registration door + the closing
+email action), and the TOC bottom clamp (bug fix, verified three ways). NO gates run this
+round (arc economics); the settle owes everything listed at the arc log's foot: probe script
++ lens fan-out + render read, simplifier, full gate, decisions.md distillation, merge,
+manual wrangler deploy (Actions still billing-blocked), Geoff's before/after. NEXT SESSION
+(in THIS repo): continue the live round or run the settle, Geoff's call.**
+
 **EVENING CLOSE (2026-07-12 late, Geoff's live review round, ALL RATIFIED): after the
 template pass verified below, Geoff reviewed live (localhost tab) and the round landed, all
 on design/education-round-4, gates green throughout (check 0/0, 725 tests): (1) education

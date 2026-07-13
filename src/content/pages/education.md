@@ -47,12 +47,19 @@ Here's everything you'll learn in the four days:
 
 <div class="learn-cluster">
 
-<p class="learn-cluster-label">Boat handling</p>
+<p class="learn-cluster-label">Know the boat</p>
 
 - Basic sailing vocabulary, including the names of all the "parts and pieces" of a boat
+- Correct rigging, put-away, and hoist-use procedures for the club boats. Adults and teens focus on Lido 14s, the Buccaneer 18, and the Catalina 16.5; youth sailors learn to rig Lasers and Optimists.
+
+</div>
+
+<div class="learn-cluster">
+
+<p class="learn-cluster-label">Boat handling</p>
+
 - How to sail a dinghy on all points of sail (reaching, running, and upwind sailing)
 - Core sailing maneuvers, including tacking, jibing, and rocking a sailboat forward when there isn't any wind
-- Correct rigging, put-away, and hoist-use procedures for the club boats. Adults and teens focus on Lido 14s, the Buccaneer 18, and the Catalina 16.5; youth sailors learn to rig Lasers and Optimists.
 
 </div>
 
@@ -62,14 +69,14 @@ Here's everything you'll learn in the four days:
 
 - How to right a capsized boat safely
 - Essential sailing knots, including the double figure eight, the double half-hitch, the bowline, and the cleat knot
-- Basic right-of-way rules
 
 </div>
 
-<div class="learn-cluster learn-cluster-wide">
+<div class="learn-cluster">
 
-<p class="learn-cluster-label">Racing basics</p>
+<p class="learn-cluster-label">Rules &amp; racing</p>
 
+- Basic right-of-way rules
 - An introduction to the rules and basic tactics of sailboat racing
 
 </div>
@@ -80,61 +87,51 @@ Here's everything you'll learn in the four days:
 
 We adjust for weather and wind, so treat the times below as a plan, not a promise. Class runs to 6:00 p.m. Thursday through Saturday and wraps up an hour earlier on Sunday; most students camp at the club for the duration, and instructors often take a sunset sail on the club's Ensign 22 after dinner.
 
-<div class="course-schedule not-prose">
-
-<div class="schedule-row">
-<span class="schedule-day">Arrival</span>
-<span class="schedule-time">Anytime before class</span>
-<span class="schedule-dot-slot" aria-hidden="true"></span>
-<span class="schedule-focus">Set up your tent or RV, and join the volunteers rigging boats if you like</span>
-</div>
-
-<div class="schedule-row">
-<span class="schedule-day">Thursday</span>
-<span class="schedule-time">1:00&ndash;6:00 p.m.</span>
-<span class="schedule-dot-slot" aria-hidden="true"><span class="schedule-dot schedule-dot-ashore"></span></span>
-<span class="schedule-focus"><span class="sr-only">Classroom &amp; rigging: </span>Introductions, club tour, rigging, capsize drill, sailing theory</span>
-</div>
-
-<div class="schedule-row">
-<span class="schedule-day">Friday</span>
-<span class="schedule-time">10:00 a.m.&ndash;6:00 p.m.</span>
-<span class="schedule-dot-slot" aria-hidden="true"><span class="schedule-dot schedule-dot-water"></span></span>
-<span class="schedule-focus"><span class="sr-only">On the water: </span>On-water drills, upwind and downwind sailing practice</span>
-</div>
-
-<div class="schedule-row">
-<span class="schedule-day">Saturday</span>
-<span class="schedule-time">10:00 a.m.&ndash;6:00 p.m.</span>
-<span class="schedule-dot-slot" aria-hidden="true"><span class="schedule-dot schedule-dot-water"></span></span>
-<span class="schedule-focus"><span class="sr-only">On the water: </span>Advanced drills, right-of-way, docking, telltales, heavy weather</span>
-</div>
-
-<div class="schedule-row">
-<span class="schedule-day">Sunday</span>
-<span class="schedule-time">10:00 a.m.&ndash;5:00 p.m.</span>
-<span class="schedule-dot-slot" aria-hidden="true"><span class="schedule-dot schedule-dot-water"></span></span>
-<span class="schedule-focus"><span class="sr-only">On the water: </span>Racing basics and a few fun class races, ends an hour early</span>
-</div>
-
-</div>
-
-<div class="schedule-legend not-prose">
-<span class="schedule-legend-item"><span class="schedule-dot schedule-dot-water" aria-hidden="true"></span>On the water</span>
-<span class="schedule-legend-item"><span class="schedule-dot schedule-dot-ashore" aria-hidden="true"></span>Classroom &amp; rigging</span>
-</div>
-
 Here's what each day actually looks like:
 
-**Arrival.** Come any time before class starts; some students arrive a day early to set up camp and pitch in on rigging. Arriving the day of class, plan on 45 minutes to set up your tent or RV before start time.
+<div class="course-days not-prose">
 
-**Thursday.** Class starts at 1:00 p.m. with introductions and a walking tour, then hands-on rigging, where you'll learn the names of every part of a dinghy. Once the boats are launched, everyone runs the capsize drill. A short classroom session covers sailing theory and basic maneuvers (tacking and jibing), followed by dry-land tiller practice, a Q&A, and derigging.
+<div class="course-day">
 
-**Friday.** As much water time as the wind allows. Rig and launch, a quick classroom review, then the first drill: beam reaching and tacking around two marks. After a classroom session on upwind and downwind technique and a lunch break, the rest of the day is upwind/downwind practice, typically the hardest skill for a beginner. Ends with Q&A and put-away.
+<p class="course-day-label">Arrival <span class="course-day-time">Anytime before class</span></p>
 
-**Saturday.** More on-water time with harder drills: tack-on-the-whistle, jibe-on-the-whistle, follow the leader. After a classroom debrief and lunch, advanced topics: right-of-way, safe docking procedures, sailing with telltales, and sailing in extreme conditions (too much wind, too little wind). Ends with Q&A and put-away.
+Come any time before class starts; some students arrive a day early to set up camp and pitch in on rigging. Arriving the day of class, plan on 45 minutes to set up your tent or RV before start time.
 
-**Sunday.** Rig and launch, then straight into advanced drills, followed by a classroom session on the basics of sailboat racing (enough to join an ASC regatta). The afternoon is low-key racing drills and a few fun class races. Ends about an hour earlier than the other days.
+</div>
+
+<div class="course-day">
+
+<p class="course-day-label">Thursday <span class="course-day-time">1:00&ndash;6:00 p.m.</span></p>
+
+Class starts at 1:00 p.m. with introductions and a walking tour, then hands-on rigging, where you'll learn the names of every part of a dinghy. Once the boats are launched, everyone runs the capsize drill. A short classroom session covers sailing theory and basic maneuvers (tacking and jibing), followed by dry-land tiller practice, a Q&A, and derigging.
+
+</div>
+
+<div class="course-day">
+
+<p class="course-day-label">Friday <span class="course-day-time">10:00 a.m.&ndash;6:00 p.m.</span></p>
+
+As much water time as the wind allows. Rig and launch, a quick classroom review, then the first drill: beam reaching and tacking around two marks. After a classroom session on upwind and downwind technique and a lunch break, the rest of the day is upwind/downwind practice, typically the hardest skill for a beginner. Ends with Q&A and put-away.
+
+</div>
+
+<div class="course-day">
+
+<p class="course-day-label">Saturday <span class="course-day-time">10:00 a.m.&ndash;6:00 p.m.</span></p>
+
+More on-water time with harder drills: tack-on-the-whistle, jibe-on-the-whistle, follow the leader. After a classroom debrief and lunch, advanced topics: right-of-way, safe docking procedures, sailing with telltales, and sailing in extreme conditions (too much wind, too little wind). Ends with Q&A and put-away.
+
+</div>
+
+<div class="course-day">
+
+<p class="course-day-label">Sunday <span class="course-day-time">10:00 a.m.&ndash;5:00 p.m.</span></p>
+
+Rig and launch, then straight into advanced drills, followed by a classroom session on the basics of sailboat racing (enough to join an ASC regatta). The afternoon is low-key racing drills and a few fun class races. Ends about an hour earlier than the other days.
+
+</div>
+
+</div>
 
 ### Youth Class Special Notes
 
@@ -157,20 +154,17 @@ Ready to shake off the rust before racing season? Fleet Tune-Up Weekend is a fre
 
 ### What to Expect
 
-- **Group drills:** Tack on the whistle, jibe on the whistle, follow the leader, and more
-- **Special topic clinics** taught by some of our best sailors, covering subjects like:
-  - Buccaneer spinnaker sailing
-  - Start tactics
-  - Mark rounding rules
-  - And more, depending on instructor availability and interest
-- **All the usual ASC good stuff:** potluck, campfire, and sauna session
+The weekend is built around group drills (tack on the whistle, jibe on the whistle, follow the leader, and more), plus special topic clinics taught by some of our best sailors. Clinic subjects vary with instructor availability and interest; expect topics like:
+
+- Buccaneer spinnaker sailing
+- Start tactics
+- Mark rounding rules
+
+And all the usual ASC good stuff: potluck, campfire, and sauna session.
 
 ### Who Can Participate
 
-Fleet Tune-Up Weekend is open to members who meet one of the following:
-
-- Have taken an ASC *Introduction to Dinghy Sailing* class (or equivalent)
-- Have prior sailing background, can perform standard sailing maneuvers including capsize recovery, and have been checked out on ASC club boats
+Fleet Tune-Up Weekend is open to members who have taken an ASC *Introduction to Dinghy Sailing* class (or equivalent). Members with prior sailing background also qualify if they can perform standard sailing maneuvers, including capsize recovery, and have been checked out on ASC club boats.
 
 ## How to Register & Pricing
 
@@ -181,6 +175,8 @@ Fleet Tune-Up Weekend is open to members who meet one of the following:
 Class dates, openings, and sign-up links live on the [events page](/events/), pulled straight from the club's own calendar and kept current. Open a class there for its dates and a link to sign up.
 
 **Classes fill fast**, sessions typically sell out within a week of registration opening in mid-March, and some fill in days. If you're planning to take a class this summer, register as soon as registration opens.
+
+<a class="asc-cta-btn" href="/events/">See class dates &amp; openings</a>
 
 ### Pricing
 
@@ -286,4 +282,12 @@ If you need to cancel, please give us as much notice as possible. Courses at the
 
 ## Questions?
 
-Not finding what you need? We're real people, happy to talk sailing, just [email us](/contact/) any time.
+<div class="page-cta not-prose">
+
+<p class="page-cta-lead">Not finding what you need?</p>
+
+<p class="page-cta-body">We're real people, happy to talk sailing.</p>
+
+<a class="asc-cta-btn" href="/contact/">Email us any time</a>
+
+</div>

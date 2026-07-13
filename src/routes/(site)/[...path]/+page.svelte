@@ -125,9 +125,9 @@
   // Round 3's closing card (owner note 9): the h2 named here, through the end of its own group
   // segment, gets wrapped in the page's one warm close (wrapClosingSection, below). Keyed by slug
   // for the same reason REGISTRATION_BAND_HEADING_ID is: a missing id degrades to no wrap.
-  const CLOSING_SECTION_HEADING_ID: Record<string, string> = {
-    education: 'questions',
-  };
+  // Education left the map in the 2026-07-13 live round: the sitewide `.page-cta` panel
+  // (asc-components.css) is its warm close now, and stacking both broke A1's one-chrome rule.
+  const CLOSING_SECTION_HEADING_ID: Record<string, string> = {};
 
   // The round-2 program-section identity fix (owner's live read, 2026-07-08: "Introduction to
   // Dinghy Sailing seems to roll straight into Fleet Tune-Up Weekend"): each heading named here,
@@ -427,16 +427,33 @@
       .map((item) => document.getElementById(item.id))
       .filter((el): el is HTMLElement => el !== null);
     if (headings.length === 0) return;
+    // The band alone can never reach a short final section: at max scroll its heading may still
+    // sit below the top 30% of the viewport, leaving the previous section highlighted forever
+    // (owner-reported on education's Questions). At the document's end the last section is active
+    // by definition, so a bottom clamp closes the gap the band cannot cover. It runs after the
+    // observer's own entries as well as on scroll: a jump to the bottom fires both, and the
+    // observer callback lands last, so the clamp must get the final word there too.
+    const clampToEnd = () => {
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
+        activeId = headings[headings.length - 1].id;
+      }
+    };
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) activeId = entry.target.id;
         }
+        clampToEnd();
       },
       { rootMargin: '0px 0px -70% 0px', threshold: 0 },
     );
     for (const heading of headings) observer.observe(heading);
-    return () => observer.disconnect();
+    window.addEventListener('scroll', clampToEnd, { passive: true });
+    clampToEnd();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', clampToEnd);
+    };
   });
 </script>
 
@@ -1077,119 +1094,89 @@
     object-fit: cover;
   }
 
-  /* Item 4: "A Typical Course Weekend" trades its plain table for the Season calendar's own
-     grammar (SeasonList.svelte), adapted to this page's shape: a day label (small-caps, its own
-     hairline, the Season month-label recipe) instead of a month; time in the quiet register instead
-     of a compact date; the activity itself leading, full ink, instead of an event name; and a
-     filled-vs-open dot in place of Season's four hue-coded dots, since "on the water" and
-     "classroom & rigging" is a different axis from Season's class/social/business/racing taxonomy
-     and the ratified color story's dots are that taxonomy's alone (gold "marks classes and clinics
-     only," blue is "exclusively the link affordance"). Filled vs. a hollow ring spends no new hue
-     at all, in the same muted ink as the time column; the sr-only label beside each dot (in the
-     markup) is the real channel, same as Season's own per-row sr-only text. */
-  :global(.course-schedule) {
+  /* Owner note (live round, 2026-07-13): "A Typical Course Weekend" merges its at-a-glance grid
+     and the day-by-day narrative paragraphs (which repeated each other) into one timeline. The
+     scan layer survives in the day labels: small caps down a dotted hairline rail, day plus time
+     per stop. The read layer is the narrative itself, full ink, one paragraph per day. The old
+     water/ashore dot axis retires with the grid; the narrative says where each block happens, so
+     the legend had no job left. Rail and dots spend no new hue (card-border hairline, muted dot),
+     per the ratified color story. */
+  :global(.course-days) {
     --flow-space: var(--spacing-l);
+    /* One geometry, three constants: every mark centers on the axis at --rail-x from the
+       container's left edge; the label's fixed rem line-height pins the first line's center at
+       --stop-y, so the dot and the rail segment (both drawn in .course-day's own frame, never the
+       label's font box, which is what let the first cut drift) land on the same point on every
+       stop. */
+    --rail-gutter: calc(7px + var(--spacing-s));
+    --rail-x: 3.5px;
+    --stop-y: 0.75rem;
+    display: grid;
+    gap: var(--spacing-m);
+    padding-left: var(--rail-gutter);
   }
-  /* Mobile-first: the fixed 4-column grid (day/time/dot/focus) needs more room than a 390px
-     viewport has (a first render caught this outright: the focus column collapsed to one word per
-     line). Below 30rem, day/time/dot share a flex row and the focus text wraps onto its own line
-     below (`flex-basis: 100%` is the standard flexbox "start a new row" trick, no grid-template-
-     areas needed); the 4-column grid only applies past that width, where there is room for it. */
-  .prose :global(.course-schedule .schedule-row) {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    column-gap: var(--spacing-s);
-    row-gap: 0.3rem;
-    padding-block: var(--spacing-xs);
-    border-bottom: var(--border) solid var(--color-card-border);
+  .prose :global(.course-day) {
+    position: relative;
   }
-  .prose :global(.course-schedule .schedule-focus) {
-    flex: 1 1 100%;
+  /* The stop itself: a class-day mark, so it takes the waypoint gold every class dot on the site
+     carries (the WCAG-legible dot variant), not the muted ink of the retired water/ashore axis. */
+  .prose :global(.course-day)::before {
+    content: "";
+    position: absolute;
+    left: calc(var(--rail-x) - var(--rail-gutter) - 3.5px);
+    top: calc(var(--stop-y) - 3.5px);
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: var(--color-star-gold-dot);
   }
-  @media (min-width: 30rem) {
-    .prose :global(.course-schedule .schedule-row) {
-      display: grid;
-      grid-template-columns: 6.75rem 8.5rem 0.9rem 1fr;
-    }
+  /* Each day's rail segment runs from just under its own dot, across the grid gap, to just above
+     the next day's dot; the last day's runs through its own text and stops at the block's end
+     (owner's call, 2026-07-13: through Sunday, not cut at its dot). */
+  .prose :global(.course-day)::after {
+    content: "";
+    position: absolute;
+    left: calc(var(--rail-x) - var(--rail-gutter) - 0.5px);
+    top: calc(var(--stop-y) + 6.5px);
+    bottom: calc(-1 * var(--spacing-m) - var(--stop-y) + 6.5px);
+    width: 1px;
+    background: var(--color-card-border);
   }
-  .prose :global(.course-schedule .schedule-row:first-child) {
-    padding-top: 0;
+  .prose :global(.course-day:last-child)::after {
+    bottom: 0;
   }
-  .prose :global(.course-schedule .schedule-row:last-child) {
-    border-bottom: none;
-    padding-bottom: 0;
-  }
-  .prose :global(.course-schedule .schedule-day) {
+  .prose :global(.course-day-label) {
+    margin: 0 0 var(--spacing-3xs);
     font-family: var(--font-display);
     font-size: var(--text-step--1);
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    line-height: calc(2 * var(--stop-y));
     color: var(--color-base-content);
-    align-self: start;
   }
-  .prose :global(.course-schedule .schedule-time) {
-    font-variant-numeric: tabular-nums;
+  .prose :global(.course-day-time) {
+    margin-left: var(--spacing-2xs);
+    font-family: var(--font-body);
     font-size: var(--text-step--1);
+    font-weight: 400;
+    letter-spacing: normal;
+    text-transform: none;
+    font-variant-numeric: tabular-nums;
     color: var(--color-muted);
   }
-  .prose :global(.course-schedule .schedule-dot-slot) {
-    display: inline-flex;
-    align-items: center;
-  }
-  .prose :global(.course-schedule .schedule-focus) {
+  .prose :global(.course-day p:not(.course-day-label)) {
+    margin: 0;
     font-size: var(--text-step-0);
     color: var(--color-base-content);
   }
-  .prose :global(.course-schedule .schedule-dot) {
-    width: 7px;
-    height: 7px;
-    border-radius: 999px;
-  }
-  .prose :global(.course-schedule .schedule-dot-water) {
-    background: var(--color-muted);
-  }
-  .prose :global(.course-schedule .schedule-dot-ashore) {
-    background: transparent;
-    border: 1.5px solid var(--color-muted);
-    width: 5px;
-    height: 5px;
-  }
-  :global(.schedule-legend) {
-    margin-top: var(--spacing-s);
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-2xs) var(--spacing-m);
-    font-size: var(--text-step--2);
-    color: var(--color-muted);
-  }
-  :global(.schedule-legend-item) {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-  }
-  :global(.schedule-legend .schedule-dot) {
-    width: 7px;
-    height: 7px;
-    border-radius: 999px;
-  }
-  :global(.schedule-legend .schedule-dot-water) {
-    background: var(--color-muted);
-  }
-  :global(.schedule-legend .schedule-dot-ashore) {
-    background: transparent;
-    border: 1.5px solid var(--color-muted);
-    width: 5px;
-    height: 5px;
-  }
 
-  /* Owner note 5 (live read, 2026-07-08): "What You'll Learn" reorganizes from a flat ~8-bullet
-     list into 3 honest clusters (Boat handling / Seamanship & safety / Rules of the water, derived
-     from the original items, nothing invented), each under a small-caps mini-label, reusing home's
-     own facilities-list idiom (`.amenity-list`/`.season-month-label`): quiet muted ink, a dash
-     marker, a hairline under each cluster's own label. Two columns at desktop, one at 390 (the
-     family's own 40rem two-column threshold, matching `.amenity-list`'s). */
+  /* Owner note (live rounds, 2026-07-08 and 2026-07-13): "What You'll Learn" holds four honest
+     two-item clusters (Know the boat / Boat handling / Seamanship & safety / Rules & racing,
+     derived from the original items, nothing invented) in a balanced 2x2, each under a small-caps
+     mini-label, reusing home's own facilities-list idiom (`.amenity-list`/`.season-month-label`):
+     quiet muted ink, a dash marker, a hairline under each cluster's own label. Two columns at
+     desktop, one at 390 (the family's own 40rem two-column threshold, matching `.amenity-list`'s). */
   :global(.learn-clusters) {
     --flow-space: var(--spacing-m);
     display: grid;
@@ -1199,9 +1186,6 @@
   @media (min-width: 40rem) {
     :global(.learn-clusters) {
       grid-template-columns: repeat(2, 1fr);
-    }
-    :global(.learn-cluster-wide) {
-      grid-column: 1 / -1;
     }
   }
   :global(.learn-cluster-label) {
