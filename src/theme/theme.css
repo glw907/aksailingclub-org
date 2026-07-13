@@ -152,7 +152,12 @@
      generated the utility with no backing key; this key is both the fix for that gap and the new
      meta-role size the audit calls for. */
   --text-step--2: clamp(0.76rem, 0.73rem + 0.13vw, 0.82rem);
-  --text-step-1: clamp(1.27rem, 1.25rem + 0.1vw, 1.33rem);
+  /* The lede family (`.prose .lead`, the promise-hero standfirst): a fluid step above body
+     text, corrected by the round-4 hierarchy fix (2026-07-12) to sit strictly between body and
+     h3 rather than repeating h3's own size. The ladder now reads step-0 (max 1.125rem) <
+     step-1 (1.19-1.25rem) < step-2 (1.27-1.33rem, h3) < step-3 (h2), with no adjacent clamps
+     overlapping at any viewport; step-1 is the lede size only, never a heading size. */
+  --text-step-1: clamp(1.19rem, 1.17rem + 0.1vw, 1.25rem);
   --text-step-2: clamp(1.27rem, 1.25rem + 0.1vw, 1.33rem);
   --text-step-3: clamp(1.52rem, 1.47rem + 0.24vw, 1.66rem);
   --text-step-4: clamp(1.83rem, 1.74rem + 0.43vw, 2.08rem);

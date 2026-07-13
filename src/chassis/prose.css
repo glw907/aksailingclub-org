@@ -111,7 +111,7 @@
      heading belongs to the text it introduces (the typography criterion). */
   .prose h2 {
     font-family: var(--font-display);
-    font-weight: 600;
+    font-weight: 700;
     font-size: var(--text-step-3);
     line-height: var(--leading-tight);
     letter-spacing: var(--tracking-tight);
