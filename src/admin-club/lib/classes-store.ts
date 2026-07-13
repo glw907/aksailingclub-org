@@ -115,6 +115,9 @@ export interface EnrollmentRow {
   enrolledAt: string;
   feePaid: boolean;
   guardianContact: string | null;
+  /** The enrollee's optional answer to "anything specific you'd like to learn?" (migration
+   *  0019_enrollment_interests), `null` when they left it blank. */
+  interests: string | null;
 }
 
 /** One `class_waitlist` row, camelCased. Exactly one of `memberId`/`applicantEmail` is set (the
@@ -372,17 +375,25 @@ export async function removeInstructor(db: D1Database, classId: string, email: s
 export async function listEnrollments(db: D1Database, classId: string): Promise<EnrollmentRow[]> {
   const { results } = await db
     .prepare(
-      `SELECT id, member_id, enrolled_at, fee_paid, guardian_contact FROM class_enrollments
+      `SELECT id, member_id, enrolled_at, fee_paid, guardian_contact, interests FROM class_enrollments
        WHERE class_id = ?1 ORDER BY enrolled_at ASC`,
     )
     .bind(classId)
-    .all<{ id: string; member_id: string; enrolled_at: string; fee_paid: 0 | 1; guardian_contact: string | null }>();
+    .all<{
+      id: string;
+      member_id: string;
+      enrolled_at: string;
+      fee_paid: 0 | 1;
+      guardian_contact: string | null;
+      interests: string | null;
+    }>();
   return results.map((row) => ({
     id: row.id,
     memberId: row.member_id,
     enrolledAt: row.enrolled_at,
     feePaid: row.fee_paid === 1,
     guardianContact: row.guardian_contact,
+    interests: row.interests,
   }));
 }
 

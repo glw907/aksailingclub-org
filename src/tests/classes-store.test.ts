@@ -333,13 +333,27 @@ describe('listEnrollments', () => {
   it('maps each row, feePaid as a boolean', async () => {
     const { db } = fakeD1({
       allResults: {
-        'guardian_contact FROM class_enrollments': [
-          { id: 'enr-1', member_id: 'member-1', enrolled_at: '2026-05-01 00:00:00', fee_paid: 1, guardian_contact: null },
+        'guardian_contact, interests FROM class_enrollments': [
+          {
+            id: 'enr-1',
+            member_id: 'member-1',
+            enrolled_at: '2026-05-01 00:00:00',
+            fee_paid: 1,
+            guardian_contact: null,
+            interests: 'Docking and reefing.',
+          },
         ],
       },
     });
     await expect(listEnrollments(db, '1st_adult_teen_intro')).resolves.toEqual([
-      { id: 'enr-1', memberId: 'member-1', enrolledAt: '2026-05-01 00:00:00', feePaid: true, guardianContact: null },
+      {
+        id: 'enr-1',
+        memberId: 'member-1',
+        enrolledAt: '2026-05-01 00:00:00',
+        feePaid: true,
+        guardianContact: null,
+        interests: 'Docking and reefing.',
+      },
     ]);
   });
 });

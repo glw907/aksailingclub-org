@@ -20,7 +20,7 @@ configured, matching the family's own ContactForm/DonateForm precedent. -->
   const dateDisplay = $derived(data.cls.startDate ? formatDateRange(data.cls.startDate, data.cls.endDate) : DATE_TBD);
   const spotsLeft = $derived(Math.max(0, data.cls.capacity - data.cls.enrolledCount));
 
-  const { name, email, phone, waiverAccepted } = joinClass.fields;
+  const { name, email, phone, interests, waiverAccepted } = joinClass.fields;
 
   $effect(() => {
     const url = payClassFee.result && 'url' in payClassFee.result ? payClassFee.result.url : undefined;
@@ -123,6 +123,14 @@ configured, matching the family's own ContactForm/DonateForm precedent. -->
     <fieldset class="fieldset">
       <legend class="fieldset-legend">Phone number (optional)</legend>
       <input class="input w-full" autocomplete="tel" {...phone.as('tel')} />
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">Anything specific you'd like to learn?</legend>
+      <textarea class="textarea h-24 w-full" {...interests.as('text')}></textarea>
+      <p class="mt-2xs mb-0 text-step--2 text-muted">
+        Optional. Your answer helps us shape class time around what you want to learn.
+      </p>
     </fieldset>
 
     <fieldset class="fieldset waiver-fieldset">

@@ -71,7 +71,8 @@ describe('signUpForClass', () => {
       expect(result).toEqual({ outcome: 'enrolled', enrollmentId: expect.any(String) });
 
       const enrollInsert = calls.find((c) => c.sql.startsWith('INSERT INTO class_enrollments'));
-      expect(enrollInsert?.args).toEqual([expect.any(String), CLASS_ROW.id, MEMBER_ROW.id]);
+      // No interests answer on this shared INPUT: it lands as NULL, never an empty string.
+      expect(enrollInsert?.args).toEqual([expect.any(String), CLASS_ROW.id, MEMBER_ROW.id, null]);
       expect((result as { enrollmentId: string }).enrollmentId).toBe((enrollInsert?.args as unknown[])[0]);
 
       const audit = calls.find((c) => c.sql.startsWith('INSERT INTO audit_log'));
@@ -121,6 +122,15 @@ describe('signUpForClass', () => {
       const result = await signUpForClass(db, INPUT);
       expect(result).toEqual({ error: expect.stringContaining('already enrolled') });
       expect(calls.some((c) => c.sql.startsWith('INSERT'))).toBe(false);
+    });
+
+    it("stores the signup's interests answer on the enrollment row (migration 0019)", async () => {
+      const { db, calls } = fakeDbFreeCapacity();
+      const result = await signUpForClass(db, { ...INPUT, interests: 'Racing rules and reefing' });
+      expect(result).toEqual({ outcome: 'enrolled', enrollmentId: expect.any(String) });
+
+      const enrollInsert = calls.find((c) => c.sql.startsWith('INSERT INTO class_enrollments'));
+      expect(enrollInsert?.args).toEqual([expect.any(String), CLASS_ROW.id, MEMBER_ROW.id, 'Racing rules and reefing']);
     });
   });
 
@@ -195,6 +205,7 @@ describe('signUpForClass', () => {
       expect(calls.some((c) => c.sql.startsWith('INSERT INTO class_enrollments'))).toBe(false);
 
       const waitlistInsert = calls.find((c) => c.sql.startsWith('INSERT INTO class_waitlist'));
+      // No interests answer on this shared INPUT: it lands as NULL, never an empty string.
       expect(waitlistInsert?.args).toEqual([
         expect.any(String),
         CLASS_ROW.id,
@@ -202,6 +213,7 @@ describe('signUpForClass', () => {
         INPUT.email,
         INPUT.phone,
         3,
+        null,
       ]);
 
       const audit = calls.find((c) => c.sql.startsWith('INSERT INTO audit_log'));
@@ -215,6 +227,23 @@ describe('signUpForClass', () => {
 
       const waiverInsert = calls.find((c) => c.sql.startsWith('INSERT INTO waiver_acceptances'));
       expect(waiverInsert?.args).toEqual([expect.any(String), INPUT.name, INPUT.email, INPUT.waiverVersion]);
+    });
+
+    it("lands a waitlisted signup's interests answer in class_waitlist.notes (migration 0019)", async () => {
+      const { db, calls } = fakeDbFull();
+      const result = await signUpForClass(db, { ...INPUT, interests: 'Spinnaker trim' });
+      expect(result).toEqual({ outcome: 'waitlisted', position: 3 });
+
+      const waitlistInsert = calls.find((c) => c.sql.startsWith('INSERT INTO class_waitlist'));
+      expect(waitlistInsert?.args).toEqual([
+        expect.any(String),
+        CLASS_ROW.id,
+        INPUT.name,
+        INPUT.email,
+        INPUT.phone,
+        3,
+        'Spinnaker trim',
+      ]);
     });
 
     it('refuses a repeat waitlist join from the same email', async () => {

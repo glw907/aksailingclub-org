@@ -18,6 +18,10 @@ export const classSignupSchema = v.object({
   name: v.pipe(v.string(), v.trim(), v.nonEmpty('Please enter your name.')),
   email: v.pipe(v.string(), v.trim(), v.email('Please enter a valid email address.')),
   phone: v.optional(v.pipe(v.string(), v.trim()), ''),
+  interests: v.optional(
+    v.pipe(v.string(), v.trim(), v.maxLength(1000, 'Please keep your answer under 1000 characters.')),
+    '',
+  ),
   waiverAccepted: v.pipe(
     v.optional(v.boolean(), false),
     v.check((accepted) => accepted, 'Please check the box to accept the liability release before you sign up.'),
@@ -71,6 +75,7 @@ export async function handleClassSignup(
     name: input.name,
     email: input.email,
     phone: input.phone || undefined,
+    interests: input.interests || undefined,
     waiverVersion,
   };
   const result = await signUpForClass(

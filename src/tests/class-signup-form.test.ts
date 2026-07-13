@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isValidationError } from '@sveltejs/kit';
-import { handleClassSignup } from '$theme/class-signup-form';
+import * as v from 'valibot';
+import { classSignupSchema, handleClassSignup } from '$theme/class-signup-form';
 import { fakeD1 } from './_fake-d1';
 
 /** `isValidationError`'s own declared type narrows to `ActionFailure` (the shared public shape),
@@ -40,11 +41,26 @@ function freeCapacityDb() {
   });
 }
 
+/** A full class (capacity already met): the same shape `enrollments.test.ts`'s own `fakeDbFull`
+ *  uses, for the interests-answer tests below that need to exercise the waitlist branch. */
+function fullClassDb() {
+  return fakeD1({
+    firstResults: {
+      'FROM classes WHERE id': CLASS_ROW,
+      'FROM class_enrollments WHERE class_id': { n: 10 },
+      "COALESCE(MAX(position)": { next_position: 1 },
+      'FROM class_waitlist WHERE class_id': (args: unknown[]) => (args.length === 2 ? null : { n: 0 }),
+      "'waiver_text_version'": { value: '2026-01' },
+    },
+  });
+}
+
 const INPUT = {
   classId: CLASS_ROW.id,
   name: 'Jamie Rivera',
   email: 'jamie@example.com',
   phone: '',
+  interests: '',
   waiverAccepted: true,
   'cf-turnstile-response': '',
 };
@@ -115,5 +131,53 @@ describe('handleClassSignup (the Turnstile degrade path)', () => {
     // freeCapacityDb enrolls the 10th of 10 seats: this signup fills the class.
     expect(result).toEqual({ outcome: 'enrolled', enrollmentId: expect.any(String) });
     expect(fetchSpy).toHaveBeenCalledWith('https://discord.com/api/webhooks/classes', expect.anything());
+  });
+});
+
+describe('the interests answer (migration 0019_enrollment_interests)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('trims the answer and stores it on the enrollment row', async () => {
+    vi.stubGlobal('fetch', vi.fn());
+    const { db, calls } = freeCapacityDb();
+    const parsed = v.parse(classSignupSchema, { ...INPUT, interests: '  Reefing and docking  ' });
+
+    const result = await handleClassSignup(parsed, { CLUB_DB: db }, '203.0.113.5');
+
+    expect(result).toEqual({ outcome: 'enrolled', enrollmentId: expect.any(String) });
+    const enrollInsert = calls.find((c) => c.sql.startsWith('INSERT INTO class_enrollments'));
+    expect(enrollInsert?.args).toEqual([expect.any(String), CLASS_ROW.id, expect.any(String), 'Reefing and docking']);
+  });
+
+  it('stores NULL when the answer is left blank', async () => {
+    vi.stubGlobal('fetch', vi.fn());
+    const { db, calls } = freeCapacityDb();
+
+    const result = await handleClassSignup(INPUT, { CLUB_DB: db }, '203.0.113.5');
+
+    expect(result).toEqual({ outcome: 'enrolled', enrollmentId: expect.any(String) });
+    const enrollInsert = calls.find((c) => c.sql.startsWith('INSERT INTO class_enrollments'));
+    expect(enrollInsert?.args).toEqual([expect.any(String), CLASS_ROW.id, expect.any(String), null]);
+  });
+
+  it("lands a waitlisted signup's answer in class_waitlist.notes instead", async () => {
+    vi.stubGlobal('fetch', vi.fn());
+    const { db, calls } = fullClassDb();
+    const parsed = v.parse(classSignupSchema, { ...INPUT, interests: 'Spinnaker trim' });
+
+    const result = await handleClassSignup(parsed, { CLUB_DB: db }, '203.0.113.5');
+
+    expect(result).toEqual({ outcome: 'waitlisted', position: 1 });
+    const waitlistInsert = calls.find((c) => c.sql.startsWith('INSERT INTO class_waitlist'));
+    expect(waitlistInsert?.args).toEqual([expect.any(String), CLASS_ROW.id, INPUT.name, INPUT.email, null, 1, 'Spinnaker trim']);
+  });
+
+  it("rejects an answer over 1000 characters with the schema's friendly message", () => {
+    const result = v.safeParse(classSignupSchema, { ...INPUT, interests: 'x'.repeat(1001) });
+
+    expect(result.success).toBe(false);
+    expect(result.issues?.map((issue) => issue.message)).toContain('Please keep your answer under 1000 characters.');
   });
 });
