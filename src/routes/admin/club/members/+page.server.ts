@@ -9,10 +9,15 @@
 // control change (`goto`, no full page reload) rather than filtering an already-loaded array.
 // Pagination stays client-side over whatever `listHouseholds` already returned, since it needs no
 // further server knowledge once the filtered set is in hand.
-import type { PageServerLoad } from './$types';
+//
+// Task 5 adds the `addHousehold` action: the walk-up-join entry point (a household plus its
+// first, primary member), landing on the new desk so a manual payment can follow immediately.
+import { fail, redirect } from '@sveltejs/kit';
+import type { Actions, PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
 import { resolveClubDb } from '$admin-club/lib/club-roles';
-import { listHouseholds, type HouseholdListRow } from '$admin-club/lib/households-store';
+import { clubAdminAction } from '$admin-club/lib/club-action';
+import { createHousehold, listHouseholds, type HouseholdListRow } from '$admin-club/lib/households-store';
 
 type SegmentFilter = 'all' | 'current' | 'lapsed';
 
@@ -50,4 +55,34 @@ export const load: PageServerLoad = async (event) => {
       error: 'Could not read the households table.',
     };
   }
+};
+
+export const actions: Actions = {
+  addHousehold: clubAdminAction(
+    async ({ form, ctx }) => {
+      const name = form.get('name');
+      const memberName = form.get('memberName');
+      if (typeof name !== 'string' || !name.trim() || typeof memberName !== 'string' || !memberName.trim()) {
+        ctx.audit({ action: 'add', entity: 'household', detail: 'rejected: missing household or member name' });
+        return fail(400, { error: "A household name and its first member's name are both required." });
+      }
+      const city = form.get('city');
+      const email = form.get('memberEmail');
+      const phone = form.get('memberPhone');
+      const birthdate = form.get('memberBirthdate');
+      const { householdId } = await createHousehold(ctx.db, {
+        name: name.trim(),
+        city: typeof city === 'string' && city.trim() ? city.trim() : null,
+        member: {
+          name: memberName.trim(),
+          email: typeof email === 'string' && email.trim() ? email.trim() : null,
+          phone: typeof phone === 'string' && phone.trim() ? phone.trim() : null,
+          birthdate: typeof birthdate === 'string' && birthdate.trim() ? birthdate.trim() : null,
+        },
+      });
+      ctx.audit({ action: 'add', entity: 'household', entityId: householdId });
+      redirect(303, `/admin/club/members/${householdId}`);
+    },
+    { action: 'add', entity: 'household', deniedMessage: 'A club role is required to add a household.' },
+  ),
 };

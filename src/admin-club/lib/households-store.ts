@@ -17,6 +17,7 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import type { DirectoryVisibility, MembershipTier } from './member-types';
 import { getRenewalGraceDays, getTierPrices } from './club-settings';
+import { normalizeEmail, normalizeNameCaps, normalizePhoneE164 } from './member-normalize.js';
 
 /** A household's renewal standing: `'current'` through its rolling paid-plus-one-year boundary,
  *  `'grace'` for the settings' own grace window past it, `'lapsed'` after that, `'none'` when the
@@ -390,4 +391,94 @@ export async function getHouseholdDesk(db: D1Database, householdId: string): Pro
 export async function resolveMemberHousehold(db: D1Database, memberId: string): Promise<string | null> {
   const row = await db.prepare('SELECT household_id FROM members WHERE id = ?1').bind(memberId).first<{ household_id: string }>();
   return row?.household_id ?? null;
+}
+
+/** One roster member's contact fields, as the desk's add-member and edit-member forms both
+ *  submit them: normalized the same way every other live write path does (`member-normalize.js`)
+ *  before the write lands, so a desk edit and a self-service portal edit converge on the same
+ *  stored shape. */
+export interface RosterMemberInput {
+  name: string;
+  email: string | null;
+  phone: string | null;
+  birthdate: string | null;
+}
+
+function normalizedContactFields(input: RosterMemberInput): { name: string; email: string | null; phone: string | null } {
+  return {
+    name: normalizeNameCaps(input.name),
+    email: input.email ? normalizeEmail(input.email) : null,
+    phone: input.phone ? (normalizePhoneE164(input.phone) ?? input.phone.trim()) : null,
+  };
+}
+
+/** Create a new household with its first member as primary: the walk-up-join entry point (Task 5,
+ *  the Members list's own add-household action). Mirrors `member-signup/lib/statements.ts`'s own
+ *  deferred-primary dance (a household's `primary_member_id` can only be set once its first
+ *  member's id is known) in one `db.batch()`, so the household is never briefly primary-less. */
+export async function createHousehold(
+  db: D1Database,
+  input: { name: string; city: string | null; member: RosterMemberInput },
+): Promise<{ householdId: string; memberId: string }> {
+  const householdId = crypto.randomUUID();
+  const memberId = crypto.randomUUID();
+  const { name, email, phone } = normalizedContactFields(input.member);
+  await db.batch([
+    db.prepare('INSERT INTO households (id, name, city) VALUES (?1, ?2, ?3)').bind(householdId, input.name, input.city),
+    db
+      .prepare('INSERT INTO members (id, household_id, name, email, phone, birthdate) VALUES (?1, ?2, ?3, ?4, ?5, ?6)')
+      .bind(memberId, householdId, name, email, phone, input.member.birthdate),
+    db.prepare('UPDATE households SET primary_member_id = ?1 WHERE id = ?2').bind(memberId, householdId),
+  ]);
+  return { householdId, memberId };
+}
+
+/** Update a household's own name/city (the desk's household-level edit block; primary
+ *  reassignment is a separate write, {@link setHouseholdPrimary}, since it carries its own
+ *  precondition on the caller side, `household-surgery.ts`'s `buildMovePlan`). */
+export async function updateHouseholdInfo(db: D1Database, householdId: string, input: { name: string; city: string | null }): Promise<void> {
+  await db
+    .prepare("UPDATE households SET name = ?1, city = ?2, updated_at = datetime('now') WHERE id = ?3")
+    .bind(input.name, input.city, householdId)
+    .run();
+}
+
+/** Reassign a household's primary member. The caller is responsible for confirming `memberId`
+ *  already belongs to `householdId` (the desk's own edit form only ever offers current roster
+ *  members as choices); this module trusts its caller the same way `households-store.ts`'s own
+ *  header names as the write-layer's boundary. */
+export async function setHouseholdPrimary(db: D1Database, householdId: string, memberId: string): Promise<void> {
+  await db
+    .prepare("UPDATE households SET primary_member_id = ?1, updated_at = datetime('now') WHERE id = ?2")
+    .bind(memberId, householdId)
+    .run();
+}
+
+/** Update a roster member's own contact fields (name, email, phone, birthdate), normalized. */
+export async function updateRosterMember(db: D1Database, memberId: string, input: RosterMemberInput): Promise<void> {
+  const { name, email, phone } = normalizedContactFields(input);
+  await db
+    .prepare("UPDATE members SET name = ?1, email = ?2, phone = ?3, birthdate = ?4, updated_at = datetime('now') WHERE id = ?5")
+    .bind(name, email, phone, input.birthdate, memberId)
+    .run();
+}
+
+/** Archive or unarchive a roster member. Unlike the portal's own hard-delete
+ *  `removeHouseholdMember` (member-portal/lib/household.ts), this never refuses the household's
+ *  primary or its last member: archiving is reversible and never removes the row, so a household
+ *  whose primary reads archived is simply a fact the desk shows, not a state to guard against. */
+export async function setMemberArchived(db: D1Database, memberId: string, archived: boolean): Promise<void> {
+  const clearOrStamp = archived ? "datetime('now')" : 'NULL';
+  await db
+    .prepare(`UPDATE members SET archived_at = ${clearOrStamp}, updated_at = datetime('now') WHERE id = ?1`)
+    .bind(memberId)
+    .run();
+}
+
+/** Edit a membership's own tier (the desk's per-row tier-change action). Tier-change is a label
+ *  edit plus audit only, per the design doc's own ruling: `price_paid` stays the snapshot of what
+ *  was actually paid, and any money truing-up happens through a manual payment or refund instead
+ *  of a silent price edit here. */
+export async function updateMembershipTier(db: D1Database, membershipId: string, tier: MembershipTier): Promise<void> {
+  await db.prepare('UPDATE memberships SET tier = ?1 WHERE id = ?2').bind(tier, membershipId).run();
 }

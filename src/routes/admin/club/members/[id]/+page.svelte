@@ -1,31 +1,47 @@
 <!--
 @component
-The Club section's household desk (Task 4): the fixture-backed member-detail screen's
-successor, restructured around the design doc's own four blocks -- roster, memberships, money
-timeline, assets -- stacked per the office-list pattern rather than the old two-pane identity/
-activity split (a household, not a single member, is this route's own record now). Read-only in
-this task: roster edits, household surgery (move/merge), manual payments, tier changes, and
-refunds all land in Tasks 5-6 as form actions alongside these same blocks. The standing summary
-(current/grace/lapsed/none) reads `data.standing`, a single-household lookup
-(`getHouseholdStanding`) distinct from the list screen's own batch query, per `+page.server.ts`'s
-header. A membership row's payment `source` is not itself a `households-store.ts` fact (that
-module's own header explains why); it is read here off `data.timeline`'s dues lines instead, the
-same cross-reference that module's comment names.
+The Club section's household desk (Task 4's read side, Task 5's write side): every action from
+the design doc's own household-desk section lands here as a `clubAdminAction` form -- roster
+CRUD (add/edit/archive/visibility), household edit (name/city/primary), move member, merge
+household, a manual (check/cash/comp) payment, and a per-membership tier change. Refunds
+(Task 6) are not yet wired; the timeline's refund action lands in that task. A merge or move's
+target household is entered by id (the id visible in any household desk's own URL) -- a proper
+household picker is a follow-up, out of this task's scope.
 -->
 <script lang="ts">
-  import type { PageData } from './$types';
+  import { untrack } from 'svelte';
+  import type { ActionData, PageData } from './$types';
+  import { CsrfField } from '@glw907/cairn-cms/components';
+  import { FieldLabel, SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
   import { HEADER_CELL, formatCents, formatCivilDate, formatClubTimestamp, formatDollars } from '$admin-club/lib/ui';
   import { LINE_ITEM_LABEL, STANDING_CHIP, TIER_LABEL, TRANSACTION_KIND_LABEL, TRANSACTION_SOURCE_LABEL, VISIBILITY_CHIP } from '$admin-club/lib/member-format';
   import type { TransactionSource } from '$admin-club/lib/ledger';
+  import type { DirectoryVisibility, MembershipTier } from '$admin-club/lib/member-types';
+  import type { HouseholdMembershipRow, HouseholdRosterMember } from '$admin-club/lib/households-store';
 
-  let { data }: { data: PageData } = $props();
+  let { data, form }: { data: PageData; form: ActionData } = $props();
 
   const cardCls = 'rounded-box border border-[var(--cairn-card-border)] bg-base-100 p-6 shadow-[var(--cairn-shadow)]';
 
+  const TIER_OPTIONS: { value: MembershipTier; label: string }[] = [
+    { value: 'individual', label: TIER_LABEL.individual },
+    { value: 'family', label: TIER_LABEL.family },
+    { value: 'young-adult', label: TIER_LABEL['young-adult'] },
+  ];
+  const VISIBILITY_OPTIONS: { value: DirectoryVisibility; label: string }[] = [
+    { value: 'visible', label: VISIBILITY_CHIP.visible.label },
+    { value: 'partial', label: VISIBILITY_CHIP.partial.label },
+    { value: 'hidden', label: VISIBILITY_CHIP.hidden.label },
+  ];
+  const SOURCE_OPTIONS = [
+    { value: 'check', label: 'Check' },
+    { value: 'cash', label: 'Cash' },
+    { value: 'comp', label: 'Comp' },
+  ];
+
   /** The most recent `dues` line's own transaction source for each membership, read off the
    *  already-loaded timeline (newest first) rather than a second query: the first dues line seen
-   *  per membership id is its most recent source. `undefined` when a membership has never had a
-   *  linked ledger charge (an invoiced-but-unpaid row). */
+   *  per membership id is its most recent source. */
   const membershipSource = $derived.by(() => {
     const map = new Map<string, TransactionSource>();
     for (const tx of data.timeline) {
@@ -36,6 +52,96 @@ same cross-reference that module's comment names.
       }
     }
     return map;
+  });
+
+  // -- household edit dialog --
+  let householdDialog: HTMLDialogElement | undefined = $state();
+  let householdName = $state('');
+  let householdCity = $state('');
+  let householdPrimaryId = $state('');
+  function openHouseholdDialog() {
+    if (!data.desk) return;
+    householdName = data.desk.name;
+    householdCity = data.desk.city ?? '';
+    householdPrimaryId = data.desk.primaryMemberId ?? '';
+    householdDialog?.showModal();
+  }
+
+  // -- add / edit member dialog (shared) --
+  let memberDialog: HTMLDialogElement | undefined = $state();
+  let memberDialogMode = $state<'add' | 'edit'>('add');
+  let memberId = $state('');
+  let memberName = $state('');
+  let memberEmail = $state('');
+  let memberPhone = $state('');
+  let memberBirthdate = $state('');
+  function openAddMemberDialog() {
+    memberDialogMode = 'add';
+    memberId = '';
+    memberName = '';
+    memberEmail = '';
+    memberPhone = '';
+    memberBirthdate = '';
+    memberDialog?.showModal();
+  }
+  function openEditMemberDialog(member: HouseholdRosterMember) {
+    memberDialogMode = 'edit';
+    memberId = member.id;
+    memberName = member.name;
+    memberEmail = member.email ?? '';
+    memberPhone = member.phone ?? '';
+    memberBirthdate = member.birthdate ?? '';
+    memberDialog?.showModal();
+  }
+
+  // -- move member dialog --
+  let moveDialog: HTMLDialogElement | undefined = $state();
+  let moveMemberId = $state('');
+  let moveMemberName = $state('');
+  let moveTargetHouseholdId = $state('');
+  let moveNewPrimaryId = $state('');
+  function openMoveDialog(member: HouseholdRosterMember) {
+    moveMemberId = member.id;
+    moveMemberName = member.name;
+    moveTargetHouseholdId = '';
+    moveNewPrimaryId = '';
+    moveDialog?.showModal();
+  }
+
+  // -- merge household dialog --
+  let mergeDialog: HTMLDialogElement | undefined = $state();
+  let mergedHouseholdId = $state('');
+
+  // -- tier change dialog --
+  let tierDialog: HTMLDialogElement | undefined = $state();
+  let tierMembershipId = $state('');
+  let tierMembershipLabel = $state('');
+  let tierValue = $state<MembershipTier>('individual');
+  function openTierDialog(membership: HouseholdMembershipRow) {
+    tierMembershipId = membership.id;
+    tierMembershipLabel = `${membership.season} season`;
+    tierValue = membership.tier;
+    tierDialog?.showModal();
+  }
+
+  // -- record payment dialog --
+  let paymentDialog: HTMLDialogElement | undefined = $state();
+  let paymentSeason = $state(untrack(() => String(data.currentSeason)));
+  let paymentTier = $state<MembershipTier>('individual');
+  let paymentAmount = $state('');
+  let paymentSource = $state<'check' | 'cash' | 'comp'>('check');
+  let paymentMemo = $state('');
+  function openPaymentDialog() {
+    paymentSeason = String(data.currentSeason);
+    paymentTier = 'individual';
+    paymentAmount = data.tierPrices ? String(data.tierPrices.individual) : '';
+    paymentSource = 'check';
+    paymentMemo = '';
+    paymentDialog?.showModal();
+  }
+  $effect(() => {
+    if (data.tierPrices && paymentSource !== 'comp') paymentAmount = String(data.tierPrices[paymentTier]);
+    else if (paymentSource === 'comp') paymentAmount = '0';
   });
 </script>
 
@@ -55,24 +161,38 @@ same cross-reference that module's comment names.
 {:else}
   {@const desk = data.desk}
   {@const standing = data.standing}
+  {#key desk.id}
   <header class="mb-6 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
     <div class="flex flex-col gap-0.5">
       <span class={HEADER_CELL}>Club</span>
       <h1 class="text-2xl font-bold tracking-tight font-[family-name:var(--font-display)]">{desk.name}</h1>
       {#if desk.city}<p class="text-sm text-muted">{desk.city}</p>{/if}
     </div>
-    {#if standing}
-      {@const chip = STANDING_CHIP[standing.status]}
-      <span class="badge {chip.cls}">
-        {standing.status === 'lapsed' && standing.lastSeason ? `${chip.label} — last ${standing.lastSeason}` : chip.label}
-      </span>
-    {/if}
+    <div class="flex items-center gap-2">
+      {#if standing}
+        {@const chip = STANDING_CHIP[standing.status]}
+        <span class="badge {chip.cls}">
+          {standing.status === 'lapsed' && standing.lastSeason ? `${chip.label} — last ${standing.lastSeason}` : chip.label}
+        </span>
+      {/if}
+      <button type="button" class="btn btn-ghost btn-sm" onclick={openHouseholdDialog}>Edit household</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick={() => { mergedHouseholdId = ''; mergeDialog?.showModal(); }}>Merge in&hellip;</button>
+    </div>
   </header>
 
+  {#if form?.error}
+    <p class="mb-4 rounded-box border border-error/30 bg-error/5 px-4 py-3 text-sm font-medium text-error" role="alert">
+      {form.error}
+    </p>
+  {/if}
+
   <div class="flex flex-col gap-6">
-    <!-- Roster: contact fields, visibility, archive/primary state (read-only here; Task 5 adds CRUD). -->
+    <!-- Roster: contact fields, visibility, archive/primary state, plus add/edit/move/archive. -->
     <div class={cardCls}>
-      <h2 class={HEADER_CELL}>Roster</h2>
+      <div class="flex items-center justify-between">
+        <h2 class={HEADER_CELL}>Roster</h2>
+        <button type="button" class="btn btn-ghost btn-xs" onclick={openAddMemberDialog}>Add member</button>
+      </div>
       {#if desk.roster.length}
         <ul class="mt-3 flex flex-col divide-y divide-[var(--cairn-card-border)]">
           {#each desk.roster as member (member.id)}
@@ -90,6 +210,16 @@ same cross-reference that module's comment names.
               <div class="flex items-center gap-2">
                 <span class="badge {visibility.cls}">{visibility.label}</span>
                 {#if member.archived}<span class="badge badge-ghost badge-sm font-medium opacity-60">Archived</span>{/if}
+                <button type="button" class="btn btn-ghost btn-xs" onclick={() => openEditMemberDialog(member)}>Edit</button>
+                <button type="button" class="btn btn-ghost btn-xs" onclick={() => openMoveDialog(member)}>Move&hellip;</button>
+                <form method="post" action="?/setArchived">
+                  <CsrfField />
+                  <input type="hidden" name="memberId" value={member.id} />
+                  <input type="hidden" name="archived" value={member.archived ? '0' : '1'} />
+                  <button type="submit" class="btn btn-ghost btn-xs {member.archived ? '' : 'text-error'}">
+                    {member.archived ? 'Unarchive' : 'Archive'}
+                  </button>
+                </form>
               </div>
             </li>
           {/each}
@@ -99,7 +229,7 @@ same cross-reference that module's comment names.
       {/if}
     </div>
 
-    <!-- Memberships: season/tier/amount/paid-date/source, with refunded state. -->
+    <!-- Memberships: season/tier/amount/paid-date/source, refunded state, tier change. -->
     <div class={cardCls}>
       <h2 class={HEADER_CELL}>Memberships</h2>
       {#if desk.memberships.length}
@@ -112,6 +242,7 @@ same cross-reference that module's comment names.
               <th class={HEADER_CELL}>Paid</th>
               <th class={HEADER_CELL}>Source</th>
               <th class={HEADER_CELL}>State</th>
+              <th class="{HEADER_CELL} w-24"></th>
             </tr>
           </thead>
           <tbody>
@@ -128,6 +259,9 @@ same cross-reference that module's comment names.
                     <span class="badge badge-ghost badge-sm font-medium">Refunded {formatCivilDate(membership.refundedAt)}</span>
                   {/if}
                 </td>
+                <td>
+                  <button type="button" class="btn btn-ghost btn-xs" onclick={() => openTierDialog(membership)}>Change tier</button>
+                </td>
               </tr>
             {/each}
           </tbody>
@@ -137,9 +271,12 @@ same cross-reference that module's comment names.
       {/if}
     </div>
 
-    <!-- Money timeline: every ledger transaction for this household, newest first, its lines nested. -->
+    <!-- Money timeline: every ledger transaction for the household, newest first, its lines nested. -->
     <div class={cardCls}>
-      <h2 class={HEADER_CELL}>Money timeline</h2>
+      <div class="flex items-center justify-between">
+        <h2 class={HEADER_CELL}>Money timeline</h2>
+        <button type="button" class="btn btn-ghost btn-xs" onclick={openPaymentDialog}>Record manual payment</button>
+      </div>
       {#if data.timeline.length}
         <ul class="mt-3 flex flex-col divide-y divide-[var(--cairn-card-border)]">
           {#each data.timeline as tx (tx.id)}
@@ -192,4 +329,128 @@ same cross-reference that module's comment names.
       {/if}
     </div>
   </div>
+
+  <dialog bind:this={householdDialog} class="modal">
+    <div class="modal-box">
+      <h2 class="text-lg font-bold">Edit household</h2>
+      <form method="post" action="?/updateHousehold" class="flex flex-col gap-3">
+        <CsrfField />
+        <TextField label="Household name" name="name" bind:value={householdName} />
+        <TextField label="City" name="city" bind:value={householdCity} />
+        <SelectField
+          label="Primary member"
+          name="primaryMemberId"
+          bind:value={householdPrimaryId}
+          options={desk.roster.map((member) => ({ value: member.id, label: member.name }))}
+        />
+        <div class="modal-action">
+          <button type="button" class="btn btn-sm" onclick={() => householdDialog?.close()}>Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Save</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog bind:this={memberDialog} class="modal">
+    <div class="modal-box">
+      <h2 class="text-lg font-bold">{memberDialogMode === 'add' ? 'Add member' : 'Edit member'}</h2>
+      <form method="post" action={memberDialogMode === 'add' ? '?/addMember' : '?/updateMember'} class="flex flex-col gap-3">
+        <CsrfField />
+        {#if memberDialogMode === 'edit'}<input type="hidden" name="memberId" value={memberId} />{/if}
+        <TextField label="Name" name="name" bind:value={memberName} />
+        <TextField label="Email" name="email" type="email" bind:value={memberEmail} />
+        <TextField label="Phone" name="phone" bind:value={memberPhone} />
+        <FieldLabel label="Birthdate">
+          <input class="input input-sm" type="date" name="birthdate" bind:value={memberBirthdate} />
+        </FieldLabel>
+        <div class="modal-action">
+          <button type="button" class="btn btn-sm" onclick={() => memberDialog?.close()}>Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Save</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog bind:this={moveDialog} class="modal">
+    <div class="modal-box">
+      <h2 class="text-lg font-bold">Move {moveMemberName}</h2>
+      <p class="py-2 text-sm text-muted">
+        Re-parents this member to another household. Moving the household's own primary needs a new
+        primary named first.
+      </p>
+      <form method="post" action="?/moveMember" class="flex flex-col gap-3">
+        <CsrfField />
+        <input type="hidden" name="memberId" value={moveMemberId} />
+        <TextField label="Target household id" name="targetHouseholdId" bind:value={moveTargetHouseholdId} />
+        <SelectField
+          label="New primary (only if moving the primary)"
+          name="newPrimaryId"
+          bind:value={moveNewPrimaryId}
+          options={[{ value: '', label: 'Not applicable' }, ...desk.roster.filter((m) => m.id !== moveMemberId).map((m) => ({ value: m.id, label: m.name }))]}
+        />
+        <div class="modal-action">
+          <button type="button" class="btn btn-sm" onclick={() => moveDialog?.close()}>Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Move</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog bind:this={mergeDialog} class="modal">
+    <div class="modal-box">
+      <h2 class="text-lg font-bold">Merge a household into {desk.name}</h2>
+      <p class="py-2 text-sm text-muted">
+        Members, memberships, and ledger transactions move here; the other household is marked left.
+        Refused when both hold a membership for the same season.
+      </p>
+      <form method="post" action="?/mergeHousehold" class="flex flex-col gap-3">
+        <CsrfField />
+        <TextField label="Household id to merge in" name="mergedHouseholdId" bind:value={mergedHouseholdId} />
+        <div class="modal-action">
+          <button type="button" class="btn btn-sm" onclick={() => mergeDialog?.close()}>Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Merge</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog bind:this={tierDialog} class="modal">
+    <div class="modal-box">
+      <h2 class="text-lg font-bold">Change tier &middot; {tierMembershipLabel}</h2>
+      <p class="py-2 text-sm text-muted">Edits the tier label only. Trueing up money happens through a manual payment or refund.</p>
+      <form method="post" action="?/changeTier" class="flex flex-col gap-3">
+        <CsrfField />
+        <input type="hidden" name="membershipId" value={tierMembershipId} />
+        <SelectField label="Tier" name="tier" bind:value={tierValue} options={TIER_OPTIONS} />
+        <div class="modal-action">
+          <button type="button" class="btn btn-sm" onclick={() => tierDialog?.close()}>Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Save</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog bind:this={paymentDialog} class="modal">
+    <div class="modal-box">
+      <h2 class="text-lg font-bold">Record a manual payment</h2>
+      <p class="py-2 text-sm text-muted">A check, cash, or comp payment; creates the membership and the ledger entry together.</p>
+      <form method="post" action="?/recordPayment" class="flex flex-col gap-3">
+        <CsrfField />
+        <FieldLabel label="Season">
+          <input class="input input-sm" type="number" name="season" min="2020" step="1" bind:value={paymentSeason} required />
+        </FieldLabel>
+        <SelectField label="Tier" name="tier" bind:value={paymentTier} options={TIER_OPTIONS} />
+        <FieldLabel label="Amount (USD)">
+          <input class="input input-sm" type="number" name="amount" min="0" step="1" bind:value={paymentAmount} required />
+        </FieldLabel>
+        <SelectField label="Source" name="source" bind:value={paymentSource} options={SOURCE_OPTIONS} />
+        <TextField label="Memo" name="memo" bind:value={paymentMemo} />
+        <div class="modal-action">
+          <button type="button" class="btn btn-sm" onclick={() => paymentDialog?.close()}>Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Record payment</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+  {/key}
 {/if}

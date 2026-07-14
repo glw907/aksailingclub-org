@@ -13,15 +13,33 @@ discounted rendered honestly), asset count (with a stale-asset warning mark), an
 -->
 <script lang="ts">
   import { untrack } from 'svelte';
-  import type { PageData } from './$types';
+  import type { ActionData, PageData } from './$types';
   import { goto } from '$app/navigation';
-  import { OfficeList } from '@glw907/cairn-cms/components';
-  import { SelectField } from '@glw907/cairn-cms/admin-fields';
+  import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
+  import { SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
   import { HEADER_CELL, formatDollars } from '$admin-club/lib/ui';
   import { STANDING_CHIP } from '$admin-club/lib/member-format';
   import type { HouseholdListRow } from '$admin-club/lib/households-store';
 
-  let { data }: { data: PageData } = $props();
+  let { data, form }: { data: PageData; form: ActionData } = $props();
+
+  // -- add household dialog (the walk-up-join entry point, Task 5) --
+  let addHouseholdDialog: HTMLDialogElement | undefined = $state();
+  let newHouseholdName = $state('');
+  let newHouseholdCity = $state('');
+  let newMemberName = $state('');
+  let newMemberEmail = $state('');
+  let newMemberPhone = $state('');
+  let newMemberBirthdate = $state('');
+  function openAddHouseholdDialog() {
+    newHouseholdName = '';
+    newHouseholdCity = '';
+    newMemberName = '';
+    newMemberEmail = '';
+    newMemberPhone = '';
+    newMemberBirthdate = '';
+    addHouseholdDialog?.showModal();
+  }
 
   const PAGE_SIZE = 10;
 
@@ -119,8 +137,14 @@ discounted rendered honestly), asset count (with a stale-asset warning mark), an
         <input type="checkbox" class="checkbox checkbox-sm" bind:checked={includeArchived} />
         Include archived
       </label>
+      <button type="button" class="btn btn-primary btn-sm" onclick={openAddHouseholdDialog}>Add household</button>
     </div>
   {/snippet}
+  {#if form?.error}
+    <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-error" role="alert">
+      {form.error}
+    </p>
+  {/if}
   {#if data.error}
     <p class="px-6 py-10 text-center text-sm text-warning">{data.error}</p>
   {:else}
@@ -213,3 +237,26 @@ discounted rendered honestly), asset count (with a stale-asset warning mark), an
     {/if}
   {/if}
 </OfficeList>
+
+<dialog bind:this={addHouseholdDialog} class="modal">
+  <div class="modal-box">
+    <h2 class="text-lg font-bold">Add a household</h2>
+    <p class="py-2 text-sm text-muted">The walk-up-join entry point: a household and its first, primary member. Record a payment from the new desk afterward.</p>
+    <form method="post" action="?/addHousehold" class="flex flex-col gap-3">
+      <CsrfField />
+      <TextField label="Household name" name="name" bind:value={newHouseholdName} />
+      <TextField label="City" name="city" bind:value={newHouseholdCity} />
+      <TextField label="Primary member's name" name="memberName" bind:value={newMemberName} />
+      <TextField label="Email" name="memberEmail" type="email" bind:value={newMemberEmail} />
+      <TextField label="Phone" name="memberPhone" bind:value={newMemberPhone} />
+      <label class="flex flex-col gap-1 text-sm">
+        Birthdate
+        <input class="input input-sm" type="date" name="memberBirthdate" bind:value={newMemberBirthdate} />
+      </label>
+      <div class="modal-action">
+        <button type="button" class="btn btn-sm" onclick={() => addHouseholdDialog?.close()}>Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Add household</button>
+      </div>
+    </form>
+  </div>
+</dialog>
