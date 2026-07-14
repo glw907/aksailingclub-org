@@ -70,27 +70,12 @@
 //     denial), and who resolved it, when. Signup review is a POST-HOC check the board runs in
 //     the background, never a gate (design choice 5): nothing here can un-activate a membership.
 
-/** MembershipWorks's own three-state semantics for how a member appears in the public
- *  directory: fully visible, name-and-city only, or not listed at all. */
-export type DirectoryVisibility = 'visible' | 'partial' | 'hidden';
-
-/**
- * The batch-email segment vocabulary (docs/superpowers/specs/2026-07-06-asc-phase-2-design-
- * suite.md, Part B): pass 2.3's segment sends read this exact vocabulary directly ("nudge every
- * `lapsed` member to renew", "announce to every `current` member"). `archived` is distinct from
- * `lapsed`: a lapsed member's household is still a renewal prospect, while an archived member has
- * deliberately left for good (moved away, resigned, and so on) and is excluded from the active
- * list, the future public directory, and every batch segment by default, even though their
- * history stays intact and readable.
- */
-export type MemberSegment = 'current' | 'lapsed' | 'archived';
-
-/** The three membership tiers, source-verified against the club's published pricing (see design
- *  choice 7): `individual` ($250/year, one person, one class credit), `family` ($500/year, the
- *  whole household, two credits), `young-adult` ($100/year, an independent member aged 18-25,
- *  one credit). Sizes the class-credit grant a household receives when it joins at that tier;
- *  see {@link CREDIT_GRANT_AMOUNT}. */
-export type MembershipTier = 'individual' | 'family' | 'young-adult';
+// `DirectoryVisibility`, `MemberSegment`, and `MembershipTier` now live in `member-types.ts`
+// (Task 1, docs/plans/2026-07-14-membership-admin.md), re-exported here so this fixture's own
+// remaining (data) importers see no change; a type-only importer repoints to that module
+// directly. `member-types.ts` carries each union's own doc comment.
+import type { DirectoryVisibility, MemberSegment, MembershipTier } from './member-types';
+export type { DirectoryVisibility, MemberSegment, MembershipTier } from './member-types';
 
 /** A Stripe payment's own lifecycle, as the bolt-on ops flow already tracks it: a payment link
  *  is generated when the invoice is issued, and its status flips to `paid` once Stripe confirms

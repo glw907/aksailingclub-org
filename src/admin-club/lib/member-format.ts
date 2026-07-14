@@ -3,7 +3,7 @@
 // only (no markup or CSS class strings), and out of ui.ts, which holds the screen-agnostic
 // primitives (`ChipStyle`, the civil-date and dollar formatters) these records build on.
 import type { ChipStyle } from './ui';
-import type { DirectoryVisibility, MemberSegment, MembershipTier } from './demo-members';
+import type { DirectoryVisibility, MemberSegment, MembershipTier } from './member-types';
 
 /** Segment chips, following the same vocabulary the Events/Classes screens already established
  *  (`docs/club-admin-scaffold.md`'s chip vocabulary): the one state a volunteer can act on
