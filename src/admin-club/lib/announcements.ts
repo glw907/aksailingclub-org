@@ -13,6 +13,7 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import { deriveExcerpt } from '@glw907/cairn-cms/delivery/data';
 import { resolveSegment } from './segments';
+import { chunkRecipients, RECIPIENT_CHUNK_SIZE } from './bulk-email';
 import { sendClubEmail, type EmailBindingEnv } from './club-email';
 import {
   ANNOUNCE_CHANNELS,
@@ -179,20 +180,10 @@ export async function currentMemberEmails(db: D1Database): Promise<string[]> {
   return recipients.map((recipient) => recipient.email);
 }
 
-/** The Cloudflare Email Sending API's own combined to/cc/bcc cap per call (50); `sendAnnouncementEmails`
- *  sends one recipient per call (see that function's own header on why), so this bounds how many
- *  concurrent `EMAIL.send()` subrequests a single announce submit fires at once, not any one
- *  call's own recipient count. */
-export const RECIPIENT_CHUNK_SIZE = 50;
-
-/** Split `items` into consecutive groups of at most `size`, preserving order. A pure utility with
- *  no D1 or network dependency, so the chunking behavior itself is directly testable. */
-export function chunkRecipients<T>(items: readonly T[], size = RECIPIENT_CHUNK_SIZE): T[][] {
-  if (size <= 0) throw new Error('chunkRecipients: size must be positive');
-  const chunks: T[][] = [];
-  for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
-  return chunks;
-}
+/** The chunked-send loop this function used to own directly now lives in `bulk-email.ts` (the
+ *  Compose screen's own segment blasts share it); re-exported here so a caller (and this module's
+ *  own existing tests) that imports either from `announcements.ts` keeps working unchanged. */
+export { chunkRecipients, RECIPIENT_CHUNK_SIZE } from './bulk-email';
 
 /**
  * The announcement email's own subject/body, the sibling render to `discord.ts`'s
@@ -217,14 +208,13 @@ export interface SendAnnouncementEmailsResult {
 }
 
 /**
- * Email `args.recipients` the same composed subject/body (`buildAnnouncementEmailContent`),
- * chunked at {@link RECIPIENT_CHUNK_SIZE} recipients per batch, each batch's sends run
- * concurrently (`Promise.all`) and batches run one after another. Every recipient gets the
- * identical rendered content (`sendClubEmail`'s `raw` path, not a stored template: an
- * announcement's content is one-off and per-post, the case `SendClubEmailArgs.raw` exists for),
- * one `sendClubEmail` call each, so a failed send for one recipient never blocks the rest (that
- * function's own never-throws contract). `segment` tags each `email_log` row with the post id, so
- * a send's history is traceable back to the announcement that caused it.
+ * Email `args.recipients` the same composed subject/body (`buildAnnouncementEmailContent`), one
+ * `sendClubEmail` call per recipient (`raw` path, not a stored template: an announcement's content
+ * is one-off and per-post, the case `SendClubEmailArgs.raw` exists for), chunked through
+ * `bulk-email.ts`'s own shared {@link chunkRecipients} loop (the Compose screen's segment blasts
+ * share the identical chunking behavior). A failed send for one recipient never blocks the rest
+ * (`sendClubEmail`'s own never-throws contract). `segment` tags each `email_log` row with the post
+ * id, so a send's history is traceable back to the announcement that caused it.
  */
 export async function sendAnnouncementEmails(
   db: D1Database,
