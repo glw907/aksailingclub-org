@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { buildCheckoutBody, CheckoutUnavailableError, createCheckout, PAYMENT_KINDS } from '$admin-club/lib/payments';
+import { buildCheckoutBody, CheckoutUnavailableError, createCheckout, issueStripeRefund, PAYMENT_KINDS } from '$admin-club/lib/payments';
 
 const ARGS = {
   kind: 'class-fee' as const,
@@ -127,5 +127,55 @@ describe('createCheckout', () => {
   it('throws CheckoutUnavailableError when the network call itself fails', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network down'));
     await expect(createCheckout({ STRIPE_SECRET_KEY: 'sk_test_1' }, ARGS)).rejects.toBeInstanceOf(CheckoutUnavailableError);
+  });
+});
+
+describe('issueStripeRefund', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('answers ok: false when STRIPE_SECRET_KEY is not bound, never throwing', async () => {
+    const result = await issueStripeRefund({}, { processorRef: 'pi_test_1', amountCents: 5000 });
+    expect(result).toEqual({ ok: false, error: 'STRIPE_SECRET_KEY is not configured.' });
+  });
+
+  it('refunds a payment intent ref directly, with one fetch call', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ id: 're_test_1' }), { status: 200 }));
+    const result = await issueStripeRefund({ STRIPE_SECRET_KEY: 'sk_test_1' }, { processorRef: 'pi_test_1', amountCents: 5000 });
+    expect(result).toEqual({ ok: true, refundId: 're_test_1' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith('https://api.stripe.com/v1/refunds', expect.objectContaining({ method: 'POST' }));
+  });
+
+  it('resolves a checkout session ref to its payment intent first, then refunds it', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ payment_intent: 'pi_resolved' }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 're_test_2' }), { status: 200 }));
+    const result = await issueStripeRefund({ STRIPE_SECRET_KEY: 'sk_test_1' }, { processorRef: 'cs_test_1', amountCents: 5000 });
+    expect(result).toEqual({ ok: true, refundId: 're_test_2' });
+    expect(fetchMock).toHaveBeenNthCalledWith(1, 'https://api.stripe.com/v1/checkout/sessions/cs_test_1', expect.anything());
+    const refundBody = fetchMock.mock.calls[1][1] as RequestInit;
+    expect(new URLSearchParams(refundBody.body as string).get('payment_intent')).toBe('pi_resolved');
+  });
+
+  it('answers ok: false for an unrecognized processor reference, with no fetch call', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch');
+    const result = await issueStripeRefund({ STRIPE_SECRET_KEY: 'sk_test_1' }, { processorRef: 'ch_unrecognized', amountCents: 5000 });
+    expect(result.ok).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('answers ok: false when Stripe refuses the refund', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('nope', { status: 402 }));
+    const result = await issueStripeRefund({ STRIPE_SECRET_KEY: 'sk_test_1' }, { processorRef: 'pi_test_1', amountCents: 5000 });
+    expect(result.ok).toBe(false);
+  });
+
+  it('answers ok: false when the network call itself fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network down'));
+    const result = await issueStripeRefund({ STRIPE_SECRET_KEY: 'sk_test_1' }, { processorRef: 'pi_test_1', amountCents: 5000 });
+    expect(result.ok).toBe(false);
   });
 });

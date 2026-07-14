@@ -3,10 +3,12 @@
 The Club section's household desk (Task 4's read side, Task 5's write side): every action from
 the design doc's own household-desk section lands here as a `clubAdminAction` form -- roster
 CRUD (add/edit/archive/visibility), household edit (name/city/primary), move member, merge
-household, a manual (check/cash/comp) payment, and a per-membership tier change. Refunds
-(Task 6) are not yet wired; the timeline's refund action lands in that task. A merge or move's
-target household is entered by id (the id visible in any household desk's own URL) -- a proper
-household picker is a follow-up, out of this task's scope.
+household, a manual (check/cash/comp) payment, a per-membership tier change, and (Task 6) the
+refund action on a refundable timeline charge -- the admin picks which lines and how much of
+each to refund, the dialog states whether the refund can reach Stripe or records only, and
+submitting runs the whole thing atomically server-side. A merge or move's target household is
+entered by id (the id visible in any household desk's own URL) -- a proper household picker is a
+follow-up, out of this task's scope.
 -->
 <script lang="ts">
   import { untrack } from 'svelte';
@@ -18,6 +20,7 @@ household picker is a follow-up, out of this task's scope.
   import type { TransactionSource } from '$admin-club/lib/ledger';
   import type { DirectoryVisibility, MembershipTier } from '$admin-club/lib/member-types';
   import type { HouseholdMembershipRow, HouseholdRosterMember } from '$admin-club/lib/households-store';
+  import type { TimelineTransaction } from '$admin-club/lib/money-store';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -143,6 +146,19 @@ household picker is a follow-up, out of this task's scope.
     if (data.tierPrices && paymentSource !== 'comp') paymentAmount = String(data.tierPrices[paymentTier]);
     else if (paymentSource === 'comp') paymentAmount = '0';
   });
+
+  // -- refund dialog: the admin picks which of the charge's own lines to refund, and how much of
+  // each (a partial dues refund leaves the membership standing, per the design doc's own rule).
+  let refundDialog: HTMLDialogElement | undefined = $state();
+  let refundTx: TimelineTransaction | null = $state(null);
+  let refundSelected = $state<Record<string, boolean>>({});
+  let refundAmounts = $state<Record<string, string>>({});
+  function openRefundDialog(tx: TimelineTransaction) {
+    refundTx = tx;
+    refundSelected = Object.fromEntries(tx.lines.map((line) => [line.id, true]));
+    refundAmounts = Object.fromEntries(tx.lines.map((line) => [line.id, (line.amountCents / 100).toFixed(2)]));
+    refundDialog?.showModal();
+  }
 </script>
 
 <a
@@ -286,7 +302,12 @@ household picker is a follow-up, out of this task's scope.
                   {TRANSACTION_KIND_LABEL[tx.kind]} &middot; {TRANSACTION_SOURCE_LABEL[tx.source]}
                   <span class="ml-1 font-normal text-muted">{formatClubTimestamp(tx.occurredAt)}</span>
                 </p>
-                <p class="font-semibold tabular-nums">{formatCents(tx.amountTotalCents)}</p>
+                <div class="flex items-center gap-2">
+                  <p class="font-semibold tabular-nums">{formatCents(tx.amountTotalCents)}</p>
+                  {#if tx.kind === 'charge' && tx.refundable}
+                    <button type="button" class="btn btn-ghost btn-xs text-error" onclick={() => openRefundDialog(tx)}>Refund</button>
+                  {/if}
+                </div>
               </div>
               {#if tx.memo}<p class="text-sm text-muted">{tx.memo}</p>{/if}
               <ul class="mt-1 flex flex-col gap-0.5 pl-4 text-sm text-muted">
@@ -450,6 +471,52 @@ household picker is a follow-up, out of this task's scope.
           <button type="submit" class="btn btn-primary btn-sm">Record payment</button>
         </div>
       </form>
+    </div>
+  </dialog>
+
+  <dialog bind:this={refundDialog} class="modal">
+    <div class="modal-box">
+      <h2 class="text-lg font-bold">Refund</h2>
+      {#if refundTx}
+        {@const tx = refundTx}
+        <p class="py-2 text-sm text-muted">
+          {tx.apiEligible
+            ? 'This charge went through Stripe checkout: the refund issues through Stripe automatically.'
+            : 'This charge did not go through Stripe checkout (an imported, PayPal, or check/cash payment): the refund records here only.'}
+        </p>
+        <form method="post" action="?/refund" class="flex flex-col gap-3">
+          <CsrfField />
+          <input type="hidden" name="transactionId" value={tx.id} />
+          <ul class="flex flex-col gap-2">
+            {#each tx.lines as line (line.id)}
+              <li class="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  class="checkbox checkbox-sm"
+                  name="lineIds"
+                  value={line.id}
+                  bind:checked={refundSelected[line.id]}
+                />
+                <span class="flex-1 text-sm">{LINE_ITEM_LABEL[line.item]} &middot; {line.description}</span>
+                <input
+                  class="input input-xs w-24"
+                  type="number"
+                  name="amount-{line.id}"
+                  min="0.01"
+                  max={line.amountCents / 100}
+                  step="0.01"
+                  disabled={!refundSelected[line.id]}
+                  bind:value={refundAmounts[line.id]}
+                />
+              </li>
+            {/each}
+          </ul>
+          <div class="modal-action">
+            <button type="button" class="btn btn-sm" onclick={() => refundDialog?.close()}>Cancel</button>
+            <button type="submit" class="btn btn-error btn-sm">Refund</button>
+          </div>
+        </form>
+      {/if}
     </div>
   </dialog>
   {/key}

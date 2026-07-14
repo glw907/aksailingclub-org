@@ -2,10 +2,10 @@
 // docs/plans/2026-07-14-membership-admin.md): the fixture-backed member-detail screen's
 // successor, now with every desk action from the design doc's own household-desk section --
 // roster CRUD (add/edit/archive/unarchive, visibility, household name/city/primary), household
-// surgery (move member, merge household), a manual (check/cash/comp) payment, and a membership
-// tier change. `id` in the URL is a household id; a member id (any surviving link to the old
-// per-member detail route) resolves through `resolveMemberHousehold` and redirects to the
-// household it belongs to. Refunds (Task 6) are not yet wired.
+// surgery (move member, merge household), a manual (check/cash/comp) payment, a membership
+// tier change, and (Task 6) the refund action. `id` in the URL is a household id; a member id
+// (any surviving link to the old per-member detail route) resolves through
+// `resolveMemberHousehold` and redirects to the household it belongs to.
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
@@ -26,6 +26,8 @@ import { getHouseholdStanding, type HouseholdStanding } from '$member-auth/lib/s
 import { addHouseholdMember, setDirectoryVisibility, type DirectoryVisibility } from '$member-portal/lib/household';
 import { buildMergePlan, buildMovePlan } from '$admin-club/lib/household-surgery';
 import { buildManualMembershipPayment, type ManualPaymentSource } from '$admin-club/lib/manual-payment';
+import { executeRefund, type RefundLineSelection } from '$admin-club/lib/refunds';
+import type { CreateCheckoutEnv } from '$admin-club/lib/payments';
 import { getCurrentSeason, getTierPrices } from '$admin-club/lib/club-settings';
 import type { MembershipTier } from '$admin-club/lib/member-types';
 
@@ -270,5 +272,55 @@ export const actions: Actions = {
       return { ok: true };
     },
     { action: 'change-tier', entity: 'membership', deniedMessage: DENIED_MESSAGE },
+  ),
+
+  refund: clubAdminAction(
+    async ({ event, form, ctx }) => {
+      const householdId = routeId(event);
+      const transactionId = requiredField(form, 'transactionId');
+      if (!transactionId) {
+        ctx.audit({ action: 'refund', entity: 'transaction', entityId: householdId, detail: 'rejected: missing transactionId' });
+        return fail(400, { error: 'A charge is required.' });
+      }
+
+      const lineIds = form.getAll('lineIds').filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+      if (lineIds.length === 0) {
+        ctx.audit({ action: 'refund', entity: 'transaction', entityId: transactionId, detail: 'rejected: no lines selected' });
+        return fail(400, { error: 'Select at least one line to refund.' });
+      }
+
+      const selection: RefundLineSelection[] = [];
+      for (const lineId of lineIds) {
+        const amountRaw = form.get(`amount-${lineId}`);
+        const amountDollars = typeof amountRaw === 'string' ? Number(amountRaw) : NaN;
+        if (!Number.isFinite(amountDollars) || amountDollars <= 0) {
+          ctx.audit({ action: 'refund', entity: 'transaction', entityId: transactionId, detail: `rejected: invalid amount for line ${lineId}` });
+          return fail(400, { error: 'Every selected line needs a positive refund amount.' });
+        }
+        selection.push({ lineId, amountCents: Math.round(amountDollars * 100) });
+      }
+
+      // Re-read the charge fresh off the household's own timeline rather than trusting anything
+      // about it the client posted beyond `transactionId`/`lineIds`/the dollar amounts: the
+      // charge's `apiEligible`/`refundable` flags and every line's own bound come straight off
+      // this read, so a stale or tampered client payload can never claim a bigger refund or a
+      // different eligibility than the database itself currently shows.
+      const timeline = await getHouseholdTimeline(ctx.db, householdId);
+      const charge = timeline.find((tx) => tx.id === transactionId);
+      if (!charge) {
+        ctx.audit({ action: 'refund', entity: 'transaction', entityId: transactionId, detail: 'rejected: no such charge on this household' });
+        return fail(404, { error: 'No such charge on this household.' });
+      }
+
+      const platformEnv = event.platform?.env as CreateCheckoutEnv | undefined;
+      const result = await executeRefund(ctx.db, platformEnv ?? {}, charge, selection);
+      if (!result.ok) {
+        ctx.audit({ action: 'refund', entity: 'transaction', entityId: transactionId, detail: `rejected: ${result.error}` });
+        return fail(400, { error: result.error });
+      }
+      ctx.audit({ action: 'refund', entity: 'transaction', entityId: result.transactionId, detail: `refunds=${transactionId} household=${householdId}` });
+      return { ok: true };
+    },
+    { action: 'refund', entity: 'transaction', deniedMessage: DENIED_MESSAGE },
   ),
 };
