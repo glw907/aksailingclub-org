@@ -12,6 +12,8 @@ follow-up, out of this task's scope.
 -->
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { enhance } from '$app/forms';
+  import type { SubmitFunction } from '@sveltejs/kit';
   import type { ActionData, PageData } from './$types';
   import { CsrfField } from '@glw907/cairn-cms/components';
   import { FieldLabel, SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
@@ -23,6 +25,20 @@ follow-up, out of this task's scope.
   import type { TimelineTransaction } from '$admin-club/lib/money-store';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
+
+  /** Every dialog form's own `use:enhance`: keeps the modal open with whatever the admin already
+   *  typed and shows the server's `fail()` message inline (`form?.error` at the page top) rather
+   *  than a full-page navigation that would discard it; closes the dialog once the action settles
+   *  with anything but a failure (a success, or a redirect `enhance`'s own default `update()`
+   *  already follows). */
+  function closeDialogOnSettle(dialog: () => HTMLDialogElement | undefined): SubmitFunction {
+    return () => {
+      return async ({ result, update }) => {
+        await update();
+        if (result.type !== 'failure') dialog()?.close();
+      };
+    };
+  }
 
   const cardCls = 'rounded-box border border-[var(--cairn-card-border)] bg-base-100 p-6 shadow-[var(--cairn-shadow)]';
 
@@ -155,8 +171,12 @@ follow-up, out of this task's scope.
   let refundAmounts = $state<Record<string, string>>({});
   function openRefundDialog(tx: TimelineTransaction) {
     refundTx = tx;
-    refundSelected = Object.fromEntries(tx.lines.map((line) => [line.id, true]));
-    refundAmounts = Object.fromEntries(tx.lines.map((line) => [line.id, (line.amountCents / 100).toFixed(2)]));
+    // Default to the REMAINING balance, not the line's original amount: a line already partially
+    // refunded (`line.refundedCents > 0`) preselects for only what is left, matching the per-line
+    // cumulative cap `refunds.ts`'s own `buildRefundPlan` now enforces server-side. A line with
+    // nothing left to refund starts unchecked.
+    refundSelected = Object.fromEntries(tx.lines.map((line) => [line.id, line.amountCents - line.refundedCents > 0]));
+    refundAmounts = Object.fromEntries(tx.lines.map((line) => [line.id, ((line.amountCents - line.refundedCents) / 100).toFixed(2)]));
     refundDialog?.showModal();
   }
 </script>
@@ -351,10 +371,10 @@ follow-up, out of this task's scope.
     </div>
   </div>
 
-  <dialog bind:this={householdDialog} class="modal">
+  <dialog bind:this={householdDialog} class="modal" aria-labelledby="household-dialog-title">
     <div class="modal-box">
-      <h2 class="text-lg font-bold">Edit household</h2>
-      <form method="post" action="?/updateHousehold" class="flex flex-col gap-3">
+      <h2 id="household-dialog-title" class="text-lg font-bold">Edit household</h2>
+      <form method="post" action="?/updateHousehold" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => householdDialog)}>
         <CsrfField />
         <TextField label="Household name" name="name" bind:value={householdName} />
         <TextField label="City" name="city" bind:value={householdCity} />
@@ -372,10 +392,15 @@ follow-up, out of this task's scope.
     </div>
   </dialog>
 
-  <dialog bind:this={memberDialog} class="modal">
+  <dialog bind:this={memberDialog} class="modal" aria-labelledby="member-dialog-title">
     <div class="modal-box">
-      <h2 class="text-lg font-bold">{memberDialogMode === 'add' ? 'Add member' : 'Edit member'}</h2>
-      <form method="post" action={memberDialogMode === 'add' ? '?/addMember' : '?/updateMember'} class="flex flex-col gap-3">
+      <h2 id="member-dialog-title" class="text-lg font-bold">{memberDialogMode === 'add' ? 'Add member' : 'Edit member'}</h2>
+      <form
+        method="post"
+        action={memberDialogMode === 'add' ? '?/addMember' : '?/updateMember'}
+        class="flex flex-col gap-3"
+        use:enhance={closeDialogOnSettle(() => memberDialog)}
+      >
         <CsrfField />
         {#if memberDialogMode === 'edit'}<input type="hidden" name="memberId" value={memberId} />{/if}
         <TextField label="Name" name="name" bind:value={memberName} />
@@ -392,14 +417,14 @@ follow-up, out of this task's scope.
     </div>
   </dialog>
 
-  <dialog bind:this={moveDialog} class="modal">
+  <dialog bind:this={moveDialog} class="modal" aria-labelledby="move-dialog-title">
     <div class="modal-box">
-      <h2 class="text-lg font-bold">Move {moveMemberName}</h2>
+      <h2 id="move-dialog-title" class="text-lg font-bold">Move {moveMemberName}</h2>
       <p class="py-2 text-sm text-muted">
         Re-parents this member to another household. Moving the household's own primary needs a new
         primary named first.
       </p>
-      <form method="post" action="?/moveMember" class="flex flex-col gap-3">
+      <form method="post" action="?/moveMember" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => moveDialog)}>
         <CsrfField />
         <input type="hidden" name="memberId" value={moveMemberId} />
         <TextField label="Target household id" name="targetHouseholdId" bind:value={moveTargetHouseholdId} />
@@ -417,14 +442,14 @@ follow-up, out of this task's scope.
     </div>
   </dialog>
 
-  <dialog bind:this={mergeDialog} class="modal">
+  <dialog bind:this={mergeDialog} class="modal" aria-labelledby="merge-dialog-title">
     <div class="modal-box">
-      <h2 class="text-lg font-bold">Merge a household into {desk.name}</h2>
+      <h2 id="merge-dialog-title" class="text-lg font-bold">Merge a household into {desk.name}</h2>
       <p class="py-2 text-sm text-muted">
         Members, memberships, and ledger transactions move here; the other household is marked left.
         Refused when both hold a membership for the same season.
       </p>
-      <form method="post" action="?/mergeHousehold" class="flex flex-col gap-3">
+      <form method="post" action="?/mergeHousehold" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => mergeDialog)}>
         <CsrfField />
         <TextField label="Household id to merge in" name="mergedHouseholdId" bind:value={mergedHouseholdId} />
         <div class="modal-action">
@@ -435,11 +460,11 @@ follow-up, out of this task's scope.
     </div>
   </dialog>
 
-  <dialog bind:this={tierDialog} class="modal">
+  <dialog bind:this={tierDialog} class="modal" aria-labelledby="tier-dialog-title">
     <div class="modal-box">
-      <h2 class="text-lg font-bold">Change tier &middot; {tierMembershipLabel}</h2>
+      <h2 id="tier-dialog-title" class="text-lg font-bold">Change tier &middot; {tierMembershipLabel}</h2>
       <p class="py-2 text-sm text-muted">Edits the tier label only. Trueing up money happens through a manual payment or refund.</p>
-      <form method="post" action="?/changeTier" class="flex flex-col gap-3">
+      <form method="post" action="?/changeTier" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => tierDialog)}>
         <CsrfField />
         <input type="hidden" name="membershipId" value={tierMembershipId} />
         <SelectField label="Tier" name="tier" bind:value={tierValue} options={TIER_OPTIONS} />
@@ -451,11 +476,11 @@ follow-up, out of this task's scope.
     </div>
   </dialog>
 
-  <dialog bind:this={paymentDialog} class="modal">
+  <dialog bind:this={paymentDialog} class="modal" aria-labelledby="payment-dialog-title">
     <div class="modal-box">
-      <h2 class="text-lg font-bold">Record a manual payment</h2>
+      <h2 id="payment-dialog-title" class="text-lg font-bold">Record a manual payment</h2>
       <p class="py-2 text-sm text-muted">A check, cash, or comp payment; creates the membership and the ledger entry together.</p>
-      <form method="post" action="?/recordPayment" class="flex flex-col gap-3">
+      <form method="post" action="?/recordPayment" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => paymentDialog)}>
         <CsrfField />
         <FieldLabel label="Season">
           <input class="input input-sm" type="number" name="season" min="2020" step="1" bind:value={paymentSeason} required />
@@ -474,9 +499,9 @@ follow-up, out of this task's scope.
     </div>
   </dialog>
 
-  <dialog bind:this={refundDialog} class="modal">
+  <dialog bind:this={refundDialog} class="modal" aria-labelledby="refund-dialog-title">
     <div class="modal-box">
-      <h2 class="text-lg font-bold">Refund</h2>
+      <h2 id="refund-dialog-title" class="text-lg font-bold">Refund</h2>
       {#if refundTx}
         {@const tx = refundTx}
         <p class="py-2 text-sm text-muted">
@@ -484,26 +509,40 @@ follow-up, out of this task's scope.
             ? 'This charge went through Stripe checkout: the refund issues through Stripe automatically.'
             : 'This charge did not go through Stripe checkout (an imported, PayPal, or check/cash payment): the refund records here only.'}
         </p>
-        <form method="post" action="?/refund" class="flex flex-col gap-3">
+        <form method="post" action="?/refund" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => refundDialog)}>
           <CsrfField />
           <input type="hidden" name="transactionId" value={tx.id} />
           <ul class="flex flex-col gap-2">
             {#each tx.lines as line (line.id)}
+              {@const remainingCents = line.amountCents - line.refundedCents}
               <li class="flex items-center gap-2">
+                <label class="flex items-center gap-2" for={`refund-select-${line.id}`}>
+                  <input
+                    id={`refund-select-${line.id}`}
+                    type="checkbox"
+                    class="checkbox checkbox-sm"
+                    name="lineIds"
+                    value={line.id}
+                    bind:checked={refundSelected[line.id]}
+                    aria-label={`Refund ${LINE_ITEM_LABEL[line.item]} -- ${line.description}`}
+                  />
+                </label>
+                <span class="flex-1 text-sm">
+                  {LINE_ITEM_LABEL[line.item]} &middot; {line.description}
+                  {#if line.refundedCents > 0}
+                    <span class="text-muted">({formatCents(line.refundedCents)} already refunded)</span>
+                  {/if}
+                </span>
+                <label class="sr-only" for={`refund-amount-${line.id}`}>
+                  Refund amount for {LINE_ITEM_LABEL[line.item]}, {line.description}
+                </label>
                 <input
-                  type="checkbox"
-                  class="checkbox checkbox-sm"
-                  name="lineIds"
-                  value={line.id}
-                  bind:checked={refundSelected[line.id]}
-                />
-                <span class="flex-1 text-sm">{LINE_ITEM_LABEL[line.item]} &middot; {line.description}</span>
-                <input
+                  id={`refund-amount-${line.id}`}
                   class="input input-xs w-24"
                   type="number"
                   name="amount-{line.id}"
                   min="0.01"
-                  max={line.amountCents / 100}
+                  max={remainingCents / 100}
                   step="0.01"
                   disabled={!refundSelected[line.id]}
                   bind:value={refundAmounts[line.id]}

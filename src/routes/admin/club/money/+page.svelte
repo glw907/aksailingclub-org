@@ -11,6 +11,8 @@ since (unlike the desk) this screen has no single household in its own URL.
 -->
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { enhance } from '$app/forms';
+  import type { SubmitFunction } from '@sveltejs/kit';
   import type { ActionData, PageData } from './$types';
   import { CsrfField } from '@glw907/cairn-cms/components';
   import { FieldLabel, SelectField } from '@glw907/cairn-cms/admin-fields';
@@ -19,6 +21,18 @@ since (unlike the desk) this screen has no single household in its own URL.
   import type { MembershipTier } from '$admin-club/lib/member-types';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
+
+  /** Matches the household desk's own `closeDialogOnSettle` (`members/[id]/+page.svelte`): keeps
+   *  the modal open with entered values and the inline error on a `fail()`, closes it once the
+   *  action settles with anything else. */
+  function closeDialogOnSettle(dialog: () => HTMLDialogElement | undefined): SubmitFunction {
+    return () => {
+      return async ({ result, update }) => {
+        await update();
+        if (result.type !== 'failure') dialog()?.close();
+      };
+    };
+  }
 
   const cardCls = 'rounded-box border border-[var(--cairn-card-border)] bg-base-100 p-6 shadow-[var(--cairn-shadow)]';
 
@@ -245,11 +259,11 @@ since (unlike the desk) this screen has no single household in its own URL.
   </div>
 {/if}
 
-<dialog bind:this={paymentDialog} class="modal">
+<dialog bind:this={paymentDialog} class="modal" aria-labelledby="money-payment-dialog-title">
   <div class="modal-box">
-    <h2 class="text-lg font-bold">Record a manual payment</h2>
+    <h2 id="money-payment-dialog-title" class="text-lg font-bold">Record a manual payment</h2>
     <p class="py-2 text-sm text-muted">A check, cash, or comp payment; creates the membership and the ledger entry together.</p>
-    <form method="post" action="?/recordPayment" class="flex flex-col gap-3">
+    <form method="post" action="?/recordPayment" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => paymentDialog)}>
       <CsrfField />
       <SelectField label="Household" name="householdId" bind:value={paymentHouseholdId} options={householdOptions} />
       <FieldLabel label="Season">

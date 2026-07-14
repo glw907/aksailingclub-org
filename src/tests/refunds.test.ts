@@ -24,8 +24,8 @@ function joinCharge(overrides: Partial<TimelineTransaction> = {}): TimelineTrans
     refundable: true,
     apiEligible: true,
     lines: [
-      { id: 'line-dues', item: 'dues', description: 'Family Membership -- 2026 season', amountCents: 25000, membershipId: 'ms-1', enrollmentId: null, assignmentId: null },
-      { id: 'line-fee', item: 'class-fee', description: 'Fleet Tune-Up Weekend class fee', amountCents: 10000, membershipId: null, enrollmentId: 'enr-1', assignmentId: null },
+      { id: 'line-dues', item: 'dues', description: 'Family Membership -- 2026 season', amountCents: 25000, membershipId: 'ms-1', enrollmentId: null, assignmentId: null, refundedCents: 0 },
+      { id: 'line-fee', item: 'class-fee', description: 'Fleet Tune-Up Weekend class fee', amountCents: 10000, membershipId: null, enrollmentId: 'enr-1', assignmentId: null, refundedCents: 0 },
     ],
     ...overrides,
   };
@@ -49,7 +49,7 @@ function assetFeeCharge(overrides: Partial<TimelineTransaction> = {}): TimelineT
     mwRef: null,
     refundable: true,
     apiEligible: true,
-    lines: [{ id: 'line-asset', item: 'asset-fee', description: 'Mooring fee -- Buoy M-14', amountCents: 8000, membershipId: null, enrollmentId: null, assignmentId: 'aa-1' }],
+    lines: [{ id: 'line-asset', item: 'asset-fee', description: 'Mooring fee -- Buoy M-14', amountCents: 8000, membershipId: null, enrollmentId: null, assignmentId: 'aa-1', refundedCents: 0 }],
     ...overrides,
   };
 }
@@ -89,7 +89,7 @@ describe('buildRefundPlan', () => {
 
   it('produces no unwind for a donation line', () => {
     const charge = joinCharge({
-      lines: [{ id: 'line-donation', item: 'donation', description: 'Donation', amountCents: 5000, membershipId: null, enrollmentId: null, assignmentId: null }],
+      lines: [{ id: 'line-donation', item: 'donation', description: 'Donation', amountCents: 5000, membershipId: null, enrollmentId: null, assignmentId: null, refundedCents: 0 }],
     });
     const plan = buildRefundPlan(charge, [{ lineId: 'line-donation', amountCents: 5000 }]);
     expect(plan.unwinds).toEqual([]);
@@ -143,6 +143,34 @@ describe('buildRefundPlan', () => {
   it('throws for an unknown line id', () => {
     expect(() => buildRefundPlan(joinCharge(), [{ lineId: 'line-nope', amountCents: 100 }])).toThrow(/carries no line/);
   });
+
+  it('rejects a pick that would push a partially-refunded line past its original amount', () => {
+    // A $150 partial refund of the $250 dues line already landed (refundedCents: 15000); another
+    // $250 must be rejected -- the per-line CUMULATIVE cap, not the line's original amount alone.
+    const charge = joinCharge({
+      lines: [
+        { id: 'line-dues', item: 'dues', description: 'Family Membership -- 2026 season', amountCents: 25000, membershipId: 'ms-1', enrollmentId: null, assignmentId: null, refundedCents: 15000 },
+      ],
+    });
+    expect(() => buildRefundPlan(charge, [{ lineId: 'line-dues', amountCents: 25000 }])).toThrow(/must be between 1 and 10000/);
+  });
+
+  it('still allows a fresh line (refundedCents: 0) to refund to its full original amount', () => {
+    const plan = buildRefundPlan(joinCharge(), [{ lineId: 'line-dues', amountCents: 25000 }]);
+    expect(plan.refundAmountCents).toBe(25000);
+  });
+
+  it('marks the membership refunded when a pick zeroes out a line already partially refunded', () => {
+    // The remaining $100 of a $250 dues line, $150 of which already came back: this pick
+    // completes the full refund across two separate transactions, so the membership unwinds.
+    const charge = joinCharge({
+      lines: [
+        { id: 'line-dues', item: 'dues', description: 'Family Membership -- 2026 season', amountCents: 25000, membershipId: 'ms-1', enrollmentId: null, assignmentId: null, refundedCents: 15000 },
+      ],
+    });
+    const plan = buildRefundPlan(charge, [{ lineId: 'line-dues', amountCents: 10000 }]);
+    expect(plan.unwinds).toEqual([{ kind: 'membership-refunded', membershipId: 'ms-1' }]);
+  });
 });
 
 describe('executeRefund', () => {
@@ -175,6 +203,47 @@ describe('executeRefund', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const txInsert = calls.find((c) => c.sql.startsWith('INSERT INTO transactions'));
     expect(txInsert?.args).toContain('re_test_1');
+  });
+
+  it('carries a deterministic Idempotency-Key on the Stripe refund call, derived from the charge, its refunded-so-far total, and the selection', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 're_test_a' }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 're_test_b' }), { status: 200 }));
+    const { db } = fakeD1();
+
+    await executeRefund(db, { STRIPE_SECRET_KEY: 'sk_test_1' }, assetFeeCharge(), [{ lineId: 'line-asset', amountCents: 8000 }]);
+    const firstHeaders = fetchMock.mock.calls[0][1] as RequestInit;
+    const firstKey = (firstHeaders.headers as Record<string, string>)['Idempotency-Key'];
+    expect(firstKey).toMatch(/^[0-9a-f]{64}$/);
+
+    // Same charge, same refunded-so-far state, same selection: the retry (a double-click, or a
+    // retry after a transient DB failure) must replay the IDENTICAL key so Stripe dedupes it.
+    await executeRefund(db, { STRIPE_SECRET_KEY: 'sk_test_1' }, assetFeeCharge(), [{ lineId: 'line-asset', amountCents: 8000 }]);
+    const secondHeaders = fetchMock.mock.calls[1][1] as RequestInit;
+    const secondKey = (secondHeaders.headers as Record<string, string>)['Idempotency-Key'];
+    expect(secondKey).toBe(firstKey);
+  });
+
+  it('carries a different Idempotency-Key once the charge already carries a refunded-so-far total', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 're_test_a' }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 're_test_b' }), { status: 200 }));
+    const { db } = fakeD1();
+
+    const fresh = assetFeeCharge();
+    const partiallyRefunded = assetFeeCharge({
+      lines: [{ id: 'line-asset', item: 'asset-fee', description: 'Mooring fee -- Buoy M-14', amountCents: 8000, membershipId: null, enrollmentId: null, assignmentId: 'aa-1', refundedCents: 3000 }],
+    });
+
+    await executeRefund(db, { STRIPE_SECRET_KEY: 'sk_test_1' }, fresh, [{ lineId: 'line-asset', amountCents: 5000 }]);
+    const freshKey = ((fetchMock.mock.calls[0][1] as RequestInit).headers as Record<string, string>)['Idempotency-Key'];
+
+    await executeRefund(db, { STRIPE_SECRET_KEY: 'sk_test_1' }, partiallyRefunded, [{ lineId: 'line-asset', amountCents: 5000 }]);
+    const advancedKey = ((fetchMock.mock.calls[1][1] as RequestInit).headers as Record<string, string>)['Idempotency-Key'];
+
+    expect(advancedKey).not.toBe(freshKey);
   });
 
   it('writes nothing to the database when the Stripe refund fails', async () => {

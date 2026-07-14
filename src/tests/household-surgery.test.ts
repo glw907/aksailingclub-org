@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fakeD1 } from './_fake-d1';
-import { buildMergePlan, buildMovePlan } from '$admin-club/lib/household-surgery';
+import { buildMergePlan, buildMovePlan, isUniqueConstraintError } from '$admin-club/lib/household-surgery';
 
 describe('buildMergePlan', () => {
   it('refuses a merge when both households hold a membership for the same season', async () => {
@@ -117,5 +117,19 @@ describe('buildMovePlan', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error('expected ok');
     expect(result.statements).toHaveLength(2);
+  });
+});
+
+describe('isUniqueConstraintError', () => {
+  it('recognizes a raw D1 UNIQUE-constraint failure, the season-conflict race a batch can still hit', () => {
+    expect(isUniqueConstraintError(new Error('UNIQUE constraint failed: memberships.household_id, memberships.season'))).toBe(true);
+  });
+
+  it('answers false for an unrelated error', () => {
+    expect(isUniqueConstraintError(new Error('network timeout'))).toBe(false);
+  });
+
+  it('answers false for a non-Error thrown value', () => {
+    expect(isUniqueConstraintError('some string')).toBe(false);
   });
 });

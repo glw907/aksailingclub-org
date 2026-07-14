@@ -50,9 +50,60 @@ describe('getHouseholdTimeline', () => {
     const [tx] = await getHouseholdTimeline(db, 'hh-1');
     expect(tx).toMatchObject({ id: 'tx-1', kind: 'charge', amountTotalCents: 50000 });
     expect(tx.lines).toEqual([
-      { id: 'line-1', item: 'dues', description: '2026 Family Membership', amountCents: 50000, membershipId: 'ms-1', enrollmentId: null, assignmentId: null },
+      { id: 'line-1', item: 'dues', description: '2026 Family Membership', amountCents: 50000, membershipId: 'ms-1', enrollmentId: null, assignmentId: null, refundedCents: 0 },
     ]);
     expect(calls.find((c) => c.sql.includes('FROM transactions t'))?.sql).toContain('ORDER BY t.occurred_at DESC');
+  });
+
+  it('sums a matching refund line\'s own amount into refundedCents, keyed by item plus domain reference', async () => {
+    const refundRow = {
+      ...CHARGE_ROW,
+      id: 'tx-refund-1',
+      kind: 'refund',
+      refunds_transaction_id: 'tx-1',
+      amount_total_cents: 15000,
+    };
+    const refundLineRow = {
+      id: 'line-refund-1',
+      transaction_id: 'tx-refund-1',
+      item: 'dues',
+      description: 'Refund: 2026 Family Membership',
+      amount_cents: 15000,
+      membership_id: 'ms-1',
+      enrollment_id: null,
+      assignment_id: null,
+    };
+    const { db } = fakeD1({
+      allResults: {
+        'FROM transactions t': [CHARGE_ROW, refundRow],
+        'FROM transaction_lines tl': [LINE_ROW, refundLineRow],
+      },
+    });
+    const [charge] = await getHouseholdTimeline(db, 'hh-1');
+    expect(charge.lines[0].refundedCents).toBe(15000);
+  });
+
+  it('never confuses two different lines that share an item but not a domain reference', async () => {
+    const otherLine = { ...LINE_ROW, id: 'line-2', membership_id: 'ms-2' };
+    const refundRow = { ...CHARGE_ROW, id: 'tx-refund-1', kind: 'refund', refunds_transaction_id: 'tx-1', amount_total_cents: 15000 };
+    const refundLineRow = {
+      id: 'line-refund-1',
+      transaction_id: 'tx-refund-1',
+      item: 'dues',
+      description: 'Refund: some other membership',
+      amount_cents: 15000,
+      membership_id: 'ms-2',
+      enrollment_id: null,
+      assignment_id: null,
+    };
+    const { db } = fakeD1({
+      allResults: {
+        'FROM transactions t': [CHARGE_ROW, refundRow],
+        'FROM transaction_lines tl': [LINE_ROW, otherLine, refundLineRow],
+      },
+    });
+    const [charge] = await getHouseholdTimeline(db, 'hh-1');
+    expect(charge.lines.find((line) => line.id === 'line-1')?.refundedCents).toBe(0);
   });
 
   it('marks a fresh stripe charge refundable and API-eligible', async () => {

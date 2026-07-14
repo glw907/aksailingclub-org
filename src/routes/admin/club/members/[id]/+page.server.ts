@@ -24,7 +24,7 @@ import {
 import { getHouseholdTimeline, type TimelineTransaction } from '$admin-club/lib/money-store';
 import { getHouseholdStanding, type HouseholdStanding } from '$member-auth/lib/standing';
 import { addHouseholdMember, setDirectoryVisibility, type DirectoryVisibility } from '$member-portal/lib/household';
-import { buildMergePlan, buildMovePlan } from '$admin-club/lib/household-surgery';
+import { buildMergePlan, buildMovePlan, isUniqueConstraintError, SEASON_CONFLICT_RACE_MESSAGE } from '$admin-club/lib/household-surgery';
 import { buildManualMembershipPayment, type ManualPaymentSource } from '$admin-club/lib/manual-payment';
 import { executeRefund, type RefundLineSelection } from '$admin-club/lib/refunds';
 import type { CreateCheckoutEnv } from '$admin-club/lib/payments';
@@ -191,7 +191,13 @@ export const actions: Actions = {
         ctx.audit({ action: 'move', entity: 'member', entityId: memberId, detail: `rejected: ${plan.error}` });
         return fail(400, { error: plan.error });
       }
-      await ctx.db.batch(plan.statements);
+      try {
+        await ctx.db.batch(plan.statements);
+      } catch (err) {
+        if (!isUniqueConstraintError(err)) throw err;
+        ctx.audit({ action: 'move', entity: 'member', entityId: memberId, detail: 'rejected: concurrent conflict' });
+        return fail(400, { error: SEASON_CONFLICT_RACE_MESSAGE });
+      }
       ctx.audit({ action: 'move', entity: 'member', entityId: memberId, detail: `to=${targetHouseholdId}` });
       redirect(303, `/admin/club/members/${targetHouseholdId}`);
     },
@@ -216,7 +222,13 @@ export const actions: Actions = {
         ctx.audit({ action: 'merge', entity: 'household', entityId: survivorId, detail: `rejected: conflict seasons ${seasons}` });
         return fail(400, { error: `Both households hold a membership for ${seasons}. Resolve the duplicate season first.` });
       }
-      await ctx.db.batch(plan.statements);
+      try {
+        await ctx.db.batch(plan.statements);
+      } catch (err) {
+        if (!isUniqueConstraintError(err)) throw err;
+        ctx.audit({ action: 'merge', entity: 'household', entityId: survivorId, detail: 'rejected: concurrent season conflict' });
+        return fail(400, { error: SEASON_CONFLICT_RACE_MESSAGE });
+      }
       ctx.audit({ action: 'merge', entity: 'household', entityId: survivorId, detail: `merged=${mergedId}` });
       return { ok: true };
     },

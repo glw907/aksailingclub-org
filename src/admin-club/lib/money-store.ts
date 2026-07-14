@@ -24,6 +24,19 @@ export interface TimelineLine {
   membershipId: string | null;
   enrollmentId: string | null;
   assignmentId: string | null;
+  /** How much of THIS line has already come back via a `refund` transaction that names this
+   *  line's own charge in `refunds_transaction_id`, matched by item and domain reference (or by
+   *  item and description when the line carries no domain reference at all, e.g. a donation). The
+   *  refund engine's own per-line cumulative cap (`refunds.ts`'s `buildRefundPlan`) and the refund
+   *  dialog's own per-line amount ceiling both read this instead of the line's original
+   *  `amountCents` alone, so a second refund against an already-partially-refunded line can never
+   *  push the total past what was actually charged. Always 0 on a `refund`/`void` row's own
+   *  lines (nothing refunds a refund). Computed off whatever refund transactions the SAME query
+   *  already fetched (`toTimelineTransactions`'s own header): complete for `getHouseholdTimeline`
+   *  (a refund always shares its original charge's `household_id`, `refunds.ts`'s own
+   *  `buildRefundPlan`, so a household-scoped read always carries a charge's full refund history
+   *  alongside it), an approximation bounded by the fetch window for `listRecentTransactions`. */
+  refundedCents: number;
 }
 
 /** One `transactions` row plus its lines, the shape every screen and the refund engine (Task 6)
@@ -100,8 +113,21 @@ const REFUNDED_SO_FAR_SQL = `(
   WHERE r.refunds_transaction_id = t.id AND r.kind = 'refund'
 ) AS refunded_so_far`;
 
+type UnrefundedTimelineLine = Omit<TimelineLine, 'refundedCents'>;
+
+/** The identity a refund line matches its own original line by: the item plus whichever single
+ *  domain reference the line carries (`ledger.ts`'s own "at most one domain reference" invariant
+ *  means at most one of the three is ever set), or the item plus description when the line
+ *  carries no domain reference at all (a donation, say). */
+function lineMatchKey(line: UnrefundedTimelineLine): string {
+  if (line.membershipId) return `${line.item}:m:${line.membershipId}`;
+  if (line.enrollmentId) return `${line.item}:e:${line.enrollmentId}`;
+  if (line.assignmentId) return `${line.item}:a:${line.assignmentId}`;
+  return `${line.item}:d:${line.description}`;
+}
+
 function toTimelineTransactions(txRows: TransactionRawRow[], lineRows: TransactionLineRawRow[]): TimelineTransaction[] {
-  const linesByTransaction = new Map<string, TimelineLine[]>();
+  const linesByTransaction = new Map<string, UnrefundedTimelineLine[]>();
   for (const line of lineRows) {
     const list = linesByTransaction.get(line.transaction_id) ?? [];
     list.push({
@@ -116,25 +142,45 @@ function toTimelineTransactions(txRows: TransactionRawRow[], lineRows: Transacti
     linesByTransaction.set(line.transaction_id, list);
   }
 
-  return txRows.map((row) => ({
-    id: row.id,
-    kind: row.kind,
-    source: row.source,
-    occurredAt: row.occurred_at,
-    amountTotalCents: row.amount_total_cents,
-    feeCents: row.fee_cents,
-    processorRef: row.processor_ref,
-    refundsTransactionId: row.refunds_transaction_id,
-    householdId: row.household_id,
-    householdName: row.household_name,
-    payerName: row.payer_name,
-    payerEmail: row.payer_email,
-    memo: row.memo,
-    mwRef: row.mw_ref,
-    lines: linesByTransaction.get(row.id) ?? [],
-    refundable: row.kind === 'charge' && row.refunded_so_far < row.amount_total_cents,
-    apiEligible: isApiEligible(row.source, row.mw_ref, row.processor_ref),
-  }));
+  // Sum every refund transaction's own lines (in this same result set) by the charge they refund
+  // and the match key of the line they refund, so each original line can look its own
+  // refunded-so-far up by one map lookup below.
+  const refundedByCharge = new Map<string, Map<string, number>>();
+  for (const row of txRows) {
+    if (row.kind !== 'refund' || !row.refunds_transaction_id) continue;
+    const perCharge = refundedByCharge.get(row.refunds_transaction_id) ?? new Map<string, number>();
+    for (const refundLine of linesByTransaction.get(row.id) ?? []) {
+      const key = lineMatchKey(refundLine);
+      perCharge.set(key, (perCharge.get(key) ?? 0) + refundLine.amountCents);
+    }
+    refundedByCharge.set(row.refunds_transaction_id, perCharge);
+  }
+
+  return txRows.map((row) => {
+    const refundedForThisCharge = refundedByCharge.get(row.id);
+    return {
+      id: row.id,
+      kind: row.kind,
+      source: row.source,
+      occurredAt: row.occurred_at,
+      amountTotalCents: row.amount_total_cents,
+      feeCents: row.fee_cents,
+      processorRef: row.processor_ref,
+      refundsTransactionId: row.refunds_transaction_id,
+      householdId: row.household_id,
+      householdName: row.household_name,
+      payerName: row.payer_name,
+      payerEmail: row.payer_email,
+      memo: row.memo,
+      mwRef: row.mw_ref,
+      lines: (linesByTransaction.get(row.id) ?? []).map((line) => ({
+        ...line,
+        refundedCents: refundedForThisCharge?.get(lineMatchKey(line)) ?? 0,
+      })),
+      refundable: row.kind === 'charge' && row.refunded_so_far < row.amount_total_cents,
+      apiEligible: isApiEligible(row.source, row.mw_ref, row.processor_ref),
+    };
+  });
 }
 
 /** Every ledger transaction for one household, with its lines, newest first: the household desk's

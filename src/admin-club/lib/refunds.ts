@@ -11,7 +11,7 @@
 import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types';
 import type { TimelineLine, TimelineTransaction } from './money-store';
 import { buildTransactionStatements, type TransactionHeader, type TransactionLineInput } from './ledger';
-import { issueStripeRefund, type CreateCheckoutEnv } from './payments';
+import { buildRefundIdempotencyKey, issueStripeRefund, type CreateCheckoutEnv } from './payments';
 import { toSqliteDatetime } from './offers';
 
 /** One line the admin picked to refund, and how much of it: `amountCents` may be less than the
@@ -57,10 +57,14 @@ function findLine(charge: TimelineTransaction, lineId: string): TimelineLine {
  * or payment intent this site's own checkout minted, never an imported MW row, a PayPal row, or a
  * check/cash row). The refund transaction's lines mirror the selected lines' own item and domain
  * reference, so the ledger's sum invariant (`buildTransactionStatements`) holds by construction
- * once a caller runs them. A dues line unwinds the membership only when it refunds IN FULL (the
- * design doc's own "a partial dues refund leaves the membership standing"); a class-fee or
- * asset-fee line always unwinds, full or partial, since there is no partial-seat or partial-fee
- * concept to preserve.
+ * once a caller runs them. Each selected amount is capped at the line's own REMAINING balance
+ * (`line.amountCents - line.refundedCents`, `money-store.ts`'s own per-line cumulative tracking),
+ * never the line's original `amountCents` alone, so a second refund against an already-partially-
+ * refunded line can never push the total past what was actually charged. A dues line unwinds the
+ * membership only when this pick zeroes out its remaining balance -- a single-shot full refund or
+ * the pick that completes a prior partial one -- the design doc's own "a partial dues refund
+ * leaves the membership standing"; a class-fee or asset-fee line always unwinds, full or partial,
+ * since there is no partial-seat or partial-fee concept to preserve.
  */
 export function buildRefundPlan(charge: TimelineTransaction, selection: RefundLineSelection[]): RefundPlan {
   if (charge.kind !== 'charge') throw new Error(`refunds: transaction ${charge.id} is not a charge`);
@@ -68,15 +72,16 @@ export function buildRefundPlan(charge: TimelineTransaction, selection: RefundLi
   if (selection.length === 0) throw new Error('refunds: at least one line must be selected');
 
   const seenLineIds = new Set<string>();
-  const picks: Array<{ line: TimelineLine; amountCents: number }> = [];
+  const picks: Array<{ line: TimelineLine; amountCents: number; remainingCents: number }> = [];
   for (const pick of selection) {
     if (seenLineIds.has(pick.lineId)) throw new Error(`refunds: line ${pick.lineId} selected more than once`);
     seenLineIds.add(pick.lineId);
     const line = findLine(charge, pick.lineId);
-    if (pick.amountCents <= 0 || pick.amountCents > line.amountCents) {
-      throw new Error(`refunds: refund amount for "${line.description}" must be between 1 and ${line.amountCents} cents`);
+    const remainingCents = line.amountCents - line.refundedCents;
+    if (pick.amountCents <= 0 || pick.amountCents > remainingCents) {
+      throw new Error(`refunds: refund amount for "${line.description}" must be between 1 and ${remainingCents} cents`);
     }
-    picks.push({ line, amountCents: pick.amountCents });
+    picks.push({ line, amountCents: pick.amountCents, remainingCents });
   }
 
   const refundAmountCents = picks.reduce((total, pick) => total + pick.amountCents, 0);
@@ -91,8 +96,8 @@ export function buildRefundPlan(charge: TimelineTransaction, selection: RefundLi
   }));
 
   const unwinds: UnwindAction[] = [];
-  for (const { line, amountCents } of picks) {
-    if (line.item === 'dues' && line.membershipId && amountCents === line.amountCents) {
+  for (const { line, amountCents, remainingCents } of picks) {
+    if (line.item === 'dues' && line.membershipId && amountCents === remainingCents) {
       unwinds.push({ kind: 'membership-refunded', membershipId: line.membershipId });
     } else if (line.item === 'class-fee' && line.enrollmentId) {
       unwinds.push({ kind: 'drop-enrollment', enrollmentId: line.enrollmentId });
@@ -155,6 +160,13 @@ export type ExecuteRefundResult = { ok: true; transactionId: string } | { ok: fa
  * validation error from {@link buildRefundPlan} (a stale line id, an out-of-range amount) is
  * caught here and turned into the same `{ ok: false }` shape a Stripe refusal produces, so a
  * caller (the household desk's `?/refund` action) has one failure shape to handle.
+ *
+ * The API-mode Stripe call carries its own {@link buildRefundIdempotencyKey}-derived key, built
+ * from `charge`'s own id, the sum of every one of `charge`'s lines' own `refundedCents` (the
+ * charge's full refunded-so-far total, read BEFORE this attempt), and `selection` itself: the
+ * same inputs on a retry (a double-click, or a retry after this call's own later `db.batch()`
+ * failed) reproduce the identical key, so Stripe answers with the SAME refund object rather than
+ * creating a second one (that function's own header states the self-healing property this buys).
  */
 export async function executeRefund(
   db: D1Database,
@@ -172,7 +184,9 @@ export async function executeRefund(
   let header = plan.header;
   if (plan.mode === 'api') {
     if (!charge.processorRef) return { ok: false, error: 'This charge carries no processor reference to refund.' };
-    const refund = await issueStripeRefund(env, { processorRef: charge.processorRef, amountCents: plan.refundAmountCents });
+    const refundedSoFarCents = charge.lines.reduce((total, line) => total + line.refundedCents, 0);
+    const idempotencyKey = await buildRefundIdempotencyKey(charge.id, refundedSoFarCents, selection);
+    const refund = await issueStripeRefund(env, { processorRef: charge.processorRef, amountCents: plan.refundAmountCents, idempotencyKey });
     if (!refund.ok) return { ok: false, error: refund.error };
     header = { ...header, processorRef: refund.refundId };
   }

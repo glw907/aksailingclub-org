@@ -24,6 +24,26 @@ export interface MoveRefusal {
   error: string;
 }
 
+/** The message a merge's own pre-check (`buildMergePlan`'s `MergeConflict` branch) already builds
+ *  from the specific overlapping seasons it found; also what a caller shows when the identical
+ *  `UNIQUE(household_id, season)` constraint fires DURING the batch instead, a race the pre-check
+ *  cannot close on its own (a season row inserted concurrently, after the check ran clean but
+ *  before the batch committed) -- {@link isUniqueConstraintError}'s own header. Generic on
+ *  purpose: the race path never learns which season collided, only that one did. */
+export const SEASON_CONFLICT_RACE_MESSAGE = 'Both households hold a membership for the same season. Resolve the duplicate season first.';
+
+/**
+ * Whether `err` is a raw D1 UNIQUE-constraint failure, `enrollments.ts`'s own `isUniqueViolation`
+ * substring convention (matched loosely here, with no table name, since the caller already knows
+ * from context which constraint its own batch could plausibly trip). The desk's merge and move
+ * actions both wrap their own `db.batch()` call with this so a race that slips past
+ * `buildMergePlan`'s pre-check surfaces the design's own {@link SEASON_CONFLICT_RACE_MESSAGE}
+ * instead of a raw database error reaching the admin.
+ */
+export function isUniqueConstraintError(err: unknown): boolean {
+  return err instanceof Error && err.message.includes('UNIQUE');
+}
+
 interface HouseholdMembershipSeasonRow {
   household_id: string;
   season: number;
