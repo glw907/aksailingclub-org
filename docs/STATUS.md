@@ -1,20 +1,44 @@
 # asc-site status
 
-**INITIATIVE 2 (unified-signup) BRAINSTORMED, SPEC + PLAN COMMITTED, AWAITING GEOFF'S
-REVIEW (2026-07-13, the program's second session): spec
-`docs/2026-07-13-unified-signup-design.md`, plan `docs/plans/2026-07-13-unified-signup.md`.
-Rulings banked in the spec: classes members-only (non-member pivots to join), ONE
-combined join checkout (dues + uncovered class-fee lines; family multi-seat is the
-driving case), young-adult = under 26 with 1 credit, purchaser-only waiver at join, no
-board email anywhere in the join story (board notified, never a gate). CORRECTION
-LANDED (e16054f + memory): the 2026-07-07 craft sweep had invented a board-approval
-gate on join.md/renewing-your-membership.md; the live process is MW self-serve, active
-immediately, background review — both pages restored, and member-facing process claims
-now verify against the legacy live site. Execution is Geoff-pre-authorized as a
-workflow (serial Sonnet implementers, conductor reviews, content task conductor-owned,
-0022 scratch-proof + live apply conductor-owned). NEXT ACTION: Geoff reviews spec+plan;
-on approval, run the workflow (Tasks 1-8), then the settle (reviewer fan-out, e2e +
-visual baselines, dev deploy, Geoff's before/after).**
+**INITIATIVE 2 (unified-signup) IS BUILT, REVIEWED, AND ON DEV AWAITING GEOFF'S
+BEFORE/AFTER (2026-07-13→14, the program's second session; spec
+`docs/2026-07-13-unified-signup-design.md` + plan `docs/plans/2026-07-13-unified-signup.md`,
+both implemented). What landed: the `src/member-signup/lib/` pure engine (validate /
+price / build; MAX_CLASS_PICKS=8), the fifth payment kind `join` (multi-line
+createCheckout; `reconcileJoin` ATOMIC on the donation pattern — claim inside one
+db.batch with the flip, credit grant/redemptions, fee_paid flips, and the ledger lines;
+webhook answers 500-for-retry on join+donation; ledger cents SNAPSHOTTED into session
+metadata so lines sum to Stripe's total by construction), migration 0022 (join_welcome +
+board_join_notice templates AND the processed_stripe_sessions.kind CHECK widened —
+fixing a LATENT LIVE DEFECT where 'donation' was never CHECK-valid on real D1;
+scratch-proven, applied LIVE + local), the public `/join/apply` door (tier prices from
+settings, family roster, per-member class picks, running total, waiver, Turnstile,
+fireweed submit), the class-door standing gate (current/grace proceed; no-match pivots
+into join with the class carried; lapsed gets the renewal magic link), portal renew LIVE
+(tier picker, next-unclaimed-season mint, dues checkout; the reminder deep-link works)
+plus the asset-fee pay door (incl. a real pre-existing season-source bug fix), the
+`membership-pricing` inline directive replacing every hand-typed tier dollar, the
+content pass (join/renewing/class-registration on the live doors; fresh-context content
+review, original club copy ruled standing), and the membershipworks directive retired.
+SECURITY AMENDMENT (spec 2026-07-14): the unauthenticated welcome-back form was
+REPLACED by a requestMemberLink magic-link handoff after the Opus auth lens showed
+pre-payment writes into a victim household + roster/minor-name disclosure; a known-paid
+email at either public door now gets "check your email" into the portal. Build: the
+6-task Sonnet workflow + 3 Opus lenses (~1.7M tokens), two conductor-spec'd fix rounds,
+simplifier (one finding — the arc judged clean), e2e (join happy path, class-door
+pivot; portal-renew e2e skipped: no member-auth login helper exists) + `/join/apply` in
+the five-viewport visual suite + ALL 15 stale round-4/5 baselines regenerated against
+the ratified rendering (conductor render-read; events h1 assertion updated for the
+promise hero). Gate at close: check 0/0 (813 files), 1050 tests, build green, e2e
+27/27. Budgets: ~3.1M subagent tokens + the Fable main loop; 2 question rounds to
+Geoff, 1 Geoff-initiated correction (the invented board-approval copy, e16054f +
+memory). Roadmap: `class-management` and `season-rollover` logged (Geoff's rulings;
+rollover is sitewide, ops startNewSeason is the precedent). NEXT: Geoff's before/after
+on dev (join.md → /join/apply, class-door pivot, portal renew card), his verdict on the
+welcome-back amendment + the fireweed submit; then INITIATIVE 3 membership-admin (fresh
+session per the ruling). Known debt: GitHub Actions billing still blocked (deploys stay
+manual); Turnstile enforcement + rate limiting ride payments-live-smoke; the
+education-round-4 branch still owes its merge to main at Geoff's go.**
 
 **PRIOR (INITIATIVE 1, money-ledger) IS COMPLETE AND LIVE (2026-07-13, the program's first
 session): the MW REPLACEMENT PROGRAM is on ROADMAP.md (Geoff-approved; one go-live —
