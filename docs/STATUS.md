@@ -1,20 +1,38 @@
 # asc-site status
 
-**THE MW REPLACEMENT PROGRAM IS APPROVED AND EXECUTING (2026-07-13, follow-on session):
-six initiatives on ROADMAP.md (Geoff-approved; one go-live — the apex cutover waits for
-membership signup/renewal/admin, MW cancels right after): money-ledger → unified-signup →
-membership-admin → segment-email → payments-live-smoke → mw-cutover; qbo-integration
-narrowed to the sync (the ledger table moved into initiative 1). Scope rulings: email =
-announce + segments (not a campaign tool). INITIATIVE 1 (money-ledger) IS IN FLIGHT:
-spec at docs/2026-07-13-money-ledger-design.md, plan at
-docs/plans/2026-07-13-money-ledger.md (Tasks 1-4 workflow-dispatched Sonnet builds:
-migration 0021 transactions/transaction_lines, ledger.ts seam, reconciler wiring + the
-donation fourth kind, mw-ledger.mjs backfill; Task 5 conductor-owned live DB ops).
-Sessions clear context between initiatives (Geoff's ruling this session). On resume
-mid-initiative: read the plan, check `git log` for which tasks committed, continue from
-the first uncommitted task. NEXT AFTER INITIATIVE 1: the unified-signup brainstorm
-(Fable-authorized), then initiative 3; the round-5 settle and admin review round remain
-queued from the prior entries.**
+**INITIATIVE 1 (money-ledger) IS COMPLETE AND LIVE (2026-07-13, the program's first
+session): the MW REPLACEMENT PROGRAM is on ROADMAP.md (Geoff-approved; one go-live —
+apex cutover waits for membership signup/renewal/admin, MW cancels right after):
+money-ledger → unified-signup → membership-admin → segment-email → payments-live-smoke →
+mw-cutover; qbo-integration narrowed to the sync. Rulings this session: email = announce
++ segments (not a campaign tool); membership-admin grows user/role management (club roles
++ cairn editors, screen home TBD site-vs-cairn); SESSIONS CLEAR CONTEXT BETWEEN
+INITIATIVES. What landed (spec docs/2026-07-13-money-ledger-design.md, plan
+docs/plans/2026-07-13-money-ledger.md, both marked by this entry as implemented):
+migration 0021 (transactions + transaction_lines, scratch-proven on a real disposable D1
+then APPLIED LIVE), ledger.ts (the invariant-enforcing write seam), the three reconcilers
+now write ledger rows after their guarded flips, DONATIONS PERSIST as a fourth payment
+kind (atomic claim+ledger batch; the webhook answers 500-for-retry on donations only —
+they have no domain row to reconcile by hand), and mw-ledger.mjs BACKFILLED ALL 401 MW
+accounting rows to the live asc-club (401 transactions / 461 lines; zero sum-invariant
+violations; idempotent — post-apply dry-run plans exactly zero). Built by a workflow (4
+serial Sonnet implementers + cf-d1 and money-security Opus lenses) + three conductor fix
+rounds off the real dry-runs (cents parsing for fractional fees; blank-account rows
+import with null household — two were real wedding donations; all-comped list-price
+fallback to classes.fee; partial-refund matching across a Reference typo; repair
+detection keys on the sum invariant, not line absence). Live-data facts for the record:
+19 comped memberships legitimately carry no dues line (no money moved); the Joseph
+Oliver two-tier 2024 ruling now shows honestly as TWO $250 charges linked to one
+membership (verify.sql reports, correctly); memberships' real column is price_paid
+(snake_case — an earlier explorer summary said pricePaid; verified against live schema).
+Pre-backfill backup at ~/.local/asc-data/backups/asc-club-2026-07-13-pre-ledger.sql.
+Gate at close: check 0/0 (792 files), 973/973 tests, build green. Budgets: ~1.44M
+subagent tokens + the Fable main loop; 2 questions to Geoff (finish line, email scope),
+0 corrections. NEXT SESSION (fresh context, per the ruling): INITIATIVE 2, the
+unified-signup brainstorm (Fable-authorized; the education arc log holds the framing;
+ROADMAP.md's unified-signup entry is the scope) — the dues checkout call sites land
+there against the now-ledger-complete seams. The round-5 settle and admin review round
+remain queued from the prior entries.**
 
 **PRIOR (THE MEMBERSHIPWORKS DATA IMPORT IS LIVE, 2026-07-13 night session, Geoff live throughout):
 the real asc-club now holds the club's COMPLETE MW record — 148 households, 285 members (all

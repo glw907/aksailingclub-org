@@ -26,7 +26,7 @@ represent either.
 Naming follows the repo's newer migrations (snake_case, TEXT uuid primary keys, sqlite
 `datetime('now')` timestamps). All amounts are **integer cents**: Stripe is cents-native
 and processor fees are fractional dollars. Existing dollar-denominated columns
-(`asset_payments.amount`, `memberships.pricePaid`) are untouched; conversion happens at
+(`asset_payments.amount`, `memberships.price_paid`) are untouched; conversion happens at
 the write sites.
 
 ### `transactions` — one row per money event
@@ -151,7 +151,7 @@ Scope — all 401 rows of the canon accounting export (Apr 2024 – Jul 2026):
 
 `verify.sql` cross-checks: row counts per category above; every membership row with
 `paid_at` has exactly one dues line; per-membership dues totals reconcile against
-`memberships.pricePaid` (dollars-to-cents); the lines-sum-to-total invariant holds for
+`memberships.price_paid` (dollars-to-cents); the lines-sum-to-total invariant holds for
 every transaction.
 
 Unmatchable rows (a transaction whose account resolves to no imported member) are

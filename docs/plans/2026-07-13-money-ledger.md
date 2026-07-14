@@ -194,7 +194,7 @@ absence of ledger writes.
 - Rollback deletes exactly the imported rows (`WHERE mw_ref IS NOT NULL`), lines first.
 - verify.sql implements the spec's cross-checks: per-category row counts, every paid
   membership has exactly one dues line, dues totals reconcile to
-  `memberships.pricePaid` (dollars-to-cents), lines-sum-to-total for every transaction.
+  `memberships.price_paid` (dollars-to-cents), lines-sum-to-total for every transaction.
 - Test fixtures cover: a membership bundle with an asset add-on line, a comp
   (zero-total, negative discount line), a refund linked to its charge, a void, a
   donation, and an unmatchable row refused.
