@@ -5,8 +5,9 @@ session): the MW REPLACEMENT PROGRAM is on ROADMAP.md (Geoff-approved; one go-li
 apex cutover waits for membership signup/renewal/admin, MW cancels right after):
 money-ledger → unified-signup → membership-admin → segment-email → payments-live-smoke →
 mw-cutover; qbo-integration narrowed to the sync. Rulings this session: email = announce
-+ segments (not a campaign tool); membership-admin grows user/role management (club roles
-+ cairn editors, screen home TBD site-vs-cairn); SESSIONS CLEAR CONTEXT BETWEEN
++ segments (not a campaign tool); membership and editor/admin systems are FULLY SEPARATE
+(club-roles UI stays in membership-admin here; cairn editor/role UI ruled upstream —
+Geoff is taking that work in the cairn-cms repo); SESSIONS CLEAR CONTEXT BETWEEN
 INITIATIVES. What landed (spec docs/2026-07-13-money-ledger-design.md, plan
 docs/plans/2026-07-13-money-ledger.md, both marked by this entry as implemented):
 migration 0021 (transactions + transaction_lines, scratch-proven on a real disposable D1
