@@ -1,14 +1,67 @@
 # asc-site status
 
-**INITIATIVE 3 (membership-admin) IS IN FLIGHT (2026-07-14, this session): spec
-`docs/2026-07-14-membership-admin-design.md` (Geoff-approved; rulings: one
-household-grouped Members screen + a Money & Renewals view, member-first search,
-Stripe-API refunds marking `refunded_at` and never deleting history, household
-merge/move in scope, no renewal-chase send action) + plan
-`docs/plans/2026-07-14-membership-admin.md` (8 tasks, workflow-executed on branch
-feat/membership-admin; Geoff authorized run-to-merge including push and queueing the
-next initiative). If this session crashed: resume from the plan. Migration 0023 applies
-LOCAL/scratch only during tasks; the live apply is a conductor close-ritual step.**
+**INITIATIVE 3 (membership-admin) IS COMPLETE, MERGED TO MAIN (22c10b0), AND ON DEV
+(2026-07-14, the program's third session). Spec `docs/2026-07-14-membership-admin-design.md`
++ plan `docs/plans/2026-07-14-membership-admin.md`, both implemented. What landed: the
+household-grouped Members screen (member-first search with matched-chip highlight,
+standing badges incl. grace, comp/discount rendered honestly, stale-asset warning), the
+household desk (roster CRUD with normalization, membership history with tier
+change/refund, money timeline, assets; add-household walk-up door; move member with
+primary reassignment; merge with season-conflict refusal), Money & Renewals
+(/admin/club/money: KPI grid, read-only renewal candidates, attention list,
+season-flat table, manual check/cash/comp payments), the refund engine (Stripe API
+refunds with deterministic Idempotency-Key + per-line CUMULATIVE caps off
+refunded-so-far; record-only path for MW/PayPal/check; unwinds: refunded_at mark /
+enrollment drop / asset-fee unflip; Stripe-failure-writes-nothing), standing unified in
+member-auth/lib/standing.ts (household-keyed, refund-aware; doors + admin share it;
+renewal reclaims refunded seasons), the live signup-review queue
+(signup_review_resolutions; announcements repointed to real segments), demo-members.ts
+DELETED, and the REMINDER-BLAST GUARD (10-day staleness cutoff in both due-selectors;
+50-send per-tick shared budget with a send_cap_hit audit row; renewal markers now
+cycle-keyed on expires_on). Migrations 0023+0024 scratch-proven, applied LIVE, verified
+(240 markers backfilled, zero empty). Build: 8-task Sonnet workflow + 3 Opus lenses
+(~1.84M tokens) + one conductor-spec'd fix round + the guard rider + simplifier (one
+dead-code removal); conductor render-read on a synthetic seed caught 3 display defects,
+fixed (formatCivilDate datetime tolerance, date-shaped paid_at writes, KPI grid — NOTE:
+DaisyUI's stats component CSS is NOT in this project's compiled set). Gate at close:
+check 0/0 (831 files), 1138 tests, build green, e2e 27/27 (e2e needs `npm run
+media:seed` after any .wrangler/state wipe or the visual specs fail on missing photos).
+Budgets: ~2.9M subagent tokens + the Fable main loop; 3 question rounds to Geoff
+pre-execution, 1 mid-flight correction (I claimed Tidy fixed before verifying the key
+itself — the claim-without-live-proof lesson). Known debt: admin e2e still wants an
+editor-auth login helper (the render-read session-mint recipe in this entry's session
+is the seed of one); Turnstile/rate-limit rides payments-live-smoke; deploys stay
+manual (Actions billing).
+THE DAY'S OPERATIONAL ARC (same session, alongside the build): (1) the post-import
+REMINDER BLAST (first cron tick after the MW import fired 655 catch-up sends; 471
+quota-failed, 184 delivered to 59 members) — root-caused, cron trigger REMOVED from the
+worker via API and commented out of wrangler.toml (re-enable = explicit mw-cutover step,
+now gated on the blast guard above); (2) the APOLOGY SEND queued for 07-15 09:03 via
+self-deleting crontab (~/.local/asc-data/send-apology-2026-07-15.mjs, idempotent,
+throttle-retrying, FROM Geoff Wright <geoff@907.life>, 59 recipients) + a 09:21
+in-session verifier (if that session died: check the JSONL log beside the script,
+re-run --send if needed, record rows into email_log template_id 'migration_apology');
+(3) the legacy live site's EMAIL MIGRATION DEPLOYED (Resend→CF; the committed-but-
+blocked change shipped manually with the full pipeline replicated; uptime worker too;
+RESEND fully retired: worker secrets, stores, sync routing, health checks, and the six
+Resend DNS records + apex SPF include swept); (4) CLOUDFLARE TOKEN CONSOLIDATED to one
+("Cloudflare Admin 2026-07"): the old token had NO DNS scope anywhere (docs claimed
+otherwise — corrected; past "DNS" changes were product-API side effects), dashboard
+edits to it silently failed, so a fresh full-scope token was minted and rotated through
+the age store + 4 GH repos; CF_ZT_TOKEN retired; scope truth now lives ONLY in
+~/.claude/docs/cloudflare-estate-inventory.md (all project docs repointed; the broken
+`source ~/.bashrc` token recipe fixed in 3 repos); (5) the ANTHROPIC_API_KEY was found
+REVOKED (via cairn Tidy failing on asc-site — which also never had the key routed);
+new key minted, validated live, rotated to asc-site + ecxc workers; Tidy healthy.
+NEXT SESSION (fresh context, per the ruling): INITIATIVE 4, segment-email — read this
+entry + ROADMAP.md's segment-email entry, then brainstorm. Scope ruled 2026-07-13:
+announce stays; add segment targeting (current, lapsed, class roster, instructors) and
+compose-without-a-post, on the email-templates/log substrate; the segments now exist
+live (standing.ts + the announcements repoint). The staff-roles collapse onto cairn's
+editor-roles seam STILL WAITS for the cairn release (consumer brief:
+docs/2026-07-13-cairn-editor-roles-consumer-brief.md) and lands as its own follow-up
+pass. Also queued: Geoff's dev walkthrough of the three new screens (his before/after
+gate), and tomorrow's apology-send verification.**
 
 **PRIOR (INITIATIVE 2, unified-signup) IS BUILT, REVIEWED, AND ON DEV AWAITING GEOFF'S
 BEFORE/AFTER (2026-07-13→14, the program's second session; spec

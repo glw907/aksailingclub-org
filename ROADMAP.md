@@ -31,8 +31,12 @@ program's centerpiece; Geoff authorized Fable time for its brainstorm. Builds on
 
 ## Planned
 
-### Members & Memberships admin on live data `membership-admin`
-Swap the admin members screens' demo fixtures for the real 285-member D1 and settle
+### Members & Memberships admin on live data `membership-admin` — DONE 2026-07-14
+Shipped (merge 22c10b0; spec docs/2026-07-14-membership-admin-design.md). The one piece
+deliberately still open: the staff-roles collapse onto cairn's editor-roles seam, which
+waits for the cairn release and lands as its own follow-up pass (the consumer brief is
+the contract). Original scope, for the record: swap the admin members screens' demo
+fixtures for the real 285-member D1 and settle
 the screen-shape question (two screens vs. one household-grouped screen plus a
 money/renewals view) in its design. Adds the missing CRUD: manual payments
 (check/cash/comp), tier changes, archive, directory-visibility management,
