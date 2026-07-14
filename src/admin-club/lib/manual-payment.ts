@@ -57,11 +57,11 @@ export async function buildManualMembershipPayment(db: D1Database, input: Manual
   const membershipStatement = existing
     ? db
         .prepare(
-          "UPDATE memberships SET tier = ?1, price_paid = ?2, paid_at = datetime('now'), stripe_ref = NULL, refunded_at = NULL WHERE id = ?3",
+          "UPDATE memberships SET tier = ?1, price_paid = ?2, paid_at = date('now'), stripe_ref = NULL, refunded_at = NULL WHERE id = ?3",
         )
         .bind(input.tier, priceDollars, membershipId)
     : db
-        .prepare("INSERT INTO memberships (id, household_id, season, tier, price_paid, paid_at) VALUES (?1, ?2, ?3, ?4, ?5, datetime('now'))")
+        .prepare("INSERT INTO memberships (id, household_id, season, tier, price_paid, paid_at) VALUES (?1, ?2, ?3, ?4, ?5, date('now'))")
         .bind(membershipId, input.householdId, input.season, input.tier, priceDollars);
 
   const { statements: ledgerStatements } = buildTransactionStatements(

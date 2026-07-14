@@ -32,7 +32,10 @@ const civilDateFmt = new Intl.DateTimeFormat(undefined, { year: 'numeric', month
  *  for a date that simply hasn't happened). */
 export function formatCivilDate(iso: string | null, fallback = 'Not yet'): string {
   if (!iso) return fallback;
-  const parsed = new Date(`${iso}T00:00:00`);
+  // Some writers store a full SQLite datetime ("2026-06-14 19:22:57"); the civil-date
+  // portion is the display contract either way.
+  const civil = iso.slice(0, 10);
+  const parsed = new Date(`${civil}T00:00:00`);
   return Number.isNaN(parsed.getTime()) ? iso : civilDateFmt.format(parsed);
 }
 

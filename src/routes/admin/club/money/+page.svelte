@@ -97,23 +97,25 @@ since (unlike the desk) this screen has no single household in its own URL.
   <p class="{cardCls} text-center text-sm text-warning">{data.error}</p>
 {:else}
   <div class="flex flex-col gap-6">
-    <div class="stats stats-vertical lg:stats-horizontal w-full rounded-box border border-[var(--cairn-card-border)] bg-base-100 shadow-[var(--cairn-shadow)]">
-      <div class="stat">
+    <!-- A plain grid, not DaisyUI stats: the stats component CSS is not part of this
+         project's compiled set, so those classes render inert. -->
+    <div class="grid w-full grid-cols-2 gap-6 rounded-box border border-[var(--cairn-card-border)] bg-base-100 p-6 shadow-[var(--cairn-shadow)] xl:grid-cols-4">
+      <div>
         <div class={HEADER_CELL}>Current households</div>
         <div class="stat-value text-xl">{data.overview.currentHouseholds} / {data.overview.totalHouseholds}</div>
         <div class="stat-desc">Paid for {data.currentSeason}</div>
       </div>
-      <div class="stat">
+      <div>
         <div class={HEADER_CELL}>Dues collected</div>
         <div class="stat-value text-xl">{formatDollars(data.overview.duesCollected)}</div>
         <div class="stat-desc">{data.currentSeason} season</div>
       </div>
-      <div class="stat">
+      <div>
         <div class={HEADER_CELL}>Renewal candidates</div>
         <div class="stat-value text-xl" class:text-warning={data.overview.renewalCandidates > 0}>{data.overview.renewalCandidates}</div>
         <div class="stat-desc">Lapsed since {data.currentSeason - 1}</div>
       </div>
-      <div class="stat">
+      <div>
         <div class={HEADER_CELL}>Attention</div>
         <div class="stat-value text-xl" class:text-warning={data.overview.attentionCount > 0}>{data.overview.attentionCount}</div>
         <div class="stat-desc">Active assets, no current membership</div>
