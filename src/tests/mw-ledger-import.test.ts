@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   buildListPriceIndex,
+  buildRepairLineStatements,
   buildSubtotalLines,
   buildTransactionInsertStatements,
   classifyKind,
@@ -11,7 +12,9 @@ import {
   formatReport,
   linkDomainRows,
   linkRefunds,
+  parseMoneyToCents,
   planMwLedgerImport,
+  planRepairs,
   planTransactionRow,
 } from '../../scripts/import/mw-ledger.mjs';
 import { RowRefusedError, parseMwCsv } from '../../scripts/import/mw-members.mjs';
@@ -41,6 +44,8 @@ function existingState() {
     memberships: [{ id: 'membership-1', householdId: 'household-1', paidAt: '2026-01-10', pricePaid: 150 }],
     enrollments: [{ id: 'enrollment-1', householdId: 'household-4', stripeRef: 'ch_evt1' }],
     existingMwRefs: new Set<string>(),
+    existingIdByMwRef: new Map<string, string>(),
+    headersMissingLines: [] as { id: string; mwRef: string }[],
   };
 }
 
@@ -69,6 +74,33 @@ describe('deriveMwRef', () => {
     const a = { Date: 'Jan 10, 2026', 'Account ID': 'acct-1', 'Transaction Type': 'Membership', Reference: '', Items: 'x', 'Transaction Total': '200', 'Payment ID': '', 'Discount Code': '', Note: '' };
     const b = { ...a, 'Account ID': 'acct-2' };
     expect(deriveMwRef(a)).not.toBe(deriveMwRef(b));
+  });
+});
+
+describe('parseMoneyToCents', () => {
+  it('parses whole dollars, thousands commas, and a leading $ to cents', () => {
+    expect(parseMoneyToCents('250', CTX, 'x')).toBe(25000);
+    expect(parseMoneyToCents('$1,200', CTX, 'x')).toBe(120000);
+    expect(parseMoneyToCents('-120', CTX, 'x')).toBe(-12000);
+  });
+
+  it('parses one or two decimal places without float rounding drift', () => {
+    expect(parseMoneyToCents('3.20', CTX, 'x')).toBe(320);
+    expect(parseMoneyToCents('6.10', CTX, 'x')).toBe(610);
+    expect(parseMoneyToCents('$1,200.50', CTX, 'x')).toBe(120050);
+    expect(parseMoneyToCents('25.5', CTX, 'x')).toBe(2550);
+  });
+
+  it('treats a blank cell as zero', () => {
+    expect(parseMoneyToCents('', CTX, 'x')).toBe(0);
+  });
+
+  it('refuses more than two decimal places', () => {
+    expect(() => parseMoneyToCents('3.201', CTX, 'x')).toThrow(RowRefusedError);
+  });
+
+  it('refuses non-numeric content', () => {
+    expect(() => parseMoneyToCents('not a number', CTX, 'x')).toThrow(RowRefusedError);
   });
 });
 
@@ -110,7 +142,7 @@ describe('planTransactionRow: membership bundle with an asset add-on line', () =
     expect(planned.kind).toBe('charge');
     expect(planned.source).toBe('stripe');
     expect(planned.amountTotalCents).toBe(20000);
-    expect(planned.feeCents).toBe(600);
+    expect(planned.feeCents).toBe(610); // Transaction Fee is fractional ($6.10) in the fixture
     expect(planned.householdId).toBe('household-1');
     expect(planned.lines).toEqual([
       { item: 'dues', description: 'Membership dues', amountCents: 15000, membershipId: null, enrollmentId: null, assignmentId: null },
@@ -158,7 +190,8 @@ describe('planTransactionRow: donation', () => {
     expect(planned.householdId).toBeNull();
     expect(planned.payerName).toBe('Anonymous Donor');
     expect(planned.payerEmail).toBe('donor@example.com');
-    expect(planned.lines).toEqual([{ item: 'donation', description: 'Donation', amountCents: 2500, membershipId: null, enrollmentId: null, assignmentId: null }]);
+    // Donation Sub-Total is fractional ($25.50) in the fixture -- 2550 cents, not 2500.
+    expect(planned.lines).toEqual([{ item: 'donation', description: 'Donation', amountCents: 2550, membershipId: null, enrollmentId: null, assignmentId: null }]);
   });
 });
 
@@ -178,16 +211,50 @@ describe('linkRefunds', () => {
     const planned = rows
       .filter((r) => r['Account ID'] === 'acct-5')
       .map((row) => ({ ...planTransactionRow(row, existing, index), id: crypto.randomUUID(), refundsTransactionId: null as string | null }));
-    linkRefunds(planned);
+    const warnings = linkRefunds(planned);
     const charge = planned.find((t) => t.kind === 'charge')!;
     const refund = planned.find((t) => t.kind === 'refund')!;
     expect(refund.refundsTransactionId).toBe(charge.id);
+    expect(warnings).toHaveLength(0);
   });
 
-  it('leaves refundsTransactionId null when no matching prior charge exists', () => {
-    const orphanRefund = { kind: 'refund' as const, refundLinkKey: 'Membership:acct-9:', amountTotalCents: 5000, id: 'r1', refundsTransactionId: null as string | null };
-    linkRefunds([orphanRefund] as never);
+  it('leaves refundsTransactionId null and returns a loud warning when no matching prior charge exists', () => {
+    const orphanRefund = {
+      kind: 'refund' as const,
+      refundLinkKey: 'Membership:acct-9:',
+      amountTotalCents: 5000,
+      id: 'r1',
+      mwRef: 'mw-ledger:orphan',
+      accountId: 'acct-9',
+      refundsTransactionId: null as string | null,
+    };
+    const warnings = linkRefunds([orphanRefund] as never);
     expect(orphanRefund.refundsTransactionId).toBeNull();
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('acct-9');
+  });
+
+  it('links a refund to a charge already imported in a prior run, by its REAL database id', () => {
+    // Simulates run 2: the DB already holds the charge (a fake existing-rows response carrying
+    // its real id); this run's export adds the refund for the first time. The planned refund row
+    // must carry the charge's REAL database id, not a throwaway id this run would otherwise mint
+    // for a row it never re-inserts.
+    const rows = loadRows();
+    const chargeRow = rows.find((r) => r['Account ID'] === 'acct-5' && r['Transaction Total'] === '120')!;
+    const chargeMwRef = deriveMwRef(chargeRow);
+    const existing = {
+      ...existingState(),
+      existingMwRefs: new Set([chargeMwRef]),
+      existingIdByMwRef: new Map([[chargeMwRef, 'db-charge-real-id']]),
+    };
+    const plan = planMwLedgerImport(rows, existing);
+
+    // The charge itself is already imported -- not re-inserted.
+    expect(plan.alreadyImported).toContainEqual({ mwRef: chargeMwRef });
+    expect(plan.toInsert.find((t) => t.mwRef === chargeMwRef)).toBeUndefined();
+
+    const refund = plan.toInsert.find((t) => t.kind === 'refund')!;
+    expect(refund.refundsTransactionId).toBe('db-charge-real-id');
   });
 });
 
@@ -210,6 +277,71 @@ describe('linkDomainRows', () => {
     const planned = [{ ...planTransactionRow(row, existing, index), id: 't2', refundsTransactionId: null }];
     linkDomainRows(planned, existing);
     expect(planned[0].lines.find((l) => l.item === 'class-fee')?.enrollmentId).toBe('enrollment-1');
+  });
+});
+
+describe('planRepairs (partial-apply self-heal)', () => {
+  it('re-derives lines for an existing header with zero transaction_lines rows', () => {
+    const rows = loadRows();
+    const chargeRow = rows.find((r) => r['Account ID'] === 'acct-1')!;
+    const mwRef = deriveMwRef(chargeRow);
+    const existing = {
+      ...existingState(),
+      existingMwRefs: new Set([mwRef]),
+      existingIdByMwRef: new Map([[mwRef, 'db-txn-1']]),
+      headersMissingLines: [{ id: 'db-txn-1', mwRef }],
+    };
+    const plan = planMwLedgerImport(rows, existing);
+
+    expect(plan.repairs).toHaveLength(1);
+    expect(plan.repairs[0].transactionId).toBe('db-txn-1');
+    expect(plan.repairs[0].mwRef).toBe(mwRef);
+    expect(plan.repairs[0].lines).toEqual([
+      { item: 'dues', description: 'Membership dues', amountCents: 15000, membershipId: 'membership-1', enrollmentId: null, assignmentId: null },
+      { item: 'asset-fee', description: 'Asset add-on', amountCents: 5000, membershipId: null, enrollmentId: null, assignmentId: null },
+    ]);
+    // The header row itself is already imported -- a repair never re-inserts the header.
+    expect(plan.toInsert.find((t) => t.mwRef === mwRef)).toBeUndefined();
+  });
+
+  it('plans nothing for a fully-imported transaction (a header that already has its lines)', () => {
+    const rows = loadRows();
+    const chargeRow = rows.find((r) => r['Account ID'] === 'acct-2')!;
+    const mwRef = deriveMwRef(chargeRow);
+    const existing = {
+      ...existingState(),
+      existingMwRefs: new Set([mwRef]),
+      existingIdByMwRef: new Map([[mwRef, 'db-txn-2']]),
+      headersMissingLines: [], // this header already has its lines -- nothing to repair
+    };
+    const plan = planMwLedgerImport(rows, existing);
+    expect(plan.repairs).toHaveLength(0);
+  });
+
+  it('leaves a header alone when its row is no longer present in this export', () => {
+    const planned = planRepairs([], { headersMissingLines: [{ id: 'db-txn-9', mwRef: 'mw-ledger:gone' }] } as never);
+    expect(planned).toHaveLength(0);
+  });
+});
+
+describe('buildRepairLineStatements', () => {
+  it('emits one transaction_lines INSERT per line and no transactions INSERT', () => {
+    const repair = {
+      transactionId: 'db-txn-1',
+      mwRef: 'mw-ledger:test',
+      lines: [
+        { item: 'dues', description: 'Membership dues', amountCents: 15000, membershipId: 'membership-1', enrollmentId: null, assignmentId: null },
+        { item: 'asset-fee', description: 'Asset add-on', amountCents: 5000, membershipId: null, enrollmentId: null, assignmentId: null },
+      ],
+      lineCount: 2,
+    };
+    const statements = buildRepairLineStatements(repair);
+    expect(statements).toHaveLength(2);
+    for (const s of statements) {
+      expect(s).toContain('INSERT INTO transaction_lines');
+      expect(s).not.toContain('INSERT INTO transactions ');
+      expect(s).toContain("'db-txn-1'");
+    }
   });
 });
 
@@ -236,16 +368,27 @@ describe('planMwLedgerImport (integration)', () => {
       const sum = t.lines.reduce((s, l) => s + l.amountCents, 0);
       expect(sum).toBe(t.amountTotalCents);
     }
+
+    expect(plan.warnings).toHaveLength(0); // the refund above links cleanly
+    expect(plan.repairs).toHaveLength(0); // no already-imported header in this run
   });
 
-  it('is idempotent: a second run against unchanged input plans zero inserts', () => {
+  it('is idempotent: a second run against unchanged input plans zero inserts and zero repairs', () => {
     const rows = loadRows();
     const existing = existingState();
     const first = planMwLedgerImport(rows, existing);
-    const secondExisting = { ...existing, existingMwRefs: new Set(first.toInsert.map((t) => t.mwRef)) };
+    const secondExisting = {
+      ...existing,
+      existingMwRefs: new Set(first.toInsert.map((t) => t.mwRef)),
+      // Every row this run wrote now carries the id the FIRST run assigned it -- the real
+      // database id a live re-run would read back, per the id-assignment step's own contract.
+      existingIdByMwRef: new Map(first.toInsert.map((t) => [t.mwRef, t.id])),
+      headersMissingLines: [], // the clean apply wrote every header's lines -- nothing to repair
+    };
     const second = planMwLedgerImport(rows, secondExisting);
     expect(second.toInsert).toHaveLength(0);
     expect(second.alreadyImported).toHaveLength(first.toInsert.length);
+    expect(second.repairs).toHaveLength(0);
   });
 });
 

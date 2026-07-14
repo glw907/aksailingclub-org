@@ -25,6 +25,15 @@ Dry run is the default (prints the plan, writes nothing); `--apply` gates the re
 `source = 'comp'` when `Discount Code` is set and `Transaction Total = 0` (75 in the real
 export); otherwise `'stripe'` when `Payment ID` is present, else `'other'`.
 
+## Money, in cents, end to end
+
+Every amount this script parses or writes is CENTS: `parseMoneyToCents` (a local, cents-native
+replacement for `mw-members.mjs`'s own `parseMoneyToInt`, which is whole-DOLLARS-only and fits
+that script's own `memberships.price_paid` caller) accepts an optional leading `$`, thousands
+commas, and up to two decimal places, refusing anything with more or with non-numeric content.
+The real accounting export carries genuine fractional-dollar fees (Stripe's own percentage-based
+processing fee, mostly) a whole-dollars-only parser would refuse outright.
+
 ## The line-item breakdown
 
 The export's own five sub-total columns map directly to `transaction_lines.item` -- this is the
@@ -90,7 +99,25 @@ A `refund`-kind row links to its originating charge via the same netting key
 recent prior UNCONSUMED charge of the identical absolute amount. Unlike that script, BOTH rows
 land in the ledger here -- this only records `refunds_transaction_id`, never drops either side.
 An unlinkable refund (its charge predates this export, say) keeps `refunds_transaction_id` null;
-the spec marks that FK "when identifiable", not mandatory.
+the spec marks that FK "when identifiable", not mandatory. A row this deep into the plan is worth
+a human's look even when it never blocks the write, so an unlinkable refund is also reported as a
+loud warning line in the plan output.
+
+**Cross-run linking uses the real database id.** A charge already imported in a PRIOR run keeps
+its REAL `transactions.id` when this run re-plans it (rather than minting a fresh, throwaway id),
+so a refund for that charge arriving for the first time in a LATER run's export still links to
+the id the charge actually has in the database.
+
+## Partial-apply self-heal
+
+This import applies as ONE `wrangler d1 execute --remote --file` call with no cross-statement
+transaction (see "Partial-failure recovery" below), so a mid-batch failure can leave a
+`transactions` header row committed with none of its `transaction_lines`. Every planning run
+queries for exactly that shape (a header with `mw_ref IS NOT NULL` and zero lines) and, for any
+found, re-derives that header's lines from the export via the normal mapping and plans them as a
+line-only repair -- no `transactions` INSERT, since the header already exists. Repairs are
+reported separately from ordinary inserts in the plan output; a re-run after a clean apply (every
+header already carries its lines) still plans zero repairs, zero inserts.
 
 ## Idempotency key
 
@@ -153,7 +180,10 @@ npx wrangler d1 export asc-club --remote --output /path/to/backup-$(date +%Y%m%d
 
 **Recovery after a partial failure is a plain re-run**, same command: the `mw_ref` idempotency
 check treats every row this run already wrote as a no-op the second time through, so the re-run
-resumes forward from wherever the prior run stopped.
+resumes forward from wherever the prior run stopped. A header row that committed without its
+lines -- the one partial-write shape a plain re-run alone cannot fix, since its `mw_ref` already
+reads as "already imported" -- is caught and repaired automatically by the "Partial-apply
+self-heal" pass above; nothing extra to run.
 
 ## Rollback
 

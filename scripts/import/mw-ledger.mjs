@@ -30,13 +30,21 @@
  * Donation row's `household_id` is simply left null, using the row's own `Name`/`Email` as a
  * payer snapshot, since donors need not be members. A refund is linked to its original charge by
  * matching the most recent prior unconsumed same-account/same-type(/same-`Reference`-for-Event)
- * charge of the same absolute amount, `preprocessAccounting`'s own netting key
- * (`mw-members.mjs`) -- unlinkable when no such charge exists in this run.
+ * charge of the same absolute amount, `preprocessAccounting`'s own netting key (`mw-members.mjs`)
+ * -- unlinkable when no such charge exists in the database OR this run's own inserts, in which
+ * case the link is left null and reported as a loud warning ({@link linkRefunds}). A charge
+ * already imported in a prior run carries its REAL database id here, so a refund arriving for the
+ * first time in a LATER run still links correctly.
+ *
+ * Every amount this script writes is CENTS end to end ({@link parseMoneyToCents}): the real
+ * export carries genuine fractional-dollar fees a whole-dollars-only parser would refuse outright.
  *
  * Idempotency key: `mw_ref`, a stable hash of each row's own identifying columns (the export
  * carries no transaction-id column of its own) -- see {@link deriveMwRef}. A re-run against
  * unchanged input plans zero changes: every row's `mw_ref` is checked against the database before
- * planning a write.
+ * planning a write. A partial prior apply -- a header row committed with no lines, this single-
+ * `--file`-batch import's own known risk -- self-heals: {@link planRepairs} finds any such header
+ * and plans its lines as a line-only repair, reported separately from an ordinary insert.
  *
  * Usage:
  *   node scripts/import/mw-ledger.mjs                    # dry run (default), prints the plan
@@ -56,7 +64,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { normalizeEmail, normalizeNameCaps } from '../../src/admin-club/lib/member-normalize.js';
-import { RowRefusedError, deriveMembershipTier, parseMoneyToInt, parseMwCsv, parseMwDateToIso, sqlInt } from './mw-members.mjs';
+import { RowRefusedError, deriveMembershipTier, parseMwCsv, parseMwDateToIso, sqlInt } from './mw-members.mjs';
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -76,6 +84,39 @@ function sqlLiteral(value) {
 /** @param {Record<string, string>} row @returns {{ accountId: string, accountName: string, email: string }} */
 function rowContext(row) {
   return { accountId: row['Account ID']?.trim() ?? '', accountName: row.Name?.trim() ?? '', email: row.Email?.trim() ?? '' };
+}
+
+// ---------------------------------------------------------------------------
+// Money parsing -- cents, not dollars, throughout this script.
+// ---------------------------------------------------------------------------
+
+/**
+ * Parses a money-shaped CSV cell (`'$1,200.50'`, `'250'`, `'3.20'`, `''`) to integer cents,
+ * stripping a leading `$` and thousands commas first. A local cents-native replacement for
+ * `mw-members.mjs`'s own `parseMoneyToInt` (that function's integer-DOLLARS contract fits its own
+ * caller, `memberships.price_paid`, but every amount this script ever touches is a
+ * `transaction_lines.amount_cents`/`transactions.amount_total_cents` cents column, and the real
+ * accounting export carries genuine fractional-dollar fees the dollars-only parser refused
+ * outright). Digit parts are combined without floating-point multiplication (`Number(whole) *
+ * 100 + Number(fraction)`, fraction padded to two digits) so no cell can round to the wrong cent.
+ * Throws {@link RowRefusedError} when the cleaned value is not numeric or carries more than two
+ * decimal places -- refusing the source row rather than letting a malformed or over-precise token
+ * survive into a plan object and, eventually, a generated SQL statement.
+ * @param {string} raw
+ * @param {{ accountId: string, accountName: string, email: string }} context
+ * @param {string} fieldLabel
+ * @returns {number} integer cents
+ */
+export function parseMoneyToCents(raw, context, fieldLabel) {
+  const cleaned = String(raw ?? '').trim().replace(/^\$/, '').replace(/,/g, '');
+  if (cleaned === '') return 0;
+  const match = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(cleaned);
+  if (!match) {
+    throw new RowRefusedError(`non-numeric ${fieldLabel}: ${raw}`, context);
+  }
+  const [, sign, whole, fraction = ''] = match;
+  const cents = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
+  return sign === '-' ? -cents : cents;
 }
 
 // ---------------------------------------------------------------------------
@@ -112,8 +153,8 @@ export function deriveMwRef(row) {
  */
 export function classifyKind(row, ctx) {
   if (row.Items?.trim() === 'Voided') return 'void';
-  const total = parseMoneyToInt(row['Transaction Total'], ctx, 'Transaction Total');
-  return total < 0 ? 'refund' : 'charge';
+  const totalCents = parseMoneyToCents(row['Transaction Total'], ctx, 'Transaction Total');
+  return totalCents < 0 ? 'refund' : 'charge';
 }
 
 // ---------------------------------------------------------------------------
@@ -140,13 +181,13 @@ const SUBTOTAL_COLUMNS = /** @type {const} */ ([
 export function buildSubtotalLines(row, ctx) {
   const lines = [];
   for (const { column, item, description } of SUBTOTAL_COLUMNS) {
-    const dollars = parseMoneyToInt(row[column] ?? '', ctx, column);
-    if (dollars !== 0) lines.push({ item, description, amountCents: Math.abs(dollars) * 100 });
+    const cents = parseMoneyToCents(row[column] ?? '', ctx, column);
+    if (cents !== 0) lines.push({ item, description, amountCents: Math.abs(cents) });
   }
-  const handling = parseMoneyToInt(row.Handling ?? '', ctx, 'Handling');
-  const tax = parseMoneyToInt(row['Total Tax'] ?? '', ctx, 'Total Tax');
-  const extra = handling + tax;
-  if (extra !== 0) lines.push({ item: 'other', description: 'Handling & tax', amountCents: Math.abs(extra) * 100 });
+  const handlingCents = parseMoneyToCents(row.Handling ?? '', ctx, 'Handling');
+  const taxCents = parseMoneyToCents(row['Total Tax'] ?? '', ctx, 'Total Tax');
+  const extraCents = handlingCents + taxCents;
+  if (extraCents !== 0) lines.push({ item: 'other', description: 'Handling & tax', amountCents: Math.abs(extraCents) });
   return lines;
 }
 
@@ -185,16 +226,14 @@ export function buildListPriceIndex(rows) {
       } catch {
         continue; // unrecognized tier text; not a usable price source
       }
-      const dollars = parseMoneyToInt(row['Membership Sub-Total'] ?? '', ctx, 'Membership Sub-Total');
-      if (dollars > 0) {
-        const cents = dollars * 100;
+      const cents = parseMoneyToCents(row['Membership Sub-Total'] ?? '', ctx, 'Membership Sub-Total');
+      if (cents > 0) {
         if ((membershipCentsByTier.get(tier) ?? 0) < cents) membershipCentsByTier.set(tier, cents);
       }
     } else if (type === 'Event') {
       const reference = row.Reference?.trim();
-      const dollars = parseMoneyToInt(row['Event Sub-Total'] ?? '', ctx, 'Event Sub-Total');
-      if (reference && dollars > 0) {
-        const cents = dollars * 100;
+      const cents = parseMoneyToCents(row['Event Sub-Total'] ?? '', ctx, 'Event Sub-Total');
+      if (reference && cents > 0) {
         if ((eventCentsByReference.get(reference) ?? 0) < cents) eventCentsByReference.set(reference, cents);
       }
     }
@@ -220,11 +259,24 @@ export function buildListPriceIndex(rows) {
  * @property {string | null} stripeRef
  */
 /**
+ * @typedef {object} ExistingHeaderMissingLines a prior run's partial apply: a `transactions`
+ *   header row that committed with zero `transaction_lines` rows (the single-`--file` batch's own
+ *   no-cross-statement-transaction risk, `mw-ledger.README.md`'s "Partial-failure recovery")
+ * @property {string} id the header's own real database id
+ * @property {string} mwRef
+ */
+/**
  * @typedef {object} ExistingLedgerState
  * @property {Map<string, string>} householdIdByMwAccountId
  * @property {ExistingHouseholdMembership[]} memberships
  * @property {ExistingEnrollment[]} enrollments
  * @property {Set<string>} existingMwRefs every `transactions.mw_ref` already in the database
+ * @property {Map<string, string>} existingIdByMwRef every already-imported row's REAL database
+ *   `id`, keyed by its `mw_ref` -- {@link planMwLedgerImport}'s id-assignment step reuses this id
+ *   for a row it re-plans (rather than minting a fresh one) so a same-run refund linking against
+ *   that row (see {@link linkRefunds}) points at the id the row actually has in the database, not
+ *   a throwaway one this run happens to generate
+ * @property {ExistingHeaderMissingLines[]} headersMissingLines
  */
 
 /**
@@ -270,12 +322,12 @@ export function planTransactionRow(row, existing, listPrices) {
   const ctx = rowContext(row);
   const type = row['Transaction Type'];
   const kind = classifyKind(row, ctx);
-  const totalDollars = parseMoneyToInt(row['Transaction Total'], ctx, 'Transaction Total');
-  const amountTotalCents = Math.abs(totalDollars) * 100;
+  const totalCents = parseMoneyToCents(row['Transaction Total'], ctx, 'Transaction Total');
+  const amountTotalCents = Math.abs(totalCents);
   const occurredAt = parseMwDateToIso(row.Date, ctx);
   const processorRef = row['Payment ID']?.trim() || null;
-  const feeDollars = parseMoneyToInt(row['Transaction Fee'] ?? '', ctx, 'Transaction Fee');
-  const feeCents = feeDollars !== 0 ? Math.abs(feeDollars) * 100 : null;
+  const feeCentsRaw = parseMoneyToCents(row['Transaction Fee'] ?? '', ctx, 'Transaction Fee');
+  const feeCents = feeCentsRaw !== 0 ? Math.abs(feeCentsRaw) : null;
   const discountCode = row['Discount Code']?.trim();
   const isComp = kind === 'charge' && amountTotalCents === 0 && Boolean(discountCode);
   const source = isComp ? 'comp' : processorRef ? 'stripe' : 'other';
@@ -338,11 +390,19 @@ export function planTransactionRow(row, existing, listPrices) {
  * same netting key `mw-members.mjs`'s `preprocessAccounting` uses (account + type, plus
  * `Reference` for an Event): the most recent prior UNCONSUMED charge sharing the key and the
  * refund's own absolute amount. Unlike that script, both rows stay in the ledger -- this only
- * records the link, never drops either row. A refund with no matching charge in this run (its
- * charge predates this export, say) is left with `refundsTransactionId: null`, never refused --
- * the spec marks the FK "when identifiable", not mandatory.
+ * records the link, never drops either row. A charge already imported in a prior run carries its
+ * REAL database id here (`planMwLedgerImport`'s id-assignment step), so a refund arriving for the
+ * first time in a LATER run still links to the id the charge actually has in the database, not a
+ * throwaway id this run would otherwise mint for a row it never re-inserts.
+ *
+ * A refund with no matching charge -- in the database or in this run's own inserts (its charge
+ * predates this export, say) -- is left with `refundsTransactionId: null`, never refused (the
+ * spec marks the FK "when identifiable", not mandatory), but is reported back as a loud warning:
+ * a dangling refund is worth a human's look even though it never blocks the write.
  * @param {(PlannedTransaction & { id: string, refundsTransactionId: string | null })[]} planned
- *   every planned row, IN ORIGINAL FILE ORDER, already assigned an `id`
+ *   every planned row, IN ORIGINAL FILE ORDER, already assigned an `id` (a real database id when
+ *   the row is already imported, a fresh one otherwise)
+ * @returns {string[]} one human-readable warning per unlinkable refund
  */
 export function linkRefunds(planned) {
   /** @type {Map<string, { id: string; amountCents: number; consumed: boolean }[]>} */
@@ -354,6 +414,8 @@ export function linkRefunds(planned) {
       chargesByKey.set(t.refundLinkKey, list);
     }
   }
+  /** @type {string[]} */
+  const warnings = [];
   for (const t of planned) {
     if (t.kind !== 'refund' || !t.refundLinkKey) continue;
     const candidates = chargesByKey.get(t.refundLinkKey) ?? [];
@@ -363,8 +425,10 @@ export function linkRefunds(planned) {
       t.refundsTransactionId = match.id;
     } else {
       t.refundsTransactionId = null;
+      warnings.push(`refund mw_ref=${t.mwRef} account=${t.accountId ?? '(blank)'} amount=${t.amountTotalCents}c: no matching charge found -- refunds_transaction_id left null`);
     }
   }
+  return warnings;
 }
 
 /**
@@ -399,6 +463,42 @@ export function linkDomainRows(planned, existing) {
   }
 }
 
+/**
+ * @typedef {object} PlannedRepair
+ * @property {string} transactionId the existing header's REAL database id -- no `transactions`
+ *   INSERT is planned for a repair, only its `transaction_lines`
+ * @property {string} mwRef
+ * @property {PlannedLine[]} lines re-derived from this run's own planning pass, domain-linked the
+ *   same as any other planned row's lines
+ * @property {number} lineCount
+ */
+
+/**
+ * Self-heals a prior run's partial apply: finds every already-imported `transactions` header
+ * with zero `transaction_lines` rows (`existing.headersMissingLines`, the signature of a batch
+ * that committed its header INSERT but not its line INSERTs) and re-derives that header's lines
+ * from THIS run's own planning pass, keyed by the header's own `mw_ref`. A header no longer
+ * represented in this export (a row removed from the source since the partial apply) is left
+ * alone -- there is nothing to repair it FROM -- rather than refused, since a repair is
+ * self-healing, not a fresh import decision.
+ * @param {(PlannedTransaction & { id: string })[]} planned every planned row this run, already
+ *   carrying the real database id for any row whose `mw_ref` already exists
+ *   ({@link planMwLedgerImport}'s id-assignment step)
+ * @param {ExistingLedgerState} existing
+ * @returns {PlannedRepair[]}
+ */
+export function planRepairs(planned, existing) {
+  const byMwRef = new Map(planned.map((t) => [t.mwRef, t]));
+  /** @type {PlannedRepair[]} */
+  const repairs = [];
+  for (const header of existing.headersMissingLines) {
+    const match = byMwRef.get(header.mwRef);
+    if (!match) continue;
+    repairs.push({ transactionId: header.id, mwRef: header.mwRef, lines: match.lines, lineCount: match.lines.length });
+  }
+  return repairs;
+}
+
 // ---------------------------------------------------------------------------
 // Top-level plan.
 // ---------------------------------------------------------------------------
@@ -410,6 +510,10 @@ export function linkDomainRows(planned, existing) {
  *   (the idempotent no-op path)
  * @property {{ reason: string, accountId: string }[]} refusals
  * @property {{ kind: string, source: string, count: number }[]} categoryCounts
+ * @property {string[]} warnings loud, human-readable warnings that never block a write -- an
+ *   unlinkable refund, currently the only source (see {@link linkRefunds})
+ * @property {PlannedRepair[]} repairs partial-apply self-heals: an existing header with zero
+ *   lines, whose lines this run plans as line-only inserts (see {@link planRepairs})
  */
 
 /**
@@ -444,11 +548,17 @@ export function planMwLedgerImport(accountingRows, existing) {
     const seenCount = seenRefs.get(t.mwRef) ?? 0;
     seenRefs.set(t.mwRef, seenCount + 1);
     const mwRef = seenCount === 0 ? t.mwRef : `${t.mwRef}#${seenCount}`;
-    planned.push({ ...t, mwRef, id: randomUUID(), refundsTransactionId: null });
+    // A row already imported keeps its REAL database id rather than minting a fresh one: a
+    // same-run or cross-run refund linking against this row (linkRefunds, below) must point at
+    // the id the row actually has in the database, never a throwaway id this run generates for a
+    // row it never re-inserts.
+    const id = existing.existingIdByMwRef.get(mwRef) ?? randomUUID();
+    planned.push({ ...t, mwRef, id, refundsTransactionId: null });
   }
 
-  linkRefunds(planned);
+  const warnings = linkRefunds(planned);
   linkDomainRows(planned, existing);
+  const repairs = planRepairs(planned, existing);
 
   const toInsert = planned.filter((t) => !existing.existingMwRefs.has(t.mwRef));
   const alreadyImported = planned.filter((t) => existing.existingMwRefs.has(t.mwRef)).map((t) => ({ mwRef: t.mwRef }));
@@ -464,7 +574,7 @@ export function planMwLedgerImport(accountingRows, existing) {
     return { kind, source, count };
   });
 
-  return { toInsert, alreadyImported, refusals, categoryCounts };
+  return { toInsert, alreadyImported, refusals, categoryCounts, warnings, repairs };
 }
 
 // ---------------------------------------------------------------------------
@@ -492,9 +602,24 @@ export function buildTransactionInsertStatements(t) {
 }
 
 /**
- * Formats the plan for a human read: category counts, refusals (account id + reason, no name or
- * email -- names/emails never print from this script), and the already-imported count. Printed
- * under `--dry-run` and on a real applied run alike.
+ * Builds the `transaction_lines` INSERT statements for one repair: an existing `transactions`
+ * header whose lines this run re-derives from the export (see {@link planRepairs}). No
+ * `transactions` INSERT -- the header row already exists in the database.
+ * @param {PlannedRepair} repair
+ * @returns {string[]}
+ */
+export function buildRepairLineStatements(repair) {
+  return repair.lines.map(
+    (line) =>
+      `INSERT INTO transaction_lines (id, transaction_id, item, description, amount_cents, membership_id, enrollment_id, assignment_id) VALUES (${sqlLiteral(randomUUID())}, ${sqlLiteral(repair.transactionId)}, ${sqlLiteral(line.item)}, ${sqlLiteral(line.description)}, ${sqlInt(line.amountCents)}, ${sqlLiteral(line.membershipId)}, ${sqlLiteral(line.enrollmentId)}, ${sqlLiteral(line.assignmentId)})`,
+  );
+}
+
+/**
+ * Formats the plan for a human read: category counts, repairs, refusals (account id + reason, no
+ * name or email -- names/emails never print from this script), the already-imported count, and
+ * any warning (an unlinkable refund, currently the only source). Printed under `--dry-run` and on
+ * a real applied run alike.
  * @param {MwLedgerPlan} plan
  * @returns {string}
  */
@@ -503,8 +628,14 @@ export function formatReport(plan) {
   lines.push(`  to insert: ${plan.toInsert.length}`);
   for (const c of plan.categoryCounts) lines.push(`    ${c.kind}/${c.source}: ${c.count}`);
   lines.push(`  already imported (no-op): ${plan.alreadyImported.length}`);
+  lines.push(`  repairs (existing header, missing lines): ${plan.repairs.length}`);
+  for (const r of plan.repairs) lines.push(`    mw_ref=${r.mwRef}: ${r.lineCount} line(s)`);
   lines.push(`  refused: ${plan.refusals.length}`);
   for (const r of plan.refusals) lines.push(`    account=${r.accountId}: ${r.reason}`);
+  if (plan.warnings.length > 0) {
+    lines.push(`  warnings: ${plan.warnings.length}`);
+    for (const w of plan.warnings) lines.push(`    ${w}`);
+  }
   return lines.join('\n');
 }
 
@@ -543,9 +674,15 @@ function readExistingState() {
   );
   const enrollments = enrollmentRows.map((r) => ({ id: String(r.id), householdId: String(r.household_id), stripeRef: String(r.stripe_ref) }));
 
-  const existingMwRefs = new Set(query(`SELECT mw_ref FROM transactions WHERE mw_ref IS NOT NULL`).map((r) => String(r.mw_ref)));
+  const transactionRows = query(`SELECT id, mw_ref FROM transactions WHERE mw_ref IS NOT NULL`);
+  const existingIdByMwRef = new Map(transactionRows.map((r) => [String(r.mw_ref), String(r.id)]));
+  const existingMwRefs = new Set(existingIdByMwRef.keys());
 
-  return { householdIdByMwAccountId, memberships, enrollments, existingMwRefs };
+  const headersMissingLines = query(
+    `SELECT t.id, t.mw_ref FROM transactions t LEFT JOIN transaction_lines tl ON tl.transaction_id = t.id WHERE t.mw_ref IS NOT NULL AND tl.id IS NULL`,
+  ).map((r) => ({ id: String(r.id), mwRef: String(r.mw_ref) }));
+
+  return { householdIdByMwAccountId, memberships, enrollments, existingMwRefs, existingIdByMwRef, headersMissingLines };
 }
 
 async function main() {
@@ -558,7 +695,7 @@ async function main() {
   const accountingPath = argValue('--accounting', path.join(os.homedir(), '.local', 'asc-data', 'mw-accounting-2026-07-13.csv'));
 
   const existing = readExistingState();
-  console.log(`mw-ledger: ${existing.memberships.length} membership(s), ${existing.enrollments.length} stripe-linked enrollment(s), ${existing.existingMwRefs.size} transaction(s) already in ${DB_NAME}`);
+  console.log(`mw-ledger: ${existing.memberships.length} membership(s), ${existing.enrollments.length} stripe-linked enrollment(s), ${existing.existingMwRefs.size} transaction(s) already in ${DB_NAME} (${existing.headersMissingLines.length} missing their lines)`);
 
   const accountingRows = parseMwCsv(readFileSync(accountingPath, 'utf8'));
   console.log(`mw-ledger: ${accountingRows.length} accounting row(s) read`);
@@ -570,12 +707,15 @@ async function main() {
     console.log('\ndry run (default): no statements executed. Pass --apply to write to the real database.');
     return;
   }
-  if (plan.toInsert.length === 0) {
+  if (plan.toInsert.length === 0 && plan.repairs.length === 0) {
     console.log('\nmw-ledger: nothing to write (idempotent no-op run).');
     return;
   }
 
-  const statements = plan.toInsert.flatMap((t) => buildTransactionInsertStatements(t));
+  const statements = [
+    ...plan.toInsert.flatMap((t) => buildTransactionInsertStatements(t)),
+    ...plan.repairs.flatMap((r) => buildRepairLineStatements(r)),
+  ];
   const tmpDir = mkdtempSync(path.join(os.tmpdir(), 'mw-ledger-'));
   const tmpFile = path.join(tmpDir, 'import.sql');
   writeFileSync(tmpFile, statements.join(';\n'));
