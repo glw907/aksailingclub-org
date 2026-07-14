@@ -49,9 +49,12 @@
  * Idempotency key: `mw_ref`, a stable hash of each row's own identifying columns (the export
  * carries no transaction-id column of its own) -- see {@link deriveMwRef}. A re-run against
  * unchanged input plans zero changes: every row's `mw_ref` is checked against the database before
- * planning a write. A partial prior apply -- a header row committed with no lines, this single-
- * `--file`-batch import's own known risk -- self-heals: {@link planRepairs} finds any such header
- * and plans its lines as a line-only repair, reported separately from an ordinary insert.
+ * planning a write. A partial prior apply -- a header row committed with some or all of its lines
+ * missing, this single-`--file`-batch import's own known risk -- self-heals: {@link planRepairs}
+ * finds any header whose `amount_total_cents` does not sum-match its own `transaction_lines` (the
+ * invariant every row must hold, NOT bare line absence -- a zero-total void or fully-comped row
+ * legitimately has zero lines, and flagging on absence alone never converges) and plans a
+ * delete-and-reinsert of that header's lines, reported separately from an ordinary insert.
  *
  * Usage:
  *   node scripts/import/mw-ledger.mjs                    # dry run (default), prints the plan
@@ -276,9 +279,11 @@ export function buildListPriceIndex(rows) {
  * @property {string | null} stripeRef
  */
 /**
- * @typedef {object} ExistingHeaderMissingLines a prior run's partial apply: a `transactions`
- *   header row that committed with zero `transaction_lines` rows (the single-`--file` batch's own
- *   no-cross-statement-transaction risk, `mw-ledger.README.md`'s "Partial-failure recovery")
+ * @typedef {object} ExistingHeaderWithSumMismatch a prior run's partial apply: a `transactions`
+ *   header row whose `amount_total_cents` does not sum-match its own `transaction_lines` (the
+ *   single-`--file` batch's own no-cross-statement-transaction risk, `mw-ledger.README.md`'s
+ *   "Partial-failure recovery") -- detected on the invariant itself, never on line absence alone,
+ *   since a zero-total void or fully-comped row legitimately has zero lines
  * @property {string} id the header's own real database id
  * @property {string} mwRef
  */
@@ -293,7 +298,7 @@ export function buildListPriceIndex(rows) {
  *   for a row it re-plans (rather than minting a fresh one) so a same-run refund linking against
  *   that row (see {@link linkRefunds}) points at the id the row actually has in the database, not
  *   a throwaway one this run happens to generate
- * @property {ExistingHeaderMissingLines[]} headersMissingLines
+ * @property {ExistingHeaderWithSumMismatch[]} headersWithSumMismatch
  * @property {Map<string, number>} classFeeCentsBySeasonSlug every `classes.fee` (dollars in the
  *   database, converted here to cents), keyed `${season}:${slug}` -- the comped-Event list-price
  *   fallback's second preference (see {@link planTransactionRow})
@@ -573,12 +578,15 @@ export function linkDomainRows(planned, existing) {
 
 /**
  * Self-heals a prior run's partial apply: finds every already-imported `transactions` header
- * with zero `transaction_lines` rows (`existing.headersMissingLines`, the signature of a batch
- * that committed its header INSERT but not its line INSERTs) and re-derives that header's lines
- * from THIS run's own planning pass, keyed by the header's own `mw_ref`. A header no longer
- * represented in this export (a row removed from the source since the partial apply) is left
- * alone -- there is nothing to repair it FROM -- rather than refused, since a repair is
- * self-healing, not a fresh import decision.
+ * whose `amount_total_cents` does not sum-match its own `transaction_lines`
+ * (`existing.headersWithSumMismatch`, the signature of a batch that committed its header INSERT
+ * but not every line INSERT -- zero lines landed, or only some of them) and re-derives that
+ * header's full line set from THIS run's own planning pass, keyed by the header's own `mw_ref`.
+ * {@link buildRepairLineStatements} deletes any lines that DID land before reinserting the full
+ * set, so a genuine partial apply (some lines committed, some didn't) never double-writes. A
+ * header no longer represented in this export (a row removed from the source since the partial
+ * apply) is left alone -- there is nothing to repair it FROM -- rather than refused, since a
+ * repair is self-healing, not a fresh import decision.
  * @param {(PlannedTransaction & { id: string })[]} planned every planned row this run, already
  *   carrying the real database id for any row whose `mw_ref` already exists
  *   ({@link planMwLedgerImport}'s id-assignment step)
@@ -589,7 +597,7 @@ export function planRepairs(planned, existing) {
   const byMwRef = new Map(planned.map((t) => [t.mwRef, t]));
   /** @type {PlannedRepair[]} */
   const repairs = [];
-  for (const header of existing.headersMissingLines) {
+  for (const header of existing.headersWithSumMismatch) {
     const match = byMwRef.get(header.mwRef);
     if (!match) continue;
     repairs.push({ transactionId: header.id, mwRef: header.mwRef, lines: match.lines, lineCount: match.lines.length });
@@ -706,14 +714,20 @@ export function buildTransactionInsertStatements(t) {
 }
 
 /**
- * Builds the `transaction_lines` INSERT statements for one repair: an existing `transactions`
- * header whose lines this run re-derives from the export (see {@link planRepairs}). No
- * `transactions` INSERT -- the header row already exists in the database.
+ * Builds the statements for one repair: an existing `transactions` header whose lines this run
+ * re-derives from the export (see {@link planRepairs}). Leads with a `DELETE FROM
+ * transaction_lines` for this transaction id, so a genuine partial apply -- some lines landed
+ * before the batch failed -- never leaves a stale line alongside the freshly reinserted full set
+ * (a header with zero lines simply deletes nothing). No `transactions` INSERT -- the header row
+ * already exists in the database.
  * @param {PlannedRepair} repair
  * @returns {string[]}
  */
 export function buildRepairLineStatements(repair) {
-  return repair.lines.map((line) => buildLineInsertStatement(repair.transactionId, line));
+  return [
+    `DELETE FROM transaction_lines WHERE transaction_id = ${sqlLiteral(repair.transactionId)}`,
+    ...repair.lines.map((line) => buildLineInsertStatement(repair.transactionId, line)),
+  ];
 }
 
 /**
@@ -729,7 +743,7 @@ export function formatReport(plan) {
   lines.push(`  to insert: ${plan.toInsert.length}`);
   for (const c of plan.categoryCounts) lines.push(`    ${c.kind}/${c.source}: ${c.count}`);
   lines.push(`  already imported (no-op): ${plan.alreadyImported.length}`);
-  lines.push(`  repairs (existing header, missing lines): ${plan.repairs.length}`);
+  lines.push(`  repairs (existing header, sum mismatch): ${plan.repairs.length}`);
   for (const r of plan.repairs) lines.push(`    mw_ref=${r.mwRef}: ${r.lineCount} line(s)`);
   lines.push(`  refused: ${plan.refusals.length}`);
   for (const r of plan.refusals) lines.push(`    account=${r.accountId}: ${r.reason}`);
@@ -779,8 +793,11 @@ function readExistingState() {
   const existingIdByMwRef = new Map(transactionRows.map((r) => [String(r.mw_ref), String(r.id)]));
   const existingMwRefs = new Set(existingIdByMwRef.keys());
 
-  const headersMissingLines = query(
-    `SELECT t.id, t.mw_ref FROM transactions t LEFT JOIN transaction_lines tl ON tl.transaction_id = t.id WHERE t.mw_ref IS NOT NULL AND tl.id IS NULL`,
+  // Keys on the sum invariant itself, never on line absence alone: a zero-total void or
+  // fully-comped row legitimately has zero lines (0 = 0 holds), so flagging on absence alone
+  // never converges -- see the header comment and planRepairs's own doc comment.
+  const headersWithSumMismatch = query(
+    `SELECT t.id, t.mw_ref FROM transactions t WHERE t.mw_ref IS NOT NULL AND t.amount_total_cents <> COALESCE((SELECT SUM(amount_cents) FROM transaction_lines WHERE transaction_id = t.id), 0)`,
   ).map((r) => ({ id: String(r.id), mwRef: String(r.mw_ref) }));
 
   // classes.fee is whole DOLLARS (mw-members.mjs's own HISTORICAL_CLASS_FEE convention);
@@ -788,7 +805,7 @@ function readExistingState() {
   const classRows = query(`SELECT season, slug, fee FROM classes`);
   const classFeeCentsBySeasonSlug = new Map(classRows.map((r) => [`${r.season}:${r.slug}`, Number(r.fee) * 100]));
 
-  return { householdIdByMwAccountId, memberships, enrollments, existingMwRefs, existingIdByMwRef, headersMissingLines, classFeeCentsBySeasonSlug };
+  return { householdIdByMwAccountId, memberships, enrollments, existingMwRefs, existingIdByMwRef, headersWithSumMismatch, classFeeCentsBySeasonSlug };
 }
 
 async function main() {
@@ -801,7 +818,7 @@ async function main() {
   const accountingPath = argValue('--accounting', path.join(os.homedir(), '.local', 'asc-data', 'mw-accounting-2026-07-13.csv'));
 
   const existing = readExistingState();
-  console.log(`mw-ledger: ${existing.memberships.length} membership(s), ${existing.enrollments.length} stripe-linked enrollment(s), ${existing.existingMwRefs.size} transaction(s) already in ${DB_NAME} (${existing.headersMissingLines.length} missing their lines)`);
+  console.log(`mw-ledger: ${existing.memberships.length} membership(s), ${existing.enrollments.length} stripe-linked enrollment(s), ${existing.existingMwRefs.size} transaction(s) already in ${DB_NAME} (${existing.headersWithSumMismatch.length} with a lines-sum mismatch)`);
 
   const accountingRows = parseMwCsv(readFileSync(accountingPath, 'utf8'));
   console.log(`mw-ledger: ${accountingRows.length} accounting row(s) read`);

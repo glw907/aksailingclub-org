@@ -48,7 +48,7 @@ function existingState() {
     enrollments: [{ id: 'enrollment-1', householdId: 'household-4', stripeRef: 'ch_evt1' }],
     existingMwRefs: new Set<string>(),
     existingIdByMwRef: new Map<string, string>(),
-    headersMissingLines: [] as { id: string; mwRef: string }[],
+    headersWithSumMismatch: [] as { id: string; mwRef: string }[],
     // acct-7's comp row (fixture Reference 'Event: 2nd Adult/Teen Intro to Sailing Class (Thu Jul
     // 18 2024, 01:00pm AKDT)') resolves via HISTORICAL_CLASS_MAP to season 2024, slug
     // 'adult-intro-class-2' -- the real class this fixture's list-price fallback matches against.
@@ -350,7 +350,7 @@ describe('linkDomainRows', () => {
 });
 
 describe('planRepairs (partial-apply self-heal)', () => {
-  it('re-derives lines for an existing header with zero transaction_lines rows', () => {
+  it('re-derives lines for an existing header flagged with a sum mismatch', () => {
     const rows = loadRows();
     const chargeRow = rows.find((r) => r['Account ID'] === 'acct-1')!;
     const mwRef = deriveMwRef(chargeRow);
@@ -358,7 +358,7 @@ describe('planRepairs (partial-apply self-heal)', () => {
       ...existingState(),
       existingMwRefs: new Set([mwRef]),
       existingIdByMwRef: new Map([[mwRef, 'db-txn-1']]),
-      headersMissingLines: [{ id: 'db-txn-1', mwRef }],
+      headersWithSumMismatch: [{ id: 'db-txn-1', mwRef }],
     };
     const plan = planMwLedgerImport(rows, existing);
 
@@ -381,20 +381,46 @@ describe('planRepairs (partial-apply self-heal)', () => {
       ...existingState(),
       existingMwRefs: new Set([mwRef]),
       existingIdByMwRef: new Map([[mwRef, 'db-txn-2']]),
-      headersMissingLines: [], // this header already has its lines -- nothing to repair
+      headersWithSumMismatch: [], // this header already has its lines -- nothing to repair
     };
     const plan = planMwLedgerImport(rows, existing);
     expect(plan.repairs).toHaveLength(0);
   });
 
   it('leaves a header alone when its row is no longer present in this export', () => {
-    const planned = planRepairs([], { headersMissingLines: [{ id: 'db-txn-9', mwRef: 'mw-ledger:gone' }] } as never);
+    const planned = planRepairs([], { headersWithSumMismatch: [{ id: 'db-txn-9', mwRef: 'mw-ledger:gone' }] } as never);
     expect(planned).toHaveLength(0);
+  });
+
+  it('never repairs a zero-total header with zero lines -- the sum invariant (0 = 0) already holds', () => {
+    const rows = loadRows();
+    // The fixture's blank-account 'Site Test' row: Items='Voided' (so isComp never applies) with
+    // every sub-total column blank, so buildSubtotalLines legitimately returns no lines at all.
+    const voidRow = rows.find((r) => r.Items?.trim() === 'Voided' && r['Account ID']?.trim() === '')!;
+    const mwRef = deriveMwRef(voidRow);
+    const planned = planTransactionRow(voidRow, existingState(), buildListPriceIndex(rows));
+    expect(planned.lines).toEqual([]);
+    expect(planned.amountTotalCents).toBe(0);
+
+    // Detection lives on the sum invariant, not line absence: the corrected query never lists
+    // this header in headersWithSumMismatch in the first place (0 total = 0-line sum), so a
+    // repair is never planned for it, unlike the old absence-based heuristic that could never
+    // converge on a file with legitimately lineless rows.
+    const existing = {
+      ...existingState(),
+      existingMwRefs: new Set([mwRef]),
+      existingIdByMwRef: new Map([[mwRef, 'db-txn-void']]),
+      headersWithSumMismatch: [],
+    };
+    const plan = planMwLedgerImport(rows, existing);
+    expect(plan.repairs).toHaveLength(0);
+    expect(plan.toInsert.find((t) => t.mwRef === mwRef)).toBeUndefined();
+    expect(plan.alreadyImported.some((t) => t.mwRef === mwRef)).toBe(true);
   });
 });
 
 describe('buildRepairLineStatements', () => {
-  it('emits one transaction_lines INSERT per line and no transactions INSERT', () => {
+  it('leads with a DELETE for the transaction id, then one INSERT per re-derived line -- no transactions INSERT', () => {
     const repair = {
       transactionId: 'db-txn-1',
       mwRef: 'mw-ledger:test',
@@ -405,12 +431,30 @@ describe('buildRepairLineStatements', () => {
       lineCount: 2,
     };
     const statements = buildRepairLineStatements(repair);
-    expect(statements).toHaveLength(2);
-    for (const s of statements) {
+    expect(statements).toHaveLength(3);
+    expect(statements[0]).toBe("DELETE FROM transaction_lines WHERE transaction_id = 'db-txn-1'");
+    for (const s of statements.slice(1)) {
       expect(s).toContain('INSERT INTO transaction_lines');
       expect(s).not.toContain('INSERT INTO transactions ');
       expect(s).toContain("'db-txn-1'");
     }
+  });
+
+  it('deletes then fully reinserts even when only some lines were missing -- a genuine partial apply, not just an all-lines-gone header', () => {
+    // buildRepairLineStatements carries no notion of which lines already landed: it always
+    // deletes whatever exists for this transaction id and reinserts the full re-derived set, so
+    // a partial apply (one line committed, one didn't) self-heals the same way a zero-line
+    // header does, with no risk of a stale line surviving alongside the reinsert.
+    const repair = {
+      transactionId: 'db-txn-2',
+      mwRef: 'mw-ledger:partial',
+      lines: [{ item: 'dues', description: 'Membership dues', amountCents: 10000, membershipId: null, enrollmentId: null, assignmentId: null }],
+      lineCount: 1,
+    };
+    const statements = buildRepairLineStatements(repair);
+    expect(statements).toHaveLength(2);
+    expect(statements[0]).toBe("DELETE FROM transaction_lines WHERE transaction_id = 'db-txn-2'");
+    expect(statements[1]).toContain('INSERT INTO transaction_lines');
   });
 });
 
@@ -452,7 +496,7 @@ describe('planMwLedgerImport (integration)', () => {
       // Every row this run wrote now carries the id the FIRST run assigned it -- the real
       // database id a live re-run would read back, per the id-assignment step's own contract.
       existingIdByMwRef: new Map(first.toInsert.map((t) => [t.mwRef, t.id])),
-      headersMissingLines: [], // the clean apply wrote every header's lines -- nothing to repair
+      headersWithSumMismatch: [], // the clean apply wrote every header's lines -- nothing to repair
     };
     const second = planMwLedgerImport(rows, secondExisting);
     expect(second.toInsert).toHaveLength(0);

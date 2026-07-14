@@ -136,12 +136,18 @@ the id the charge actually has in the database.
 
 This import applies as ONE `wrangler d1 execute --remote --file` call with no cross-statement
 transaction (see "Partial-failure recovery" below), so a mid-batch failure can leave a
-`transactions` header row committed with none of its `transaction_lines`. Every planning run
-queries for exactly that shape (a header with `mw_ref IS NOT NULL` and zero lines) and, for any
-found, re-derives that header's lines from the export via the normal mapping and plans them as a
-line-only repair -- no `transactions` INSERT, since the header already exists. Repairs are
-reported separately from ordinary inserts in the plan output; a re-run after a clean apply (every
-header already carries its lines) still plans zero repairs, zero inserts.
+`transactions` header row committed with some or all of its `transaction_lines` missing. Every
+planning run queries for exactly that shape -- a header whose `amount_total_cents` does not
+sum-match its own `transaction_lines` -- and, for any found, re-derives that header's full line
+set from the export via the normal mapping and plans a delete-and-reinsert repair: `DELETE FROM
+transaction_lines WHERE transaction_id = ?` followed by the full re-derived INSERTs, never a
+`transactions` INSERT, since the header already exists. Detection keys on the sum invariant
+itself (`amount_total_cents <> COALESCE(SUM(transaction_lines.amount_cents), 0)`), not on bare
+line absence: a zero-total void or fully-comped row legitimately has zero lines (0 = 0 holds, so
+it is never flagged), and a plan built on absence alone would never converge against a real
+export, which carries exactly that shape. Repairs are reported separately from ordinary inserts
+in the plan output; a re-run after a clean apply (every header's lines already sum-match) still
+plans zero repairs, zero inserts.
 
 ## Idempotency key
 
@@ -206,10 +212,11 @@ npx wrangler d1 export asc-club --remote --output /path/to/backup-$(date +%Y%m%d
 
 **Recovery after a partial failure is a plain re-run**, same command: the `mw_ref` idempotency
 check treats every row this run already wrote as a no-op the second time through, so the re-run
-resumes forward from wherever the prior run stopped. A header row that committed without its
-lines -- the one partial-write shape a plain re-run alone cannot fix, since its `mw_ref` already
-reads as "already imported" -- is caught and repaired automatically by the "Partial-apply
-self-heal" pass above; nothing extra to run.
+resumes forward from wherever the prior run stopped. A header row that committed with some or all
+of its lines missing -- the one partial-write shape a plain re-run alone cannot fix, since its
+`mw_ref` already reads as "already imported" -- is caught (via the sum invariant, not line
+absence) and repaired automatically by the "Partial-apply self-heal" pass above; nothing extra to
+run.
 
 ## Rollback
 
