@@ -1,14 +1,23 @@
 <!-- @component
-The public class signup/waitlist form (Task 8): reachable from the events listing's class cards.
-An open class enrolls immediately on submit; a full one joins the waitlist instead, both through
-the same `joinClass` remote function (class-signup.remote.ts), which decides the outcome
-server-side (this page never guesses). Turnstile-gated, degrading gracefully with no secret
-configured, matching the family's own ContactForm/DonateForm precedent. -->
+The public class signup/waitlist form: reachable from the events listing's class cards. An open
+class enrolls immediately on submit; a full one joins the waitlist instead, both through the same
+`joinClass` remote function (class-signup.remote.ts), which decides the outcome server-side (this
+page never guesses). Turnstile-gated, degrading gracefully with no secret configured, matching the
+family's own ContactForm/DonateForm precedent.
+
+The class-door standing gate: `joinClass`'s own submission is gated server-side on membership
+standing, so a non-member never enrolls here — the action answers a `{ pivot: 'join' }` outcome
+instead, which this page renders as an invitation into `/join/apply` with the submitted fields
+carried over as query params. A `lapsed` household gets `{ pivot: 'renew' }` instead (amended
+2026-07-14): joining fresh would duplicate that household, so the page offers a button that emails
+the member's own sign-in link (`requestRenewLink`) rather than the join carry-over. With JS
+available, an email-blur probe (`checkKnownEmail` then `checkClassEligibility`) offers the same
+pivot before the visitor fills out the rest of the form. -->
 <script lang="ts">
-  import { browser } from '$app/environment';
   import type { PageData } from './$types';
   import { siteConfig } from '$theme/cairn.config';
-  import { joinClass } from '$theme/class-signup.remote';
+  import { joinClass, checkClassEligibility, requestRenewLink } from '$theme/class-signup.remote';
+  import { checkKnownEmail } from '$theme/join-apply.remote';
   import { payClassFee } from '$theme/class-fee-checkout.remote';
   import { CLASS_TRACK_LABEL } from '$admin-club/lib/classes-store';
   import { WAIVER_RELEASE_TEXT } from '$theme/waiver-text';
@@ -20,11 +29,57 @@ configured, matching the family's own ContactForm/DonateForm precedent. -->
   const dateDisplay = $derived(data.cls.startDate ? formatDateRange(data.cls.startDate, data.cls.endDate) : DATE_TBD);
   const spotsLeft = $derived(Math.max(0, data.cls.capacity - data.cls.enrolledCount));
 
-  const { name, email, phone, waiverAccepted } = joinClass.fields;
+  const { name, email, phone, interests, waiverAccepted } = joinClass.fields;
+
+  /** The class-door standing gate's own pivot shape: the join invitation carries the entered
+   *  fields, the renewal handoff carries just the email the "email me a sign-in link" button
+   *  needs. Set once the email-blur probe (or a full submit) finds the visitor ineligible, so the
+   *  page can show the right pivot before a full submit; `null` until then. */
+  type Pivot = { mode: 'join'; name: string; email: string; phone: string } | { mode: 'renew'; email: string };
+
+  let blurPivot = $state<Pivot | null>(null);
+
+  async function onEmailBlur(): Promise<void> {
+    const enteredEmail = email.value() ?? '';
+    if (!enteredEmail.trim()) {
+      blurPivot = null;
+      return;
+    }
+    const known = await checkKnownEmail(enteredEmail);
+    if (!known.known) {
+      blurPivot = { mode: 'join', name: name.value() ?? '', email: enteredEmail, phone: phone.value() ?? '' };
+      return;
+    }
+    const { status } = await checkClassEligibility(enteredEmail);
+    if (status === 'eligible') {
+      blurPivot = null;
+    } else if (status === 'lapsed') {
+      blurPivot = { mode: 'renew', email: enteredEmail };
+    } else {
+      blurPivot = { mode: 'join', name: name.value() ?? '', email: enteredEmail, phone: phone.value() ?? '' };
+    }
+  }
+
+  const resultPivot = $derived.by<Pivot | null>(() => {
+    const result = joinClass.result;
+    if (!result || !('pivot' in result)) return null;
+    return result.pivot === 'join'
+      ? { mode: 'join', name: result.name, email: result.email, phone: result.phone ?? '' }
+      : { mode: 'renew', email: result.email };
+  });
+
+  const pivot = $derived(resultPivot ?? blurPivot);
+
+  const joinApplyHref = $derived.by(() => {
+    if (!pivot || pivot.mode !== 'join') return '';
+    const params = new URLSearchParams({ class: data.cls.id, name: pivot.name, email: pivot.email });
+    if (pivot.phone) params.set('phone', pivot.phone);
+    return `/join/apply?${params.toString()}`;
+  });
 
   $effect(() => {
     const url = payClassFee.result && 'url' in payClassFee.result ? payClassFee.result.url : undefined;
-    if (browser && url) window.location.href = url;
+    if (url) window.location.href = url;
   });
 </script>
 
@@ -56,7 +111,7 @@ configured, matching the family's own ContactForm/DonateForm precedent. -->
   {/if}
 </p>
 
-{#if joinClass.result?.outcome === 'enrolled'}
+{#if joinClass.result && 'outcome' in joinClass.result && joinClass.result.outcome === 'enrolled'}
   <div class="mt-l max-w-measure-wide rounded-box border border-success bg-success/10 p-m">
     <p class="m-0 font-semibold text-base-content">You're signed up for {data.cls.name}.</p>
     {#if data.cls.fee > 0}
@@ -91,7 +146,7 @@ configured, matching the family's own ContactForm/DonateForm precedent. -->
       </p>
     {/if}
   </div>
-{:else if joinClass.result?.outcome === 'waitlisted'}
+{:else if joinClass.result && 'outcome' in joinClass.result && joinClass.result.outcome === 'waitlisted'}
   <div class="mt-l max-w-measure-wide rounded-box border border-info bg-info/10 p-m">
     <p class="m-0 font-semibold text-base-content">You're on the waitlist, position {joinClass.result.position}.</p>
     <p class="mt-xs mb-0 text-step--1 text-base-content">
@@ -99,6 +154,33 @@ configured, matching the family's own ContactForm/DonateForm precedent. -->
       claim it, good for a limited window; passing on an offer is a fine choice and keeps your place
       for a future opening.
     </p>
+  </div>
+{:else if pivot && pivot.mode === 'renew'}
+  <div class="mt-l max-w-measure-wide rounded-box border border-info bg-info/10 p-m">
+    <p class="m-0 font-semibold text-base-content">Renew to sign up for {data.cls.name}.</p>
+    <p class="mt-xs mb-0 text-step--1 text-base-content">
+      Your membership has lapsed. We'll email you a sign-in link; you can renew and register for
+      classes from your account.
+    </p>
+    {#if requestRenewLink.result?.sent}
+      <p class="mt-xs mb-0 text-step--1 text-base-content">Check your inbox. The link expires in 15 minutes.</p>
+    {:else}
+      <form {...requestRenewLink} class="mt-s">
+        <input type="hidden" name="email" value={pivot.email} />
+        <button type="submit" class="btn btn-primary btn-sm" disabled={!!requestRenewLink.pending}>
+          {requestRenewLink.pending ? 'Sending…' : 'Email me a sign-in link'}
+        </button>
+      </form>
+    {/if}
+  </div>
+{:else if pivot}
+  <div class="mt-l max-w-measure-wide rounded-box border border-info bg-info/10 p-m">
+    <p class="m-0 font-semibold text-base-content">Classes are for current members.</p>
+    <p class="mt-xs mb-0 text-step--1 text-base-content">
+      Join the club to sign up for {data.cls.name}; we'll carry your class pick over so you don't
+      have to enter it twice.
+    </p>
+    <a class="btn btn-primary btn-sm mt-s" href={joinApplyHref}>Join the club</a>
   </div>
 {:else}
   <form {...joinClass} class="mt-l flex max-w-measure-wide flex-col gap-m">
@@ -117,12 +199,20 @@ configured, matching the family's own ContactForm/DonateForm precedent. -->
 
     <fieldset class="fieldset">
       <legend class="fieldset-legend">Email address</legend>
-      <input class="input w-full" autocomplete="email" required {...email.as('email')} />
+      <input class="input w-full" autocomplete="email" required {...email.as('email')} onblur={onEmailBlur} />
     </fieldset>
 
     <fieldset class="fieldset">
       <legend class="fieldset-legend">Phone number (optional)</legend>
       <input class="input w-full" autocomplete="tel" {...phone.as('tel')} />
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">Anything specific you'd like to learn?</legend>
+      <textarea class="textarea h-24 w-full" {...interests.as('text')}></textarea>
+      <p class="mt-2xs mb-0 text-step--2 text-muted">
+        Optional. Your answer helps us shape class time around what you want to learn.
+      </p>
     </fieldset>
 
     <fieldset class="fieldset waiver-fieldset">

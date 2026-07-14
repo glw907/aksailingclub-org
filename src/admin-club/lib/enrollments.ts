@@ -56,6 +56,11 @@ export interface SignUpForClassInput {
    *  phone has its own separate home, `class_waitlist.applicant_phone`, and is stored there in
    *  full regardless of member status. */
   phone?: string;
+  /** Optional: the enrollee's free-text answer to "anything specific you'd like to learn?"
+   *  (migration 0019_enrollment_interests). An enrolled signup stores it on its own
+   *  `class_enrollments.interests` column; a waitlisted one stores the same answer on
+   *  `class_waitlist.notes` instead, since a waitlist entry has no enrollment row yet to hold it. */
+  interests?: string;
   /** The wording version to stamp the `waiver_acceptances` row with: the caller reads this from
    *  `club-settings.ts`'s `getWaiverTextVersion` at the moment of submission, never here. */
   waiverVersion: string;
@@ -140,8 +145,8 @@ export async function signUpForClass(
       const detail = `class=${input.classId}`;
       await db.batch([
         db
-          .prepare('INSERT INTO class_enrollments (id, class_id, member_id) VALUES (?1, ?2, ?3)')
-          .bind(enrollmentId, input.classId, member.memberId),
+          .prepare('INSERT INTO class_enrollments (id, class_id, member_id, interests) VALUES (?1, ?2, ?3, ?4)')
+          .bind(enrollmentId, input.classId, member.memberId, input.interests ?? null),
         db
           .prepare('INSERT INTO audit_log (actor, action, entity, entity_id, detail) VALUES (?1, ?2, ?3, ?4, ?5)')
           .bind('public:signup', 'enroll', 'enrollment', enrollmentId, detail),
@@ -178,10 +183,10 @@ export async function signUpForClass(
     await db.batch([
       db
         .prepare(
-          `INSERT INTO class_waitlist (id, class_id, applicant_name, applicant_email, applicant_phone, position)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
+          `INSERT INTO class_waitlist (id, class_id, applicant_name, applicant_email, applicant_phone, position, notes)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
         )
-        .bind(waitlistId, input.classId, input.name, input.email, input.phone ?? null, position),
+        .bind(waitlistId, input.classId, input.name, input.email, input.phone ?? null, position, input.interests ?? null),
       db
         .prepare('INSERT INTO audit_log (actor, action, entity, entity_id, detail) VALUES (?1, ?2, ?3, ?4, ?5)')
         .bind('public:signup', 'waitlist', 'waitlist', waitlistId, `class=${input.classId} position=${position}`),

@@ -389,7 +389,7 @@ export async function claimOffer(db: D1Database, token: string, notify?: EmailBi
   if ((consume.meta.changes ?? 0) !== 1) return { error: 'This offer has already been used.' };
 
   const waitlistRow = await db
-    .prepare('SELECT id, applicant_name, applicant_email, applicant_phone, member_id FROM class_waitlist WHERE id = ?1 LIMIT 1')
+    .prepare('SELECT id, applicant_name, applicant_email, applicant_phone, member_id, notes FROM class_waitlist WHERE id = ?1 LIMIT 1')
     .bind(preview.waitlist_id)
     .first<{
       id: string;
@@ -397,6 +397,7 @@ export async function claimOffer(db: D1Database, token: string, notify?: EmailBi
       applicant_email: string | null;
       applicant_phone: string | null;
       member_id: string | null;
+      notes: string | null;
     }>();
   // The waitlist row's own CHECK guarantees exactly one identity edge: either `member_id` is
   // already set (the person joined as a known member), or `applicant_email` is (a public signup
@@ -424,9 +425,11 @@ export async function claimOffer(db: D1Database, token: string, notify?: EmailBi
   const enrollmentId = crypto.randomUUID();
   try {
     await db.batch([
+      // The waitlist row's notes carry the signup form's "what would you like to learn" answer
+      // (migration 0019); the delete below would discard it, so it rides onto the enrollment.
       db
-        .prepare('INSERT INTO class_enrollments (id, class_id, member_id) VALUES (?1, ?2, ?3)')
-        .bind(enrollmentId, preview.class_id, enrollMemberId),
+        .prepare('INSERT INTO class_enrollments (id, class_id, member_id, interests) VALUES (?1, ?2, ?3, ?4)')
+        .bind(enrollmentId, preview.class_id, enrollMemberId, waitlistRow.notes),
       db.prepare('DELETE FROM class_waitlist WHERE id = ?1').bind(preview.waitlist_id),
     ]);
   } catch (err) {

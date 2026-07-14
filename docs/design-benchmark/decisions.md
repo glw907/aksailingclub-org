@@ -114,6 +114,52 @@ Dates are 2026-07-07/08 (the home convergence arc) unless noted.
   `httpMetadata` fields instead. The engine fix landed and the `devMediaFallback` middleware,
   `scripts/sync-media-local.mjs`, and `.dev-media/` are gone.
 
+- **Header hierarchy, resolved (page template system pass, 2026-07-12)**: the round-4 arc's
+  open item ("h2 vs h3 reads as one weak step") traced to a root cause, not a per-page fix:
+  `--text-step-1` (the lede family) was a literal duplicate of `--text-step-2` (h3's own
+  size), so the promise-hero standfirst and h3 rendered identically. Shipped both arc
+  candidates together: **A** (`--text-step-1` repinned to `clamp(1.19rem, 1.17rem + 0.1vw,
+  1.25rem)`, strictly between body and h3; `.prose h2` weight 600 → 700, so h2 differs from
+  h3 in size and weight) plus **B** (a short gold waypoint rule above each `.prose h2`,
+  kin to `EventsListing.svelte`'s spine marker). The fix is spine-wide, not education-only:
+  the education-only `LONG_FORM_PAGE_SLUGS` gate generalized into a nav-rank tier selector
+  (`src/theme/page-tiers.ts`, `isPrimaryPage`), deriving primary status from
+  `menus.primary` with no per-page bookkeeping. Every primary page (Education, Racing,
+  Events, Join, Members, Contact) now carries the composed hero and the gold marker; the
+  hero itself moved from a code map (`LONG_FORM_HERO`) into pages frontmatter (`promise`,
+  `facts`) and degrades to a light variant (no photo slot) when a page has no hero photo.
+  Bands stay home-only, unaffected.
+
+- **Dedicated-route primary pages mirror the light hero locally (verification round,
+  2026-07-12)**: `/events/` never passes through `[...path]`, so the tier gate cannot reach
+  it; the route now renders the eyebrow-plus-promise light variant itself, matched
+  declaration-for-declaration to the template's, and keeps the calendar's own composition
+  (its month waypoints already carry the spine's gold marks, so no prose-h2 tier rule
+  there). Consolidate into a shared component when a third consumer appears. Two cosmetic
+  carries from the verifier fan-out await the owner's read: home's news-card headings
+  shrank with `--text-step-1` (full titles now fit where they ellipsized), and education's
+  standfirst sits near body size (distinct from body by ink recession and position only).
+
+- **Hero photos crop 2:1 with per-photo focus; the image standard is codified
+  (2026-07-12)**: the owner picked the 2:1 editorial crop from side-by-side candidates
+  ("2:1 looks better") with the caution that crop location must not cut heads or break
+  composition. A global up-bias failed its second photo (racing's fleet cropped to sky),
+  so the crop window is per-photo data: the pages concept's `imageFocus` field, centered
+  default, join `50% 30%`, racing `50% 65%`. The full template-by-template imagery rules
+  now live in `docs/image-standard.md`; future page builds consult it rather than
+  re-deriving. Related fix the probe surfaced: the lede's trailing-CTA styling keyed off
+  `a:last-child` and broke racing's mid-sentence link; the CTA is now stamped
+  structurally (`lede-cta`) by the split code.
+
+- **Inline figures: 85% flush-left inset on primary pages (ratified at the evening
+  close, 2026-07-12)**: the step-down sharpens the hero's seniority on many-figure
+  pages. Centered was tried first and the owner read it as right-aligned despite
+  measured 49px/49px symmetry; the ragged-right column's hard left anchor makes a
+  centered inset read displaced, so flush-left (spare room to the rag side) is the
+  ruling. The hero's extra-width breakout is confirmed deliberate (wider-than-column =
+  senior; if it ever reads accidental, widen it, never shrink). Per-template, not
+  per-page; codified in `docs/image-standard.md`.
+
 ## Benchmark provenance
 
 Pinned by the owner 2026-07-08 ("that's our new design benchmark"): the home page at commit

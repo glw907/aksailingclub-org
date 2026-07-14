@@ -3,6 +3,7 @@ title: "Member Resources"
 image:
   src: "media:members-group-photo.123c6cd3c2758c8c"
   alt: "ASC members gathered for a group photo at the clubhouse and grounds, with kids, boats, and a dog."
+promise: "Everything membership offers, in one place."
 ---
 
 Your member hub has everything the Alaska Sailing Club offers its members, in one place. Whether you're planning your first visit, trying to get on the water, managing your membership, or looking up a club policy, you'll find it here. From club boats and seasonal storage to the member directory and governance documents, it's all organized so you can find what you need whether you've been with us for a week or a decade. New members should start with the New Member Guide.

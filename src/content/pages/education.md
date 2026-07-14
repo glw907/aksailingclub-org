@@ -3,21 +3,17 @@ title: "Education"
 image:
   src: "media:youth-intro-class-2.091a328187aa5733"
   alt: "A sailing instructor laughing with three kids aboard a club boat, everyone in life jackets."
+promise: "Come learn to sail with us."
+facts:
+  - "4 days"
+  - "Adults, teens & kids 8–12"
+  - "Big Lake"
+  - "Summer sessions"
 ---
 
-Families welcome. Every summer we run a four-day beginner course for adults, teens, and kids, with both tracks timed together so you can learn side by side. We're on Big Lake, about 25 minutes from Wasilla, 45 from Palmer, and an hour and 15 minutes north of Anchorage. [See class dates →](/events/)
+Everyone's welcome, solo sailors, couples, and whole families alike. Every summer we run a four-day beginner course for adults, teens, and kids, with both tracks timed together so a family can learn side by side. We're on Big Lake, about 25 minutes from Wasilla, 45 from Palmer, and an hour and 15 minutes north of Anchorage. [See class dates →](/events/)
 
-The Alaska Sailing Club is an education-focused 501(c)(3). Teaching people to sail is core to our mission, not an add-on. Our volunteer instructors are US Sailing certified, with decades of combined sailing experience between them, and several race competitively at the national level. Once you've taken a beginner class, come back for the free [Fleet Tune-Up Weekend](#fleet-tune-up-weekend) each June to sharpen your skills before racing season.
-
-## Dates & Registration
-
-Want to sign up? You'll need an active ASC membership first. See [How to Register & Pricing](#how-to-register--pricing) below for how that works and what it costs.
-
-Class dates, openings, and sign-up links live on the [events page](/events/), pulled straight from the club's own calendar and kept current. Open a class there for its dates and a link to sign up.
-
-**Classes fill fast**, sessions typically sell out within a week of registration opening in mid-March, and some fill in days. If you're planning to take a class this summer, register as soon as registration opens.
-
-*If a class shows as open but registration fails, it may have already filled. [Join the waitlist](#class-waitlist) and we'll contact you when a spot opens.*
+The Alaska Sailing Club is an education-focused 501(c)(3). Teaching people to sail is core to our mission, not an add-on. Our volunteer instructors are US Sailing certified, with decades of combined sailing experience between them, and several race competitively at the national level. Once you've taken a beginner class, come back for the free [Skills & Drills Weekend](#skills--drills-weekend) each June to sharpen your skills before racing season.
 
 ## Introduction to Dinghy Sailing
 
@@ -37,7 +33,7 @@ Our four-day beginner course covers everything from basic boat handling to racin
 ![Sailing instructor celebrating with arms raised alongside a group of youth students on a Buccaneer at the dock](media:youth-intro-class-1.9c08687cac54de80)
 :::
 
-A kid-friendly version of our intro course, with more hands-on time, on-water games, and shorter practice sessions designed for younger learners. Parents are welcome to take the adult class simultaneously or enjoy time on our grounds.
+A kid-friendly version of our intro course, designed for younger learners. Parents are welcome to take the adult class simultaneously or enjoy time on our grounds.
 
 We require a parent on-premises during youth classes. Since there's no standalone youth membership, a child registers under the $500 Family membership, the only tier that covers kids (see [Pricing](#pricing) below).
 
@@ -51,12 +47,19 @@ Here's everything you'll learn in the four days:
 
 <div class="learn-cluster">
 
-<p class="learn-cluster-label">Boat handling</p>
+<p class="learn-cluster-label">Know the boat</p>
 
 - Basic sailing vocabulary, including the names of all the "parts and pieces" of a boat
+- Correct rigging, put-away, and hoist-use procedures for the club boats. Adults and teens focus on Lido 14s, the Buccaneer 18, and the Catalina 16.5; youth sailors learn to rig Lasers and Optimists.
+
+</div>
+
+<div class="learn-cluster">
+
+<p class="learn-cluster-label">Boat handling</p>
+
 - How to sail a dinghy on all points of sail (reaching, running, and upwind sailing)
 - Core sailing maneuvers, including tacking, jibing, and rocking a sailboat forward when there isn't any wind
-- Correct rigging, put-away, and hoist-use procedures for the club boats. Adults and teens focus on Lido 14s, the Buccaneer 18, and the Catalina 16.5; youth sailors learn to rig Lasers and Optimists.
 
 </div>
 
@@ -66,14 +69,14 @@ Here's everything you'll learn in the four days:
 
 - How to right a capsized boat safely
 - Essential sailing knots, including the double figure eight, the double half-hitch, the bowline, and the cleat knot
-- Basic right-of-way rules
 
 </div>
 
-<div class="learn-cluster learn-cluster-wide">
+<div class="learn-cluster">
 
-<p class="learn-cluster-label">Racing basics</p>
+<p class="learn-cluster-label">Rules &amp; racing</p>
 
+- Basic right-of-way rules
 - An introduction to the rules and basic tactics of sailboat racing
 
 </div>
@@ -84,61 +87,51 @@ Here's everything you'll learn in the four days:
 
 We adjust for weather and wind, so treat the times below as a plan, not a promise. Class runs to 6:00 p.m. Thursday through Saturday and wraps up an hour earlier on Sunday; most students camp at the club for the duration, and instructors often take a sunset sail on the club's Ensign 22 after dinner.
 
-<div class="course-schedule not-prose">
-
-<div class="schedule-row">
-<span class="schedule-day">Arrival</span>
-<span class="schedule-time">Anytime before class</span>
-<span class="schedule-dot-slot" aria-hidden="true"></span>
-<span class="schedule-focus">Set up your tent or RV, and join the volunteers rigging boats if you like</span>
-</div>
-
-<div class="schedule-row">
-<span class="schedule-day">Thursday</span>
-<span class="schedule-time">1:00&ndash;6:00 p.m.</span>
-<span class="schedule-dot-slot" aria-hidden="true"><span class="schedule-dot schedule-dot-ashore"></span></span>
-<span class="schedule-focus"><span class="sr-only">Classroom &amp; rigging: </span>Introductions, club tour, rigging, capsize drill, sailing theory</span>
-</div>
-
-<div class="schedule-row">
-<span class="schedule-day">Friday</span>
-<span class="schedule-time">10:00 a.m.&ndash;6:00 p.m.</span>
-<span class="schedule-dot-slot" aria-hidden="true"><span class="schedule-dot schedule-dot-water"></span></span>
-<span class="schedule-focus"><span class="sr-only">On the water: </span>On-water drills, upwind and downwind sailing practice</span>
-</div>
-
-<div class="schedule-row">
-<span class="schedule-day">Saturday</span>
-<span class="schedule-time">10:00 a.m.&ndash;6:00 p.m.</span>
-<span class="schedule-dot-slot" aria-hidden="true"><span class="schedule-dot schedule-dot-water"></span></span>
-<span class="schedule-focus"><span class="sr-only">On the water: </span>Advanced drills, right-of-way, docking, telltales, heavy weather</span>
-</div>
-
-<div class="schedule-row">
-<span class="schedule-day">Sunday</span>
-<span class="schedule-time">10:00 a.m.&ndash;5:00 p.m.</span>
-<span class="schedule-dot-slot" aria-hidden="true"><span class="schedule-dot schedule-dot-water"></span></span>
-<span class="schedule-focus"><span class="sr-only">On the water: </span>Racing basics and a few fun class races, ends an hour early</span>
-</div>
-
-</div>
-
-<div class="schedule-legend not-prose">
-<span class="schedule-legend-item"><span class="schedule-dot schedule-dot-water" aria-hidden="true"></span>On the water</span>
-<span class="schedule-legend-item"><span class="schedule-dot schedule-dot-ashore" aria-hidden="true"></span>Classroom &amp; rigging</span>
-</div>
-
 Here's what each day actually looks like:
 
-**Arrival.** Come any time before class starts; some students arrive a day early to set up camp and pitch in on rigging. Arriving the day of class, plan on 45 minutes to set up your tent or RV before start time.
+<div class="course-days not-prose">
 
-**Thursday.** Class starts at 1:00 p.m. with introductions and a walking tour, then hands-on rigging, where you'll learn the names of every part of a dinghy. Once the boats are launched, everyone runs the capsize drill. A short classroom session covers sailing theory and basic maneuvers (tacking and jibing), followed by dry-land tiller practice, a Q&A, and derigging.
+<div class="course-day">
 
-**Friday.** As much water time as the wind allows. Rig and launch, a quick classroom review, then the first drill: beam reaching and tacking around two marks. After a classroom session on upwind and downwind technique and a lunch break, the rest of the day is upwind/downwind practice, typically the hardest skill for a beginner. Ends with Q&A and put-away.
+<p class="course-day-label">Arrival <span class="course-day-time">Anytime before class</span></p>
 
-**Saturday.** More on-water time with harder drills: tack-on-the-whistle, jibe-on-the-whistle, follow the leader. After a classroom debrief and lunch, advanced topics: right-of-way, safe docking procedures, sailing with telltales, and sailing in extreme conditions (too much wind, too little wind). Ends with Q&A and put-away.
+Come any time before class starts; some students arrive a day early to set up camp and pitch in on rigging. Arriving the day of class, plan on 45 minutes to set up your tent or RV before start time.
 
-**Sunday.** Rig and launch, then straight into advanced drills, followed by a classroom session on the basics of sailboat racing (enough to join an ASC regatta). The afternoon is low-key racing drills and a few fun class races. Ends about an hour earlier than the other days.
+</div>
+
+<div class="course-day">
+
+<p class="course-day-label">Thursday <span class="course-day-time">1:00&ndash;6:00 p.m.</span></p>
+
+Class starts at 1:00 p.m. with introductions and a walking tour, then hands-on rigging, where you'll learn the names of every part of a dinghy. Once the boats are launched, everyone runs the capsize drill. A short classroom session covers sailing theory and basic maneuvers (tacking and jibing), followed by dry-land tiller practice, a Q&A, and derigging.
+
+</div>
+
+<div class="course-day">
+
+<p class="course-day-label">Friday <span class="course-day-time">10:00 a.m.&ndash;6:00 p.m.</span></p>
+
+As much water time as the wind allows. Rig and launch, a quick classroom review, then the first drill: beam reaching and tacking around two marks. After a classroom session on upwind and downwind technique and a lunch break, the rest of the day is upwind/downwind practice, typically the hardest skill for a beginner. Ends with Q&A and put-away.
+
+</div>
+
+<div class="course-day">
+
+<p class="course-day-label">Saturday <span class="course-day-time">10:00 a.m.&ndash;6:00 p.m.</span></p>
+
+More on-water time with harder drills: tack-on-the-whistle, jibe-on-the-whistle, follow the leader. After a classroom debrief and lunch, advanced topics: right-of-way, safe docking procedures, sailing with telltales, and sailing in extreme conditions (too much wind, too little wind). Ends with Q&A and put-away.
+
+</div>
+
+<div class="course-day">
+
+<p class="course-day-label">Sunday <span class="course-day-time">10:00 a.m.&ndash;5:00 p.m.</span></p>
+
+Rig and launch, then straight into advanced drills, followed by a classroom session on the basics of sailboat racing (enough to join an ASC regatta). The afternoon is low-key racing drills and a few fun class races. Ends about an hour earlier than the other days.
+
+</div>
+
+</div>
 
 ### Youth Class Special Notes
 
@@ -149,40 +142,40 @@ The overall youth class schedule is similar to the agenda for the adult class, w
 - More frequent and shorter practice sessions
 - Time for unstructured play
 
-### Recommended Reading
-
-Before taking this class, we recommend reading *Learning to Sail: The Annapolis Sailing School Guide for All Ages*. This reading exercise isn't a hard requirement, but it'll give you some theoretical grounding for many of the hands-on activities in the class. You can often pick up a local copy at [Title Wave Books](http://www.wavebooks.com/), and it's also [available to order from Amazon](https://www.amazon.com/Learning-Sail-Annapolis-Sailing-School/dp/0070240140).
-
-## Fleet Tune-Up Weekend
+## Skills & Drills Weekend
 
 :::figure
 ![Two sailors aboard the dinghy Mast Casualty, one at the helm, sailing on Big Lake.](media:mast-casualty-sailing.659b55426153c22e)
 :::
 
-Ready to shake off the rust before racing season? Fleet Tune-Up Weekend is a free, three-day event with group drills, special topic clinics, and plenty of time on the water.
+Ready to shake off the rust before racing season? Skills & Drills Weekend is a free, three-day event with group drills, special topic clinics, and plenty of time on the water.
 
-**Mid-June** (3 days), free for all qualified members. No registration required, show up and sail!
+**Mid-June** (3 days), free for all qualified members. Registration required. When you register, tell us what you'd like to work on, and we'll shape the weekend around it.
 
 ### What to Expect
 
-- **Group drills:** Tack on the whistle, jibe on the whistle, follow the leader, and more
-- **Special topic clinics** taught by some of our best sailors, covering subjects like:
-  - Buccaneer spinnaker sailing
-  - Start tactics
-  - Mark rounding rules
-  - And more, depending on instructor availability and interest
-- **All the usual ASC good stuff:** potluck, campfire, and sauna session
+The weekend is built around group drills (tack on the whistle, jibe on the whistle, follow the leader, and more), plus special topic clinics taught by some of our best sailors. Clinic subjects vary with instructor availability and interest; expect topics like:
+
+- Buccaneer spinnaker sailing
+- Start tactics
+- Mark rounding rules
+
+And all the usual ASC good stuff: potluck, campfire, and sauna session.
 
 ### Who Can Participate
 
-Fleet Tune-Up Weekend is open to members who meet one of the following:
-
-- Have taken an ASC *Introduction to Dinghy Sailing* class (or equivalent)
-- Have prior sailing background, can perform standard sailing maneuvers including capsize recovery, and have been checked out on ASC club boats
+Skills & Drills Weekend is open to members who have taken an ASC *Introduction to Dinghy Sailing* class (or equivalent). Members with prior sailing background also qualify if they can perform standard sailing maneuvers, including capsize recovery, and have been checked out on ASC club boats.
 
 ## How to Register & Pricing
 
-**ASC membership is required to take classes.** Here's what you need to know about pricing, how to join, and how to register for a class.
+**ASC membership is required to take classes.** Here's what you need to know about class dates, pricing, how to join, and how to register for a class.
+
+### Class Dates & Openings
+
+:::class-schedule
+:::
+
+**Classes fill fast**, sessions typically sell out within a week of registration opening in mid-March, and some fill in days. If you're planning to take a class this summer, register as soon as registration opens.
 
 ### Pricing
 
@@ -196,19 +189,7 @@ When you join as a new member, your membership includes credit for your first cl
 
 **Already planning to bring family?** A family membership ($500) includes two class credits, perfect for a parent and teen taking the adult track, or a parent taking the adult class while their child takes the youth class.
 
-### What Membership Includes (Beyond Classes)
-
-<div class="membership-benefits not-prose">
-
-- **Use of club boats** after qualification: included in your beginner class
-- **Participation in regattas and races** throughout the summer season
-- **Tent camping** at our beautiful Big Lake property: unlimited weekend visits
-- **Member directory and Discord community:** connect with 100+ sailors
-- **Support a 501(c)(3) nonprofit** dedicated to making sailing accessible
-
-</div>
-
-Many members discover us through classes and stay for the boats, the racing, and the community. Your $250 individual membership pays for itself in 2-3 uses of club boats (equivalent to commercial rentals at other facilities).
+Membership includes a lot more than classes: club boats after qualification, racing, tent camping, and the club community. The [Join page](/join/#what-you-get-with-membership) has the full list.
 
 ### Your Registration Path
 
@@ -232,6 +213,12 @@ Ready to register! Check the class schedule on our [events page](/events/) and s
 :::
 ::::
 
+### Class Waitlist
+
+Our Learn to Sail classes fill up quickly! If a class session is full, join the waitlist. The Program Committee will contact you when a spot opens up. Cancellations are common in the weeks before class. Waitlisted students frequently get in.
+
+Find your class on the [events page](/events/) and open its listing. A full class shows a "Join the waitlist" option in place of Sign Up, right on the same page, no separate form. If a class shows as open but registration fails, it may have already filled, so join the waitlist.
+
 ### Ready to Join?
 
 [Join the club](/join/) — membership is active immediately upon payment.
@@ -243,6 +230,10 @@ Dinghy sailing doesn't require extreme fitness, but you need to be able to pass 
 Participants in ASC classes must wear a life jacket on the docks or a boat. We take our life jacket rules very seriously, and we will ask participants who don't comply to leave the class.
 
 Kids take the swim test and capsize drill too, and they handle it themselves: our young sailors right their own boats, in dinghies sized to fit them (an Optimist, or a Laser rigged with a smaller sail). For sailors 12 and under, life jackets stay on at all times, including during the swim test.
+
+## Recommended Reading
+
+Before taking the intro class, we recommend reading *Learning to Sail: The Annapolis Sailing School Guide for All Ages*. This reading exercise isn't a hard requirement, but it'll give you some theoretical grounding for many of the hands-on activities in the class. You can often pick up a local copy at [Title Wave Books](http://www.wavebooks.com/), and it's also [available to order from Amazon](https://www.amazon.com/Learning-Sail-Annapolis-Sailing-School/dp/0070240140).
 
 ## Recommended Gear
 
@@ -288,12 +279,14 @@ If you cancel a class within the two-week window, you can opt to apply your clas
 
 If you need to cancel, please give us as much notice as possible. Courses at the ASC typically have a long waiting list, and we want to provide potential attendees with as much notice about openings as possible.
 
-## Class Waitlist
-
-Our Learn to Sail classes fill up quickly! If a class session is full, join the waitlist below. The Program Committee will contact you when a spot opens up. Cancellations are common in the weeks before class. Waitlisted students frequently get in.
-
-Find your class on the [events page](/events/) and open its listing. A full class shows a "Join the waitlist" option in place of Sign Up, right on the same page, no separate form.
-
 ## Questions?
 
-Not finding what you need? We're real people, happy to talk sailing, just [email us](/contact/) any time.
+<div class="page-cta not-prose">
+
+<p class="page-cta-lead">Not finding what you need?</p>
+
+<p class="page-cta-body">We're real people, happy to talk sailing.</p>
+
+<a class="asc-cta-btn" href="/contact/">Email us any time</a>
+
+</div>

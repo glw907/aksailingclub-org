@@ -63,6 +63,9 @@ export interface ClassRow {
   heroImage: string | null;
   heroImageAlt: string | null;
   visible: boolean;
+  /** A drop-in offering takes no registration at all (migration 0018): the public schedule
+   *  shows "Just show up!" instead of a Register link. */
+  dropIn: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -93,6 +96,7 @@ export interface ClassWrite {
   instructorNotes: string | null;
   customNote: string | null;
   visible: boolean;
+  dropIn: boolean;
 }
 
 /** One instructor assigned to a class: `email` is read off the real `members` row `member_id`
@@ -111,6 +115,9 @@ export interface EnrollmentRow {
   enrolledAt: string;
   feePaid: boolean;
   guardianContact: string | null;
+  /** The enrollee's optional answer to "anything specific you'd like to learn?" (migration
+   *  0019_enrollment_interests), `null` when they left it blank. */
+  interests: string | null;
 }
 
 /** One `class_waitlist` row, camelCased. Exactly one of `memberId`/`applicantEmail` is set (the
@@ -146,6 +153,7 @@ interface ClassRawRow {
   hero_image: string | null;
   hero_image_alt: string | null;
   visible: 0 | 1;
+  drop_in: 0 | 1;
   created_at: string;
   updated_at: string;
 }
@@ -168,6 +176,7 @@ function toClassRow(row: ClassRawRow): ClassRow {
     heroImage: row.hero_image,
     heroImageAlt: row.hero_image_alt,
     visible: row.visible === 1,
+    dropIn: row.drop_in === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -175,7 +184,7 @@ function toClassRow(row: ClassRawRow): ClassRow {
 
 const SELECT_COLUMNS = `id, season, name, slug, track, capacity, fee, start_date, end_date,
   location, description, instructor_notes, custom_note, hero_image, hero_image_alt, visible,
-  created_at, updated_at`;
+  drop_in, created_at, updated_at`;
 
 const ORDER_BY = 'ORDER BY start_date IS NULL, start_date ASC, name ASC';
 
@@ -258,8 +267,8 @@ export async function createClass(db: D1Database, id: string, season: number, wr
   await db
     .prepare(
       `INSERT INTO classes (id, season, name, slug, track, capacity, fee, start_date, end_date,
-        location, description, instructor_notes, custom_note, visible)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)`,
+        location, description, instructor_notes, custom_note, visible, drop_in)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)`,
     )
     .bind(
       id,
@@ -276,6 +285,7 @@ export async function createClass(db: D1Database, id: string, season: number, wr
       write.instructorNotes,
       write.customNote,
       write.visible ? 1 : 0,
+      write.dropIn ? 1 : 0,
     )
     .run();
 }
@@ -286,8 +296,8 @@ export async function updateClass(db: D1Database, id: string, write: ClassWrite)
     .prepare(
       `UPDATE classes SET name = ?1, slug = ?2, track = ?3, capacity = ?4, fee = ?5, start_date = ?6,
         end_date = ?7, location = ?8, description = ?9, instructor_notes = ?10, custom_note = ?11,
-        visible = ?12, updated_at = datetime('now')
-       WHERE id = ?13`,
+        visible = ?12, drop_in = ?13, updated_at = datetime('now')
+       WHERE id = ?14`,
     )
     .bind(
       write.name,
@@ -302,6 +312,7 @@ export async function updateClass(db: D1Database, id: string, write: ClassWrite)
       write.instructorNotes,
       write.customNote,
       write.visible ? 1 : 0,
+      write.dropIn ? 1 : 0,
       id,
     )
     .run();
@@ -364,17 +375,25 @@ export async function removeInstructor(db: D1Database, classId: string, email: s
 export async function listEnrollments(db: D1Database, classId: string): Promise<EnrollmentRow[]> {
   const { results } = await db
     .prepare(
-      `SELECT id, member_id, enrolled_at, fee_paid, guardian_contact FROM class_enrollments
+      `SELECT id, member_id, enrolled_at, fee_paid, guardian_contact, interests FROM class_enrollments
        WHERE class_id = ?1 ORDER BY enrolled_at ASC`,
     )
     .bind(classId)
-    .all<{ id: string; member_id: string; enrolled_at: string; fee_paid: 0 | 1; guardian_contact: string | null }>();
+    .all<{
+      id: string;
+      member_id: string;
+      enrolled_at: string;
+      fee_paid: 0 | 1;
+      guardian_contact: string | null;
+      interests: string | null;
+    }>();
   return results.map((row) => ({
     id: row.id,
     memberId: row.member_id,
     enrolledAt: row.enrolled_at,
     feePaid: row.fee_paid === 1,
     guardianContact: row.guardian_contact,
+    interests: row.interests,
   }));
 }
 

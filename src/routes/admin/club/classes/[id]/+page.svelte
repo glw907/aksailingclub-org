@@ -49,6 +49,7 @@ section posts to this route's own actions, independent of the main edit form bel
   let instructorNotes = $state(untrack(() => data.class?.instructorNotes ?? ''));
   let customNote = $state(untrack(() => data.class?.customNote ?? ''));
   let visible = $state(untrack(() => data.class?.visible ?? true));
+  let dropIn = $state(untrack(() => data.class?.dropIn ?? false));
 
   let newInstructorEmail = $state('');
   let newInstructorName = $state('');
@@ -99,6 +100,7 @@ section posts to this route's own actions, independent of the main edit form bel
         bind:instructorNotes
         bind:customNote
         bind:visible
+        bind:dropIn
         heroImage={data.class.heroImage}
         heroImageAlt={data.class.heroImageAlt}
       />
@@ -155,16 +157,21 @@ section posts to this route's own actions, independent of the main edit form bel
     </div>
     <ul class="divide-y divide-[var(--cairn-card-border)]">
       {#each data.enrollments as enrollment (enrollment.id)}
-        <li class="flex items-center justify-between gap-4 px-6 py-3 text-sm">
-          <span>{enrollment.memberId}</span>
-          <span class="flex items-center gap-3">
-            <span class="text-muted">{enrollment.feePaid ? 'Paid' : 'Unpaid'}</span>
-            <form method="post" action="?/dropEnrollment">
-              <input type="hidden" name="enrollmentId" value={enrollment.id} />
-              <CsrfField />
-              <button type="submit" class="btn btn-ghost btn-xs">Drop</button>
-            </form>
-          </span>
+        <li class="flex flex-col gap-1 px-6 py-3 text-sm">
+          <div class="flex items-center justify-between gap-4">
+            <span>{enrollment.memberId}</span>
+            <span class="flex items-center gap-3">
+              <span class="text-muted">{enrollment.feePaid ? 'Paid' : 'Unpaid'}</span>
+              <form method="post" action="?/dropEnrollment">
+                <input type="hidden" name="enrollmentId" value={enrollment.id} />
+                <CsrfField />
+                <button type="submit" class="btn btn-ghost btn-xs">Drop</button>
+              </form>
+            </span>
+          </div>
+          {#if enrollment.interests}
+            <p class="m-0 text-xs text-muted">Wants to learn: {enrollment.interests}</p>
+          {/if}
         </li>
       {:else}
         <li class="px-6 py-6 text-center text-sm text-muted">No one is enrolled yet.</li>
@@ -192,6 +199,10 @@ section posts to this route's own actions, independent of the main edit form bel
               <span class="badge badge-ghost badge-sm font-medium capitalize">{history[0].resolved}</span>
             {/if}
           </div>
+
+          {#if entry.notes}
+            <p class="m-0 text-xs text-muted">Wants to learn: {entry.notes}</p>
+          {/if}
 
           {#if activeOffer}
             <div class="flex flex-wrap items-center justify-between gap-2 rounded-box bg-base-200/60 px-3 py-2 text-sm">

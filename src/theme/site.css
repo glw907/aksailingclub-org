@@ -154,14 +154,16 @@ body {
    so a bare link in the chrome (SiteHeader/SiteFooter own their own link colors already) is
    untouched. `:not(.asc-card-link)` excludes the card grid's own whole-card anchor: that link
    wraps a title and a description together, and underlining the whole block read as every word in
-   the card being a separate link, not a single clean card (A1's quieting recipe). */
-.site-main .prose a:not(.asc-card-link) {
+   the card being a separate link, not a single clean card (A1's quieting recipe).
+   `:not(.asc-cta-btn)` excludes the fireweed action button the same way: a button is not a text
+   link, and the underline plus primary blue would fight its own white-on-fireweed dress. */
+.site-main .prose a:not(.asc-card-link):not(.asc-cta-btn) {
   color: var(--color-primary);
   text-decoration: underline;
   text-decoration-color: color-mix(in oklab, var(--color-primary) 35%, transparent);
   text-underline-offset: 3px;
 }
-.site-main .prose a:not(.asc-card-link):hover {
+.site-main .prose a:not(.asc-card-link):not(.asc-cta-btn):hover {
   text-decoration-color: currentColor;
 }
 

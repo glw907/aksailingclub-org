@@ -1,6 +1,212 @@
 # asc-site status
 
-**HANDOFF (2026-07-09, education round 3 closes; NEXT SESSION = the design-loop brainstorm):
+**INITIATIVE 2 (unified-signup) IS BUILT, REVIEWED, AND ON DEV AWAITING GEOFF'S
+BEFORE/AFTER (2026-07-13→14, the program's second session; spec
+`docs/2026-07-13-unified-signup-design.md` + plan `docs/plans/2026-07-13-unified-signup.md`,
+both implemented). What landed: the `src/member-signup/lib/` pure engine (validate /
+price / build; MAX_CLASS_PICKS=8), the fifth payment kind `join` (multi-line
+createCheckout; `reconcileJoin` ATOMIC on the donation pattern — claim inside one
+db.batch with the flip, credit grant/redemptions, fee_paid flips, and the ledger lines;
+webhook answers 500-for-retry on join+donation; ledger cents SNAPSHOTTED into session
+metadata so lines sum to Stripe's total by construction), migration 0022 (join_welcome +
+board_join_notice templates AND the processed_stripe_sessions.kind CHECK widened —
+fixing a LATENT LIVE DEFECT where 'donation' was never CHECK-valid on real D1;
+scratch-proven, applied LIVE + local), the public `/join/apply` door (tier prices from
+settings, family roster, per-member class picks, running total, waiver, Turnstile,
+fireweed submit), the class-door standing gate (current/grace proceed; no-match pivots
+into join with the class carried; lapsed gets the renewal magic link), portal renew LIVE
+(tier picker, next-unclaimed-season mint, dues checkout; the reminder deep-link works)
+plus the asset-fee pay door (incl. a real pre-existing season-source bug fix), the
+`membership-pricing` inline directive replacing every hand-typed tier dollar, the
+content pass (join/renewing/class-registration on the live doors; fresh-context content
+review, original club copy ruled standing), and the membershipworks directive retired.
+SECURITY AMENDMENT (spec 2026-07-14): the unauthenticated welcome-back form was
+REPLACED by a requestMemberLink magic-link handoff after the Opus auth lens showed
+pre-payment writes into a victim household + roster/minor-name disclosure; a known-paid
+email at either public door now gets "check your email" into the portal. Build: the
+6-task Sonnet workflow + 3 Opus lenses (~1.7M tokens), two conductor-spec'd fix rounds,
+simplifier (one finding — the arc judged clean), e2e (join happy path, class-door
+pivot; portal-renew e2e skipped: no member-auth login helper exists) + `/join/apply` in
+the five-viewport visual suite + ALL 15 stale round-4/5 baselines regenerated against
+the ratified rendering (conductor render-read; events h1 assertion updated for the
+promise hero). Gate at close: check 0/0 (813 files), 1050 tests, build green, e2e
+27/27. Budgets: ~3.1M subagent tokens + the Fable main loop; 2 question rounds to
+Geoff, 1 Geoff-initiated correction (the invented board-approval copy, e16054f +
+memory). Roadmap: `class-management` and `season-rollover` logged (Geoff's rulings;
+rollover is sitewide, ops startNewSeason is the precedent). NEXT: Geoff's before/after
+on dev (join.md → /join/apply, class-door pivot, portal renew card), his verdict on the
+welcome-back amendment + the fireweed submit; then INITIATIVE 3 membership-admin (fresh
+session per the ruling). Known debt: GitHub Actions billing still blocked (deploys stay
+manual); Turnstile enforcement + rate limiting ride payments-live-smoke; the
+education-round-4 branch still owes its merge to main at Geoff's go.**
+
+**PRIOR (INITIATIVE 1, money-ledger) IS COMPLETE AND LIVE (2026-07-13, the program's first
+session): the MW REPLACEMENT PROGRAM is on ROADMAP.md (Geoff-approved; one go-live —
+apex cutover waits for membership signup/renewal/admin, MW cancels right after):
+money-ledger → unified-signup → membership-admin → segment-email → payments-live-smoke →
+mw-cutover; qbo-integration narrowed to the sync. Rulings this session: email = announce
++ segments (not a campaign tool); staff roles: cairn's committed shape is ONE identity
+with a site-declared role vocabulary (Geoff building it in cairn-cms; ASC first
+consumer — membership-admin collapses club_roles onto the seam; member auth stays
+separate; consumer brief at docs/2026-07-13-cairn-editor-roles-consumer-brief.md);
+SESSIONS CLEAR CONTEXT BETWEEN INITIATIVES. What landed (spec docs/2026-07-13-money-ledger-design.md, plan
+docs/plans/2026-07-13-money-ledger.md, both marked by this entry as implemented):
+migration 0021 (transactions + transaction_lines, scratch-proven on a real disposable D1
+then APPLIED LIVE), ledger.ts (the invariant-enforcing write seam), the three reconcilers
+now write ledger rows after their guarded flips, DONATIONS PERSIST as a fourth payment
+kind (atomic claim+ledger batch; the webhook answers 500-for-retry on donations only —
+they have no domain row to reconcile by hand), and mw-ledger.mjs BACKFILLED ALL 401 MW
+accounting rows to the live asc-club (401 transactions / 461 lines; zero sum-invariant
+violations; idempotent — post-apply dry-run plans exactly zero). Built by a workflow (4
+serial Sonnet implementers + cf-d1 and money-security Opus lenses) + three conductor fix
+rounds off the real dry-runs (cents parsing for fractional fees; blank-account rows
+import with null household — two were real wedding donations; all-comped list-price
+fallback to classes.fee; partial-refund matching across a Reference typo; repair
+detection keys on the sum invariant, not line absence). Live-data facts for the record:
+19 comped memberships legitimately carry no dues line (no money moved); the Joseph
+Oliver two-tier 2024 ruling now shows honestly as TWO $250 charges linked to one
+membership (verify.sql reports, correctly); memberships' real column is price_paid
+(snake_case — an earlier explorer summary said pricePaid; verified against live schema).
+Pre-backfill backup at ~/.local/asc-data/backups/asc-club-2026-07-13-pre-ledger.sql.
+Gate at close: check 0/0 (792 files), 973/973 tests, build green. Budgets: ~1.44M
+subagent tokens + the Fable main loop; 2 questions to Geoff (finish line, email scope),
+0 corrections. NEXT SESSION (fresh context, per the ruling): INITIATIVE 2, the
+unified-signup brainstorm (Fable-authorized; the education arc log holds the framing;
+ROADMAP.md's unified-signup entry is the scope) — the dues checkout call sites land
+there against the now-ledger-complete seams. The round-5 settle and admin review round
+remain queued from the prior entries.**
+
+**PRIOR (THE MEMBERSHIPWORKS DATA IMPORT IS LIVE, 2026-07-13 night session, Geoff live throughout):
+the real asc-club now holds the club's COMPLETE MW record — 148 households, 285 members (all
+with `mw_account_id` provenance, migration 0020; the one pet row refused), 235 membership rows
+spanning seasons 2024-2026 with REAL payment facts (dates, Stripe/PayPal refs, true amounts
+incl. discounts and comps; the July-7 paid_at-from-renewal-date approximation fully retired,
+incl. one delete of a fully-refunded membership), 15 classes (10 historical instances minted),
+172 enrollments with >95% exact attendee identity from MW's per-event rosters (signup answers +
+check-ins in audit provenance), and 89 asset assignments (the 3 formerly-unmatched holders
+resolved: one by sub-member email, two by the new ops-person→MW-account override map).
+Machinery: `scripts/import/mw-members.mjs` v2 (six phases + accounting pre-processing + roster
+identification, idempotent — post-apply re-run plans ZERO changes; 915 tests), built by a
+workflow (4 implementers + 2 Opus review lenses) plus five conductor-driven fix rounds off real
+dry-runs. Sources committed age-encrypted at `data/membershipworks/` (members, canon accounting
+export, 14 attendee rosters; plaintext machine-local only); pre-import backup at
+`~/.local/asc-data/backups/`. Rulings recorded in CLAUDE.md: asc-club schema fully evolvable
+(never write around it), encrypted exports in-repo, normalization on every write path (emails
+lower, phones E.164, conservative name recasing — live paths done: ensureMember, portal
+profile/household; portal profile still validates unparseable phones). ROADMAP.md born:
+`qbo-integration` logged as the phase-2 accounting project (ledger-shaped transactions table;
+Geoff's ruling). FOR GEOFF/COMMITTEE: (1) the Wright household + Elayne C Hunter hold active
+asset assignments but memberships stale >400 days — 6 assignment rows correctly skipped until
+renewal or a hand-recorded payment; (2) Jerry Edward Amundsen's fully-refunded May-2026
+membership row was deleted per accounting-is-canon; (3) Joseph Oliver's two-tier 2024
+transaction ruled family (override in-script). NEXT: the unified-signup brainstorm (Geoff
+authorized Fable time), the .page-cta rollout behind ratification, the round-5 settle (owed
+list at the education arc log's foot), and the admin review round (+ Geoff's new ask: a spot
+for both Members and Memberships, or one household-grouped screen + a money/renewals view).**
+
+**PRIOR (ROUND 5 EXTENDED, 2026-07-13 evening, this repo's first live session; Geoff live-reviewed
+throughout, then called for a state save ahead of a context clear): the education page grew
+its LIVE CLASS SCHEDULE (Geoff's ask, mirroring the old site's table) — a `class-schedule`
+island in the registration band, quiet grid rows reading asc-club through a remote query,
+with the FULL lifecycle status engine (Completed / In session / Drop-in "Just show up!" /
+Opens <date> via the new class_registration_opens settings gate / Full→Join waitlist /
+Open→Register to our own /classes/[id]/signup / Dates TBD / season-wrapped line /
+schedule-pending line for the post-rollover empty season). Everything relevant is on
+`design/education-round-4`, gates green at close (check 0/0 over 786 files, 754 tests,
+build green, cairn bumped to 0.84.2). Data facts settled with Geoff live: Fleet Tune-Up
+RENAMED "Skills & Drills Weekend" (his pick from a slate; old name read as boat repair; D1
+name+slug remote+local, education + racing prose, anchor #skills--drills-weekend), the
+event now takes PRE-REGISTRATION (drop_in=0; free; members-only), and signup asks
+"Anything specific you'd like to learn?" (migration 0019; answers ride waitlist→enrollment
+through both offer-claim paths — a conductor-caught data-loss fix). Migrations 0018
+(drop_in + registration gate) and 0019 (enrollment interests) are scratch-proven and
+APPLIED TO THE REAL asc-club; the 2nd Adult Intro end_date typo (2016→2026) repaired;
+local D1 rebuilt from all 19 migrations and seeded with real events/classes/settings (no
+member PII). Admin: Drop-in checkbox + classes-list badge + owner-only "Class registration
+opens" Settings field (two reviewed Sonnet dispatches, c23fb6a + 9fffa1f). FLAGGED FOR
+GEOFF'S VERDICT: the band's fireweed registration-door button is RETIRED (schedule rows
+carry their own doors; page fireweed budget back to ONE — the closing email CTA).
+NEXT SESSION: the MEMBERSHIPWORKS DATA IMPORT (Geoff has data; start from
+docs/mw-export-findings.md, the partial export at ~/.local/asc-data/mw-export-2026-07-07.csv,
+and the two-database import doctrine in the cairn-aksailingclub-effort memory). QUEUED
+BEHIND IT: the unified-signup brainstorm (one flow + language across the join and class
+doors, join+class in one pass — Geoff authorized Fable time; the arc log holds the framing),
+the .page-cta rollout to the five Questions-style pages (behind ratification), and the
+ROUND SETTLE (unchanged owed list at the arc log's foot). The dev server machinery:
+`npm run dev` + `npm run media:seed` (cairn-media-seed; the old sync-media-local.mjs is
+retired since 0.84.1).**
+
+**PRIOR (LIVE ROUND 5, 2026-07-13 afternoon, run from the cairn-cms session; work moves HERE now —
+Geoff's ruling at handoff): seven education-page probes on `design/education-round-4`, all
+PROVISIONAL-KEEP (Geoff iterated forward on each; no per-item ratification yet), logged
+one-per-line in `docs/design-benchmark/education-round-5-arc.md` (READ IT FIRST on resume):
+the 2x2 "What You'll Learn" reorganization (four two-item clusters, Rules & Racing new), the
+course-weekend TIMELINE (grid + duplicate narrative merged; gold class-day stops on one
+measured axis; rail through Sunday), the Fleet Tune-Up de-bulleting, the SITEWIDE `.page-cta`
+closing panel (supersedes the round-3 education closing card; rollout to the five other
+Questions-style pages QUEUED behind ratification, home exempt), the two FIREWEED action
+buttons (`.asc-cta-btn`, the color story's full budget: the registration door + the closing
+email action), and the TOC bottom clamp (bug fix, verified three ways). NO gates run this
+round (arc economics); the settle owes everything listed at the arc log's foot: probe script
++ lens fan-out + render read, simplifier, full gate, decisions.md distillation, merge,
+manual wrangler deploy (Actions still billing-blocked), Geoff's before/after. NEXT SESSION
+(in THIS repo): continue the live round or run the settle, Geoff's call.**
+
+**EVENING CLOSE (2026-07-12 late, Geoff's live review round, ALL RATIFIED): after the
+template pass verified below, Geoff reviewed live (localhost tab) and the round landed, all
+on design/education-round-4, gates green throughout (check 0/0, 725 tests): (1) education
+CONTENT REORGANIZED — "Dates & Registration" dissolved into the registration band (Class
+Dates & Openings first, Class Waitlist folded in as h3, old h2 removed), Recommended
+Reading moved to the prep group, lede widened past family-first ("Everyone's welcome, solo
+sailors, couples, and whole families alike"); (2) membership benefits OWNERSHIP moved —
+Join owns the content (it already had the card grid; education's checkmark section deleted
++ one-line pointer; the two unique lines folded into Join's What It Costs; dead
+.membership-benefits CSS removed); (3) the HERO CROP SYSTEM — 2:1 (owner-picked from
+side-by-side crops) with per-photo `imageFocus` frontmatter (join "50% 30%", racing
+"50% 65%", others centered; a global up-bias failed racing and was replaced); (4) INLINE
+FIGURES on primary pages = 85% FLUSH-LEFT inset above 48rem (centered read right-shifted
+to the owner's eye despite measured symmetry — the ragged-right anchor-edge optics; ruling
+in decisions.md); (5) the TOC RAIL moved clear of the hero photo's breakout (gap keyed to
+the widest element; breakpoint 82rem); (6) TWO REAL BUGS fixed — the lede CTA styled by
+a:last-child shattered racing's mid-sentence link (now stamped lede-cta structurally), and
+the events dedicated route never received tier treatment (light hero mirrored locally).
+THE IMAGE STANDARD is codified per-template in docs/image-standard.md (consult it, never
+re-derive). Rulings: geometry probes are necessary but the owner's optical read outranks
+them; content work is main-loop (Fable-level), never dispatched.
+NEXT SESSION: the settle — merge design/education-round-4 to main, push, deploy to dev,
+final production before/after on Geoff's go (the branch is pushed for durability; GitHub
+Actions still billing-blocked, so CI/deploy workflows will not fire — deploy manually via
+wrangler if unblock hasn't happened). Then: regenerate the education-light e2e baseline on
+CI once billing clears (DOUBLY stale now: round-4 + this round), and the posts/bulletins
+composition follow-up spec (the phased half of the template-system spec).**
+
+**PRIOR (2026-07-12): the page template system pass, Tasks 1-6 LANDED on
+design/education-round-4 (spec: `docs/2026-07-12-page-template-system.md`, now marked
+implemented; plan: `docs/plans/2026-07-12-page-template-system.md`). Recovered from the
+2026-07-11 crashed brainstorm. Shipped: the shared type spine (`--text-step-1` repinned to
+`clamp(1.19rem, 1.17rem + 0.1vw, 1.25rem)`, strictly between body and h3; `.prose h2`
+weight 600 → 700), the nav-rank tier selector (`src/theme/page-tiers.ts`, `isPrimaryPage`,
+primary = top-level `menus.primary` destinations), hero data moved off a code map into
+pages frontmatter (`promise`/`facts`), the adaptive primary hero (full promise hero, light
+variant, or plain title hero per page) plus the gold waypoint rule on every primary page's
+h2s, and promise lines for all six primary pages (Education, Racing, Events, Join, Members,
+Contact). `docs/design-benchmark/education-round-4-arc.md` is distilled into
+`decisions.md` and removed. Gate at Task 6: check 0/0 (782 files), 725 tests exit 0, build
+green. **TASK 7 RAN (same session): four fresh-context visual verifiers + an Opus svelte
+review over pre/post captures (scratchpad reference-pre banked before T1). Verdicts:
+education PASS (all three expected deltas, zero hero drift from the frontmatter migration);
+home COSMETIC (news-card headings share step-1 and shrank; full titles now fit where they
+ellipsized — judged an improvement, in Geoff's package); hierarchy PASS (one cosmetic carry:
+education's standfirst reads near body size — left for Geoff's live education review, a
+taste call); tier variants PASS after the conductor's fix (686060c): /events/ is a DEDICATED
+route the [...path] tier gate never reaches, so it now mirrors the light promise hero
+locally (a dedicated-route primary page mirrors the light hero; consolidate to a shared
+component on a third consumer). Svelte review: no blockers; both hardening fixes applied
+(trimmed promise, Array.isArray facts). NEXT ACTION = Geoff's before/after at the deploy
+gate — nothing from this pass deploys or merges without his look; then merge to main + the
+follow-up posts/bulletins composition spec.**
+
+**PRIOR HANDOFF (2026-07-09, education round 3 closes; NEXT SESSION = the design-loop brainstorm):
 education round 3 is MERGED TO MAIN and LIVE ON DEV (0827c06 + machinery at ed8c317). The
 round: fixed the round-2 hydration DUPLICATION bug (split-before-wrap invariant + regression
 test), band now holds only How to Register & Pricing, third divider group "Preparing for

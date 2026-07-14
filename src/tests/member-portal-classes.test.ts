@@ -219,7 +219,7 @@ describe('adminDropEnrollment (reuses withdrawFromClass against the enrollment\'
 });
 
 describe('claimOfferFromPortal / passOfferFromPortal', () => {
-  const OWNED = { id: 'wait-1', class_id: CLASS_ROW.id, member_id: 'mem-kid', household_id: 'hh-1' };
+  const OWNED = { id: 'wait-1', class_id: CLASS_ROW.id, member_id: 'mem-kid', notes: 'Mark roundings', household_id: 'hh-1' };
 
   it('claimOfferFromPortal refuses an entry that does not belong to the household', async () => {
     const { db } = fakeD1({ firstResults: { 'FROM class_waitlist w JOIN members m': { ...OWNED, household_id: 'hh-other' } } });
@@ -236,7 +236,9 @@ describe('claimOfferFromPortal / passOfferFromPortal', () => {
     });
     const result = await claimOfferFromPortal(db, 'wait-1', 'hh-1');
     expect(result).toEqual({ enrollmentId: expect.any(String) });
-    expect(calls.some((c) => c.sql.startsWith('INSERT INTO class_enrollments'))).toBe(true);
+    const enrollInsert = calls.find((c) => c.sql.startsWith('INSERT INTO class_enrollments'));
+    // The waitlist row's interest answer rides onto the enrollment (migration 0019).
+    expect(enrollInsert?.args).toEqual([expect.any(String), CLASS_ROW.id, 'mem-kid', 'Mark roundings']);
   });
 
   it('passOfferFromPortal declines an owned offer', async () => {

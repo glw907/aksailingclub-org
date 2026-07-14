@@ -2,11 +2,11 @@
 title: "Class Registration"
 ---
 
-Class registration happens on the [Events](/events/) page: find your class in the calendar and register directly from its listing. Not yet a member? [Join first](/join/), since membership is required for all classes.
+Class registration happens on the [Education](/education/) page's live schedule and the [Events](/events/) calendar: find your class and register directly from its listing. Not yet a member? Membership is required for all classes, and the registration form will walk you into [joining](/join/) with your class carried along.
 
 ::::cards
 :::card[Browse classes on the Events calendar]{icon="calendar-dots" href="/events/"}
-Find your class, check dates, and register directly from its listing.
+See dates, open spots, and the register link for each class.
 :::
 ::::
 

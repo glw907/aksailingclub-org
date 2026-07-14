@@ -1,9 +1,11 @@
 # asc-site
 
 The Alaska Sailing Club's public site: guides, news, pages, and the season calendar, built on
-`@glw907/cairn-cms` (0.81.0) using the cairn chassis structure. It replaces the club's prior
-Hugo/Blowfish site (`~/Projects/aksailingclub-org`) and its abandoned SvelteKit rebuild
-(`~/Projects/aksailingclub-sveltekit`, kept only as phase-2 evidence, not a foundation).
+`@glw907/cairn-cms` (see `package.json` for the current range) using the cairn chassis
+structure. It replaces the club's prior Hugo/Blowfish site (now at
+`~/Projects/aksailingclub-legacy` after the 2026-07-06 rename; see "The repo family" below)
+and its abandoned SvelteKit rebuild (`~/Projects/aksailingclub-sveltekit`, kept only as
+phase-2 evidence, not a foundation).
 
 @docs/STATUS.md
 
@@ -68,6 +70,26 @@ the change), then the one-check gate above. The family five-viewport bar (320, 3
 2560, composed at the extremes) is the acceptance bar for responsiveness; `e2e/site-visual.spec.ts`
 is the CI-enforced form of it, and any change that alters rendering must regenerate its baselines
 in the same change, never leave them stale.
+
+## The asc-club schema is fully evolvable — never write around it (Geoff, 2026-07-13)
+
+`asc-club` is this application's own database, and its schema serves the application, not the
+other way around. When a feature or a data fix wants a different shape, change the schema with a
+real migration (scratch-proven, forward/rollback/verify, then applied to the live database) —
+never absorb a schema shortcoming into application code. Writing around bad database design in
+code is the named anti-pattern; optimal database design at all times is the standard. This
+freedom is asc-club's alone: cairn's engine database (`AUTH_DB`, cairn-cms's own migrations)
+belongs to the cairn package, and `EVENTS_DB` stays read-only per the rule below.
+
+## Member-data imports (MembershipWorks)
+
+Source exports are committed to this repo age-encrypted under `data/membershipworks/`
+(`*.csv.age`, encrypted to the ASC age key; decrypt with `age -d -i $AGE_KEY_FILE`, the key at
+`~/.config/age/asc-key.txt`, never committed). Plaintext copies live machine-local only at
+`~/.local/asc-data/`; never commit a plaintext export. Import scripts live in `scripts/import/`
+(verified-import-script pattern: dry-run plan, audit trail, verify.sql, rollback). Member data
+regularizes on every write path, import and live alike: emails lowercase, phones E.164 (+1
+default), names conservatively recased.
 
 ## The D1 EVENTS_DB rule — read-only, never migrate it here
 
@@ -155,6 +177,14 @@ npx wrangler secret list
 - `docs/STATUS.md`: rolling status, read first.
 - `docs/2026-07-06-asc-phase-1-design.md` / `docs/2026-07-06-asc-home-northstar.html`: the design
   contract (see above).
+- `docs/design-benchmark/decisions.md`: every settled design question with its reasoning; later
+  rounds never re-litigate a logged decision unless Geoff reopens it. An in-flight live round
+  keeps a one-line-per-probe arc log beside it (`education-round-<N>-arc.md`), distilled into
+  decisions.md at settle and then removed.
+- `docs/image-standard.md`: the per-template image standard (hero crops, figure insets).
+  BINDING for any image or figure work; consult it, never re-derive.
+- `docs/2026-07-07-polish-backlog.md`: the design/content polish backlog. This repo keeps no
+  separate BACKLOG.md; carry-forwards live in STATUS entries.
 - `docs/content-migration-findings.md`: what migrated from the Hugo site and the deltas taken.
 - `docs/events-integration-findings.md`: the `EVENTS_DB` schema verification and taxonomy rules.
 - `docs/verification-findings.md`: the phase-1 verification pass, the pixel-diff rider, and the

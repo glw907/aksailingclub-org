@@ -144,46 +144,6 @@ const cards = defineComponent({
   icon: 'grid-nine',
 });
 
-// ─── MembershipWorks: the club's registration widget, embedded as-is (Task 4) ─
-// The engine's sanitize floor runs before component dispatch (see the render pipeline's own
-// header comment), so a component's build() output, unlike raw markdown HTML, is never stripped
-// of a script element: this is the sanctioned seam for a trusted third-party embed a page
-// genuinely needs, not a loophole. `open` is MembershipWorks's own `data-ini` panel key (e.g.
-// `"!event-list"` for the class-registration list); `data-org` is the club's fixed account id.
-function buildMembershipWorks(ctx: ComponentContext): Element {
-  const open = strAttr(ctx, 'open') ?? '';
-  return h('div', { className: ['mw-embed'] }, [
-    h('script', { src: 'https://cdn.membershipworks.com/mfm.js' }),
-    h('div', {
-      id: 'SFctr',
-      className: ['SF'],
-      'data-org': '32205',
-      'data-ini': open,
-      'data-scl': '0',
-      'data-sfi': '1',
-    }),
-  ]);
-}
-
-const membershipworks = defineComponent({
-  name: 'membershipworks',
-  label: 'MembershipWorks embed',
-  description: "The club's MembershipWorks widget, embedded exactly as the live site does (a known constraint: it is not stylable).",
-  use: 'Hand a registration or account flow to MembershipWorks.',
-  build: buildMembershipWorks,
-  attributes: {
-    open: fields.text({
-      label: 'Panel',
-      required: true,
-      pattern: '^!?[a-zA-Z0-9_-]+$',
-      help: 'The MembershipWorks data-ini panel key, e.g. "join" or "!event-list".',
-    }),
-  },
-  group: 'Page structure',
-  icon: 'graduation-cap',
-  preview: { attributes: { open: '!event-list' } },
-});
-
 // ─── Contact / donate forms: hydrated islands (completion-pass manifest item 2) ─
 // Both are content-authored placements with no attributes: build() emits only the no-JavaScript
 // fallback (a plain mailto link), and the live, interactive form (ContactForm.svelte,
@@ -224,6 +184,52 @@ const donateForm = defineComponent({
   icon: 'heart',
 });
 
+// ─── Class schedule: the live season schedule, a hydrated island (2026-07-13) ─
+// Same island shape as the forms above: build() emits only the no-JavaScript fallback (a
+// pointer to the events page, the sentence this placement replaced in education.md), and
+// ClassSchedule.svelte mounts over it with the live rows (class-schedule.remote.ts).
+const classSchedule = defineComponent({
+  name: 'class-schedule',
+  label: 'Class schedule',
+  description: 'The live class schedule: dates, lifecycle status, and signup links per class, read from the club database.',
+  use: "Show the season's classes with live registration status.",
+  insertTemplate: ':::class-schedule\n:::',
+  hydrate: true,
+  build: () =>
+    h('p', { className: ['class-schedule-fallback'] }, [
+      'Class dates, openings, and sign-up links live on the ',
+      h('a', { href: '/events/' }, ['events page']),
+      '.',
+    ]),
+  group: 'Page structure',
+  icon: 'graduation-cap',
+});
+
+// ─── Membership pricing: an inline, settings-driven dollar figure (Task 3) ──
+// Same island shape as class-schedule above: build() emits only the no-JavaScript fallback (a
+// link to the live join door, since no dollar figure is safe to hard-code here), and
+// MembershipPricing.svelte replaces it with the live settings price once mounted
+// (membership-pricing.remote.ts). Renders inline (an anchor, not a block element) so it drops
+// into a sentence the same way the migrated `.cta-list` links do.
+const membershipPricing = defineComponent({
+  name: 'membership-pricing',
+  label: 'Membership price',
+  description: "One membership tier's live settings price, inline in a sentence.",
+  use: 'Replace a hand-typed dollar figure with the real, settings-driven tier price.',
+  insertTemplate: ':::membership-pricing{tier="individual"}:::',
+  hydrate: true,
+  build: (ctx) => {
+    const tier = strAttr(ctx, 'tier') ?? 'individual';
+    return h('a', { className: ['membership-pricing-fallback'], href: '/join/apply' }, [`current ${tier} pricing`]);
+  },
+  attributes: {
+    tier: fields.select({ label: 'Tier', required: true, options: ['individual', 'family', 'young-adult'] }),
+  },
+  group: 'Page structure',
+  icon: 'graduation-cap',
+  preview: { attributes: { tier: 'individual' } },
+});
+
 export const ascRegistry = defineRegistry({
-  components: [callout, passage, cards, card, membershipworks, contactForm, donateForm],
+  components: [callout, passage, cards, card, contactForm, donateForm, classSchedule, membershipPricing],
 });

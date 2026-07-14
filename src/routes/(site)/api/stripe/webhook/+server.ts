@@ -1,15 +1,20 @@
 // The Stripe webhook (Stripe's own dashboard is already pointed at this exact path, sandbox mode,
 // per this worktree's own README): the one place a completed Checkout Session (`payments.ts`'s
-// `createCheckout`) actually reconciles into asc-club's own tables. Every response is either 400
-// (a verification or shape failure Stripe should NOT keep retrying: a signature that will never
-// verify, a payload that will never parse, stays wrong forever) or 200 (everything else,
-// INCLUDING a reconciliation refusal or an unexpected database error, both logged loudly via
-// `console.error` rather than thrown): a non-2xx response makes Stripe redeliver the same event
-// for up to three days, and a persistently-unreconcilable event (a stale `refId`, a genuine
-// outage) can never self-heal from a retry, so answering 200 and relying on Workers Logs for
-// operator visibility (this repo's own "diagnose from the logs first" convention, CLAUDE.md) beats
-// an infinite redelivery loop. `stripe-reconcile.ts`'s own header carries the reconciliation
-// engine's reasoning; this route is intentionally thin, verify-then-dispatch only.
+// `createCheckout`) actually reconciles into asc-club's own tables. Every response is 400 (a
+// verification or shape failure Stripe should NOT keep retrying: a signature that will never
+// verify, a payload that will never parse, stays wrong forever), 200 (an ordinary reconciliation,
+// a reconciliation refusal, or -- for `dues`/`class-fee`/`asset-fee` only -- an unexpected
+// database error, all logged loudly via `console.error` rather than thrown), or, for `kind:
+// 'donation'`/`kind: 'join'`, 500 on an unexpected database error, so Stripe retries. A non-2xx
+// response makes Stripe redeliver the same event for up to three days; for the first three kinds a
+// persistently-unreconcilable event (a stale `refId`, a genuine outage) can never self-heal from
+// a retry, so answering 200 and relying on Workers Logs for operator visibility (this repo's own
+// "diagnose from the logs first" convention, CLAUDE.md) beats an infinite redelivery loop.
+// Donations and joins are the deliberate exceptions: each claims its own session atomically as
+// part of its own `db.batch()`, so the ordinary claim-then-reconcile ordering (which could lose a
+// write silently if a later step failed after an earlier pre-claim had already committed) never
+// applies to either. `stripe-reconcile.ts`'s own header carries the full reasoning for both
+// halves; this route is intentionally thin, verify-then-dispatch only.
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { verifyStripeWebhook } from '$admin-club/lib/stripe-webhook-verify';
@@ -77,6 +82,27 @@ export const POST: RequestHandler = async ({ request, platform }) => {
   if (!db) {
     console.error('api/stripe/webhook: CLUB_DB is not bound');
     return new Response('Not available right now.', { status: 503 });
+  }
+
+  if (meta.kind === 'donation' || meta.kind === 'join') {
+    // Donations and joins both skip the pre-claim entirely: `reconcileDonation`/`reconcileJoin`
+    // each claim the session themselves, atomically with their own domain writes and ledger
+    // statements, so there is nothing for this route to check first (`stripe-reconcile.ts`'s own
+    // header on both).
+    try {
+      const outcome = await reconcileCheckoutSession(db, platform.env, meta.kind, meta.refId, session);
+      if (!outcome.ok) {
+        console.error(`api/stripe/webhook: reconciliation refused for session ${session.id} (${meta.kind}/${meta.refId}): ${outcome.reason}`);
+      }
+    } catch (err) {
+      // Unlike dues/class-fee/asset-fee, this route answers 500 here (this file's own header):
+      // the atomic claim+writes batch means a failed attempt commits nothing, so a Stripe retry
+      // is safe, and it is the only way to avoid silently losing a payment that has no separate
+      // pre-claim to fall back on.
+      console.error(`api/stripe/webhook: ${meta.kind} reconciliation threw for session ${session.id} (refId ${meta.refId})`, err);
+      return new Response('Reconciliation failed; retry.', { status: 500 });
+    }
+    return json({ received: true });
   }
 
   try {

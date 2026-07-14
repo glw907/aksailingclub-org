@@ -338,9 +338,9 @@ export async function getLiveOfferForWaitlistEntry(db: D1Database, waitlistId: s
  */
 export async function claimOfferFromPortal(db: D1Database, waitlistId: string, householdId: string): Promise<{ enrollmentId: string } | ClassActionError> {
   const waitlistRow = await db
-    .prepare('SELECT w.id, w.class_id, w.member_id, m.household_id FROM class_waitlist w JOIN members m ON m.id = w.member_id WHERE w.id = ?1')
+    .prepare('SELECT w.id, w.class_id, w.member_id, w.notes, m.household_id FROM class_waitlist w JOIN members m ON m.id = w.member_id WHERE w.id = ?1')
     .bind(waitlistId)
-    .first<{ id: string; class_id: string; member_id: string; household_id: string }>();
+    .first<{ id: string; class_id: string; member_id: string; notes: string | null; household_id: string }>();
   if (!waitlistRow || waitlistRow.household_id !== householdId) return { error: 'No such waitlist entry.' };
 
   const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -363,7 +363,11 @@ export async function claimOfferFromPortal(db: D1Database, waitlistId: string, h
   const enrollmentId = crypto.randomUUID();
   try {
     await db.batch([
-      db.prepare('INSERT INTO class_enrollments (id, class_id, member_id) VALUES (?1, ?2, ?3)').bind(enrollmentId, waitlistRow.class_id, waitlistRow.member_id),
+      // The waitlist row's notes carry the signup form's "what would you like to learn" answer
+      // (migration 0019); the delete below would discard it, so it rides onto the enrollment.
+      db
+        .prepare('INSERT INTO class_enrollments (id, class_id, member_id, interests) VALUES (?1, ?2, ?3, ?4)')
+        .bind(enrollmentId, waitlistRow.class_id, waitlistRow.member_id, waitlistRow.notes),
       db.prepare('DELETE FROM class_waitlist WHERE id = ?1').bind(waitlistId),
       db
         .prepare('INSERT INTO audit_log (actor, action, entity, entity_id, detail) VALUES (?1, ?2, ?3, ?4, ?5)')

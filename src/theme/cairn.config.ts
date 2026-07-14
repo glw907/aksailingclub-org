@@ -9,6 +9,8 @@ import { ascRegistry } from './markdown/components.js';
 import { ICON_PATHS } from './markdown/icons.js';
 import ContactForm from './components/ContactForm.svelte';
 import DonateForm from './components/DonateForm.svelte';
+import ClassSchedule from './components/ClassSchedule.svelte';
+import MembershipPricing from './components/MembershipPricing.svelte';
 import siteYaml from './site.config.yaml?raw';
 // The ?url import resolves the compiled stylesheets to their served URLs (the hashed assets in a
 // build), so the editor's preview frame can link the same sheets the (site) layout loads. They
@@ -117,6 +119,18 @@ export const cairn = defineAdapter({
         // restoring live's own governance-subpage description). Most pages carry none; the
         // catch-all template renders it only when a page sets it.
         description: fields.textarea({ label: 'Subtitle' }),
+        // The page-template pass's promise hero (Task 3): a primary page's own short display
+        // line, rendered as the promise hero's h1 in place of the plain title. Optional; most
+        // pages carry none and keep the plain title hero.
+        promise: fields.text({ label: 'Promise line' }),
+        // Where the hero photo's 2:1 crop centers, as a CSS object-position pair ("50% 30%").
+        // Optional; the crop centers when unset. Set it when the photo's subject sits high or
+        // low in the frame (join's members, racing's fleet at the waterline).
+        imageFocus: fields.text({ label: 'Hero crop focus (e.g. 50% 30%)' }),
+        // The promise hero's fact strip, paired with `promise`. Reuses the open, creatable
+        // multiselect shape posts' `tags` field already uses, without `taxonomy`: no vocabulary
+        // pools across entries, each page's facts are its own short freeform list.
+        facts: fields.multiselect({ label: 'Fact strip', creatable: true }),
       }),
     }),
     // The bulletins concept: short, time-sensitive announcements with their own permalinked page
@@ -174,7 +188,12 @@ export const cairn = defineAdapter({
     icons: ICON_PATHS,
     // The contact and donate directives' live components (completion-pass manifest item 2),
     // mounted over their build() fallback by the root layout's hydrateIslands() call.
-    islands: { 'contact-form': ContactForm, 'donate-form': DonateForm },
+    islands: {
+      'contact-form': ContactForm,
+      'donate-form': DonateForm,
+      'class-schedule': ClassSchedule,
+      'membership-pricing': MembershipPricing,
+    },
   },
   editor: {
     nav: { configPath: 'src/theme/site.config.yaml', menuName: 'primary', label: 'Navigation', maxDepth: 2 },

@@ -3,6 +3,8 @@ title: "Racing"
 image:
   src: "media:racing-hero.ff77ce74df7d2570"
   alt: "A dozen club dinghies racing under colorful spinnakers on Big Lake, with the Chugach mountains in the distance."
+promise: "Come race with us."
+imageFocus: "50% 65%"
 ---
 
 Racing at the ASC picks up where our sailing classes leave off, giving experienced sailors a fleet to plug into when they move to Anchorage. Graduates of our [Introduction to Dinghy Sailing](/education/) course step straight into real racing alongside veteran competitors who remember being new. Whether you're after relaxed weeknight racing, tight one-design starts, or a national championship, the program scales to meet you.
@@ -156,4 +158,4 @@ These are questions about **wind shifts**: the constant small (and sometimes lar
 
 Laylines. Tactical positioning at mark roundings. The rules as a tool, not just a constraint; knowing when another boat owes you room, and how to claim it confidently. Sail trim: small adjustments to leech tension or sail twist that change how fast you're moving without touching the rudder. The moment it all starts to come together in real time is one of the better feelings in the sport.
 
-The club's teaching culture doesn't stop at the end of the beginner class. Experienced sailors debrief after races and share what they saw on the course. [Fleet Tune-Up Weekend](/education/) each June is specifically designed to sharpen racing skills before the season hits full stride. Ask questions on `#racing`. People will answer.
+The club's teaching culture doesn't stop at the end of the beginner class. Experienced sailors debrief after races and share what they saw on the course. [Skills & Drills Weekend](/education/) each June is specifically designed to sharpen racing skills before the season hits full stride. Ask questions on `#racing`. People will answer.

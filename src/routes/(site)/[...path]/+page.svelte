@@ -3,6 +3,7 @@
   import { CairnHead } from '@glw907/cairn-cms/delivery/head';
   import { siteConfig } from '$theme/cairn.config';
   import { GOVERNANCE_SUBPAGE_SLUGS } from '$theme/redirects';
+  import { isPrimaryPage } from '$theme/page-tiers';
 
   let { data }: { data: PageData } = $props();
 
@@ -78,28 +79,23 @@
     return items;
   }
 
-  // The long-form page device: a page named here renders as a whole-document article, no boxed
-  // panels, no measure change, its own jump list plus a true gutter rail (past 1280px), and (the
+  // The long-form template device: a page renders as a whole-document article, no boxed panels,
+  // no measure change, its own jump list plus a true gutter rail (past 1280px), and (the
   // 2026-07-08 benchmark-alignment pass) its own document merged into the title-adjacent hero and
-  // grouped by GROUP_HEADINGS below. Keyed by the pages concept's own flat slug, the same key
-  // GOVERNANCE_SUBPAGE_SLUGS uses. A page not listed here (every other long document, bylaws
-  // included) keeps the heading-count-gated panel/TOC template below unchanged. Currently
-  // education only.
-  const LONG_FORM_PAGE_SLUGS = new Set(['education']);
+  // grouped by GROUP_HEADINGS below. The page-template pass (Task 4) generalized the gate from a
+  // hardcoded slug set (education only) to the nav-rank tier itself, `isPrimaryPage` (page-tiers.ts):
+  // any page promoted into `menus.primary` picks up this whole template with no edit here. A
+  // secondary page (every page outside the primary tier, bylaws included) keeps the
+  // heading-count-gated panel/TOC template below unchanged.
 
   // The presentation round's "promise hero" (round 3, pass C): a long-form page named here trades
   // the title-adjacent hero for a whole-column composition, eyebrow, an italic display promise as
   // the page's own h1, the document's lede, a full-width photo, and a fact strip, all read top to
   // bottom in the plain reading column (the photo is the one element that breaks out wider; see
   // `.promise-hero-photo` below). The eyebrow is always the page's own title, not configured here.
-  // A long-form page with no entry keeps the older title-adjacent hero (`isPageHero`) unchanged; a
-  // page outside `LONG_FORM_PAGE_SLUGS` never reads this map at all.
-  const LONG_FORM_HERO: Record<string, { promise: string; facts: string[] }> = {
-    education: {
-      promise: 'Come learn to sail on an Alaska lake.',
-      facts: ['4 days', 'Adults, teens & kids 8–12', 'Big Lake', 'Summer sessions'],
-    },
-  };
+  // A long-form page with no entry keeps the older title-adjacent hero (`isPageHero`) unchanged. The
+  // page-template pass (Task 3) moved the promise and facts into each page's own frontmatter (the
+  // pages concept's `promise`/`facts` fields); see `longFormHero` below.
 
   // A long-form page's own group structure (the 2026-07-08 benchmark-alignment pass, axis B): a
   // hairline-and-label divider announces the start of each named part after the first, so the
@@ -129,9 +125,9 @@
   // Round 3's closing card (owner note 9): the h2 named here, through the end of its own group
   // segment, gets wrapped in the page's one warm close (wrapClosingSection, below). Keyed by slug
   // for the same reason REGISTRATION_BAND_HEADING_ID is: a missing id degrades to no wrap.
-  const CLOSING_SECTION_HEADING_ID: Record<string, string> = {
-    education: 'questions',
-  };
+  // Education left the map in the 2026-07-13 live round: the sitewide `.page-cta` panel
+  // (asc-components.css) is its warm close now, and stacking both broke A1's one-chrome rule.
+  const CLOSING_SECTION_HEADING_ID: Record<string, string> = {};
 
   // The round-2 program-section identity fix (owner's live read, 2026-07-08: "Introduction to
   // Dinghy Sailing seems to roll straight into Fleet Tune-Up Weekend"): each heading named here,
@@ -151,12 +147,23 @@
   };
 
   const longFormSlug = $derived(
-    data.entry.concept === 'pages' && LONG_FORM_PAGE_SLUGS.has(data.entry.slug) ? data.entry.slug : undefined,
+    data.entry.concept === 'pages' && isPrimaryPage(data.entry.slug) ? data.entry.slug : undefined,
   );
 
-  // The promise hero (round 3, pass C): set only for a long-form page with its own LONG_FORM_HERO
-  // entry. A long-form page with no entry falls through to the older title-adjacent hero below.
-  const longFormHero = $derived(longFormSlug ? LONG_FORM_HERO[longFormSlug] : undefined);
+  // The promise hero (round 3, pass C; Task 3 moved its data into frontmatter): set only for a
+  // long-form page whose own entry sets `promise`. A long-form page with no `promise` falls
+  // through to the older title-adjacent hero below. Frontmatter is hand-editable markdown, so
+  // both reads are hardened: a whitespace-only promise counts as absent (it would otherwise
+  // render as the page's only h1 with a blank accessible name), and facts that are not a real
+  // list (a YAML scalar) render as none rather than one chip per character.
+  const longFormHero = $derived.by(() => {
+    if (!longFormSlug) return undefined;
+    const raw = data.entry.frontmatter.promise;
+    const promise = typeof raw === 'string' ? raw.trim() : '';
+    if (!promise) return undefined;
+    const facts = data.entry.frontmatter.facts;
+    return { promise, facts: Array.isArray(facts) ? (facts as string[]) : [] };
+  });
 
   /** Splits off the document's very first paragraph, when the document opens with one (no
    *  heading or other block precedes it). Falls back to no split (an empty lede, the whole
@@ -176,7 +183,25 @@
 
   const mergeLedeIntoHero = $derived(isPageHero && Boolean(longFormSlug));
   const ledeSplit = $derived(mergeLedeIntoHero ? splitLede(data.html) : null);
-  const heroLede = $derived(ledeSplit ? ledeSplit.lede : '');
+
+  /** Marks the lede's trailing action link ("See class dates →") so the CSS can promote it to its
+   *  own CTA line. Only an anchor that closes the paragraph counts; a link mid-sentence (racing's
+   *  "Introduction to Dinghy Sailing") stays inline, which position-based styling (`a:last-child`)
+   *  got wrong once the template generalized past education. Text-only anchors are enough here:
+   *  both real CTAs are plain text, and a non-matching lede passes through unchanged. */
+  function markTrailingCta(lede: string): string {
+    return lede.replace(/<a ([^>]*)>([^<]*)<\/a>(\s*<\/p>\s*)$/, '<a class="lede-cta" $1>$2</a>$3');
+  }
+
+  const heroLede = $derived(ledeSplit ? markTrailingCta(ledeSplit.lede) : '');
+
+  // The hero photo's crop focus (the pages concept's `imageFocus` field), validated to the one
+  // shape the style attribute accepts ("50% 30%") since it is editor-entered frontmatter headed
+  // for inline CSS; anything else falls back to the stylesheet's centered default.
+  const heroFocus = $derived.by(() => {
+    const raw = data.entry.frontmatter.imageFocus;
+    return typeof raw === 'string' && /^\d{1,3}% \d{1,3}%$/.test(raw.trim()) ? raw.trim() : undefined;
+  });
   // Every other derived value below reads `contentHtml`, never `data.html` directly, so the hero
   // lede (once split off) does not also appear a second time further down the document.
   const contentHtml = $derived(ledeSplit ? ledeSplit.rest : data.html);
@@ -402,16 +427,33 @@
       .map((item) => document.getElementById(item.id))
       .filter((el): el is HTMLElement => el !== null);
     if (headings.length === 0) return;
+    // The band alone can never reach a short final section: at max scroll its heading may still
+    // sit below the top 30% of the viewport, leaving the previous section highlighted forever
+    // (owner-reported on education's Questions). At the document's end the last section is active
+    // by definition, so a bottom clamp closes the gap the band cannot cover. It runs after the
+    // observer's own entries as well as on scroll: a jump to the bottom fires both, and the
+    // observer callback lands last, so the clamp must get the final word there too.
+    const clampToEnd = () => {
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
+        activeId = headings[headings.length - 1].id;
+      }
+    };
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) activeId = entry.target.id;
         }
+        clampToEnd();
       },
       { rootMargin: '0px 0px -70% 0px', threshold: 0 },
     );
     for (const heading of headings) observer.observe(heading);
-    return () => observer.disconnect();
+    window.addEventListener('scroll', clampToEnd, { passive: true });
+    clampToEnd();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', clampToEnd);
+    };
   });
 </script>
 
@@ -437,6 +479,11 @@
 
 <CairnHead seo={data.seo} titleTemplate={(title) => `${title} — ${siteConfig.siteName}`} />
 
+<!-- `.long-form-page` doubles as the primary tier's own marker class post-generalization
+     (Task 4): it fires for `longFormSlug`, which is now `isPrimaryPage` gated rather than a
+     hardcoded education-only set, so every primary page picks up both the long-form template
+     below and the gold waypoint rule (see `article.prose.long-form-page :global(h2)::before`)
+     from this one class. -->
 <article class="prose" class:long-form-page={Boolean(longFormSlug)}>
   {#if isGovernanceSubpage}
     <a href="/governance/" class="not-prose back-link">
@@ -459,7 +506,7 @@
       {/if}
       {#if data.heroImage}
         <figure class="promise-hero-photo">
-          <img src={data.heroImage.url} alt={data.heroImage.alt} />
+          <img src={data.heroImage.url} alt={data.heroImage.alt} style:object-position={heroFocus} />
         </figure>
       {/if}
       <!-- Each fact carries its own leading separator dot as a CSS ::before (below), rather than a
@@ -469,10 +516,14 @@
            site chrome padding) needs at ordinary desktop widths, not just 390px. No whitespace
            between the tags below either: a flex container turns even a single collapsed space
            between inline children into its own anonymous flex item, widening the row for no
-           visible reason. -->
-      <p class="promise-hero-facts">
-        {#each longFormHero.facts as fact (fact)}<span class="promise-hero-fact">{fact}</span>{/each}
-      </p>
+           visible reason. Gated on a non-empty list (Task 4, the light-variant primary hero, a
+           promise with no facts of its own): an unconditional empty strip would still occupy its
+           own margin-top in the flow with nothing inside it to show for that space. -->
+      {#if longFormHero.facts.length > 0}
+        <p class="promise-hero-facts">
+          {#each longFormHero.facts as fact (fact)}<span class="promise-hero-fact">{fact}</span>{/each}
+        </p>
+      {/if}
     </div>
   {:else if isPageHero}
     <div class="page-title-hero not-prose" class:hero-has-lede={mergeLedeIntoHero}>
@@ -498,11 +549,12 @@
     {@render titleBlock()}
   {/if}
   {#if longFormSlug}
-    <!-- The long-form page (education, 2026-07-07): a whole-document article, no boxed panels, no
-         measure change. The navigation sits right after the intro, before the first section, so
-         it is present from the top rather than appearing only once a reader reaches the tail;
-         `.jump-links` and `.page-toc-rail` render the same list and never both show at once (CSS
-         toggles by breakpoint, `jumpLinks`'s own comment above explains the shared source). -->
+    <!-- The long-form template (originally education-only, 2026-07-07; every primary page since
+         Task 4's generalization): a whole-document article, no boxed panels, no measure change.
+         The navigation sits right after the intro, before the first section, so it is present
+         from the top rather than appearing only once a reader reaches the tail; `.jump-links` and
+         `.page-toc-rail` render the same list and never both show at once (CSS toggles by
+         breakpoint, `jumpLinks`'s own comment above explains the shared source). -->
     {@html longFormPreamble}
     <!-- Round 2 (owner's live read, 2026-07-08): "the expanded nine-item TOC eats a viewport before
          content" at narrow widths. A <details> collapsed by default (the same chevron-disclosure
@@ -616,6 +668,40 @@
     color: var(--color-muted);
   }
 
+  /* The gold waypoint rule (Task 4, the page-template pass's primary-tier marker): a short rule
+     above every h2 marks it as its own waypoint down a primary page, kin to
+     EventsListing.svelte's own `.spine-waypoint-marker` (the same gold token family; theme.css's
+     "marks and waypoints only" story). Applied once, off the tier class already on the article
+     wrapper (`.long-form-page`, now set for every primary page, not per-heading markup), so it
+     reaches every h2 in the document uniformly, including ones inside the education-only
+     program/registration/closing wraps. `--color-star-gold-dot`, not the brighter
+     `--color-star-gold`: a non-text mark needs the WCAG-legible variant, the same bar every other
+     dot on the site holds to. */
+  article.prose.long-form-page :global(h2)::before {
+    content: '';
+    display: block;
+    width: 2.5rem;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--color-star-gold-dot);
+    margin-bottom: var(--spacing-2xs);
+  }
+
+  /* Inline figures step to an 85% flush-left inset above mobile widths (the image standard's
+     hierarchy rule: the hero is the page's largest image, and a many-figure page like education
+     reads calmer when section photos sit a clear step below it). Flush-left, not centered: in a
+     ragged-right column the eye anchors on the hard left edge, so a geometrically centered inset
+     reads right-shifted (owner-flagged; the probe measured perfect 49px symmetry and it still
+     looked pushed right). Keeping the text's left edge and giving the spare room to the rag side
+     is the editorial fix. The hero figure carries its own class and keeps full width; narrow
+     viewports keep full width too, where the measure is already tight. */
+  @media (min-width: 48rem) {
+    article.prose.long-form-page :global(figure:not(.promise-hero-photo)) {
+      width: 85%;
+      margin-inline: 0 auto;
+    }
+  }
+
   /* A long-form page's group hand-off (axis B, 2026-07-08): a plain typographic break (a rule
      plus a small label) announcing the next named part starts here, rather than the reader
      inferring the shift with no signal at all (the design-polish pass's original finding,
@@ -726,11 +812,16 @@
   .page-toc-rail {
     display: none;
   }
-  /* 80rem (1280px), not the ~1200px a plain reading column would need: the rail sits OUTSIDE
-     `.prose`, so the breakpoint has to clear the reading column's own half-width plus its gutter
-     plus the rail's own width with room to spare, not just the column alone. Verified empirically
-     (computed `getBoundingClientRect`) to clear the article with a comfortable margin at 1440. */
-  @media (min-width: 80rem) {
+  /* 82rem, not the ~1200px a plain reading column would need: the rail sits OUTSIDE `.prose`,
+     so the breakpoint has to clear the reading column's own half-width plus its gutter plus the
+     rail's own width with room to spare, not just the column alone. The gutter itself keys off
+     the page's WIDEST long-form element, not the text column: the promise-hero photo and the
+     card/fact breakouts run wider than the text (the `width: min(...)` family above), and a rail
+     offset tuned to the text edge left the rail 14px from the photo (owner-flagged, 2026-07-12).
+     The extra `--spacing-l` restores a comfortable gap to the breakout edge; 82rem keeps the
+     low-end fit that 80rem had before the shift. Verified empirically (computed
+     `getBoundingClientRect` at 1312/1440/2560) against the photo edge and the viewport. */
+  @media (min-width: 82rem) {
     .jump-links {
       display: none;
     }
@@ -738,7 +829,7 @@
       display: block;
       position: fixed;
       top: var(--header-clearance);
-      left: calc(50% + (var(--container-measure) / 2) + var(--spacing-m));
+      left: calc(50% + (var(--container-measure) / 2) + var(--spacing-m) + var(--spacing-l));
       width: 14rem;
       max-height: calc(100vh - var(--header-clearance) - var(--spacing-l));
       overflow-y: auto;
@@ -921,66 +1012,6 @@
     align-items: center;
     justify-content: center;
   }
-  /* Round 3, owner note 6: "What Membership Includes" reuses home's own facilities checkmark
-     device (`.amenity-list`/`.amenity-item`, src/routes/(site)/+page.svelte), the family's one
-     "included" mark, rather than inventing a second one: the same two-segment-border checkmark
-     geometry (7x11px, 40deg, muted border color) and the same `1lh`-based vertical centering math.
-     What differs is the context: these are real benefits inside the band, not a quieter outro
-     list, so the ink stays full body ink with no muted mix, and the layout is a two-column grid
-     (not home's CSS multi-column) at the same 768px/desktop threshold this page's own
-     program-section photos use.
-
-     The LAYOUT MECHANISM differs from home's own recipe, not just its numbers: home's amenity
-     items are flat text with no nested inline markup, so `display: flex` on the `<li>` wraps the
-     text as a single flex item next to the `::before` checkmark. This list's items carry a
-     markdown-rendered bold lead followed by plain description text (`<strong>Use of club
-     boats</strong> after qualification: ...`), two separate inline-level children; under flex,
-     EACH becomes its own anonymous flex item, so the bold lead and the description each wrap
-     independently in their own shrunk column instead of flowing as one sentence (caught by a
-     render, not evident from the CSS alone). The hanging-indent technique this file's own
-     `.learn-cluster li` already uses just above solves it instead: `position: absolute` takes the
-     checkmark out of the text's own flow entirely, so the `<strong>` and the text after it wrap
-     together as ordinary inline content within one `padding-left`-reserved margin.
-
-     `.membership-benefits` is the plain wrapper `not-prose` div the content markdown puts around
-     the list (the `.learn-cluster`/`.course-schedule` pattern above: a class-scoped div wrapping
-     raw markdown, so the grid and marker rules below target the rendered `ul`/`li` one level
-     inside it, never the wrapper itself). `article.prose.long-form-page` is the same defensive
-     specificity bump the Questions-card and program-photo rules use, to beat asc-components.css
-     outright regardless of source order. */
-  article.prose.long-form-page :global(.membership-benefits ul) {
-    margin: 0;
-    margin-top: var(--spacing-xs);
-    padding: 0;
-    list-style: none;
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0 var(--spacing-l);
-  }
-  @media (min-width: 48rem) {
-    article.prose.long-form-page :global(.membership-benefits ul) {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-  article.prose.long-form-page :global(.membership-benefits li) {
-    position: relative;
-    padding-left: 1.5rem;
-    padding-block: 0.2rem;
-    break-inside: avoid;
-    font-size: var(--text-step-0);
-  }
-  article.prose.long-form-page :global(.membership-benefits li)::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: calc((1lh - 11px) / 2);
-    width: 7px;
-    height: 11px;
-    border-right: 2px solid var(--color-muted);
-    border-bottom: 2px solid var(--color-muted);
-    transform: rotate(40deg);
-  }
-
   /* Item 6, the Questions close (conductor's decided direction, 2026-07-08): the single "Get in
      touch" card widens to the full content measure instead of `asc-components.css`'s own
      centered-narrow single-card treatment (`.asc-cards:has(> :only-child)`, tuned for a small
@@ -1063,121 +1094,89 @@
     object-fit: cover;
   }
 
-  /* Item 4: "A Typical Course Weekend" trades its plain table for the Season calendar's own
-     grammar (SeasonList.svelte), adapted to this page's shape: a day label (small-caps, its own
-     hairline, the Season month-label recipe) instead of a month; time in the quiet register instead
-     of a compact date; the activity itself leading, full ink, instead of an event name; and a
-     filled-vs-open dot in place of Season's four hue-coded dots, since "on the water" and
-     "classroom & rigging" is a different axis from Season's class/social/business/racing taxonomy
-     and the ratified color story's dots are that taxonomy's alone (gold "marks classes and clinics
-     only," blue is "exclusively the link affordance"). Filled vs. a hollow ring spends no new hue
-     at all, in the same muted ink as the time column; the sr-only label beside each dot (in the
-     markup) is the real channel, same as Season's own per-row sr-only text. */
-  :global(.course-schedule) {
+  /* Owner note (live round, 2026-07-13): "A Typical Course Weekend" merges its at-a-glance grid
+     and the day-by-day narrative paragraphs (which repeated each other) into one timeline. The
+     scan layer survives in the day labels: small caps down a dotted hairline rail, day plus time
+     per stop. The read layer is the narrative itself, full ink, one paragraph per day. The old
+     water/ashore dot axis retires with the grid; the narrative says where each block happens, so
+     the legend had no job left. Rail and dots spend no new hue (card-border hairline, muted dot),
+     per the ratified color story. */
+  :global(.course-days) {
     --flow-space: var(--spacing-l);
+    /* One geometry, three constants: every mark centers on the axis at --rail-x from the
+       container's left edge; the label's fixed rem line-height pins the first line's center at
+       --stop-y, so the dot and the rail segment (both drawn in .course-day's own frame, never the
+       label's font box, which is what let the first cut drift) land on the same point on every
+       stop. */
+    --rail-gutter: calc(7px + var(--spacing-s));
+    --rail-x: 3.5px;
+    --stop-y: 0.75rem;
+    display: grid;
+    gap: var(--spacing-m);
+    padding-left: var(--rail-gutter);
   }
-  /* Mobile-first: the fixed 4-column grid (day/time/dot/focus) needs more room than a 390px
-     viewport has (a first render caught this outright: the focus column collapsed to one word per
-     line). Below 30rem, day/time/dot share a flex row and the focus text wraps onto its own line
-     below (`flex-basis: 100%` is the standard flexbox "start a new row" trick, no grid-template-
-     areas needed); the 4-column grid only applies past that width, where there is room for it. */
-  .prose :global(.course-schedule .schedule-row) {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    column-gap: var(--spacing-s);
-    row-gap: 0.3rem;
-    padding-block: var(--spacing-xs);
-    border-bottom: var(--border) solid var(--color-card-border);
+  .prose :global(.course-day) {
+    position: relative;
   }
-  .prose :global(.course-schedule .schedule-focus) {
-    flex: 1 1 100%;
+  /* The stop itself: a class-day mark, so it takes the waypoint gold every class dot on the site
+     carries (the WCAG-legible dot variant), not the muted ink of the retired water/ashore axis. */
+  .prose :global(.course-day)::before {
+    content: "";
+    position: absolute;
+    left: calc(var(--rail-x) - var(--rail-gutter) - 3.5px);
+    top: calc(var(--stop-y) - 3.5px);
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: var(--color-star-gold-dot);
   }
-  @media (min-width: 30rem) {
-    .prose :global(.course-schedule .schedule-row) {
-      display: grid;
-      grid-template-columns: 6.75rem 8.5rem 0.9rem 1fr;
-    }
+  /* Each day's rail segment runs from just under its own dot, across the grid gap, to just above
+     the next day's dot; the last day's runs through its own text and stops at the block's end
+     (owner's call, 2026-07-13: through Sunday, not cut at its dot). */
+  .prose :global(.course-day)::after {
+    content: "";
+    position: absolute;
+    left: calc(var(--rail-x) - var(--rail-gutter) - 0.5px);
+    top: calc(var(--stop-y) + 6.5px);
+    bottom: calc(-1 * var(--spacing-m) - var(--stop-y) + 6.5px);
+    width: 1px;
+    background: var(--color-card-border);
   }
-  .prose :global(.course-schedule .schedule-row:first-child) {
-    padding-top: 0;
+  .prose :global(.course-day:last-child)::after {
+    bottom: 0;
   }
-  .prose :global(.course-schedule .schedule-row:last-child) {
-    border-bottom: none;
-    padding-bottom: 0;
-  }
-  .prose :global(.course-schedule .schedule-day) {
+  .prose :global(.course-day-label) {
+    margin: 0 0 var(--spacing-3xs);
     font-family: var(--font-display);
     font-size: var(--text-step--1);
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    line-height: calc(2 * var(--stop-y));
     color: var(--color-base-content);
-    border-bottom: 1px solid var(--color-card-border);
-    padding-bottom: 0.2rem;
-    align-self: start;
   }
-  .prose :global(.course-schedule .schedule-time) {
-    font-variant-numeric: tabular-nums;
+  .prose :global(.course-day-time) {
+    margin-left: var(--spacing-2xs);
+    font-family: var(--font-body);
     font-size: var(--text-step--1);
+    font-weight: 400;
+    letter-spacing: normal;
+    text-transform: none;
+    font-variant-numeric: tabular-nums;
     color: var(--color-muted);
   }
-  .prose :global(.course-schedule .schedule-dot-slot) {
-    display: inline-flex;
-    align-items: center;
-  }
-  .prose :global(.course-schedule .schedule-focus) {
+  .prose :global(.course-day p:not(.course-day-label)) {
+    margin: 0;
     font-size: var(--text-step-0);
     color: var(--color-base-content);
   }
-  .prose :global(.course-schedule .schedule-dot) {
-    width: 7px;
-    height: 7px;
-    border-radius: 999px;
-  }
-  .prose :global(.course-schedule .schedule-dot-water) {
-    background: var(--color-muted);
-  }
-  .prose :global(.course-schedule .schedule-dot-ashore) {
-    background: transparent;
-    border: 1.5px solid var(--color-muted);
-    width: 5px;
-    height: 5px;
-  }
-  :global(.schedule-legend) {
-    margin-top: var(--spacing-s);
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-2xs) var(--spacing-m);
-    font-size: var(--text-step--2);
-    color: var(--color-muted);
-  }
-  :global(.schedule-legend-item) {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-  }
-  :global(.schedule-legend .schedule-dot) {
-    width: 7px;
-    height: 7px;
-    border-radius: 999px;
-  }
-  :global(.schedule-legend .schedule-dot-water) {
-    background: var(--color-muted);
-  }
-  :global(.schedule-legend .schedule-dot-ashore) {
-    background: transparent;
-    border: 1.5px solid var(--color-muted);
-    width: 5px;
-    height: 5px;
-  }
 
-  /* Owner note 5 (live read, 2026-07-08): "What You'll Learn" reorganizes from a flat ~8-bullet
-     list into 3 honest clusters (Boat handling / Seamanship & safety / Rules of the water, derived
-     from the original items, nothing invented), each under a small-caps mini-label, reusing home's
-     own facilities-list idiom (`.amenity-list`/`.season-month-label`): quiet muted ink, a dash
-     marker, a hairline under each cluster's own label. Two columns at desktop, one at 390 (the
-     family's own 40rem two-column threshold, matching `.amenity-list`'s). */
+  /* Owner note (live rounds, 2026-07-08 and 2026-07-13): "What You'll Learn" holds four honest
+     two-item clusters (Know the boat / Boat handling / Seamanship & safety / Rules & racing,
+     derived from the original items, nothing invented) in a balanced 2x2, each under a small-caps
+     mini-label, reusing home's own facilities-list idiom (`.amenity-list`/`.season-month-label`):
+     quiet muted ink, a dash marker, a hairline under each cluster's own label. Two columns at
+     desktop, one at 390 (the family's own 40rem two-column threshold, matching `.amenity-list`'s). */
   :global(.learn-clusters) {
     --flow-space: var(--spacing-m);
     display: grid;
@@ -1187,9 +1186,6 @@
   @media (min-width: 40rem) {
     :global(.learn-clusters) {
       grid-template-columns: repeat(2, 1fr);
-    }
-    :global(.learn-cluster-wide) {
-      grid-column: 1 / -1;
     }
   }
   :global(.learn-cluster-label) {
@@ -1222,10 +1218,10 @@
   }
 
   /* The promise hero (round 3, pass C, the approved candidate): a whole-column composition that
-     replaces the title-adjacent hero for a long-form page with its own LONG_FORM_HERO entry. Every
-     child nests one level inside `.promise-hero`, never a direct child of `.prose`, so prose.css's
-     own `.prose > h1` selector never reaches the promise h1 and this block owns its typography
-     outright with no specificity fight to win back. */
+     replaces the title-adjacent hero for a long-form page with its own `promise` frontmatter.
+     Every child nests one level inside `.promise-hero`, never a direct child of `.prose`, so
+     prose.css's own `.prose > h1` selector never reaches the promise h1 and this block owns its
+     typography outright with no specificity fight to win back. */
   .promise-hero-eyebrow {
     margin: 0;
     font-family: var(--font-display);
@@ -1257,13 +1253,14 @@
   .promise-hero-support {
     margin-top: var(--spacing-m);
   }
-  /* The lede's own trailing action link ("See class dates →"), always the last node in its
-     paragraph: `display: block` alone drops it to its own line below the lede text, with no markup
-     change needed. Color, underline, and the focus-visible ring already come from site.css's own
-     `.site-main .prose a` rule and prose.css's `a:focus-visible` rule (both apply to this injected
-     `{@html}` markup unscoped), so only the weight this action earns beyond a plain inline link is
-     restated here. */
-  .promise-hero-support :global(a:last-child) {
+  /* The lede's own trailing action link ("See class dates →"), stamped `lede-cta` by
+     markTrailingCta above only when the anchor closes the paragraph: `display: block` drops it to
+     its own line below the lede text. Styling by position (`a:last-child`) broke racing's lede,
+     whose only link sits mid-sentence. Color, underline, and the focus-visible ring already come
+     from site.css's own `.site-main .prose a` rule and prose.css's `a:focus-visible` rule (both
+     apply to this injected `{@html}` markup unscoped), so only the weight this action earns
+     beyond a plain inline link is restated here. */
+  .promise-hero-support :global(a.lede-cta) {
     display: block;
     margin-top: var(--spacing-s);
     font-family: var(--font-display);
@@ -1273,10 +1270,18 @@
   .promise-hero-photo {
     margin: var(--spacing-l) 0 0;
   }
+  /* 2:1, not the source photos' native 3:2 (owner's pick from crops, 2026-07-12): the flatter
+     editorial lead-image ratio returns ~160px of first viewport, pulling the fact strip (and on
+     other primary pages the first content section) above the fold. The crop window defaults to
+     center; a photo whose subject fights that (join's members sit high in frame, racing's fleet
+     sits low) sets the pages concept's `imageFocus` frontmatter field, applied above as an inline
+     `object-position` after validation. A global bias was tried first and failed its second photo
+     (35% up-bias cropped racing's hulls to sky), so the crop is per-photo data, not a theme
+     constant. */
   .promise-hero-photo img {
     display: block;
     width: 100%;
-    aspect-ratio: 3 / 2;
+    aspect-ratio: 2 / 1;
     object-fit: cover;
     border-radius: var(--radius-box);
   }

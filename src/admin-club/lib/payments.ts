@@ -26,8 +26,15 @@
 // both kinds (`stripe-reconcile.ts`) is already built and tested; only the call sites that CREATE
 // the session are missing, deliberately left to the worktree that owns those screens.
 
-/** The three kinds of payment the club collects through Stripe Checkout today. */
-export const PAYMENT_KINDS = ['dues', 'class-fee', 'asset-fee'] as const;
+/** The five kinds of payment the club collects through Stripe Checkout today. `donation` joined
+ *  the other three (`docs/2026-07-13-money-ledger-design.md`'s "Live write path") once the
+ *  ledger gave a donation somewhere durable to land; `donate.remote.ts` mints its own `refId`
+ *  (a fresh uuid with no domain row behind it) rather than pointing at one, since a donation has
+ *  no domain row of its own. `join` is the unified-signup initiative's own fifth kind
+ *  (`docs/2026-07-13-unified-signup-design.md`): a `refId` pointing at the new `memberships` row
+ *  a combined join-plus-classes checkout pays for, reconciled by `stripe-reconcile.ts`'s own
+ *  `reconcileJoin`. */
+export const PAYMENT_KINDS = ['dues', 'class-fee', 'asset-fee', 'donation', 'join'] as const;
 
 /** One allowed payment kind, also the webhook's own dispatch key. */
 export type PaymentKind = (typeof PAYMENT_KINDS)[number];
@@ -57,9 +64,34 @@ export interface CreateCheckoutArgs {
   origin: string;
   successPath: string;
   cancelPath: string;
+  /** A multi-line Checkout Session (the `join` kind's own combined dues-plus-class-fees
+   *  session): when given and non-empty, `buildCheckoutBody` emits one indexed
+   *  `line_items[i][...]` group per entry instead of the single `line_items[0]` built from
+   *  {@link amountCents}/{@link description} above, which are then ignored entirely. A
+   *  single-line caller (every kind but `join`, today) omits this field and is byte-identical
+   *  to before this field existed. */
+  lines?: Array<{
+    amountCents: number;
+    /** The line item's own display name (`price_data.product_data.name`), matching
+     *  {@link description}'s role in the single-line shape. */
+    name: string;
+    /** The line item's own longer strapline (`price_data.product_data.description`), matching
+     *  {@link productDescription}'s role in the single-line shape. Omitted, Stripe shows no
+     *  strapline for that line. */
+    description?: string;
+  }>;
   /** Pre-fills Stripe's own email field when the payer's address is already known (a signed-in
    *  member paying dues, say); omitted, Stripe collects it fresh. */
   customerEmail?: string;
+  /** Stripe's own `product_data.description`, the line item's longer strapline below its name
+   *  (distinct from {@link description} above, which is the product's display name). Only the
+   *  donation kind uses this today (the tax-deductible notice `donate.remote.ts` used to carry
+   *  in its own hand-rolled body). */
+  productDescription?: string;
+  /** Extra session metadata beyond the `kind`/`refId` pair every reconciler already reads (a
+   *  donor's optional note, say). Merged in after `kind`/`refId`, so a caller cannot collide
+   *  with either. */
+  metadata?: Record<string, string>;
 }
 
 /** `createCheckout`'s success shape: the Checkout Session's own redirect URL. */
@@ -86,26 +118,57 @@ export class CheckoutUnavailableError extends Error {}
 
 const STRIPE_CHECKOUT_SESSIONS_URL = 'https://api.stripe.com/v1/checkout/sessions';
 
+/** `args.metadata`'s own keys this module already writes itself (`kind`/`refId`, both set from
+ *  `args.kind`/`args.refId` above, never from caller-supplied metadata): skipped in the loop
+ *  below so the doc comment's "cannot collide with either" claim on {@link CreateCheckoutArgs.metadata}
+ *  is actually true, rather than merely intended. */
+const RESERVED_METADATA_KEYS = new Set(['kind', 'refId']);
+
 /**
  * The `application/x-www-form-urlencoded` body for `POST /v1/checkout/sessions`, generalizing
  * `donate-pricing.ts`'s own `buildStripeCheckoutBody` across every payment kind. `success_url` is
  * appended as a raw string, not through `URLSearchParams`, for the same reason that module's own
  * doc comment gives: `URLSearchParams` would percent-encode the `{CHECKOUT_SESSION_ID}`
  * placeholder Stripe expects literal.
+ *
+ * `args.lines`, when given and non-empty, builds one indexed `line_items[i][...]` group per
+ * entry instead of the single `line_items[0]` group the `amountCents`/`description`/
+ * `productDescription` fields build otherwise; a single-line call (no `lines`) produces the
+ * exact same key order and content as before `lines` existed.
  */
 export function buildCheckoutBody(args: CreateCheckoutArgs): string {
-  const { kind, refId, amountCents, description, origin, cancelPath, customerEmail } = args;
+  const { kind, refId, amountCents, description, origin, cancelPath, customerEmail, productDescription, metadata, lines } = args;
+
+  const lineItemParams: Record<string, string> =
+    lines && lines.length > 0
+      ? lines.reduce<Record<string, string>>((acc, line, i) => {
+          acc[`line_items[${i}][price_data][currency]`] = 'usd';
+          acc[`line_items[${i}][price_data][unit_amount]`] = String(line.amountCents);
+          acc[`line_items[${i}][price_data][product_data][name]`] = line.name;
+          if (line.description) acc[`line_items[${i}][price_data][product_data][description]`] = line.description;
+          acc[`line_items[${i}][quantity]`] = '1';
+          return acc;
+        }, {})
+      : {
+          'line_items[0][price_data][currency]': 'usd',
+          'line_items[0][price_data][unit_amount]': String(amountCents),
+          'line_items[0][price_data][product_data][name]': description,
+          ...(productDescription ? { 'line_items[0][price_data][product_data][description]': productDescription } : {}),
+          'line_items[0][quantity]': '1',
+        };
+
   const params = new URLSearchParams({
     mode: 'payment',
-    'line_items[0][price_data][currency]': 'usd',
-    'line_items[0][price_data][unit_amount]': String(amountCents),
-    'line_items[0][price_data][product_data][name]': description,
-    'line_items[0][quantity]': '1',
+    ...lineItemParams,
     cancel_url: `${origin}${cancelPath}`,
     'metadata[kind]': kind,
     'metadata[refId]': refId,
     ...(customerEmail ? { customer_email: customerEmail } : {}),
   });
+  for (const [key, value] of Object.entries(metadata ?? {})) {
+    if (RESERVED_METADATA_KEYS.has(key)) continue;
+    params.set(`metadata[${key}]`, value);
+  }
   return `${params.toString()}&success_url=${origin}${args.successPath}?session_id={CHECKOUT_SESSION_ID}`;
 }
 
