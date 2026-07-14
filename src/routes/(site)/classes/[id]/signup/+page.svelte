@@ -51,12 +51,13 @@ pivot before the visitor fills out the rest of the form. -->
       return;
     }
     const { status } = await checkClassEligibility(enteredEmail);
-    blurPivot =
-      status === 'eligible'
-        ? null
-        : status === 'lapsed'
-          ? { mode: 'renew', email: enteredEmail }
-          : { mode: 'join', name: name.value() ?? '', email: enteredEmail, phone: phone.value() ?? '' };
+    if (status === 'eligible') {
+      blurPivot = null;
+    } else if (status === 'lapsed') {
+      blurPivot = { mode: 'renew', email: enteredEmail };
+    } else {
+      blurPivot = { mode: 'join', name: name.value() ?? '', email: enteredEmail, phone: phone.value() ?? '' };
+    }
   }
 
   const resultPivot = $derived.by<Pivot | null>(() => {
