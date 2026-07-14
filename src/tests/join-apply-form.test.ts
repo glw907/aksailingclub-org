@@ -1,7 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isValidationError } from '@sveltejs/kit';
 import { handleJoinApply, type JoinApplySubmission } from '$theme/join-apply-form';
+import { requestMemberLink } from '$member-auth/lib/auth';
 import { fakeD1 } from './_fake-d1';
+
+// The renew-and-welcome-back pivot (2026-07-14 amendment) hands off to `requestMemberLink`
+// (`$member-auth/lib/auth`) instead of writing anything itself; mocked here (resolved by file
+// path, matching `job-registry.test.ts`'s own precedent) so these tests assert the handoff
+// happened without re-proving `requestMemberLink`'s own enumeration-safety transition table
+// (already covered end to end in `member-auth.test.ts`).
+vi.mock('../member-auth/lib/auth', () => ({
+  requestMemberLink: vi.fn().mockResolvedValue({ status: 'sent' }),
+}));
 
 function issueMessages(err: unknown): string[] {
   return (err as { issues: Array<{ message: string }> }).issues.map((issue) => issue.message);
@@ -19,7 +29,6 @@ function submission(overrides: Partial<JoinApplySubmission> = {}): JoinApplySubm
     members: [],
     picks: [],
     waiverAccepted: true,
-    welcomeBackHouseholdId: '',
     'cf-turnstile-response': '',
     ...overrides,
   };
@@ -71,6 +80,7 @@ function classRow(id: string, fee: number) {
 describe('handleJoinApply', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.mocked(requestMemberLink).mockClear();
   });
 
   it('refuses when the turnstile check fails, writing nothing', async () => {
@@ -130,45 +140,42 @@ describe('handleJoinApply', () => {
     expect(params.get('line_items[1][price_data][unit_amount]')).toBeNull();
   });
 
-  it('a purchaser email belonging to a household that has paid before pivots to welcome-back with the household\'s own data, writing nothing', async () => {
+  it('a purchaser email belonging to a household that has paid before sends a sign-in link exactly once, returns no household data, and writes nothing (2026-07-14 amendment)', async () => {
     const { db, calls } = fakeD1({
       firstResults: {
         ...knownMemberFixtures(),
         'paid_at IS NOT NULL ORDER BY paid_at DESC': { tier: 'individual', season: 2025, paid_at: '2025-06-01' },
       },
-      allResults: {
-        'FROM members WHERE household_id': [
-          { id: 'member-1', name: 'Ada Lovelace' },
-          { id: 'member-2', name: 'Bob Lovelace' },
-        ],
+    });
+    const send = vi.fn().mockResolvedValue(undefined);
+
+    const result = await handleJoinApply(submission(), { CLUB_DB: db, EMAIL: { send } }, '203.0.113.5', ORIGIN);
+
+    expect(result).toEqual({ pivot: 'renewal-link-sent' });
+    expect(result).not.toHaveProperty('householdName');
+    expect(result).not.toHaveProperty('members');
+    expect(requestMemberLink).toHaveBeenCalledTimes(1);
+    expect(requestMemberLink).toHaveBeenCalledWith(
+      db,
+      'ada@example.com',
+      expect.any(Function),
+      expect.objectContaining({ origin: ORIGIN, from: 'noreply@aksailingclub.org' }),
+    );
+    expect(calls.some((c) => c.sql.startsWith('INSERT') || c.sql.startsWith('UPDATE'))).toBe(false);
+  });
+
+  it('degrades silently (no send attempted, still answers the pivot) when EMAIL is not bound', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: {
+        ...knownMemberFixtures(),
+        'paid_at IS NOT NULL ORDER BY paid_at DESC': { tier: 'individual', season: 2025, paid_at: '2025-06-01' },
       },
     });
 
     const result = await handleJoinApply(submission(), { CLUB_DB: db }, '203.0.113.5', ORIGIN);
-    expect(result).toEqual({
-      pivot: 'welcome-back',
-      householdId: 'household-1',
-      householdName: 'Lovelace Household',
-      lastTier: 'individual',
-      members: [
-        { id: 'member-1', name: 'Ada Lovelace' },
-        { id: 'member-2', name: 'Bob Lovelace' },
-      ],
-    });
-    expect(calls.some((c) => c.sql.startsWith('INSERT') || c.sql.startsWith('UPDATE'))).toBe(false);
-  });
 
-  it('a welcomeBackHouseholdId naming a household the claimed email does not actually belong to is ignored: the pivot answers again, writing nothing', async () => {
-    const { db, calls } = fakeD1({
-      firstResults: {
-        ...knownMemberFixtures(),
-        'paid_at IS NOT NULL ORDER BY paid_at DESC': { tier: 'individual', season: 2025, paid_at: '2025-06-01' },
-      },
-      allResults: { 'FROM members WHERE household_id': [{ id: 'member-1', name: 'Ada Lovelace' }] },
-    });
-
-    const result = await handleJoinApply(submission({ welcomeBackHouseholdId: 'someone-elses-household' }), { CLUB_DB: db }, '203.0.113.5', ORIGIN);
-    expect(result).toMatchObject({ pivot: 'welcome-back', householdId: 'household-1' });
+    expect(result).toEqual({ pivot: 'renewal-link-sent' });
+    expect(requestMemberLink).not.toHaveBeenCalled();
     expect(calls.some((c) => c.sql.startsWith('INSERT') || c.sql.startsWith('UPDATE'))).toBe(false);
   });
 
@@ -202,156 +209,6 @@ describe('handleJoinApply', () => {
     expect(params.get('metadata[refId]')).toBe('membership-1');
     expect(params.get('metadata[purchaser_member_id]')).toBe('member-1');
     expect(params.get('metadata[grant_credits]')).toBe('1');
-  });
-
-  describe('welcome-back confirmation (welcomeBackHouseholdId set)', () => {
-    function confirmSubmission(overrides: Partial<JoinApplySubmission> = {}): JoinApplySubmission {
-      return submission({ welcomeBackHouseholdId: 'household-1', ...overrides });
-    }
-
-    it('mints the next unclaimed season\'s unpaid membership row when the current season is already paid, with grant_credits=0', async () => {
-      const { db, calls } = fakeD1({
-        allResults: {
-          tier_price_individual: TIER_PRICE_ROWS,
-          'FROM members WHERE household_id': [{ id: 'member-1', name: 'Ada Lovelace' }],
-        },
-        firstResults: {
-          ...knownMemberFixtures(),
-          'paid_at IS NOT NULL ORDER BY paid_at DESC': { tier: 'individual', season: 2026, paid_at: '2026-01-01' },
-          "'current_season'": { value: '2026' },
-          "'waiver_text_version'": { value: '2026-01' },
-          'AND season = ?2 AND paid_at IS NOT NULL': (args: unknown[]) => (args[1] === 2026 ? { found: 1 } : null),
-          'AND season = ?2 AND paid_at IS NULL': null,
-        },
-      });
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue(new Response(JSON.stringify({ url: 'https://checkout.stripe.com/pay/cs_test_wb1' }), { status: 200 })),
-      );
-
-      const result = await handleJoinApply(confirmSubmission(), { CLUB_DB: db, STRIPE_SECRET_KEY: 'sk_test_1' }, '203.0.113.5', ORIGIN);
-      expect(result).toEqual({ url: 'https://checkout.stripe.com/pay/cs_test_wb1' });
-
-      const membershipInsert = calls.find((c) => c.sql.startsWith('INSERT INTO memberships ('));
-      expect(membershipInsert).toBeDefined();
-      expect(membershipInsert?.args[2]).toBe(2027);
-      expect(calls.some((c) => c.sql.startsWith('UPDATE memberships'))).toBe(false);
-
-      const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
-      const body = (fetchMock.mock.calls[0][1] as RequestInit).body as string;
-      const params = new URLSearchParams(body);
-      expect(params.get('metadata[grant_credits]')).toBe('0');
-      expect(params.get('metadata[purchaser_member_id]')).toBe('member-1');
-      expect(params.get('metadata[dues_cents]')).toBe('25000');
-      expect(params.get('metadata[paid_fee_cents]')).toBe('');
-    });
-
-    it('reuses an already-unpaid row for the target season instead of minting a duplicate', async () => {
-      const { db, calls } = fakeD1({
-        allResults: {
-          tier_price_individual: TIER_PRICE_ROWS,
-          'FROM members WHERE household_id': [{ id: 'member-1', name: 'Ada Lovelace' }],
-        },
-        firstResults: {
-          ...knownMemberFixtures(),
-          'paid_at IS NOT NULL ORDER BY paid_at DESC': { tier: 'individual', season: 2025, paid_at: '2025-01-01' },
-          "'current_season'": { value: '2026' },
-          "'waiver_text_version'": { value: '2026-01' },
-          'AND season = ?2 AND paid_at IS NOT NULL': null,
-          'AND season = ?2 AND paid_at IS NULL': { id: 'membership-2026' },
-        },
-      });
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue(new Response(JSON.stringify({ url: 'https://checkout.stripe.com/pay/cs_test_wb2' }), { status: 200 })),
-      );
-
-      const result = await handleJoinApply(confirmSubmission(), { CLUB_DB: db, STRIPE_SECRET_KEY: 'sk_test_1' }, '203.0.113.5', ORIGIN);
-      expect(result).toEqual({ url: 'https://checkout.stripe.com/pay/cs_test_wb2' });
-
-      expect(calls.some((c) => c.sql.startsWith('INSERT INTO memberships ('))).toBe(false);
-      const update = calls.find((c) => c.sql.startsWith('UPDATE memberships'));
-      expect(update?.args).toEqual(['individual', 250, 'membership-2026']);
-    });
-
-    it('audits a new household member added inline, never editing an existing one', async () => {
-      const { db, calls } = fakeD1({
-        allResults: {
-          tier_price_family: TIER_PRICE_ROWS,
-          'FROM members WHERE household_id': [{ id: 'member-1', name: 'Ada Lovelace' }],
-        },
-        firstResults: {
-          ...knownMemberFixtures(),
-          'paid_at IS NOT NULL ORDER BY paid_at DESC': { tier: 'family', season: 2025, paid_at: '2025-01-01' },
-          "'current_season'": { value: '2026' },
-          "'waiver_text_version'": { value: '2026-01' },
-          'AND season = ?2 AND paid_at IS NOT NULL': null,
-          'AND season = ?2 AND paid_at IS NULL': null,
-        },
-      });
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue(new Response(JSON.stringify({ url: 'https://checkout.stripe.com/pay/cs_test_wb3' }), { status: 200 })),
-      );
-
-      await handleJoinApply(
-        confirmSubmission({ tier: 'family', members: [{ name: 'Carol Lovelace', birthdate: '2015-01-01', email: '' }] }),
-        { CLUB_DB: db, STRIPE_SECRET_KEY: 'sk_test_1' },
-        '203.0.113.5',
-        ORIGIN,
-      );
-
-      expect(calls.filter((c) => c.sql.startsWith('UPDATE members ('))).toHaveLength(0);
-      const memberInsert = calls.find((c) => c.sql.startsWith('INSERT INTO members ('));
-      expect(memberInsert).toBeDefined();
-      expect(memberInsert?.args).toEqual([expect.any(String), 'household-1', 'Carol Lovelace', null, null, '2015-01-01']);
-      const newMemberId = memberInsert?.args[0];
-      const audit = calls.find((c) => c.sql.startsWith('INSERT INTO audit_log') && c.args[1] === 'add-member');
-      expect(audit?.args).toEqual(['public:join', 'add-member', 'member', newMemberId, 'household=household-1']);
-    });
-
-    it('applies the household\'s own unredeemed credit balance to a class pick, never granting a fresh credit', async () => {
-      const { db, calls } = fakeD1({
-        allResults: {
-          tier_price_individual: TIER_PRICE_ROWS,
-          'FROM members WHERE household_id': [{ id: 'member-1', name: 'Ada Lovelace' }],
-        },
-        firstResults: {
-          ...knownMemberFixtures(),
-          'paid_at IS NOT NULL ORDER BY paid_at DESC': { tier: 'individual', season: 2025, paid_at: '2025-01-01' },
-          "'current_season'": { value: '2026' },
-          "'waiver_text_version'": { value: '2026-01' },
-          'AND season = ?2 AND paid_at IS NOT NULL': null,
-          'AND season = ?2 AND paid_at IS NULL': null,
-          'AS balance': { balance: 1 },
-          'FROM classes WHERE id': classRow('intro-sailing', 100),
-        },
-      });
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue(new Response(JSON.stringify({ url: 'https://checkout.stripe.com/pay/cs_test_wb4' }), { status: 200 })),
-      );
-
-      await handleJoinApply(
-        confirmSubmission({ picks: ['intro-sailing'] }),
-        { CLUB_DB: db, STRIPE_SECRET_KEY: 'sk_test_1' },
-        '203.0.113.5',
-        ORIGIN,
-      );
-
-      const enrollmentInsert = calls.find((c) => c.sql.startsWith('INSERT INTO class_enrollments'));
-      expect(enrollmentInsert?.args).toEqual([expect.any(String), 'intro-sailing', 'member-1']);
-
-      const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
-      const body = (fetchMock.mock.calls[0][1] as RequestInit).body as string;
-      const params = new URLSearchParams(body);
-      // The credit covers the one pick: no second class-fee line item, but the enrollment still
-      // rides the checkout's metadata as a covered enrollment.
-      expect(params.get('line_items[1][price_data][unit_amount]')).toBeNull();
-      expect(params.get('metadata[grant_credits]')).toBe('0');
-      const coveredIds = (params.get('metadata[covered_enrollment_ids]') ?? '').split(',').filter(Boolean);
-      expect(coveredIds).toEqual([enrollmentInsert?.args[0]]);
-    });
   });
 
   it('delegates the running total to computeJoinPricing: credits cover picks up to the tier grant, further picks add a class-fee line', async () => {

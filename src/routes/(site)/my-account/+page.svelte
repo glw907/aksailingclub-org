@@ -18,11 +18,13 @@ section's own "Pay" doors do the same for an approved, unpaid asset assignment t
 
   // Seeded once from the household's own last tier (or 'individual' with no membership history
   // yet); the renew form re-renders this same component instance across a failed submit, but the
-  // tier picker never needs to re-seed from `data` after that first read.
+  // tier picker never needs to re-seed from `data` after that first read. `untrack` is
+  // load-bearing here, not a no-op: without it, `svelte-check` emits a `state_referenced_locally`
+  // warning for reading the reactive `data` prop outside a `$derived`/`$effect`.
   let renewTier = $state<MembershipTier>(untrack(() => data.standing?.tier ?? 'individual'));
 
-  function formatDollars(cents: number): string {
-    return `$${cents.toLocaleString('en-US')}`;
+  function formatDollars(dollars: number): string {
+    return `$${dollars.toLocaleString('en-US')}`;
   }
 </script>
 

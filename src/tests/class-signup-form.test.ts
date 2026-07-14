@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isValidationError } from '@sveltejs/kit';
 import * as v from 'valibot';
-import { classSignupSchema, handleClassSignup } from '$theme/class-signup-form';
+import { classSignupSchema, handleClassSignup, handleRequestClassRenewLink } from '$theme/class-signup-form';
 import { fakeD1 } from './_fake-d1';
 
 /** `isValidationError`'s own declared type narrows to `ActionFailure` (the shared public shape),
@@ -265,20 +265,23 @@ describe('the class-door standing gate (Task 4)', () => {
     });
   });
 
-  it('a lapsed household pivots too, carrying an entered phone number', async () => {
+  it('a lapsed household gets the renewal handoff instead of the join pivot (2026-07-14 amendment)', async () => {
     vi.stubGlobal('fetch', vi.fn());
     // Well past the 1-year boundary plus the 30-day grace window.
     const { db } = standingDb({ memberFound: true, paidAt: isoDaysAgo(450) });
 
     const result = await handleClassSignup({ ...INPUT, phone: '907-555-0100' }, { CLUB_DB: db }, '203.0.113.5');
 
-    expect(result).toEqual({
-      pivot: 'join',
-      classId: CLASS_ROW.id,
-      name: INPUT.name,
-      email: INPUT.email,
-      phone: '907-555-0100',
-    });
+    expect(result).toEqual({ pivot: 'renew', email: INPUT.email });
+  });
+
+  it('a household with no paid membership at all also gets the renewal handoff, not the join pivot', async () => {
+    vi.stubGlobal('fetch', vi.fn());
+    const { db } = standingDb({ memberFound: true, paidAt: null });
+
+    const result = await handleClassSignup(INPUT, { CLUB_DB: db }, '203.0.113.5');
+
+    expect(result).toEqual({ pivot: 'renew', email: INPUT.email });
   });
 
   it('resolves the member by normalized email', async () => {
@@ -292,5 +295,40 @@ describe('the class-door standing gate (Task 4)', () => {
     const result = await handleClassSignup({ ...INPUT, email: '  Jamie@Example.COM  ' }, { CLUB_DB: db }, '203.0.113.5');
 
     expect(result).toEqual({ outcome: 'enrolled', enrollmentId: expect.any(String) });
+  });
+});
+
+describe('handleRequestClassRenewLink (2026-07-14 amendment)', () => {
+  const ACTIVE_MEMBER = {
+    id: 'member-1',
+    household_id: 'household-1',
+    name: 'Jamie Rivera',
+    email: 'jamie@example.com',
+    archived_at: null,
+  };
+
+  it('sends the member their own sign-in link when CLUB_DB and EMAIL are both bound', async () => {
+    const { db } = fakeD1({ firstResults: { 'FROM members WHERE lower(email)': ACTIVE_MEMBER } });
+    const send = vi.fn().mockResolvedValue(undefined);
+
+    const result = await handleRequestClassRenewLink('jamie@example.com', { CLUB_DB: db, EMAIL: { send } }, 'https://dev.aksailingclub.org');
+
+    expect(result).toEqual({ sent: true });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0].to).toBe(ACTIVE_MEMBER.email);
+  });
+
+  it('still answers sent, sending nothing, when EMAIL is not bound', async () => {
+    const { db } = fakeD1({ firstResults: { 'FROM members WHERE lower(email)': ACTIVE_MEMBER } });
+
+    const result = await handleRequestClassRenewLink('jamie@example.com', { CLUB_DB: db }, 'https://dev.aksailingclub.org');
+
+    expect(result).toEqual({ sent: true });
+  });
+
+  it('still answers sent when CLUB_DB is not bound', async () => {
+    const result = await handleRequestClassRenewLink('jamie@example.com', undefined, 'https://dev.aksailingclub.org');
+
+    expect(result).toEqual({ sent: true });
   });
 });

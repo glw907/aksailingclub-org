@@ -1,21 +1,22 @@
 <!-- @component
-The public class signup/waitlist form (Task 8): reachable from the events listing's class cards.
-An open class enrolls immediately on submit; a full one joins the waitlist instead, both through
-the same `joinClass` remote function (class-signup.remote.ts), which decides the outcome
-server-side (this page never guesses). Turnstile-gated, degrading gracefully with no secret
-configured, matching the family's own ContactForm/DonateForm precedent.
+The public class signup/waitlist form: reachable from the events listing's class cards. An open
+class enrolls immediately on submit; a full one joins the waitlist instead, both through the same
+`joinClass` remote function (class-signup.remote.ts), which decides the outcome server-side (this
+page never guesses). Turnstile-gated, degrading gracefully with no secret configured, matching the
+family's own ContactForm/DonateForm precedent.
 
-The class-door standing gate (Task 4): `joinClass`'s own submission is gated server-side on
-membership standing, so a non-member (or lapsed household) never enrolls here — the action answers
-a `{ pivot: 'join' }` outcome instead, which this page renders as an invitation into `/join/apply`
-with the submitted fields carried over as query params. With JS available, an email-blur probe
-(`checkKnownEmail` then `checkClassEligibility`) offers the same invitation before the visitor
-fills out the rest of the form. -->
+The class-door standing gate: `joinClass`'s own submission is gated server-side on membership
+standing, so a non-member never enrolls here — the action answers a `{ pivot: 'join' }` outcome
+instead, which this page renders as an invitation into `/join/apply` with the submitted fields
+carried over as query params. A `lapsed` household gets `{ pivot: 'renew' }` instead (amended
+2026-07-14): joining fresh would duplicate that household, so the page offers a button that emails
+the member's own sign-in link (`requestRenewLink`) rather than the join carry-over. With JS
+available, an email-blur probe (`checkKnownEmail` then `checkClassEligibility`) offers the same
+pivot before the visitor fills out the rest of the form. -->
 <script lang="ts">
-  import { browser } from '$app/environment';
   import type { PageData } from './$types';
   import { siteConfig } from '$theme/cairn.config';
-  import { joinClass, checkClassEligibility } from '$theme/class-signup.remote';
+  import { joinClass, checkClassEligibility, requestRenewLink } from '$theme/class-signup.remote';
   import { checkKnownEmail } from '$theme/join-apply.remote';
   import { payClassFee } from '$theme/class-fee-checkout.remote';
   import { CLASS_TRACK_LABEL } from '$admin-club/lib/classes-store';
@@ -30,9 +31,13 @@ fills out the rest of the form. -->
 
   const { name, email, phone, interests, waiverAccepted } = joinClass.fields;
 
-  /** Set once the email-blur probe finds the visitor ineligible, so the page can show the join
-   *  invitation before a full submit. `null` until a blur decides otherwise. */
-  let blurPivot = $state<{ name: string; email: string; phone: string } | null>(null);
+  /** The class-door standing gate's own pivot shape: the join invitation carries the entered
+   *  fields, the renewal handoff carries just the email the "email me a sign-in link" button
+   *  needs. Set once the email-blur probe (or a full submit) finds the visitor ineligible, so the
+   *  page can show the right pivot before a full submit; `null` until then. */
+  type Pivot = { mode: 'join'; name: string; email: string; phone: string } | { mode: 'renew'; email: string };
+
+  let blurPivot = $state<Pivot | null>(null);
 
   async function onEmailBlur(): Promise<void> {
     const enteredEmail = email.value() ?? '';
@@ -41,18 +46,31 @@ fills out the rest of the form. -->
       return;
     }
     const known = await checkKnownEmail(enteredEmail);
-    const eligible = known.known ? (await checkClassEligibility(enteredEmail)).eligible : false;
-    blurPivot = eligible ? null : { name: name.value() ?? '', email: enteredEmail, phone: phone.value() ?? '' };
+    if (!known.known) {
+      blurPivot = { mode: 'join', name: name.value() ?? '', email: enteredEmail, phone: phone.value() ?? '' };
+      return;
+    }
+    const { status } = await checkClassEligibility(enteredEmail);
+    blurPivot =
+      status === 'eligible'
+        ? null
+        : status === 'lapsed'
+          ? { mode: 'renew', email: enteredEmail }
+          : { mode: 'join', name: name.value() ?? '', email: enteredEmail, phone: phone.value() ?? '' };
   }
 
-  const pivot = $derived(
-    joinClass.result && 'pivot' in joinClass.result
-      ? { name: joinClass.result.name, email: joinClass.result.email, phone: joinClass.result.phone ?? '' }
-      : blurPivot,
-  );
+  const resultPivot = $derived.by<Pivot | null>(() => {
+    const result = joinClass.result;
+    if (!result || !('pivot' in result)) return null;
+    return result.pivot === 'join'
+      ? { mode: 'join', name: result.name, email: result.email, phone: result.phone ?? '' }
+      : { mode: 'renew', email: result.email };
+  });
+
+  const pivot = $derived(resultPivot ?? blurPivot);
 
   const joinApplyHref = $derived.by(() => {
-    if (!pivot) return '';
+    if (!pivot || pivot.mode !== 'join') return '';
     const params = new URLSearchParams({ class: data.cls.id, name: pivot.name, email: pivot.email });
     if (pivot.phone) params.set('phone', pivot.phone);
     return `/join/apply?${params.toString()}`;
@@ -60,7 +78,7 @@ fills out the rest of the form. -->
 
   $effect(() => {
     const url = payClassFee.result && 'url' in payClassFee.result ? payClassFee.result.url : undefined;
-    if (browser && url) window.location.href = url;
+    if (url) window.location.href = url;
   });
 </script>
 
@@ -135,6 +153,24 @@ fills out the rest of the form. -->
       claim it, good for a limited window; passing on an offer is a fine choice and keeps your place
       for a future opening.
     </p>
+  </div>
+{:else if pivot && pivot.mode === 'renew'}
+  <div class="mt-l max-w-measure-wide rounded-box border border-info bg-info/10 p-m">
+    <p class="m-0 font-semibold text-base-content">Renew to sign up for {data.cls.name}.</p>
+    <p class="mt-xs mb-0 text-step--1 text-base-content">
+      Your membership has lapsed. We'll email you a sign-in link; you can renew and register for
+      classes from your account.
+    </p>
+    {#if requestRenewLink.result?.sent}
+      <p class="mt-xs mb-0 text-step--1 text-base-content">Check your inbox. The link expires in 15 minutes.</p>
+    {:else}
+      <form {...requestRenewLink} class="mt-s">
+        <input type="hidden" name="email" value={pivot.email} />
+        <button type="submit" class="btn btn-primary btn-sm" disabled={!!requestRenewLink.pending}>
+          {requestRenewLink.pending ? 'Sending…' : 'Email me a sign-in link'}
+        </button>
+      </form>
+    {/if}
   </div>
 {:else if pivot}
   <div class="mt-l max-w-measure-wide rounded-box border border-info bg-info/10 p-m">
