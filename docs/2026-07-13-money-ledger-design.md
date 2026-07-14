@@ -115,8 +115,15 @@ flows.
 to `createCheckout({ kind: 'donation', refId: <pre-minted uuid> })`; the webhook gains a
 donation reconciler that inserts the transaction (id = refId, one `donation` line, payer
 snapshot from the session's customer details where present). This closes today's gap
-where donations exist only inside Stripe. Idempotency: the existing
-`processed_stripe_sessions` claim plus the transaction PK.
+where donations exist only inside Stripe. Idempotency: unlike the other three kinds, the
+donation reconciler claims its own session (a plain insert into
+`processed_stripe_sessions`, not the route's own pre-claim) inside the same `db.batch()`
+as the transaction and line inserts, so the claim and the ledger row commit atomically —
+a donation has no domain row for a natural-state guard to fall back on. The route skips
+its pre-claim for this kind and, uniquely, answers 500 on an unexpected reconciliation
+failure so Stripe retries; a concurrent double delivery collides on the claim's primary
+key, the losing batch rolls back, and the retry finds the winning claim already
+committed.
 
 ## Backfill (`scripts/import/mw-ledger.mjs`)
 

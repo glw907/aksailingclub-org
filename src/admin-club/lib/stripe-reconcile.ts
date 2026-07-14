@@ -21,13 +21,21 @@
 // never surface as an unhandled exception the route would have to turn into a 500 (the route's own
 // header explains why a 500 here is worse than useless: Stripe retries a non-2xx delivery for up to
 // three days, and a persistently-wrong `refId` can never self-heal from a retry).
+//
+// `donation` is the one deliberate exception to both of the above. It has no domain row for a
+// natural-state guard to fall back on, so this module gives it its own atomic claim instead of the
+// route's own pre-claim (see `reconcileDonation`'s own header): a rejected promise from it is
+// allowed to propagate, and the route answers 500 for that kind alone so Stripe retries. This is
+// safe there and nowhere else because a donation carries no wrong-`refId` poison case -- malformed
+// metadata is already rejected 400 before any database touch -- so a retry can never get stuck
+// retrying forever against a request that will never succeed.
 import type { D1Database } from '@cloudflare/workers-types';
 import { PAYMENT_KINDS, type PaymentKind } from './payments';
 import { sendClubEmail, type EmailBindingEnv } from './club-email';
 import { getCurrentSeason } from './club-settings';
 import { formatClubTimestamp, formatDollars } from './ui';
 import { toSqliteDatetime } from './offers';
-import { recordTransaction } from './ledger';
+import { buildTransactionStatements, recordTransaction } from './ledger';
 
 /** The slice of a Stripe Checkout Session object this module actually reads: `amount_total` is
  *  the authoritative, Stripe-confirmed charge (cents), read from the event payload rather than
@@ -86,6 +94,20 @@ export interface ReconcileOutcome {
   /** A short, loggable reason: set on every `ok: false`, and on an `ok: true` no-op so the log
    *  still distinguishes "reconciled and emailed" from "already settled, nothing to do". */
   reason?: string;
+}
+
+/** `session.amount_total` is `null` on a Checkout Session Stripe itself did not attach a
+ *  confirmed total to: every reconciler below checks this BEFORE any write, rather than the old
+ *  `?? 0` fallback, because that fallback recorded a $0 ledger row while still flipping the
+ *  domain row (or, for a donation, the claim) PAID -- the difference between "no write, a loud
+ *  log line for a human to investigate" and silently mis-recording money Stripe never actually
+ *  confirmed. */
+function requireAmountTotalCents(session: StripeCheckoutSession): number | null {
+  if (session.amount_total == null) {
+    console.error(`api/stripe/webhook: session ${session.id} carries no amount_total; refusing before any write`);
+    return null;
+  }
+  return session.amount_total;
 }
 
 /** Insert one `audit_log` row directly, mirroring `offers.ts`'s own `writeAudit`: the webhook has
@@ -155,6 +177,9 @@ async function reconcileDues(db: D1Database, env: EmailBindingEnv, refId: string
     .first<MembershipReconcileRow>();
   if (!membership) return { ok: false, reason: `no such membership: ${refId}` };
 
+  const amountTotalCents = requireAmountTotalCents(session);
+  if (amountTotalCents === null) return { ok: false, reason: `session ${session.id} carries no amount_total` };
+
   const update = await db
     .prepare("UPDATE memberships SET paid_at = datetime('now'), stripe_ref = ?1 WHERE id = ?2 AND paid_at IS NULL")
     .bind(session.id, refId)
@@ -164,7 +189,6 @@ async function reconcileDues(db: D1Database, env: EmailBindingEnv, refId: string
   await writeAudit(db, 'membership', refId, `kind=dues session=${session.id}`);
 
   const itemDisplayName = `${TIER_LABEL[membership.tier]} Membership -- ${membership.season} season`;
-  const amountTotalCents = session.amount_total ?? 0;
   await recordTransaction(
     db,
     { kind: 'charge', source: 'stripe', occurredAt: toSqliteDatetime(new Date()), amountTotalCents, processorRef: session.id, householdId: membership.household_id },
@@ -220,6 +244,9 @@ async function reconcileClassFee(db: D1Database, env: EmailBindingEnv, refId: st
     .first<EnrollmentReconcileRow>();
   if (!enrollment) return { ok: false, reason: `no such class_enrollments row: ${refId}` };
 
+  const amountTotalCents = requireAmountTotalCents(session);
+  if (amountTotalCents === null) return { ok: false, reason: `session ${session.id} carries no amount_total` };
+
   const update = await db
     .prepare('UPDATE class_enrollments SET fee_paid = 1, stripe_ref = ?1 WHERE id = ?2 AND fee_paid = 0')
     .bind(session.id, refId)
@@ -229,7 +256,6 @@ async function reconcileClassFee(db: D1Database, env: EmailBindingEnv, refId: st
   await writeAudit(db, 'enrollment', refId, `kind=class-fee session=${session.id} class=${enrollment.class_id}`);
 
   const itemDisplayName = `${enrollment.class_name} class fee`;
-  const amountTotalCents = session.amount_total ?? 0;
   await recordTransaction(
     db,
     { kind: 'charge', source: 'stripe', occurredAt: toSqliteDatetime(new Date()), amountTotalCents, processorRef: session.id, householdId: enrollment.household_id },
@@ -282,8 +308,10 @@ async function reconcileAssetFee(db: D1Database, env: EmailBindingEnv, refId: st
     .first<AssignmentReconcileRow>();
   if (!assignment) return { ok: false, reason: `no such asset_assignments row: ${refId}` };
 
+  const amountTotalCents = requireAmountTotalCents(session);
+  if (amountTotalCents === null) return { ok: false, reason: `session ${session.id} carries no amount_total` };
+
   const season = await getCurrentSeason(db);
-  const amountTotalCents = session.amount_total ?? 0;
   const amountDollars = Math.round(amountTotalCents / 100);
   const upsert = await db
     .prepare(
@@ -322,18 +350,36 @@ async function reconcileAssetFee(db: D1Database, env: EmailBindingEnv, refId: st
 
 /** `kind: 'donation'`: `refId` is a fresh uuid `donate.remote.ts` mints and passes to
  *  `createCheckout` as the Checkout Session's `metadata.refId`, then hands to this reconciler as
- *  the ledger's own transaction id (`ledger.ts`'s own doc comment on why a caller-supplied id lets
- *  a Stripe retry collide on the primary key). No domain row to flip, so the guard here is a plain
- *  existence check on that id rather than a `changes: 1` compare-and-set, the natural-state guard
- *  every other reconciler in this module already uses for the identical race, and no receipt
- *  email (`docs/2026-07-13-money-ledger-design.md`'s "Live write path": donations get none in
- *  this initiative). */
+ *  the ledger's own transaction id. UNLIKE the other three kinds, this reconciler claims the
+ *  session itself -- a plain `INSERT` into `processed_stripe_sessions`, not the route's own
+ *  `INSERT OR IGNORE` pre-claim -- inside the SAME `db.batch()` as the `transactions`/
+ *  `transaction_lines` writes, so the claim and the ledger row commit atomically. A donation has
+ *  no domain row for a natural-state guard to fall back on (the other three kinds' own `WHERE
+ *  paid_at IS NULL` shape); without atomicity, a claim that committed while the ledger write
+ *  failed would silently drop a real donation forever, since Stripe never retries a session this
+ *  route already answered 200 for.
+ *
+ *  A concurrent double delivery converges: the losing batch's own claim `INSERT` collides on
+ *  `processed_stripe_sessions`'s primary key, the whole batch rolls back (this call rejects), and
+ *  the route -- donation kind only, its own header explains why -- answers 500 so Stripe retries;
+ *  the retry's own pre-check below finds the winning delivery's claim already committed and
+ *  no-ops. This is safe specifically because a donation carries no wrong-`refId` poison case for
+ *  an endless retry to get stuck on: malformed metadata is already rejected 400 before any
+ *  database touch (`parseSessionMetadata`, called before this reconciler ever runs), so any retry
+ *  that reaches here still carries a `refId` this reconciler can act on. No receipt email
+ *  (`docs/2026-07-13-money-ledger-design.md`'s "Live write path": donations get none in this
+ *  initiative). */
 async function reconcileDonation(db: D1Database, refId: string, session: StripeCheckoutSession): Promise<ReconcileOutcome> {
-  const existing = await db.prepare('SELECT id FROM transactions WHERE id = ?1').bind(refId).first<{ id: string }>();
-  if (existing) return { ok: true, reason: `donation ${refId} already recorded; no-op` };
+  const claimed = await db
+    .prepare('SELECT session_id FROM processed_stripe_sessions WHERE session_id = ?1')
+    .bind(session.id)
+    .first<{ session_id: string }>();
+  if (claimed) return { ok: true, reason: `donation session ${session.id} already recorded; no-op` };
 
-  const amountTotalCents = session.amount_total ?? 0;
-  await recordTransaction(
+  const amountTotalCents = requireAmountTotalCents(session);
+  if (amountTotalCents === null) return { ok: false, reason: `session ${session.id} carries no amount_total` };
+
+  const { statements } = buildTransactionStatements(
     db,
     {
       id: refId,
@@ -347,17 +393,26 @@ async function reconcileDonation(db: D1Database, refId: string, session: StripeC
     },
     [{ item: 'donation', description: 'Donation to the Alaska Sailing Club', amountCents: amountTotalCents }],
   );
+
+  await db.batch([
+    db.prepare('INSERT INTO processed_stripe_sessions (session_id, kind, ref_id) VALUES (?1, ?2, ?3)').bind(session.id, 'donation', refId),
+    ...statements,
+  ]);
+
   await writeAudit(db, 'transaction', refId, `kind=donation session=${session.id}`);
   return { ok: true };
 }
 
 /**
- * Reconcile one already-claimed `checkout.session.completed` session (the caller must have
- * already called {@link claimStripeSession} and confirmed it returned `true`): dispatches to the
- * `kind`-specific writer, each of which mutates its own row, audits, and emails a receipt. Never
- * throws (this module's own header): a D1 error inside a per-kind writer surfaces as a rejected
- * promise, which the webhook route's own outer `try`/`catch` logs and still answers 200, per that
- * route's header on why a reconciliation failure must never become a 500.
+ * Reconcile one `checkout.session.completed` session: dispatches to the `kind`-specific writer,
+ * each of which mutates its own row, audits, and emails a receipt. For `dues`/`class-fee`/
+ * `asset-fee`, the caller must have already called {@link claimStripeSession} and confirmed it
+ * returned `true`, and none of the three ever throws -- a D1 error inside one of them surfaces as
+ * a rejected promise the webhook route's own outer `try`/`catch` logs and still answers 200 for,
+ * per that route's header on why a reconciliation failure must never become a 500 for those
+ * kinds. `donation` is the one exception: it claims its own session atomically
+ * (`reconcileDonation`'s own header), and a rejected promise from it is meant to propagate so the
+ * route can answer 500 and let Stripe retry.
  */
 export async function reconcileCheckoutSession(
   db: D1Database,

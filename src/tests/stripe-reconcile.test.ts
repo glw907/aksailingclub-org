@@ -98,6 +98,13 @@ describe('reconcileCheckoutSession: dues', () => {
     expect(calls.some((c) => c.sql.startsWith('UPDATE') || c.sql.startsWith('INSERT'))).toBe(false);
   });
 
+  it('refuses (before any write) when the session carries no amount_total', async () => {
+    const { db, calls } = fakeD1({ firstResults: { 'FROM memberships WHERE id': MEMBERSHIP_ROW } });
+    const outcome = await reconcileCheckoutSession(db, {}, 'dues', 'mem-1', { ...SESSION, amount_total: null });
+    expect(outcome).toEqual({ ok: false, reason: expect.stringContaining('amount_total') });
+    expect(calls.some((c) => c.sql.startsWith('UPDATE') || c.sql.startsWith('INSERT'))).toBe(false);
+  });
+
   it('is a clean no-op when the membership is already paid (idempotence)', async () => {
     const send = vi.fn();
     const { db, calls } = fakeD1({
@@ -164,6 +171,13 @@ describe('reconcileCheckoutSession: class-fee', () => {
     expect(outcome).toEqual({ ok: false, reason: expect.stringContaining('no such class_enrollments row') });
   });
 
+  it('refuses (before any write) when the session carries no amount_total', async () => {
+    const { db, calls } = fakeD1({ firstResults: { 'FROM class_enrollments ce': ENROLLMENT_ROW } });
+    const outcome = await reconcileCheckoutSession(db, {}, 'class-fee', 'enr-1', { ...SESSION, amount_total: null });
+    expect(outcome).toEqual({ ok: false, reason: expect.stringContaining('amount_total') });
+    expect(calls.some((c) => c.sql.startsWith('UPDATE') || c.sql.startsWith('INSERT'))).toBe(false);
+  });
+
   it('is a clean no-op when the fee is already paid (idempotence), writing no ledger row', async () => {
     const send = vi.fn();
     const { db, calls } = fakeD1({
@@ -221,6 +235,13 @@ describe('reconcileCheckoutSession: asset-fee', () => {
     expect(outcome).toEqual({ ok: false, reason: expect.stringContaining('no such asset_assignments row') });
   });
 
+  it('refuses (before any write) when the session carries no amount_total', async () => {
+    const { db, calls } = fakeD1({ firstResults: { 'FROM asset_assignments aa': ASSIGNMENT_ROW } });
+    const outcome = await reconcileCheckoutSession(db, {}, 'asset-fee', 'assign-1', { ...SESSION, amount_total: null });
+    expect(outcome).toEqual({ ok: false, reason: expect.stringContaining('amount_total') });
+    expect(calls.some((c) => c.sql.startsWith('INSERT'))).toBe(false);
+  });
+
   it('is a clean no-op when the season is already paid (idempotence), writing no ledger row', async () => {
     const send = vi.fn();
     const { db, calls } = fakeD1({
@@ -242,10 +263,14 @@ describe('reconcileCheckoutSession: donation', () => {
     customer_details: { name: 'Jamie Rivera', email: 'jamie@example.com' },
   };
 
-  it('records the donation as a charge transaction with a donation line, no domain write', async () => {
-    const { db, calls } = fakeD1({ firstResults: { 'FROM transactions WHERE id': null } });
+  it('claims the session and writes the ledger atomically: one batch carrying the claim insert plus the transaction and its line', async () => {
+    const { db, calls } = fakeD1({ firstResults: { 'FROM processed_stripe_sessions WHERE session_id': null } });
     const outcome = await reconcileCheckoutSession(db, {}, 'donation', 'txn-fixed-1', DONATION_SESSION);
     expect(outcome).toEqual({ ok: true });
+
+    const claimInsert = calls.find((c) => c.sql.startsWith('INSERT INTO processed_stripe_sessions'));
+    expect(claimInsert?.sql).not.toContain('OR IGNORE');
+    expect(claimInsert?.args).toEqual(['cs_test_donation_1', 'donation', 'txn-fixed-1']);
 
     const txnInsert = calls.find((c) => c.sql.startsWith('INSERT INTO transactions'));
     expect(txnInsert?.args).toEqual([
@@ -254,12 +279,17 @@ describe('reconcileCheckoutSession: donation', () => {
     const lineInsert = calls.find((c) => c.sql.startsWith('INSERT INTO transaction_lines'));
     expect(lineInsert?.args).toEqual([expect.any(String), 'txn-fixed-1', 'donation', expect.any(String), 5000, null, null, null]);
 
+    // The claim insert precedes the ledger writes in call order -- they went into ONE db.batch().
+    const claimIndex = calls.findIndex((c) => c.sql.startsWith('INSERT INTO processed_stripe_sessions'));
+    const txnIndex = calls.findIndex((c) => c.sql.startsWith('INSERT INTO transactions'));
+    expect(claimIndex).toBeLessThan(txnIndex);
+
     const audit = calls.find((c) => c.sql.startsWith('INSERT INTO audit_log'));
     expect(audit?.args).toEqual(['system:stripe-webhook', 'payment.reconcile', 'transaction', 'txn-fixed-1', expect.stringContaining('kind=donation')]);
   });
 
   it('records no payer snapshot when the session carries no customer_details', async () => {
-    const { db, calls } = fakeD1({ firstResults: { 'FROM transactions WHERE id': null } });
+    const { db, calls } = fakeD1({ firstResults: { 'FROM processed_stripe_sessions WHERE session_id': null } });
     const outcome = await reconcileCheckoutSession(db, {}, 'donation', 'txn-fixed-2', {
       ...DONATION_SESSION,
       id: 'cs_test_donation_2',
@@ -271,10 +301,41 @@ describe('reconcileCheckoutSession: donation', () => {
     expect(txnInsert?.args[10]).toBeNull();
   });
 
-  it('is idempotent on a PK collision: a transaction already recorded under this id is a clean no-op', async () => {
-    const { db, calls } = fakeD1({ firstResults: { 'FROM transactions WHERE id': { id: 'txn-fixed-1' } } });
+  it('is a clean no-op when the session is already claimed', async () => {
+    const { db, calls } = fakeD1({ firstResults: { 'FROM processed_stripe_sessions WHERE session_id': { session_id: 'cs_test_donation_1' } } });
     const outcome = await reconcileCheckoutSession(db, {}, 'donation', 'txn-fixed-1', DONATION_SESSION);
     expect(outcome).toEqual({ ok: true, reason: expect.stringContaining('already recorded') });
-    expect(calls.some((c) => c.sql.startsWith('INSERT INTO transactions'))).toBe(false);
+    expect(calls.some((c) => c.sql.startsWith('INSERT INTO'))).toBe(false);
+  });
+
+  it('refuses (before any write) when the session carries no amount_total', async () => {
+    const { db, calls } = fakeD1({ firstResults: { 'FROM processed_stripe_sessions WHERE session_id': null } });
+    const outcome = await reconcileCheckoutSession(db, {}, 'donation', 'txn-fixed-1', { ...DONATION_SESSION, amount_total: null });
+    expect(outcome).toEqual({ ok: false, reason: expect.stringContaining('amount_total') });
+    expect(calls.some((c) => c.sql.startsWith('INSERT INTO'))).toBe(false);
+  });
+
+  it('propagates a batch failure (a concurrent delivery colliding on the claim primary key) as a rejected promise', async () => {
+    const throwingDb = {
+      prepare(sql: string) {
+        const stmt = {
+          sql,
+          args: [] as unknown[],
+          bind(...args: unknown[]) {
+            stmt.args = args;
+            return stmt;
+          },
+          async first() {
+            return null; // no prior claim on file -- both concurrent deliveries reach the batch
+          },
+        };
+        return stmt;
+      },
+      async batch() {
+        throw new Error('UNIQUE constraint failed: processed_stripe_sessions.session_id');
+      },
+    } as unknown as D1Database;
+
+    await expect(reconcileCheckoutSession(throwingDb, {}, 'donation', 'txn-fixed-1', DONATION_SESSION)).rejects.toThrow('UNIQUE constraint');
   });
 });

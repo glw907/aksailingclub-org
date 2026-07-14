@@ -141,4 +141,41 @@ describe('POST /api/stripe/webhook', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ received: true });
   });
+
+  it('reconciles a donation without pre-claiming: the atomic claim+ledger batch is the only claim', async () => {
+    const { db, calls } = fakeD1({ firstResults: { 'FROM processed_stripe_sessions WHERE session_id': null } });
+    const request = await signedRequest(completedSessionEvent({ metadata: { kind: 'donation', refId: 'txn-1' } }));
+    const response = await POST(eventFor(request, { STRIPE_WEBHOOK_SECRET: SECRET, CLUB_DB: db }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ received: true });
+    expect(calls.some((c) => c.sql.startsWith('INSERT OR IGNORE INTO processed_stripe_sessions'))).toBe(false);
+    const claimInsert = calls.find((c) => c.sql.startsWith('INSERT INTO processed_stripe_sessions'));
+    expect(claimInsert?.sql).not.toContain('OR IGNORE');
+  });
+
+  it('500s a donation whose reconciliation throws, so Stripe retries', async () => {
+    const throwingDb = {
+      prepare(sql: string) {
+        const stmt = {
+          sql,
+          args: [] as unknown[],
+          bind(...args: unknown[]) {
+            stmt.args = args;
+            return stmt;
+          },
+          async first() {
+            return null; // no prior claim on file -- the batch below is what fails
+          },
+        };
+        return stmt;
+      },
+      async batch() {
+        throw new Error('D1 outage mid-batch');
+      },
+    } as unknown as D1Database;
+
+    const request = await signedRequest(completedSessionEvent({ metadata: { kind: 'donation', refId: 'txn-1' } }));
+    const response = await POST(eventFor(request, { STRIPE_WEBHOOK_SECRET: SECRET, CLUB_DB: throwingDb }));
+    expect(response.status).toBe(500);
+  });
 });
