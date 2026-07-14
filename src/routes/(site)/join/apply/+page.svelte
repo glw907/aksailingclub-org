@@ -4,12 +4,21 @@ selection with live prices, the purchaser's own details, family's inline househo
 optional class picks per roster member (a full class still lists, landing the pick on the
 waitlist instead), a running total delegated to the same `computeJoinPricing` the server action
 uses (no duplicated pricing math), the waiver, and Turnstile. Submits through `applyJoin`
-(join-apply.remote.ts): a fresh join redirects to Stripe, a checkout-unavailable submission shows
-the same stub message every other payment form on this site shows, and a purchaser email that
-already belongs to a real member answers the welcome-back pivot Task 5 owns rendering. A visitor
-carried over from the class door's own invitation (Task 4, `?class=<id>&name=…&email=…&phone=…`)
-has those fields and the class pick pre-filled from `data.prefill`, so they never have to enter
-them twice. -->
+(join-apply.remote.ts): a fresh join redirects to Stripe, and a checkout-unavailable submission
+shows the same stub message every other payment form on this site shows. A visitor carried over
+from the class door's own invitation (Task 4, `?class=<id>&name=…&email=…&phone=…`) has those
+fields and the class pick pre-filled from `data.prefill`, so they never have to enter them twice.
+
+Welcome-back renewal (Task 5, the design's own "Renew and welcome-back" section): a purchaser
+email matching a household that has paid a membership before pivots the page into a second mode
+in place of the fresh-join form, seeded from the pivot response (`welcomeBack`): the household's
+own name, its last tier (shown as the default, changeable), and its current roster for per-member
+class picks, with an inline "add a household member" section for anyone new (never an edit to an
+existing member, per the design's own "destructive edits... stay portal-only" ruling). Confirming
+resubmits the same `applyJoin` form with `welcomeBackHouseholdId` set, so the action can tell a
+confirmation apart from the first-pass probe of the same email. A member row with no membership
+history at all (paid or unpaid, the rare `email-in-use` pivot) keeps the earlier "sign in instead"
+dead end, unchanged. -->
 <script lang="ts">
   import { browser } from '$app/environment';
   import { untrack } from 'svelte';
@@ -34,6 +43,40 @@ them twice. -->
   // Index-aligned with the roster: picks[0] is the purchaser's pick, picks[i] is members[i - 1]'s.
   let picks = $state<string[]>(untrack(() => [data.prefill.classId]));
   let knownEmailHint = $state(false);
+
+  // Welcome-back renewal (Task 5): a purchaser email matching a household that has paid before
+  // pivots the page into this mode instead of the fresh-join form below. `wbTier`/`wbPicks` seed
+  // once from the pivot's own data the first time it appears (the `$effect` below); after that
+  // they're left entirely to the visitor's own edits, including across a failed resubmit (a
+  // rejected waiver checkbox, say), since `welcomeBack` stays the same object across a thrown
+  // validation error.
+  let wbTier = $state<MembershipTier>('individual');
+  let wbPicks = $state<string[]>([]);
+  let wbNewMembers = $state<{ name: string; birthdate: string; email: string }[]>([]);
+  let wbSeeded = false;
+
+  const welcomeBack = $derived(
+    applyJoin.result && 'pivot' in applyJoin.result && applyJoin.result.pivot === 'welcome-back' ? applyJoin.result : null,
+  );
+
+  $effect(() => {
+    if (welcomeBack && !wbSeeded) {
+      wbSeeded = true;
+      wbTier = welcomeBack.lastTier;
+      wbPicks = welcomeBack.members.map(() => '');
+    }
+  });
+
+  function addWbMember(): void {
+    wbNewMembers.push({ name: '', birthdate: '', email: '' });
+    wbPicks.push('');
+  }
+
+  function removeWbMember(index: number): void {
+    if (!welcomeBack) return;
+    wbNewMembers.splice(index, 1);
+    wbPicks.splice(welcomeBack.members.length + index, 1);
+  }
 
   const { waiverAccepted } = applyJoin.fields;
 
@@ -99,7 +142,7 @@ them twice. -->
 
 <h1 class="m-0 font-display text-step-4 font-semibold leading-tight tracking-tight text-base-content">Join the club</h1>
 
-{#if applyJoin.result && 'pivot' in applyJoin.result}
+{#if applyJoin.result && 'pivot' in applyJoin.result && applyJoin.result.pivot === 'email-in-use'}
   <div class="mt-l max-w-measure-wide rounded-box border border-info bg-info/10 p-m">
     <p class="m-0 font-semibold text-base-content">This email is already on file.</p>
     <p class="mt-xs mb-0 text-step--1 text-base-content">
@@ -108,6 +151,118 @@ them twice. -->
       <a href="mailto:board@aksailingclub.org">board@aksailingclub.org</a> if that doesn't sound right.
     </p>
   </div>
+{:else if welcomeBack}
+  <div class="mt-l max-w-measure-wide rounded-box border border-info bg-info/10 p-m">
+    <p class="m-0 font-semibold text-base-content">Welcome back, {welcomeBack.householdName}.</p>
+    <p class="mt-xs mb-0 text-step--1 text-base-content">
+      Renew below. We'll apply any class credits your household already has, and you can add
+      anyone new to your household along the way.
+    </p>
+  </div>
+
+  <form {...applyJoin} class="mt-l flex max-w-measure-wide flex-col gap-m">
+    {#each applyJoin.fields.allIssues() ?? [] as issue (issue.message)}
+      <p class="rounded-field border border-error bg-error/10 px-s py-xs text-step--1 text-error">{issue.message}</p>
+    {/each}
+
+    <input type="hidden" name="welcomeBackHouseholdId" value={welcomeBack.householdId} />
+    <input type="hidden" name="purchaserName" value={purchaserName} />
+    <input type="hidden" name="purchaserEmail" value={purchaserEmail} />
+    <input type="hidden" name="purchaserPhone" value={purchaserPhone} />
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">Membership tier</legend>
+      <div class="flex flex-col gap-xs">
+        {#each ['individual', 'family', 'young-adult'] as const as option (option)}
+          <label class="flex items-center gap-xs">
+            <input type="radio" name="tier" value={option} checked={wbTier === option} onchange={() => (wbTier = option)} />
+            {MEMBERSHIP_TIER_LABEL[option]} — {formatDollars(data.prices[option])}/year
+          </label>
+        {/each}
+      </div>
+      {#if wbTier === 'young-adult'}
+        <label class="mt-xs flex flex-col gap-2xs text-step--1">
+          Birthdate (to verify you're under 26)
+          <input class="input w-full" name="purchaserBirthdate" type="date" required bind:value={purchaserBirthdate} />
+        </label>
+      {/if}
+    </fieldset>
+
+    {#if data.classes.length > 0}
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Classes (optional)</legend>
+        <div class="flex flex-col gap-s">
+          {#each welcomeBack.members as member, index (member.id)}
+            <label class="flex flex-col gap-2xs text-step--1">
+              {member.name}
+              <select class="select w-full" name="picks[{index}]" bind:value={wbPicks[index]}>
+                <option value="">No class</option>
+                {#each data.classes as cls (cls.id)}
+                  <option value={cls.id}>
+                    {cls.name}{cls.fee > 0 ? ` — ${formatDollars(cls.fee)}` : ' — free'}{cls.isFull ? ' (full — join waitlist)' : ''}
+                  </option>
+                {/each}
+              </select>
+            </label>
+          {/each}
+          {#each wbNewMembers as member, i (i)}
+            <label class="flex flex-col gap-2xs text-step--1">
+              {member.name || `New household member ${i + 1}`}
+              <select class="select w-full" name="picks[{welcomeBack.members.length + i}]" bind:value={wbPicks[welcomeBack.members.length + i]}>
+                <option value="">No class</option>
+                {#each data.classes as cls (cls.id)}
+                  <option value={cls.id}>
+                    {cls.name}{cls.fee > 0 ? ` — ${formatDollars(cls.fee)}` : ' — free'}{cls.isFull ? ' (full — join waitlist)' : ''}
+                  </option>
+                {/each}
+              </select>
+            </label>
+          {/each}
+        </div>
+      </fieldset>
+    {/if}
+
+    {#if wbTier === 'family'}
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Add a household member</legend>
+        <div class="flex flex-col gap-s">
+          {#each wbNewMembers as member, index (index)}
+            <div class="flex flex-wrap items-end gap-xs">
+              <input class="input" name="members[{index}].name" placeholder="Name" required bind:value={member.name} />
+              <input class="input" name="members[{index}].birthdate" type="date" bind:value={member.birthdate} />
+              <input class="input" name="members[{index}].email" type="email" placeholder="Email (optional)" bind:value={member.email} />
+              <button type="button" class="btn btn-ghost btn-sm" onclick={() => removeWbMember(index)}>Remove</button>
+            </div>
+          {/each}
+          <button type="button" class="btn btn-outline btn-sm self-start" onclick={addWbMember}>Add a household member</button>
+        </div>
+      </fieldset>
+    {/if}
+
+    <fieldset class="fieldset waiver-fieldset">
+      <legend class="fieldset-legend">Liability release</legend>
+      <details class="waiver-text">
+        <summary>Read the release (version {data.waiverVersion})</summary>
+        <p>{WAIVER_RELEASE_TEXT}</p>
+      </details>
+      <label class="mt-xs flex items-start gap-xs text-step--1">
+        <input class="checkbox mt-[0.15em]" required {...waiverAccepted.as('checkbox')} />
+        I have read and accept the liability release above (version {data.waiverVersion}).
+      </label>
+    </fieldset>
+
+    <div class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY}></div>
+
+    <button type="submit" class="btn btn-primary self-start" disabled={!!applyJoin.pending}>
+      {applyJoin.pending ? 'Submitting…' : 'Renew and continue to payment'}
+    </button>
+
+    {#if applyJoin.result && 'stub' in applyJoin.result}
+      <p class="text-step--1 text-muted">Online payment isn't available yet; the club will follow up by email with how to pay.</p>
+    {/if}
+  </form>
+
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 {:else}
   <form {...applyJoin} class="mt-l flex max-w-measure-wide flex-col gap-m">
     {#each applyJoin.fields.allIssues() ?? [] as issue (issue.message)}

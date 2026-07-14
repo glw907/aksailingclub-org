@@ -19,8 +19,22 @@ function submission(overrides: Partial<JoinApplySubmission> = {}): JoinApplySubm
     members: [],
     picks: [],
     waiverAccepted: true,
+    welcomeBackHouseholdId: '',
     'cf-turnstile-response': '',
     ...overrides,
+  };
+}
+
+/** Fixtures shared by every welcome-back scenario: a matched, previously-paid member ("member-1"
+ *  of "household-1"), used by `findMemberByEmail` and `getMemberStanding`'s own two reads
+ *  (`members` by id, `households` by id). Callers layer their own `paid_at IS NOT NULL ORDER BY
+ *  paid_at DESC` (the paid-row read) and `FROM members WHERE household_id` (the roster read) on
+ *  top, since those vary per scenario. */
+function knownMemberFixtures() {
+  return {
+    'FROM members WHERE email': { id: 'member-1', household_id: 'household-1' },
+    'FROM members WHERE id': { id: 'member-1', household_id: 'household-1', name: 'Ada Lovelace' },
+    'FROM households WHERE id': { name: 'Lovelace Household' },
   };
 }
 
@@ -114,16 +128,45 @@ describe('handleJoinApply', () => {
     expect(params.get('line_items[1][price_data][unit_amount]')).toBeNull();
   });
 
-  it('a purchaser email belonging to a household that has paid before pivots to welcome-back, writing nothing', async () => {
+  it('a purchaser email belonging to a household that has paid before pivots to welcome-back with the household\'s own data, writing nothing', async () => {
     const { db, calls } = fakeD1({
       firstResults: {
-        'FROM members WHERE email': { id: 'member-1', household_id: 'household-1' },
-        'paid_at IS NOT NULL': { found: 1 },
+        ...knownMemberFixtures(),
+        'paid_at IS NOT NULL ORDER BY paid_at DESC': { tier: 'individual', season: 2025, paid_at: '2025-06-01' },
+      },
+      allResults: {
+        'FROM members WHERE household_id': [
+          { id: 'member-1', name: 'Ada Lovelace' },
+          { id: 'member-2', name: 'Bob Lovelace' },
+        ],
       },
     });
 
     const result = await handleJoinApply(submission(), { CLUB_DB: db }, '203.0.113.5', ORIGIN);
-    expect(result).toEqual({ pivot: 'known-email' });
+    expect(result).toEqual({
+      pivot: 'welcome-back',
+      householdId: 'household-1',
+      householdName: 'Lovelace Household',
+      lastTier: 'individual',
+      members: [
+        { id: 'member-1', name: 'Ada Lovelace' },
+        { id: 'member-2', name: 'Bob Lovelace' },
+      ],
+    });
+    expect(calls.some((c) => c.sql.startsWith('INSERT') || c.sql.startsWith('UPDATE'))).toBe(false);
+  });
+
+  it('a welcomeBackHouseholdId naming a household the claimed email does not actually belong to is ignored: the pivot answers again, writing nothing', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: {
+        ...knownMemberFixtures(),
+        'paid_at IS NOT NULL ORDER BY paid_at DESC': { tier: 'individual', season: 2025, paid_at: '2025-06-01' },
+      },
+      allResults: { 'FROM members WHERE household_id': [{ id: 'member-1', name: 'Ada Lovelace' }] },
+    });
+
+    const result = await handleJoinApply(submission({ welcomeBackHouseholdId: 'someone-elses-household' }), { CLUB_DB: db }, '203.0.113.5', ORIGIN);
+    expect(result).toMatchObject({ pivot: 'welcome-back', householdId: 'household-1' });
     expect(calls.some((c) => c.sql.startsWith('INSERT') || c.sql.startsWith('UPDATE'))).toBe(false);
   });
 
@@ -132,7 +175,7 @@ describe('handleJoinApply', () => {
       allResults: { tier_price_individual: TIER_PRICE_ROWS },
       firstResults: {
         'FROM members WHERE email': { id: 'member-1', household_id: 'household-1' },
-        'paid_at IS NOT NULL': null,
+        'FROM members WHERE id': null,
         "'current_season'": { value: '2026' },
         'AND season = ?2 AND paid_at IS NULL': { id: 'membership-1' },
       },
@@ -156,6 +199,155 @@ describe('handleJoinApply', () => {
     const params = new URLSearchParams(body);
     expect(params.get('metadata[refId]')).toBe('membership-1');
     expect(params.get('metadata[purchaser_member_id]')).toBe('member-1');
+    expect(params.get('metadata[grant_credits]')).toBe('1');
+  });
+
+  describe('welcome-back confirmation (welcomeBackHouseholdId set)', () => {
+    function confirmSubmission(overrides: Partial<JoinApplySubmission> = {}): JoinApplySubmission {
+      return submission({ welcomeBackHouseholdId: 'household-1', ...overrides });
+    }
+
+    it('mints the next unclaimed season\'s unpaid membership row when the current season is already paid, with grant_credits=0', async () => {
+      const { db, calls } = fakeD1({
+        allResults: {
+          tier_price_individual: TIER_PRICE_ROWS,
+          'FROM members WHERE household_id': [{ id: 'member-1', name: 'Ada Lovelace' }],
+        },
+        firstResults: {
+          ...knownMemberFixtures(),
+          'paid_at IS NOT NULL ORDER BY paid_at DESC': { tier: 'individual', season: 2026, paid_at: '2026-01-01' },
+          "'current_season'": { value: '2026' },
+          "'waiver_text_version'": { value: '2026-01' },
+          'AND season = ?2 AND paid_at IS NOT NULL': (args: unknown[]) => (args[1] === 2026 ? { found: 1 } : null),
+          'AND season = ?2 AND paid_at IS NULL': null,
+        },
+      });
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(new Response(JSON.stringify({ url: 'https://checkout.stripe.com/pay/cs_test_wb1' }), { status: 200 })),
+      );
+
+      const result = await handleJoinApply(confirmSubmission(), { CLUB_DB: db, STRIPE_SECRET_KEY: 'sk_test_1' }, '203.0.113.5', ORIGIN);
+      expect(result).toEqual({ url: 'https://checkout.stripe.com/pay/cs_test_wb1' });
+
+      const membershipInsert = calls.find((c) => c.sql.startsWith('INSERT INTO memberships ('));
+      expect(membershipInsert).toBeDefined();
+      expect(membershipInsert?.args[2]).toBe(2027);
+      expect(calls.some((c) => c.sql.startsWith('UPDATE memberships'))).toBe(false);
+
+      const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
+      const body = (fetchMock.mock.calls[0][1] as RequestInit).body as string;
+      const params = new URLSearchParams(body);
+      expect(params.get('metadata[grant_credits]')).toBe('0');
+      expect(params.get('metadata[purchaser_member_id]')).toBe('member-1');
+    });
+
+    it('reuses an already-unpaid row for the target season instead of minting a duplicate', async () => {
+      const { db, calls } = fakeD1({
+        allResults: {
+          tier_price_individual: TIER_PRICE_ROWS,
+          'FROM members WHERE household_id': [{ id: 'member-1', name: 'Ada Lovelace' }],
+        },
+        firstResults: {
+          ...knownMemberFixtures(),
+          'paid_at IS NOT NULL ORDER BY paid_at DESC': { tier: 'individual', season: 2025, paid_at: '2025-01-01' },
+          "'current_season'": { value: '2026' },
+          "'waiver_text_version'": { value: '2026-01' },
+          'AND season = ?2 AND paid_at IS NOT NULL': null,
+          'AND season = ?2 AND paid_at IS NULL': { id: 'membership-2026' },
+        },
+      });
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(new Response(JSON.stringify({ url: 'https://checkout.stripe.com/pay/cs_test_wb2' }), { status: 200 })),
+      );
+
+      const result = await handleJoinApply(confirmSubmission(), { CLUB_DB: db, STRIPE_SECRET_KEY: 'sk_test_1' }, '203.0.113.5', ORIGIN);
+      expect(result).toEqual({ url: 'https://checkout.stripe.com/pay/cs_test_wb2' });
+
+      expect(calls.some((c) => c.sql.startsWith('INSERT INTO memberships ('))).toBe(false);
+      const update = calls.find((c) => c.sql.startsWith('UPDATE memberships'));
+      expect(update?.args).toEqual(['individual', 250, 'membership-2026']);
+    });
+
+    it('audits a new household member added inline, never editing an existing one', async () => {
+      const { db, calls } = fakeD1({
+        allResults: {
+          tier_price_family: TIER_PRICE_ROWS,
+          'FROM members WHERE household_id': [{ id: 'member-1', name: 'Ada Lovelace' }],
+        },
+        firstResults: {
+          ...knownMemberFixtures(),
+          'paid_at IS NOT NULL ORDER BY paid_at DESC': { tier: 'family', season: 2025, paid_at: '2025-01-01' },
+          "'current_season'": { value: '2026' },
+          "'waiver_text_version'": { value: '2026-01' },
+          'AND season = ?2 AND paid_at IS NOT NULL': null,
+          'AND season = ?2 AND paid_at IS NULL': null,
+        },
+      });
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(new Response(JSON.stringify({ url: 'https://checkout.stripe.com/pay/cs_test_wb3' }), { status: 200 })),
+      );
+
+      await handleJoinApply(
+        confirmSubmission({ tier: 'family', members: [{ name: 'Carol Lovelace', birthdate: '2015-01-01', email: '' }] }),
+        { CLUB_DB: db, STRIPE_SECRET_KEY: 'sk_test_1' },
+        '203.0.113.5',
+        ORIGIN,
+      );
+
+      expect(calls.filter((c) => c.sql.startsWith('UPDATE members ('))).toHaveLength(0);
+      const memberInsert = calls.find((c) => c.sql.startsWith('INSERT INTO members ('));
+      expect(memberInsert).toBeDefined();
+      expect(memberInsert?.args).toEqual([expect.any(String), 'household-1', 'Carol Lovelace', null, null, '2015-01-01']);
+      const newMemberId = memberInsert?.args[0];
+      const audit = calls.find((c) => c.sql.startsWith('INSERT INTO audit_log') && c.args[1] === 'add-member');
+      expect(audit?.args).toEqual(['public:join', 'add-member', 'member', newMemberId, 'household=household-1']);
+    });
+
+    it('applies the household\'s own unredeemed credit balance to a class pick, never granting a fresh credit', async () => {
+      const { db, calls } = fakeD1({
+        allResults: {
+          tier_price_individual: TIER_PRICE_ROWS,
+          'FROM members WHERE household_id': [{ id: 'member-1', name: 'Ada Lovelace' }],
+        },
+        firstResults: {
+          ...knownMemberFixtures(),
+          'paid_at IS NOT NULL ORDER BY paid_at DESC': { tier: 'individual', season: 2025, paid_at: '2025-01-01' },
+          "'current_season'": { value: '2026' },
+          "'waiver_text_version'": { value: '2026-01' },
+          'AND season = ?2 AND paid_at IS NOT NULL': null,
+          'AND season = ?2 AND paid_at IS NULL': null,
+          'AS balance': { balance: 1 },
+          'FROM classes WHERE id': classRow('intro-sailing', 100),
+        },
+      });
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(new Response(JSON.stringify({ url: 'https://checkout.stripe.com/pay/cs_test_wb4' }), { status: 200 })),
+      );
+
+      await handleJoinApply(
+        confirmSubmission({ picks: ['intro-sailing'] }),
+        { CLUB_DB: db, STRIPE_SECRET_KEY: 'sk_test_1' },
+        '203.0.113.5',
+        ORIGIN,
+      );
+
+      const enrollmentInsert = calls.find((c) => c.sql.startsWith('INSERT INTO class_enrollments'));
+      expect(enrollmentInsert?.args).toEqual([expect.any(String), 'intro-sailing', 'member-1']);
+
+      const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
+      const body = (fetchMock.mock.calls[0][1] as RequestInit).body as string;
+      const params = new URLSearchParams(body);
+      // The credit covers the one pick: no second class-fee line item, but the enrollment still
+      // rides the checkout's metadata as a covered enrollment.
+      expect(params.get('line_items[1][price_data][unit_amount]')).toBeNull();
+      expect(params.get('metadata[grant_credits]')).toBe('0');
+      const coveredIds = (params.get('metadata[covered_enrollment_ids]') ?? '').split(',').filter(Boolean);
+      expect(coveredIds).toEqual([enrollmentInsert?.args[0]]);
+    });
   });
 
   it('delegates the running total to computeJoinPricing: credits cover picks up to the tier grant, further picks add a class-fee line', async () => {
