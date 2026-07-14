@@ -21,11 +21,15 @@ async function findUnpaidMembershipForSeason(db: D1Database, householdId: string
     .first<UnpaidMembershipRow>();
 }
 
-/** Whether `householdId` already has a PAID `memberships` row for `season`: the season-assignment
- *  loop's own stopping condition (see {@link nextUnclaimedRenewalSeason}). */
+/** Whether `householdId` already has a non-refunded PAID `memberships` row for `season`: the
+ *  season-assignment loop's own stopping condition (see {@link nextUnclaimedRenewalSeason}). Carries
+ *  `AND refunded_at IS NULL` (migration 0023, `docs/plans/2026-07-14-membership-admin.md` Task 2)
+ *  so a refunded season reads as unclaimed, matching `standing.ts`'s own refund-aware queries: a
+ *  household whose only row for a season was refunded can renew straight back into that same
+ *  season. */
 async function hasPaidMembershipForSeason(db: D1Database, householdId: string, season: number): Promise<boolean> {
   const row = await db
-    .prepare('SELECT 1 AS found FROM memberships WHERE household_id = ?1 AND season = ?2 AND paid_at IS NOT NULL LIMIT 1')
+    .prepare('SELECT 1 AS found FROM memberships WHERE household_id = ?1 AND season = ?2 AND paid_at IS NOT NULL AND refunded_at IS NULL LIMIT 1')
     .bind(householdId, season)
     .first<{ found: number }>();
   return row !== null;

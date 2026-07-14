@@ -4,24 +4,35 @@ import { mintOrReuseRenewalMembership, nextUnclaimedRenewalSeason } from '$membe
 
 describe('nextUnclaimedRenewalSeason', () => {
   it('answers the current season when it is not already paid', async () => {
-    const { db } = fakeD1({ firstResults: { 'AND paid_at IS NOT NULL LIMIT 1': null } });
+    const { db } = fakeD1({ firstResults: { 'AND paid_at IS NOT NULL AND refunded_at IS NULL LIMIT 1': null } });
     await expect(nextUnclaimedRenewalSeason(db, 'hh-1', 2026)).resolves.toBe(2026);
   });
 
   it('walks forward past a season already paid', async () => {
     const { db } = fakeD1({
       firstResults: {
-        'AND paid_at IS NOT NULL LIMIT 1': ((args: unknown[]) => (args[1] === 2026 ? { found: 1 } : null)) as unknown as null,
+        'AND paid_at IS NOT NULL AND refunded_at IS NULL LIMIT 1': ((args: unknown[]) => (args[1] === 2026 ? { found: 1 } : null)) as unknown as null,
       },
     });
     await expect(nextUnclaimedRenewalSeason(db, 'hh-1', 2026)).resolves.toBe(2027);
+  });
+
+  it('treats a season whose only row was refunded as unclaimed, via the AND refunded_at IS NULL predicate', async () => {
+    // The real query already filters out a refunded row, so the fake DB simulates the household's
+    // only 2026 row being refunded the same way it simulates "never paid": answering null. The SQL
+    // assertion is what actually proves the predicate is there, not merely assumed by the fixture.
+    const { db, calls } = fakeD1({ firstResults: { 'AND paid_at IS NOT NULL AND refunded_at IS NULL LIMIT 1': null } });
+    await expect(nextUnclaimedRenewalSeason(db, 'hh-1', 2026)).resolves.toBe(2026);
+
+    const query = calls.find((c) => c.sql.includes('FROM memberships WHERE household_id = ?1 AND season = ?2'));
+    expect(query?.sql).toContain('AND refunded_at IS NULL');
   });
 });
 
 describe('mintOrReuseRenewalMembership', () => {
   it('mints a fresh unpaid row when none exists for the target season', async () => {
     const { db, calls } = fakeD1({
-      firstResults: { 'AND paid_at IS NOT NULL LIMIT 1': null, 'AND paid_at IS NULL LIMIT 1': null },
+      firstResults: { 'AND paid_at IS NOT NULL AND refunded_at IS NULL LIMIT 1': null, 'AND paid_at IS NULL LIMIT 1': null },
     });
     const result = await mintOrReuseRenewalMembership(db, 'hh-1', 'mem-1', 'individual', 250, 2026);
     expect(result).toEqual({ membershipId: expect.any(String), season: 2026 });
@@ -36,7 +47,7 @@ describe('mintOrReuseRenewalMembership', () => {
 
   it('reuses an abandoned unpaid row for the target season instead of minting a second one', async () => {
     const { db, calls } = fakeD1({
-      firstResults: { 'AND paid_at IS NOT NULL LIMIT 1': null, 'AND paid_at IS NULL LIMIT 1': { id: 'ms-existing' } },
+      firstResults: { 'AND paid_at IS NOT NULL AND refunded_at IS NULL LIMIT 1': null, 'AND paid_at IS NULL LIMIT 1': { id: 'ms-existing' } },
     });
     const result = await mintOrReuseRenewalMembership(db, 'hh-1', 'mem-1', 'family', 500, 2026);
     expect(result).toEqual({ membershipId: 'ms-existing', season: 2026 });
@@ -52,7 +63,7 @@ describe('mintOrReuseRenewalMembership', () => {
   it('skips a season already paid and mints into the next unclaimed one', async () => {
     const { db, calls } = fakeD1({
       firstResults: {
-        'AND paid_at IS NOT NULL LIMIT 1': ((args: unknown[]) => (args[1] === 2026 ? { found: 1 } : null)) as unknown as null,
+        'AND paid_at IS NOT NULL AND refunded_at IS NULL LIMIT 1': ((args: unknown[]) => (args[1] === 2026 ? { found: 1 } : null)) as unknown as null,
         'AND paid_at IS NULL LIMIT 1': null,
       },
     });
