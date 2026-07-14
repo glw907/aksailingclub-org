@@ -245,6 +245,31 @@ const classSchedule = defineComponent({
   icon: 'graduation-cap',
 });
 
+// ─── Membership pricing: an inline, settings-driven dollar figure (Task 3) ──
+// Same island shape as class-schedule above: build() emits only the no-JavaScript fallback (a
+// link to the live join door, since no dollar figure is safe to hard-code here), and
+// MembershipPricing.svelte replaces it with the live settings price once mounted
+// (membership-pricing.remote.ts). Renders inline (an anchor, not a block element) so it drops
+// into a sentence the same way the migrated `.cta-list` links do.
+const membershipPricing = defineComponent({
+  name: 'membership-pricing',
+  label: 'Membership price',
+  description: "One membership tier's live settings price, inline in a sentence.",
+  use: 'Replace a hand-typed dollar figure with the real, settings-driven tier price.',
+  insertTemplate: ':::membership-pricing{tier="individual"}:::',
+  hydrate: true,
+  build: (ctx) => {
+    const tier = strAttr(ctx, 'tier') ?? 'individual';
+    return h('a', { className: ['membership-pricing-fallback'], href: '/join/apply/' }, [`current ${tier} pricing`]);
+  },
+  attributes: {
+    tier: fields.select({ label: 'Tier', required: true, options: ['individual', 'family', 'young-adult'] }),
+  },
+  group: 'Page structure',
+  icon: 'graduation-cap',
+  preview: { attributes: { tier: 'individual' } },
+});
+
 export const ascRegistry = defineRegistry({
-  components: [callout, passage, cards, card, membershipworks, contactForm, donateForm, classSchedule],
+  components: [callout, passage, cards, card, membershipworks, contactForm, donateForm, classSchedule, membershipPricing],
 });

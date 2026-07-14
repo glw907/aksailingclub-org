@@ -118,11 +118,15 @@ export interface BuildJoinStatementsOptions {
 }
 
 /** {@link buildJoinStatements}'s result: the ordered statements for one `db.batch()`, the new
- *  membership's id (a `join`-kind checkout's `refId`), and the enrollment/waitlist ids created,
- *  in pick order, for whichever outcome each pick landed in. */
+ *  membership's id (a `join`-kind checkout's `refId`), the enrollment/waitlist ids created, in
+ *  pick order, for whichever outcome each pick landed in, and the purchaser's own new member id
+ *  (the `join`-kind checkout's `purchaser_member_id` metadata, Task 2's own contract; every id
+ *  this module mints is otherwise internal, so the caller needs this one back to build that
+ *  metadata without re-deriving or re-minting it). */
 export interface BuildJoinStatementsResult {
   statements: D1PreparedStatement[];
   membershipId: string;
   enrollmentIds: string[];
   waitlistIds: string[];
+  purchaserMemberId: string;
 }

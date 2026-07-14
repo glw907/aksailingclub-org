@@ -124,5 +124,5 @@ export async function buildJoinStatements(
       .bind('public:join', 'join', 'membership', membershipId, `tier=${validated.tier} season=${opts.season}`),
   );
 
-  return { statements, membershipId, enrollmentIds, waitlistIds };
+  return { statements, membershipId, enrollmentIds, waitlistIds, purchaserMemberId: purchaserId };
 }

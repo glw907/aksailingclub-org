@@ -20,6 +20,9 @@ export default {
     // signed-in member's self-service actions (classes, household, profile, assets), built on
     // top of $member-auth's identity/standing and $admin-club's data-access layer (offers,
     // classes-store, assets-store, club-email, club-settings), never duplicating them.
+    // $member-signup resolves the unified-signup engine's pure core (src/member-signup/):
+    // validation, pricing/credit math, and the join write-batch builder, consumed by the public
+    // join door, the class-door pivot, and welcome-back renewal alike.
     alias: {
       $chassis: 'src/chassis',
       '$chassis/*': 'src/chassis/*',
@@ -31,6 +34,8 @@ export default {
       '$member-auth/*': 'src/member-auth/*',
       '$member-portal': 'src/member-portal',
       '$member-portal/*': 'src/member-portal/*',
+      '$member-signup': 'src/member-signup',
+      '$member-signup/*': 'src/member-signup/*',
     },
     // handleHttpError: 'warn' downgrades a prerender error to a warning. The cairnManifest()
     // plugin verifies the manifest in buildStart, outside the prerender lifecycle, so a stale
