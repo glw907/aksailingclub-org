@@ -20,13 +20,6 @@ export const SEGMENT_CHIP: Record<MemberSegment, ChipStyle> = {
   archived: { label: 'Archived', cls: 'badge-ghost badge-sm font-medium opacity-60' },
 };
 
-/** The small "payment due" note shown beside a `current`-segment member whose this-season
- *  invoice is unpaid: styled in the timeline/stats warning language (see the Member detail
- *  page's own header comment), not the segment chip's primary/ghost/opacity vocabulary above,
- *  since owing money this season is a different fact from which segment a member is in. */
-export const PAYMENT_PENDING_LABEL = 'Payment due';
-export const PAYMENT_PENDING_CLS = 'text-warning font-medium';
-
 /** Display labels for the three membership tiers (a household's own membership tier, not a
  *  per-member fact: a `Membership` is one household's per-season purchase). */
 export const TIER_LABEL: Record<MembershipTier, string> = {
