@@ -582,6 +582,17 @@ export function planMwLedgerImport(accountingRows, existing) {
 // ---------------------------------------------------------------------------
 
 /**
+ * One `transaction_lines` INSERT for a line under a given transaction id -- the single source both
+ * the fresh-import and the repair path share, so the eight-column shape never drifts between them.
+ * @param {string} transactionId
+ * @param {PlannedLine} line
+ * @returns {string}
+ */
+function buildLineInsertStatement(transactionId, line) {
+  return `INSERT INTO transaction_lines (id, transaction_id, item, description, amount_cents, membership_id, enrollment_id, assignment_id) VALUES (${sqlLiteral(randomUUID())}, ${sqlLiteral(transactionId)}, ${sqlLiteral(line.item)}, ${sqlLiteral(line.description)}, ${sqlInt(line.amountCents)}, ${sqlLiteral(line.membershipId)}, ${sqlLiteral(line.enrollmentId)}, ${sqlLiteral(line.assignmentId)})`;
+}
+
+/**
  * Builds the `transactions` INSERT plus one `transaction_lines` INSERT per line for one planned
  * row -- the same shape `src/admin-club/lib/ledger.ts`'s `buildTransactionStatements` enforces at
  * the live write seam, expressed as raw SQL text (this script has no `D1Database` object; it
@@ -590,15 +601,10 @@ export function planMwLedgerImport(accountingRows, existing) {
  * @returns {string[]}
  */
 export function buildTransactionInsertStatements(t) {
-  const statements = [
+  return [
     `INSERT INTO transactions (id, kind, source, occurred_at, amount_total_cents, fee_cents, processor_ref, refunds_transaction_id, household_id, payer_name, payer_email, mw_ref) VALUES (${sqlLiteral(t.id)}, ${sqlLiteral(t.kind)}, ${sqlLiteral(t.source)}, ${sqlLiteral(t.occurredAt)}, ${sqlInt(t.amountTotalCents)}, ${t.feeCents === null ? 'NULL' : sqlInt(t.feeCents)}, ${sqlLiteral(t.processorRef)}, ${sqlLiteral(t.refundsTransactionId)}, ${sqlLiteral(t.householdId)}, ${sqlLiteral(t.payerName)}, ${sqlLiteral(t.payerEmail)}, ${sqlLiteral(t.mwRef)})`,
+    ...t.lines.map((line) => buildLineInsertStatement(t.id, line)),
   ];
-  for (const line of t.lines) {
-    statements.push(
-      `INSERT INTO transaction_lines (id, transaction_id, item, description, amount_cents, membership_id, enrollment_id, assignment_id) VALUES (${sqlLiteral(randomUUID())}, ${sqlLiteral(t.id)}, ${sqlLiteral(line.item)}, ${sqlLiteral(line.description)}, ${sqlInt(line.amountCents)}, ${sqlLiteral(line.membershipId)}, ${sqlLiteral(line.enrollmentId)}, ${sqlLiteral(line.assignmentId)})`,
-    );
-  }
-  return statements;
 }
 
 /**
@@ -609,10 +615,7 @@ export function buildTransactionInsertStatements(t) {
  * @returns {string[]}
  */
 export function buildRepairLineStatements(repair) {
-  return repair.lines.map(
-    (line) =>
-      `INSERT INTO transaction_lines (id, transaction_id, item, description, amount_cents, membership_id, enrollment_id, assignment_id) VALUES (${sqlLiteral(randomUUID())}, ${sqlLiteral(repair.transactionId)}, ${sqlLiteral(line.item)}, ${sqlLiteral(line.description)}, ${sqlInt(line.amountCents)}, ${sqlLiteral(line.membershipId)}, ${sqlLiteral(line.enrollmentId)}, ${sqlLiteral(line.assignmentId)})`,
-  );
+  return repair.lines.map((line) => buildLineInsertStatement(repair.transactionId, line));
 }
 
 /**

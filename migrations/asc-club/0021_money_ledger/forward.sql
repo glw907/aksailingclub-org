@@ -7,7 +7,7 @@
 -- line-item breakdown, the same shape QuickBooks Online's SalesReceipt/Refund entities use.
 --
 -- All amounts are integer cents (Stripe is cents-native; processor fees are fractional
--- dollars). Existing dollar-denominated columns (asset_payments.amount, memberships.price_paid)
+-- dollars). Existing dollar-denominated columns (asset_payments.amount, memberships.pricePaid)
 -- are untouched; conversion happens at the write sites, a later task's own work.
 --
 -- `transactions.refunds_transaction_id` is a self-FK, declared before any row exists so no
