@@ -36,13 +36,15 @@ Swap the admin members screens' demo fixtures for the real 285-member D1 and set
 the screen-shape question (two screens vs. one household-grouped screen plus a
 money/renewals view) in its design. Adds the missing CRUD: manual payments
 (check/cash/comp), tier changes, archive, directory-visibility management,
-current/lapsed segments, and refunds against the ledger. Also club-role management
-(owner/club-admin/instructor — grant/revoke exists owner-only in Settings today).
-RULED (Geoff, 2026-07-13): membership/club roles and cairn editor/admin accounts are
-FULLY SEPARATE systems — editor management (AUTH_DB allowlist UI + engine-level roles)
-belongs upstream in cairn-cms; Geoff is taking that work in the cairn-cms repo, and this
-site consumes the release. The two link by email identity only: cairn authenticates, the
-site authorizes club roles on top.
+current/lapsed segments, and refunds against the ledger. Staff-role management: cairn's
+committed shape (2026-07-13, filed in that repo's Next tier) is one identity with a
+site-declared role vocabulary — the engine keeps the allowlist, editor table, and
+ManageEditors screen; ASC declares owner/club-admin/instructor in config, each mapped to
+an engine capability level. ASC is the named first consumer: at this initiative the site
+COLLAPSES `club_roles` onto that seam (retiring the table, the Settings grant/revoke UI,
+and the site-side last-owner guard) once the cairn release ships. Member-scale auth
+stays this site's own system, per Geoff's separation ruling. The consumer requirements,
+vocabulary mapping, and fork answers: `docs/2026-07-13-cairn-editor-roles-consumer-brief.md`.
 
 ### Segment email `segment-email`
 Announce stays; add segment targeting (current, lapsed, class roster, instructors)

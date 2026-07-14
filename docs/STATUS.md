@@ -5,10 +5,11 @@ session): the MW REPLACEMENT PROGRAM is on ROADMAP.md (Geoff-approved; one go-li
 apex cutover waits for membership signup/renewal/admin, MW cancels right after):
 money-ledger → unified-signup → membership-admin → segment-email → payments-live-smoke →
 mw-cutover; qbo-integration narrowed to the sync. Rulings this session: email = announce
-+ segments (not a campaign tool); membership and editor/admin systems are FULLY SEPARATE
-(club-roles UI stays in membership-admin here; cairn editor/role UI ruled upstream —
-Geoff is taking that work in the cairn-cms repo); SESSIONS CLEAR CONTEXT BETWEEN
-INITIATIVES. What landed (spec docs/2026-07-13-money-ledger-design.md, plan
++ segments (not a campaign tool); staff roles: cairn's committed shape is ONE identity
+with a site-declared role vocabulary (Geoff building it in cairn-cms; ASC first
+consumer — membership-admin collapses club_roles onto the seam; member auth stays
+separate; consumer brief at docs/2026-07-13-cairn-editor-roles-consumer-brief.md);
+SESSIONS CLEAR CONTEXT BETWEEN INITIATIVES. What landed (spec docs/2026-07-13-money-ledger-design.md, plan
 docs/plans/2026-07-13-money-ledger.md, both marked by this entry as implemented):
 migration 0021 (transactions + transaction_lines, scratch-proven on a real disposable D1
 then APPLIED LIVE), ledger.ts (the invariant-enforcing write seam), the three reconcilers
