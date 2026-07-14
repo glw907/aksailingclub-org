@@ -1,0 +1,7 @@
+{
+  "backlog_path": "BACKLOG.md",
+  "roadmap_path": "ROADMAP.md",
+  "domains": ["site", "admin", "member-portal", "data", "infra"],
+  "default_priority": "medium",
+  "note": "This repo keeps no BACKLOG.md by doctrine (CLAUDE.md: carry-forwards live in docs/STATUS.md entries). ROADMAP.md tracks strategic initiatives only; backlog_path is the skill-schema default and intentionally points at a file that does not exist."
+}
