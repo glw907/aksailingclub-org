@@ -12,8 +12,8 @@ const ARGS = {
 };
 
 describe('PAYMENT_KINDS', () => {
-  it('lists the four kinds the webhook dispatches on', () => {
-    expect(PAYMENT_KINDS).toEqual(['dues', 'class-fee', 'asset-fee', 'donation']);
+  it('lists the five kinds the webhook dispatches on', () => {
+    expect(PAYMENT_KINDS).toEqual(['dues', 'class-fee', 'asset-fee', 'donation', 'join']);
   });
 });
 
@@ -54,6 +54,39 @@ describe('buildCheckoutBody', () => {
       'Tax-deductible donation to the Alaska Sailing Club, a 501(c)(3) nonprofit.',
     );
     expect(params.get('metadata[note]')).toBe('In memory of a good sailor');
+  });
+
+  it('is byte-identical for a single-line call whether or not other fields are present (unaffected by the lines feature)', () => {
+    expect(buildCheckoutBody(ARGS)).toBe(buildCheckoutBody({ ...ARGS, lines: undefined }));
+  });
+
+  it('emits one indexed line_items group per entry when lines is given, ignoring amountCents/description', () => {
+    const body = buildCheckoutBody({
+      ...ARGS,
+      kind: 'join',
+      amountCents: 999999,
+      description: 'ignored',
+      lines: [
+        { amountCents: 25000, name: 'Family Membership -- 2026 season' },
+        { amountCents: 10000, name: 'Fleet Tune-Up Weekend class fee', description: 'One seat, uncovered by a credit' },
+      ],
+    });
+    const params = new URLSearchParams(body);
+    expect(params.get('line_items[0][price_data][unit_amount]')).toBe('25000');
+    expect(params.get('line_items[0][price_data][product_data][name]')).toBe('Family Membership -- 2026 season');
+    expect(params.has('line_items[0][price_data][product_data][description]')).toBe(false);
+    expect(params.get('line_items[0][quantity]')).toBe('1');
+    expect(params.get('line_items[1][price_data][unit_amount]')).toBe('10000');
+    expect(params.get('line_items[1][price_data][product_data][name]')).toBe('Fleet Tune-Up Weekend class fee');
+    expect(params.get('line_items[1][price_data][product_data][description]')).toBe('One seat, uncovered by a credit');
+    expect(params.get('line_items[1][quantity]')).toBe('1');
+    expect(params.has('line_items[2][price_data][unit_amount]')).toBe(false);
+  });
+
+  it('falls back to the single-line shape when lines is an empty array', () => {
+    const params = new URLSearchParams(buildCheckoutBody({ ...ARGS, lines: [] }));
+    expect(params.get('line_items[0][price_data][unit_amount]')).toBe(String(ARGS.amountCents));
+    expect(params.has('line_items[1][price_data][unit_amount]')).toBe(false);
   });
 });
 

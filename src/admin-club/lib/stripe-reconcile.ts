@@ -155,6 +155,14 @@ interface MembershipReconcileRow {
   paid_at: string | null;
 }
 
+/** `reconcileJoin`'s own env slice beyond {@link EmailBindingEnv}: `PUBLIC_ORIGIN` builds the
+ *  `join_welcome` email's portal/Discord links, the same optional-var shape `src/jobs/registry.ts`'s
+ *  own `JobEnv` already establishes for the identical need (never a request header, since a
+ *  webhook delivery carries no browser origin worth trusting). */
+export interface ReconcileJoinEnv extends EmailBindingEnv {
+  PUBLIC_ORIGIN?: string;
+}
+
 interface HouseholdPrimaryRow {
   primary_member_id: string | null;
 }
@@ -403,20 +411,190 @@ async function reconcileDonation(db: D1Database, refId: string, session: StripeC
   return { ok: true };
 }
 
+interface JoinMembershipReconcileRow {
+  id: string;
+  household_id: string;
+  tier: 'individual' | 'family' | 'young-adult';
+  season: number;
+  price_paid: number;
+  paid_at: string | null;
+}
+
+interface HouseholdNameRow {
+  name: string;
+}
+
+interface EnrollmentClassRow {
+  class_name: string;
+  fee: number;
+}
+
+/** Local duplicate of `member-signup/lib/pricing.ts`'s own `CREDIT_GRANT_AMOUNT`: deliberate, not
+ *  an oversight, the same independence this module's own `TIER_LABEL` above already documents --
+ *  `member-signup/lib` is the join engine's pure core (Task 1), and this reconciler lives in
+ *  `admin-club/lib`; importing across that boundary for one constant costs more than repeating a
+ *  three-entry map both modules are free to keep in sync by hand. */
+const CREDIT_GRANT_AMOUNT: Record<'individual' | 'family' | 'young-adult', number> = {
+  individual: 1,
+  family: 2,
+  'young-adult': 1,
+};
+
+/** The board's own notification address (the design's ruling 5: the board is notified of every
+ *  join, never gated on it), the same address `payments.ts`'s and `enrollments.ts`'s own
+ *  fallback-contact copy already names. */
+const BOARD_NOTIFICATION_EMAIL = 'board@aksailingclub.org';
+
+/** Split a comma-joined metadata list into its ids, dropping empty entries: an empty metadata
+ *  value (a join with no class picks at all) would otherwise split to `['']`. */
+function parseIdList(value: string | undefined): string[] {
+  return (value ?? '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
+}
+
+/** `kind: 'join'`: `refId` is a `memberships.id` (Task 1's `buildJoinStatements`). The session's
+ *  metadata (`payments.ts`'s own `createCheckout` call site, Task 3) carries `enrollment_ids` and
+ *  `covered_enrollment_ids` (both comma-joined `class_enrollments.id`s -- the covered list is a
+ *  subset of the full list, the picks a class credit paid for), `grant_credits` (`'1'`/`'0'`:
+ *  `'0'` on a welcome-back renewal, which never grants credits again), and `purchaser_member_id`.
+ *
+ *  Guarded the same way {@link reconcileDues} is (`WHERE paid_at IS NULL`): that flip is the
+ *  idempotency anchor past the session claim, so a replayed webhook is a clean no-op here too. On
+ *  a fresh flip: grants the tier's class credits when `grant_credits`, redeems one credit per
+ *  covered pick, flips `fee_paid` on every enrollment the session paid for (covered by a credit or
+ *  by card alike -- both are settled), records ONE ledger transaction (a `dues` line plus a
+ *  `class-fee` line per PAID enrollment only; a credit-covered enrollment moves no money and gets
+ *  no line, per the design's own ruling), and sends the `join_welcome` email plus the board
+ *  notification.
+ */
+async function reconcileJoin(db: D1Database, env: ReconcileJoinEnv, refId: string, session: StripeCheckoutSession): Promise<ReconcileOutcome> {
+  const membership = await db
+    .prepare('SELECT id, household_id, tier, season, price_paid, paid_at FROM memberships WHERE id = ?1')
+    .bind(refId)
+    .first<JoinMembershipReconcileRow>();
+  if (!membership) return { ok: false, reason: `no such membership: ${refId}` };
+
+  const amountTotalCents = requireAmountTotalCents(session);
+  if (amountTotalCents === null) return { ok: false, reason: `session ${session.id} carries no amount_total` };
+
+  const update = await db
+    .prepare("UPDATE memberships SET paid_at = datetime('now'), stripe_ref = ?1 WHERE id = ?2 AND paid_at IS NULL")
+    .bind(session.id, refId)
+    .run();
+  if ((update.meta.changes ?? 0) !== 1) return { ok: true, reason: `membership ${refId} already paid; no-op` };
+
+  await writeAudit(db, 'membership', refId, `kind=join session=${session.id} tier=${membership.tier} season=${membership.season}`);
+
+  const meta = session.metadata ?? {};
+  const enrollmentIds = parseIdList(meta.enrollment_ids);
+  const coveredIds = new Set(parseIdList(meta.covered_enrollment_ids));
+  const paidIds = enrollmentIds.filter((id) => !coveredIds.has(id));
+  const grantCredits = meta.grant_credits === '1';
+  const purchaserMemberId = meta.purchaser_member_id ?? '';
+
+  if (grantCredits) {
+    await db
+      .prepare('INSERT INTO credit_grants (id, household_id, membership_id, credits) VALUES (?1, ?2, ?3, ?4)')
+      .bind(crypto.randomUUID(), membership.household_id, refId, CREDIT_GRANT_AMOUNT[membership.tier])
+      .run();
+  }
+
+  const classRows = new Map<string, EnrollmentClassRow>();
+  for (const enrollmentId of enrollmentIds) {
+    const row = await db
+      .prepare(
+        `SELECT c.name AS class_name, c.fee AS fee
+         FROM class_enrollments ce JOIN classes c ON c.id = ce.class_id
+         WHERE ce.id = ?1`,
+      )
+      .bind(enrollmentId)
+      .first<EnrollmentClassRow>();
+    if (row) classRows.set(enrollmentId, row);
+  }
+
+  for (const enrollmentId of coveredIds) {
+    await db
+      .prepare('INSERT INTO credit_redemptions (id, household_id, enrollment_id, redeemed_by) VALUES (?1, ?2, ?3, ?4)')
+      .bind(crypto.randomUUID(), membership.household_id, enrollmentId, purchaserMemberId)
+      .run();
+    await db.prepare('UPDATE class_enrollments SET fee_paid = 1 WHERE id = ?1').bind(enrollmentId).run();
+  }
+
+  const paidLines: Array<{ enrollmentId: string; description: string; amountCents: number }> = [];
+  for (const enrollmentId of paidIds) {
+    await db.prepare('UPDATE class_enrollments SET fee_paid = 1, stripe_ref = ?1 WHERE id = ?2').bind(session.id, enrollmentId).run();
+    const className = classRows.get(enrollmentId)?.class_name ?? 'class';
+    const feeDollars = classRows.get(enrollmentId)?.fee ?? 0;
+    paidLines.push({ enrollmentId, description: `${className} class fee`, amountCents: Math.round(feeDollars * 100) });
+  }
+
+  const itemDisplayName = `${TIER_LABEL[membership.tier]} Membership -- ${membership.season} season`;
+  const duesCents = Math.round(membership.price_paid * 100);
+  await recordTransaction(
+    db,
+    { kind: 'charge', source: 'stripe', occurredAt: toSqliteDatetime(new Date()), amountTotalCents, processorRef: session.id, householdId: membership.household_id },
+    [
+      { item: 'dues', description: itemDisplayName, amountCents: duesCents, membershipId: refId },
+      ...paidLines.map((line) => ({ item: 'class-fee' as const, description: line.description, amountCents: line.amountCents, enrollmentId: line.enrollmentId })),
+    ],
+  );
+
+  const household = await db.prepare('SELECT name FROM households WHERE id = ?1').bind(membership.household_id).first<HouseholdNameRow>();
+  const purchaser = purchaserMemberId
+    ? await db.prepare('SELECT name, email FROM members WHERE id = ?1').bind(purchaserMemberId).first<MemberContactRow>()
+    : null;
+
+  const creditsGranted = grantCredits ? CREDIT_GRANT_AMOUNT[membership.tier] : 0;
+  const creditStatus = creditsGranted > 0 ? `You have ${creditsGranted} class credit${creditsGranted === 1 ? '' : 's'} ready to use any time.` : '';
+  const origin = env.PUBLIC_ORIGIN ?? '';
+
+  if (purchaser?.email) {
+    await sendClubEmail(db, env, {
+      to: purchaser.email,
+      templateId: 'join_welcome',
+      vars: {
+        person_name: purchaser.name,
+        tier_label: TIER_LABEL[membership.tier],
+        season: String(membership.season),
+        credit_status: creditStatus,
+        portal_url: `${origin}/my-account`,
+        discord_url: `${origin}/discord-server/`,
+        committee_email: 'membership-committee@aksailingclub.org',
+      },
+    });
+  }
+
+  const classesSummary = enrollmentIds.length > 0 ? enrollmentIds.map((id) => classRows.get(id)?.class_name ?? 'a class').join(', ') : 'none';
+  await sendClubEmail(db, env, {
+    to: BOARD_NOTIFICATION_EMAIL,
+    templateId: 'board_join_notice',
+    vars: {
+      household_name: household?.name ?? '',
+      tier_label: TIER_LABEL[membership.tier],
+      season: String(membership.season),
+      classes_summary: classesSummary,
+    },
+  });
+
+  return { ok: true };
+}
+
 /**
  * Reconcile one `checkout.session.completed` session: dispatches to the `kind`-specific writer,
  * each of which mutates its own row, audits, and emails a receipt. For `dues`/`class-fee`/
- * `asset-fee`, the caller must have already called {@link claimStripeSession} and confirmed it
- * returned `true`, and none of the three ever throws -- a D1 error inside one of them surfaces as
- * a rejected promise the webhook route's own outer `try`/`catch` logs and still answers 200 for,
- * per that route's header on why a reconciliation failure must never become a 500 for those
- * kinds. `donation` is the one exception: it claims its own session atomically
+ * `asset-fee`/`join`, the caller must have already called {@link claimStripeSession} and
+ * confirmed it returned `true`, and none of the four ever throws -- a D1 error inside one of them
+ * surfaces as a rejected promise the webhook route's own outer `try`/`catch` logs and still
+ * answers 200 for, per that route's header on why a reconciliation failure must never become a
+ * 500 for those kinds. `donation` is the one exception: it claims its own session atomically
  * (`reconcileDonation`'s own header), and a rejected promise from it is meant to propagate so the
  * route can answer 500 and let Stripe retry.
  */
 export async function reconcileCheckoutSession(
   db: D1Database,
-  env: EmailBindingEnv,
+  env: ReconcileJoinEnv,
   kind: PaymentKind,
   refId: string,
   session: StripeCheckoutSession,
@@ -430,5 +608,7 @@ export async function reconcileCheckoutSession(
       return reconcileAssetFee(db, env, refId, session);
     case 'donation':
       return reconcileDonation(db, refId, session);
+    case 'join':
+      return reconcileJoin(db, env, refId, session);
   }
 }
