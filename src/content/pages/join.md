@@ -35,8 +35,9 @@ Full seasonal access to club grounds, including the clubhouse, sauna, campfire, 
 ## What It Costs
 
 **Annual Membership Dues:**
-- Individual: $250
-- Family: $500
+- Individual: :::membership-pricing{tier="individual"}:::
+- Family: :::membership-pricing{tier="family"}:::
+- Young adult (under 26): :::membership-pricing{tier="young-adult"}:::
 
 **Additional Fees:**
 - Trailer row storage: $100/season
@@ -47,13 +48,13 @@ Full seasonal access to club grounds, including the clubhouse, sauna, campfire, 
 
 **What's included in dues:** Access to club grounds, tent camping, club boat use (after qualification), regatta participation, member directory, and Discord community.
 
-Your $250 individual membership pays for itself in 2-3 uses of club boats (equivalent to commercial rentals at other facilities), and your dues support a 501(c)(3) nonprofit dedicated to making sailing accessible.
+An individual membership pays for itself in 2-3 uses of club boats (equivalent to commercial rentals at other facilities), and your dues support a 501(c)(3) nonprofit dedicated to making sailing accessible.
 
 ## Taking a Sailing Class?
 
-**ASC membership is required to take classes.** If you're joining specifically to take a beginner course, here's what to know: new individual memberships include one class credit ($100 value), and family memberships include two credits ($200 value). Your first class is effectively included in the price of joining. Credits never expire, even if your membership lapses. Many members discover us through classes and stay for the boats, the racing, and the community.
+**ASC membership is required to take classes.** If you're joining specifically to take a beginner course, here's what to know: new individual and young-adult memberships include one class credit, and family memberships include two. A credit covers one class fee in full, so your first class is effectively included in the price of joining. Credits never expire, even if your membership lapses. Many members discover us through classes and stay for the boats, the racing, and the community.
 
-Before you apply, check the [Education](/education/) page to see if there are open spots. Classes are popular and often fill within a week of registration opening, if a class shows as available, don't wait. Apply and pay right away: your membership is active immediately, so you can register for class the same day. Your welcome email will have everything you need to apply your credit.
+Before you apply, check the [Education](/education/) page to see if there are open spots. Classes are popular and often fill within a week of registration opening. If a class shows as available, don't wait. You can pick classes for anyone in your household right in the join form: membership and class registration happen in one pass, and your credits apply automatically.
 
 ::::cards
 :::card[Class schedule & registration]{icon="graduation-cap" href="/education/"}
@@ -69,7 +70,7 @@ If you're joining for the boats, the racing, or the community rather than a begi
 
 ### New Members
 
-1. **Apply and pay.** Your membership is active immediately.
+1. **[Apply and pay online](/join/apply/).** Your membership is active immediately.
 2. **Check your email** for your welcome message with your class credit, Discord invite, and account link.
 3. **The board reviews** new applications in the background (typically 2-3 business days). You won't hear anything unless there's an issue.
 
@@ -84,7 +85,7 @@ Already a member? Renewing is straightforward: log in to your account and comple
 ### Apply Now
 
 :::callout[Ready to Join?]{tone="note"}
-Online signup is coming to this page. Until then, [apply and pay on our current membership page](https://aksailingclub.org/join/); your membership is active as soon as you do.
+[Apply and pay online](/join/apply/).
 :::
 
 ## About the Club
