@@ -8,13 +8,18 @@
 > entries beyond the top two or three to the archive — this file is @-imported into every
 > session's context, so its length is a per-session token tax.
 
-**PAYMENTS HARDENING EXECUTED — CONSOLIDATED, GATE-GREEN, DELIBERATELY UNPUSHED (2026-07-15
-overnight). Ran the hardening half of docs/plans/2026-07-15-payments-live-smoke.md (Tasks
-1-6 + conductor steps 1-2) per the go. CONDUCTOR-COST NOTE: the go ruled this Opus-conducted,
-but it STARTED as Fable (75% weekly Fable already spent) and switched to Opus 4.8 early at
-Geoff's prompt — flagged so the spend shows; a Fable-conducted execution run against a
-finished plan was not the intended config. SEVEN COMMITS, UNPUSHED (push=dev-deploy; leave
-them, push on the morning go): 56500fb Turnstile on the five remaining public POSTs
+**PAYMENTS HARDENING EXECUTED AND RELEASED TO DEV (2026-07-15 overnight; pushed on Geoff's
+explicit "make the accounting updates, then release"). Ran the hardening half of
+docs/plans/2026-07-15-payments-live-smoke.md (Tasks 1-6 + conductor steps 1-2) per the go,
+then RELEASED: the whole held stack (the 4 authoring-run commits + these 7 hardening commits +
+the docs) pushed to main, which triggers deploy.yml → the asc-site DEV worker
+(dev.aksailingclub.org), NOT the production apex (the apex cutover stays a separate deliberate
+step). The release CLOSES the open-internet exposure the earlier entry flagged: Turnstile +
+rate limits now run live on dev, where TURNSTILE_SECRET_KEY is set. CONDUCTOR-COST NOTE: the go
+ruled this Opus-conducted, but it STARTED as Fable (75% weekly Fable already spent) and switched
+to Opus 4.8 early at Geoff's prompt — flagged so the spend shows; a Fable-conducted execution
+run against a finished plan was not the intended config. THE SEVEN HARDENING COMMITS: 56500fb
+Turnstile on the five remaining public POSTs
 (payClassFee, requestRenewLink, requestLink, offer claim/decline, confirm/resend, all
 degrade-to-open); 85e580f rate limits (five [[ratelimits]] namespaces MONEY/PUBLIC_POST/
 MEMBER/ADMIN/ENUMERATION, a degrade-to-open helper, keyed per IP+email / session / editor,
@@ -54,10 +59,22 @@ smoke ALL still wait on you):
   money endpoints face the open internet against real member data UNTIL these commits deploy
   (re-protect-dev vs accept-public); memo vs marker-column marking (Task 4 shipped memo only, the
   column stays your call).
-- STEPS IN ORDER: push the 7 commits (= the dev deploy) → your before/after on the four changed
-  public forms → sandbox dry-smoke (spec §3, the FIRST-EVER webhook-reconcile execution,
-  processed_stripe_sessions=0 live) → your go → key-swap per appendix A → live smoke → revert to
-  sandbox keys.
+- STEPS IN ORDER (push DONE — dev deploy triggered): your before/after on the four changed public
+  forms on dev → CONFIRM the deferred-widget fix in a REAL browser against the live secret (drive
+  the signup enrolled + renew branches on dev, verify the Turnstile widget renders and injects
+  cf-turnstile-response — this is the one verification a headless/dev-secretless run could not do,
+  and payClassFee's correctness rides on it) → sandbox dry-smoke (spec §3, the FIRST-EVER
+  webhook-reconcile execution, processed_stripe_sessions=0 live) → your go → key-swap per appendix
+  A → live smoke → revert to sandbox keys.
+
+PASS-END BUDGET SCORING (per the model-economy doctrine, recorded even where imperfect): ~1.2-1.5M
+subagent tokens across 11 dispatches (3 implementers, 1 no-code investigation, 4 review lenses, 1
+fix round, 1 simplifier), main-loop Opus/Fable additional. INTERACTION POINTS: 2 (Geoff's
+model-switch offer + this release instruction) — zero correction-driven interactions; the pass ran
+autonomously through the gates. AVOIDABLE SPEND, named: (1) the Task 1 implementer stalled in a
+background-e2e loop and never committed, costing ~1 extra implementer run (~250k) before the main
+loop took over its gate+commit; (2) the run's first phase was Fable-conducted before the Opus
+switch. Net: interaction budget clean, token budget carried avoidable waste from the T1 loop.
 
 DX HARVEST (for cairn; NOT written into the cairn-cms repo — it had a LIVE session running a
 workflow tonight; route these there yourself/next cairn session): (1) cairn /admin/auth/request

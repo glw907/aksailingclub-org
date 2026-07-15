@@ -112,9 +112,12 @@ steps 1-2): Turnstile on all five remaining public POSTs, the [[ratelimits]] lay
 optional smoke memo, and the key-swap appendix — 7 commits (56500fb..fd61fcf) gate-green
 (check 0/0, test 1216, e2e 33/33) and DELIBERATELY UNPUSHED (push=dev deploy). Review gate
 caught a live-prod Turnstile-render blocker on the signup money form (fixed) plus an a11y
-and a fixture-determinism defect. STILL OPEN on Geoff's go: push (=deploy), before/after,
-the sandbox dry-smoke (first-ever webhook reconcile), then the live charge + refund + revert;
-the three decision points above remain his. Full accounting: docs/STATUS.md top entry.
+and a fixture-determinism defect. RELEASED TO DEV 2026-07-15 (Geoff's "make the accounting
+updates, then release"): the stack pushed to main → deploy.yml → the asc-site dev worker (not
+the apex). STILL OPEN on Geoff's go: his before/after on dev, a real-browser confirm of the
+deferred-widget render against the live secret, the sandbox dry-smoke (first-ever webhook
+reconcile), then the live charge + refund + revert; the three decision points above remain his.
+Full accounting: docs/STATUS.md top entry.
 
 ### Go-live: apex cutover & MW retirement `mw-cutover`
 The program's final act: a fresh MW delta re-import (members keep joining/renewing on
