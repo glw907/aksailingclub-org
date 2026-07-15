@@ -4,7 +4,7 @@
 // backend against the asc-site repo.
 import { defineAdapter, defineConcept, defineRoles, fieldset, fields, githubApp, createRenderer, parseSiteConfig } from '@glw907/cairn-cms';
 import { normalizeAssets, makeMediaResolver, readCommittedManifest } from '@glw907/cairn-cms/media';
-import type { AdminNavSection } from '@glw907/cairn-cms/sveltekit';
+import type { NavLayout } from '@glw907/cairn-cms/sveltekit';
 import { ascRegistry } from './markdown/components.js';
 import { ICON_PATHS } from './markdown/icons.js';
 import ContactForm from './components/ContactForm.svelte';
@@ -26,47 +26,86 @@ import siteCss from './site.css?url';
 // ordinary content, rather than a second, weaker renderer.
 export const { renderMarkdown } = createRenderer(ascRegistry);
 
-// The Club section (docs/superpowers/specs/2026-07-06-asc-phase-2-design-suite.md, Part B): the
-// ops-absorption screens present inside cairn's admin as custom /admin/club/* routes, one
-// collapsible sidebar group (Part C item 4's engine seam) beside the built-in Core section. Icon
-// picks stay inside cairn's nine-name allowlist. Exported so `cairn.server.ts`'s `navFilter`
-// (Task 4) can match this section by its own `label` rather than a second, driftable string.
-export const clubAdminNav: AdminNavSection = {
-  label: 'Club',
-  children: [
-    // portal-capstone: the section's own landing, the needs-attention strip's front door
-    // (pending signup reviews, pending asset requests, offers nearing expiry). First in the
-    // list: the section's "home", not just another screen.
-    { label: 'Overview', icon: 'anchor', href: '/admin/club' },
-    { label: 'Events', icon: 'calendar', href: '/admin/club/events' },
-    { label: 'Classes', icon: 'clipboard-list', href: '/admin/club/classes' },
-    { label: 'Members', icon: 'users', href: '/admin/club/members' },
-    // Task 7 (docs/plans/2026-07-14-membership-admin.md): the season-flat Money & Renewals
-    // screen, beside Members rather than off in Club Settings, since it is a routine read/write
-    // screen a volunteer visits often, not a config page. Every allowlisted icon is already
-    // claimed (this file's own header on Announce's reused 'inbox' names the same constraint);
-    // 'table' fits the screen's own season-flat table best.
-    { label: 'Money', icon: 'table', href: '/admin/club/money' },
-    { label: 'Signups', icon: 'list', href: '/admin/club/signups' },
-    { label: 'Assets', icon: 'package', href: '/admin/club/assets' },
-    // portal-capstone: the asset-request review inbox (the signup queue's own pattern).
-    { label: 'Requests', icon: 'table', href: '/admin/club/asset-requests' },
-    { label: 'Email', icon: 'inbox', href: '/admin/club/email' },
-    // The Announce screen (a published post's own "notify the club" step): recently published
-    // posts, each with an email-and/or-Discord send form. No spare icon in the nine-name
-    // allowlist is unclaimed by this point (admin-nav-icons.js), so this reuses 'inbox', the
-    // same messaging-shaped glyph Email already carries; two adjacent inbox icons is a small,
-    // deliberate tradeoff against widening the allowlist for one more screen.
-    { label: 'Announce', icon: 'inbox', href: '/admin/club/announce' },
-    // Task 4: role management + the offer-window setting; the layout guard admits any club role
-    // here, but the screen's own write actions are owner-only (see the settings route's header
-    // comment). `ownerOnly` stays unset: an admin should still SEE the link and the current
-    // state, even though most of its actions refuse them server-side.
-    // "Club Settings", not "Settings": cairn's own sidebar already carries a Settings entry,
-    // and two identical labels in one nav read as a defect (Geoff, 2026-07-07 admin review).
-    { label: 'Club Settings', icon: 'wrench', href: '/admin/club/settings' },
-  ],
-};
+// The split-desk sidebar (initiative 5 Task 4,
+// docs/2026-07-14-admin-roles-navlayout-design.md#phase-2): the whole admin sidebar as one
+// declared tree, cairn's own screens interleaved with the site's /admin/club/* routes rather
+// than segregated by provenance. The six screens a committee volunteer works routinely lead
+// (Club), the lower-frequency pairs get their own labeled groups (Outreach, Boats & Gear), and
+// configuration sinks to the trailing Site group. Every `roles` gate names the two declared
+// role names with club access (`owner`, `club-admin`); an `instructor` session (no `home`,
+// `none` capability) resolves neither a club group nor an engine screen. Icon picks stay inside
+// cairn's nine-name allowlist, matching the icons the site's routes carried before this tree
+// existed. `{ screen: 'nav' }` is referenced here (not omitted, despite the design doc's phase-2
+// prose assuming no navMenu is configured): the adapter's `editor.nav` block below DOES
+// configure the site's nav-menu editor, so `navMenuConfigured` is true at construction and the
+// screen is real; omitting it would leave it in the fallback foot group instead of the
+// acceptance criterion's empty fallback.
+export const navLayout: NavLayout = [
+  {
+    label: 'Club',
+    roles: ['owner', 'club-admin'],
+    children: [
+      // portal-capstone: the section's own landing, the needs-attention strip's front door
+      // (pending signup reviews, pending asset requests, offers nearing expiry). First in the
+      // list: the section's "home", not just another screen.
+      { label: 'Overview', icon: 'anchor', href: '/admin/club' },
+      { label: 'Events', icon: 'calendar', href: '/admin/club/events' },
+      { label: 'Classes', icon: 'clipboard-list', href: '/admin/club/classes' },
+      { label: 'Signups', icon: 'list', href: '/admin/club/signups' },
+      { label: 'Members', icon: 'users', href: '/admin/club/members' },
+      // Task 7 (docs/plans/2026-07-14-membership-admin.md): the season-flat Money & Renewals
+      // screen. Every allowlisted icon is already claimed elsewhere in this tree (Announce's
+      // reused 'inbox' below names the same constraint); 'table' fits the screen's own
+      // season-flat table best.
+      { label: 'Money', icon: 'table', href: '/admin/club/money' },
+    ],
+  },
+  {
+    label: 'Outreach',
+    roles: ['owner', 'club-admin'],
+    children: [
+      { label: 'Email', icon: 'inbox', href: '/admin/club/email' },
+      // The Announce screen (a published post's own "notify the club" step): recently published
+      // posts, each with an email-and/or-Discord send form. No spare icon in the nine-name
+      // allowlist is unclaimed by this point, so this reuses 'inbox', the same messaging-shaped
+      // glyph Email already carries; two adjacent inbox icons is a small, deliberate tradeoff
+      // against widening the allowlist for one more screen.
+      { label: 'Announce', icon: 'inbox', href: '/admin/club/announce' },
+    ],
+  },
+  {
+    label: 'Boats & Gear',
+    roles: ['owner', 'club-admin'],
+    children: [
+      { label: 'Assets', icon: 'package', href: '/admin/club/assets' },
+      // portal-capstone: the asset-request review inbox (the signup queue's own pattern).
+      { label: 'Requests', icon: 'table', href: '/admin/club/asset-requests' },
+    ],
+  },
+  {
+    label: 'Content',
+    children: [{ screen: 'posts' }, { screen: 'bulletins' }, { screen: 'pages' }, { screen: 'notifications' }],
+  },
+  {
+    label: 'Site',
+    children: [
+      { screen: 'media' },
+      { screen: 'vocabulary' },
+      { screen: 'nav' },
+      // Initiative 5 Task 2 collapsed role management onto the engine's typed session; the
+      // grant/revoke UI retired with `club-roles.ts` in favor of cairn's own ManageEditors
+      // (`{ screen: 'editors' }`, below). This entry is only the offer-window setting now; the
+      // layout guard admits either club role, and the screen's own owner-only actions re-check
+      // `capability` server-side.
+      // "Club settings", not "Settings": cairn's own Settings screen already carries that name,
+      // and two identical labels in one nav read as a defect (Geoff, 2026-07-07 admin review).
+      { label: 'Club settings', icon: 'wrench', href: '/admin/club/settings', roles: ['owner', 'club-admin'] },
+      { screen: 'settings', label: 'Site settings' },
+      { screen: 'editors' },
+      { screen: 'help' },
+    ],
+  },
+];
 
 // The committed media manifest the public render resolver reads. A bare {} until an editor
 // uploads. Read through import.meta.glob so a fresh site with no committed media.json degrades
@@ -220,7 +259,7 @@ export const cairn = defineAdapter({
     // The preview knob: the (site) layout renders entries inside <main class="site-main">
     // (site.css), so the frame links the same theme/site sheets and reproduces that container.
     preview: { stylesheets: [themeCss, siteCss], containerClass: 'site-main' },
-    adminNav: [clubAdminNav],
+    navLayout,
     // The publish-actions seam: a published post lands beside the Announce screen's own
     // detail route (`/admin/club/announce/[id]`, a path param, not the doc example's query-string
     // shape) so the member who just published can jump straight into notifying the club.

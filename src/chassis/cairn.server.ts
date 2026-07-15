@@ -4,10 +4,9 @@
 import { composeRuntime } from '@glw907/cairn-cms';
 import { createCairnAdmin } from '@glw907/cairn-cms/sveltekit';
 import { cairn, siteConfig } from '$theme/cairn.config.js';
-import { filterClubNav } from '$admin-club/lib/club-roles';
 
 export const runtime = composeRuntime({ adapter: cairn, siteConfig });
-// Task 4: `navFilter` hides the Club section for a signed-in editor with no club role, so a
-// content editor without a club grant never sees a link into a section its own `+layout.server.ts`
-// guard would then refuse.
-export const admin = createCairnAdmin(runtime, { navFilter: filterClubNav });
+// Initiative 5 Task 4: the declared navLayout tree (cairn.config.ts) gates the Club, Outreach,
+// and Boats & Gear groups by role directly, so the site's own per-request nav-hiding hook (which
+// read the now-retired `club_roles` table) is gone; role visibility is declarative.
+export const admin = createCairnAdmin(runtime);
