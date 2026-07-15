@@ -156,14 +156,18 @@ body {
    wraps a title and a description together, and underlining the whole block read as every word in
    the card being a separate link, not a single clean card (A1's quieting recipe).
    `:not(.asc-cta-btn)` excludes the fireweed action button the same way: a button is not a text
-   link, and the underline plus primary blue would fight its own white-on-fireweed dress. */
-.site-main .prose a:not(.asc-card-link):not(.asc-cta-btn) {
+   link, and the underline plus primary blue would fight its own white-on-fireweed dress.
+   `:not(.cta-link)` excludes the `:::page-cta` actions row's own buttons (chassis prose.css's
+   `.cta-link`/`.cta-primary`/`.cta-secondary`) for the same reason: this file is unlayered, so
+   without the exclusion its underline would win over the layered button styling regardless of
+   specificity. */
+.site-main .prose a:not(.asc-card-link):not(.asc-cta-btn):not(.cta-link) {
   color: var(--color-primary);
   text-decoration: underline;
   text-decoration-color: color-mix(in oklab, var(--color-primary) 35%, transparent);
   text-underline-offset: 3px;
 }
-.site-main .prose a:not(.asc-card-link):not(.asc-cta-btn):hover {
+.site-main .prose a:not(.asc-card-link):not(.asc-cta-btn):not(.cta-link):hover {
   text-decoration-color: currentColor;
 }
 

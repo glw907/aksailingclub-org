@@ -208,6 +208,40 @@
     }
   }
 
+  /* ─── Related: a cross-reference list, not a card grid (2026-07-15) ────── */
+  /* Ends a section by pointing to a small number of other pages: a hairline top rule (this is a
+     footer-like cross-reference, never an object of its own, so it earns no card chrome per A1's
+     "cards mark objects" rule), a muted uppercase eyebrow, then one link per line. The title
+     link carries no class of its own, so it inherits the site's standard prose link treatment
+     (color, underline, focus ring) unscoped; the trailing arrow is generated content on that
+     anchor, not its own element. */
+  .prose .asc-related {
+    --flow-space: var(--spacing-l);
+    border-top: 1px solid var(--color-card-border);
+    padding-top: var(--spacing-m);
+  }
+  .prose .asc-related-eyebrow {
+    margin: 0 0 var(--spacing-2xs);
+    font-size: var(--text-step--2);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .prose .asc-related-item {
+    margin: 0;
+  }
+  .prose .asc-related-item + .asc-related-item {
+    margin-top: var(--spacing-2xs);
+  }
+  .prose .asc-related-item > a::after {
+    content: ' \2192';
+  }
+  .prose .asc-related-note {
+    margin-left: var(--spacing-2xs);
+    color: var(--color-muted);
+  }
+
   /* ─── Action button: the fireweed "act now" verb, in content (2026-07-13) ─ */
   /* Home's own `.cta-btn` recipe, made reachable from page markdown. The color story's accent
      budget ("the single pop, at most twice a page") is spent ONLY through this class, on a page's
@@ -234,25 +268,27 @@
     outline-offset: 2px;
   }
 
-  /* ─── Page CTA: the sitewide closing band (owner ask, 2026-07-13) ──────── */
+  /* ─── Page CTA: the sitewide closing panel (generalized 2026-07-15) ────── */
   /* Ends a content page's "Questions?"-style section (education, join, members, visiting,
-     renewing, new-member-guide; home is the ratified exception and keeps its own close). One
-     quiet tinted panel, radius-box, no border (ground OR hairline, never both, per A1's
-     no-stacked-chrome rule). The voice line leads in the display face at the card-title scale,
-     the reassurance line sits muted below it, and the single action link carries the site's
-     standing blue affordance plus the lede-cta weight. Link color, underline, and focus ring
-     come from the prose link rules, which reach this markup unscoped. */
+     renewing, new-member-guide; home is the ratified exception and keeps its own close). The
+     2026-07-15 shared-components review replaced the earlier tinted base-200 panel with a
+     hairline top rule and generous top spacing, plain page ground only (never a band
+     background), so the closer reads as the page's own final beat rather than a boxed-off
+     object; `:::page-cta` is the real component (markdown/components.ts), and education's
+     still-unmigrated hand-rolled markup (`div.page-cta`/`p.page-cta-lead`/`p.page-cta-body`/
+     `a.asc-cta-btn`, Task 7 converts it) shares every one of these rules, so both render off the
+     one block. Link color, underline, and focus ring come from the prose link rules, which reach
+     this markup unscoped. */
   .prose .page-cta {
     --flow-space: var(--spacing-l);
-    padding: var(--spacing-l);
-    background: var(--color-base-200);
-    border-radius: var(--radius-box);
+    border-top: 1px solid var(--color-card-border);
+    padding-top: var(--spacing-l);
   }
   .prose .page-cta-lead {
     margin: 0;
     font-family: var(--font-display);
-    font-size: var(--text-step-2);
-    font-weight: 700;
+    font-size: var(--text-step-1);
+    font-weight: 600;
     line-height: var(--leading-snug);
     text-wrap: balance;
     color: var(--color-base-content);
@@ -263,9 +299,18 @@
     line-height: var(--leading-body);
     color: var(--color-muted);
   }
-  /* The closing action is one of the page's two fireweed buttons (owner-ruled 2026-07-13), so it
-     takes the shared recipe; only the panel spacing lives here. */
+  /* Education's still-unmigrated markup nests its one `.asc-cta-btn` action directly under
+     `.page-cta` (no actions row); kept so that markup keeps rendering unbroken until Task 7. */
   .prose .page-cta .asc-cta-btn {
+    margin-top: var(--spacing-s);
+  }
+  /* The component's own actions row: a wrapping flex line of `.cta-link` buttons (at most one
+     `.cta-primary`, per the design spec's fireweed budget; that discipline is an authoring rule,
+     not enforced here). */
+  .prose .page-cta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-s);
     margin-top: var(--spacing-s);
   }
 

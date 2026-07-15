@@ -20,6 +20,17 @@ import { headRow, isElement, strAttr, type ComponentContext } from '@glw907/cair
 import { makeIconRenderer } from '$chassis/render.js';
 import { ICON_PATHS } from './icons.js';
 
+// `related`/`ref` (a cross-reference list ending a section, not a card grid) and `page-cta`/
+// `cta-action` (the sitewide closing panel, generalized off education's hand-rolled markup) are
+// this site's own components too (the 2026-07-15 shared-components review). `related` shares
+// `facts`'s nesting mechanic: the container filters its slot's children by class, and `ref` is
+// hidden from the standalone picker. `page-cta`'s lead reuses the engine's `title` slot (the
+// same `[Label]` bracket grammar every other component's title uses) so the directive stays
+// consistent, even though the design spec calls it a "lead" line; its actions reuse the same
+// nested-child mechanic, filtering the one `body` slot for the `cta-link` marker class that
+// `cta-action` renders, so a page-cta can hold plain body prose and action buttons in the one
+// markdown region.
+
 // The chassis wires the icon set into the render helpers; this theme owns only the glyph data
 // (ICON_PATHS) and where each build() function calls makeIcon.
 const makeIcon = makeIconRenderer(ICON_PATHS);
@@ -191,6 +202,115 @@ const facts = defineComponent({
   icon: 'list-checks',
 });
 
+// ─── Related / ref: a cross-reference list, not a card grid (site-declared) ─
+// A `:::related` block ends a section by pointing to a small number of other pages: a hairline
+// top rule (this is a footer-like cross-reference, never an object of its own, so it earns no
+// card chrome), a fixed "Related" eyebrow, then one `:::ref` link per line. The title link is a
+// plain, unclassed anchor so it inherits the site's standard prose link treatment (color,
+// underline, focus ring) unscoped; the trailing arrow is CSS-generated content on that anchor, not
+// its own element. Same nesting mechanic as `facts`/`fact`: the container filters its slot's
+// children by class, and the child component is `hidden` from the standalone insert menu.
+function buildRef(ctx: ComponentContext): Element {
+  const href = strAttr(ctx, 'href') ?? '#';
+  const note = ctx.slot('body');
+  const kids: ElementContent[] = [h('a', { href }, ctx.slot('title'))];
+  if (note.length) kids.push(h('span', { className: ['asc-related-note'] }, note));
+  return h('div', { className: ['asc-related-item'] }, kids);
+}
+
+const ref = defineComponent({
+  name: 'ref',
+  label: 'Reference',
+  description: 'One link in a :::related cross-reference list.',
+  use: 'One entry inside a :::related list (used nested).',
+  insertTemplate: ':::ref[Title]{href="/page/"}\nOptional one-line note.\n:::',
+  build: buildRef,
+  attributes: {
+    href: fields.text({ label: 'Link', required: true, pattern: LINK_PATTERN, help: LINK_HELP }),
+  },
+  slots: [
+    { name: 'title', label: 'Title', kind: 'inline', required: true },
+    { name: 'body', label: 'Note (optional)', kind: 'markdown' },
+  ],
+  group: 'Page structure',
+  icon: 'arrow-right',
+  hidden: true,
+});
+
+const related = defineComponent({
+  name: 'related',
+  label: 'Related',
+  description: 'A cross-reference list linking to a small number of other pages, not a card grid.',
+  use: "End a section by pointing the reader to what's related.",
+  insertTemplate: '::::related\n:::ref[Title]{href="/page/"}\nOptional one-line note.\n:::\n::::',
+  build: (ctx) =>
+    h('div', { className: ['asc-related'] }, [
+      h('p', { className: ['asc-related-eyebrow'] }, ['Related']),
+      ...ctx.slot('body').filter((c) => hasClass(c, 'asc-related-item')),
+    ]),
+  slots: [{ name: 'body', label: 'Items', kind: 'markdown' }],
+  group: 'Page structure',
+  icon: 'arrow-right',
+});
+
+// ─── Page CTA / CTA action: the sitewide closing panel (site-declared) ──────
+// Generalizes education's hand-rolled closer (`.page-cta`/`.page-cta-lead`/`.page-cta-body` in
+// asc-components.css, unmigrated until Task 7) into a real component: a `title` slot for the lead
+// line (the engine's `[Label]` bracket grammar, labeled "Lead" for the form), a markdown `body`
+// slot for the reassurance copy, and any number of nested `:::cta-action` buttons filtered out of
+// that same `body` slot by the `cta-link` marker class its build() renders (the actions row's own
+// wrapper, never a slot of its own, matching `cards`/`card`'s one-slot nesting). `cta-action`
+// reuses the chassis's own `.cta-link`/`.cta-primary`/`.cta-secondary` prose classes rather than
+// inventing new button chrome.
+function buildCtaAction(ctx: ComponentContext): Element {
+  const href = strAttr(ctx, 'href') ?? '#';
+  const kind = strAttr(ctx, 'kind') ?? 'secondary';
+  return h('a', { className: ['cta-link', `cta-${kind}`], href }, ctx.slot('title'));
+}
+
+const ctaAction = defineComponent({
+  name: 'cta-action',
+  label: 'CTA action',
+  description: 'One button in a :::page-cta actions row.',
+  use: 'One entry inside a :::page-cta block (used nested).',
+  insertTemplate: ':::cta-action[Label]{href="/page/" kind="secondary"}\n:::',
+  build: buildCtaAction,
+  attributes: {
+    href: fields.text({ label: 'Link', required: true, pattern: LINK_PATTERN, help: LINK_HELP }),
+    kind: fields.select({ label: 'Kind', options: ['primary', 'secondary'], default: 'secondary' }),
+  },
+  slots: [{ name: 'title', label: 'Label', kind: 'inline', required: true }],
+  group: 'Page structure',
+  icon: 'arrow-right',
+  hidden: true,
+});
+
+function buildPageCta(ctx: ComponentContext): Element {
+  const bodyChildren = ctx.slot('body');
+  const actionEls = bodyChildren.filter((c) => hasClass(c, 'cta-link'));
+  const proseChildren = bodyChildren.filter((c) => !hasClass(c, 'cta-link'));
+  const kids: ElementContent[] = [h('p', { className: ['page-cta-lead'] }, ctx.slot('title'))];
+  if (proseChildren.length) kids.push(h('div', { className: ['page-cta-body'] }, proseChildren));
+  if (actionEls.length) kids.push(h('div', { className: ['page-cta-actions'] }, actionEls));
+  return h('div', { className: ['page-cta', 'not-prose'] }, kids);
+}
+
+const pageCta = defineComponent({
+  name: 'page-cta',
+  label: 'Page CTA',
+  description: 'A closing panel: a lead line, optional body copy, and one or more action buttons.',
+  use: "End a content page's closing \"Questions?\"-style section.",
+  insertTemplate:
+    '::::page-cta[Not finding what you need?]\nBody copy.\n\n:::cta-action[Label]{href="/page/" kind="primary"}\n:::\n::::',
+  build: buildPageCta,
+  slots: [
+    { name: 'title', label: 'Lead', kind: 'inline', required: true },
+    { name: 'body', label: 'Body and actions', kind: 'markdown' },
+  ],
+  group: 'Page structure',
+  icon: 'chats',
+});
+
 // ─── Contact / donate forms: hydrated islands (completion-pass manifest item 2) ─
 // Both are content-authored placements with no attributes: build() emits only the no-JavaScript
 // fallback (a plain mailto link), and the live, interactive form (ContactForm.svelte,
@@ -285,6 +405,10 @@ export const ascRegistry = defineRegistry({
     card,
     facts,
     fact,
+    related,
+    ref,
+    pageCta,
+    ctaAction,
     contactForm,
     donateForm,
     classSchedule,
