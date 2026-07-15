@@ -2,7 +2,7 @@
 // site-declared notifications concept), a render that runs the engine's directive registry
 // (Task 3: the club-grounds chrome and the callout/passage/cards components), and the GitHub App
 // backend against the asc-site repo.
-import { defineAdapter, defineConcept, fieldset, fields, githubApp, createRenderer, parseSiteConfig } from '@glw907/cairn-cms';
+import { defineAdapter, defineConcept, defineRoles, fieldset, fields, githubApp, createRenderer, parseSiteConfig } from '@glw907/cairn-cms';
 import { normalizeAssets, makeMediaResolver, readCommittedManifest } from '@glw907/cairn-cms/media';
 import type { AdminNavSection } from '@glw907/cairn-cms/sveltekit';
 import { ascRegistry } from './markdown/components.js';
@@ -89,7 +89,21 @@ export const publicMediaResolver = makeMediaResolver(mediaManifest, resolvedAsse
 // on.
 export const mediaEnabled = resolvedAssets.enabled;
 
+// The site's role vocabulary (initiative 5,
+// docs/2026-07-14-admin-roles-navlayout-design.md#phase-1), the collapse target for the
+// retired `club_roles` table. `instructor` declares no `home`: no instructor-reachable
+// screen exists until class-management builds the roster, and the engine's signed-in
+// welcome view is the correct landing until then. `src/app.d.ts` augments
+// `CairnRolesRegister` with `typeof roles`, so `locals.editor.role` narrows to these
+// three names everywhere the site reads it.
+export const roles = defineRoles({
+  owner: 'owner',
+  'club-admin': 'editor',
+  instructor: { capability: 'none' },
+});
+
 export const cairn = defineAdapter({
+  roles,
   content: {
     posts: defineConcept({
       dir: 'src/content/posts',

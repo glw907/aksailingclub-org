@@ -7,6 +7,18 @@ import type { CairnPlatformBindings, CairnMediaBindings, AdminActionAuditSink } 
 import type { MemberRow } from '$member-auth/lib/auth';
 // App.Locals.editor (set by the engine's auth guard) ships with the engine.
 import '@glw907/cairn-cms/ambient';
+import type { roles } from '$theme/cairn.config.js';
+
+// Narrows `locals.editor.role` (and any navLayout `roles` list) to the site's declared
+// vocabulary (initiative 5, docs/2026-07-14-admin-roles-navlayout-design.md#phase-1)
+// everywhere it's read, instead of the unaugmented `'owner' | 'editor'` pair. Read-side
+// only; it has no effect on which capability a role resolves to at runtime (that's
+// `resolveCapability`, reading the same `roles` declaration).
+declare module '@glw907/cairn-cms' {
+  interface CairnRolesRegister {
+    roles: typeof roles;
+  }
+}
 
 declare global {
   namespace App {

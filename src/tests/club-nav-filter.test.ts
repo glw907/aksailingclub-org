@@ -15,7 +15,7 @@ function eventWith(env: unknown): ContentEvent {
   return { url: new URL('https://x.dev/admin'), request: new Request('https://x.dev/admin'), locals: {}, platform: { env } } as unknown as ContentEvent;
 }
 
-const editor: Editor = { email: 'e@example.com', displayName: 'E', role: 'editor', capability: 'editor' };
+const editor: Editor = { email: 'e@example.com', displayName: 'E', role: 'club-admin', capability: 'editor' };
 
 describe('filterClubNav', () => {
   it('drops the Club section for an editor with no club role', async () => {

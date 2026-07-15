@@ -7,8 +7,8 @@ import { actions as newActions } from '../routes/admin/club/classes/new/+page.se
 import { actions as detailActions } from '../routes/admin/club/classes/[id]/+page.server';
 import { fakeD1 } from './_fake-d1';
 
-const admin: Editor = { email: 'admin@example.com', displayName: 'Admin', role: 'editor', capability: 'editor' };
-const noRole: Editor = { email: 'no-role@example.com', displayName: 'No Role', role: 'editor', capability: 'editor' };
+const admin: Editor = { email: 'admin@example.com', displayName: 'Admin', role: 'club-admin', capability: 'editor' };
+const noRole: Editor = { email: 'no-role@example.com', displayName: 'No Role', role: 'club-admin', capability: 'editor' };
 
 const CSRF_COOKIE_NAME = '__Host-cairn_csrf';
 const CSRF_TOKEN = 'test-csrf-token';

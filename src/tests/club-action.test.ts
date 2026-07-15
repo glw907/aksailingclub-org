@@ -5,7 +5,7 @@ import type { AdminActionAuditRecord, AdminActionEvent } from '@glw907/cairn-cms
 import { clubAdminAction } from '$admin-club/lib/club-action';
 import { fakeD1 } from './_fake-d1';
 
-const editor: Editor = { email: 'editor@example.com', displayName: 'Editor', role: 'editor', capability: 'editor' };
+const editor: Editor = { email: 'editor@example.com', displayName: 'Editor', role: 'club-admin', capability: 'editor' };
 
 const CSRF_COOKIE_NAME = '__Host-cairn_csrf';
 const CSRF_TOKEN = 'test-csrf-token';
