@@ -218,7 +218,9 @@ the posts-index topic cards source (B4, likely `src/theme/post-cards.ts` or the 
 Scope is bounded to demonstrating each component where the review found the need; a full
 site-wide content consolidation is a later content pass. Editing rule: existing approved
 copy is the specification — restructure into components by moving text, deletion-only trims,
-never paraphrase.
+never paraphrase. When a retrofit touches content that is duplicated on another page, keep
+the duplicate (per Geoff, 2026-07-15) and add or update its entry in
+`docs/fragment-candidates.md`.
 
 - [ ] Moorings: cost/eligibility as `:::facts` (Cost, Eligibility, Boat size, Waitlist);
   "Active Participating Member" prerequisite as a `requirement` callout; trailing storage
