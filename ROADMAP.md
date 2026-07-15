@@ -95,6 +95,13 @@ Fable-window ruling (Geoff, 2026-07-14): spec and plan authored in-window (what 
 smoke proves, expected outcomes, abort criteria, the Turnstile/rate-limit design);
 execution runs post-window under an Opus conductor — the live smoke needs Geoff's go
 regardless.
+Pre-spec rulings (Geoff, 2026-07-14, the settle-in-advance round): the smoke charges a
+REAL card on the cheapest real product and refunds it through the ledger's own refund
+path, making refund machinery part of the proof; the real ledger row and confirmation
+email stay, marked as the smoke in the audit trail. Turnstile goes on EVERY public
+unauthenticated POST endpoint (money forms and all); authenticated member/admin forms
+rely on session plus rate limits instead. Rate-limit mechanism is the spec author's
+technical call. Spec authorship is cleared to run unattended (overnight-eligible).
 
 ### Go-live: apex cutover & MW retirement `mw-cutover`
 The program's final act: a fresh MW delta re-import (members keep joining/renewing on
@@ -113,6 +120,12 @@ its main spend), so if the chain ahead of it (admin-roles + nav-reorg,
 payments-live-smoke, Geoff's walkthrough) clears with budget left, it runs
 Fable-conducted; otherwise it falls to the post-window default, Opus-conducted against
 the runbook. The soak needs no Fable either way.
+Pre-spec rulings (Geoff, 2026-07-14, the settle-in-advance round): TWO WEEKS, QUIET —
+the apex flips with a low DNS TTL, the legacy origin stays warm for instant rollback,
+and no member announcement is made (the site simply works). MW cancels and GCE retires
+only after two clean weeks that include one full weekly cron cycle and at least one
+real member join or renewal. Runbook authorship is cleared to run unattended
+(overnight-eligible).
 
 ### Design propagation & continuing rounds `design-propagation`
 Keep the design rounds moving on the ratified Home/Education system (Geoff,
@@ -165,6 +178,10 @@ segment rides `segment-email`; the annual transition is `season-rollover`'s own 
 Fable-window ruling (Geoff, 2026-07-14): spec-only in-window (brainstorm after
 `admin-roles` lands, since instructor self-serve rosters ride the declared role);
 execution post-window, Opus-conducted.
+Ruling at the settle-in-advance round (Geoff, 2026-07-14): this one ESPECIALLY needs
+interactive brainstorming — NOT overnight-eligible. The brainstorm runs live with
+Geoff (scope cut, check-in UX against the MW bar, instructor surface and the declared
+role's `home`), now unblocked since admin-roles landed the instructor role.
 
 ### Season rollover `season-rollover`
 The annual transition designed as ONE operation — Geoff's 2026-07-13 ruling that
@@ -189,6 +206,12 @@ design says so. First real exercise: the 2026→2027 transition.
 Fable-window ruling (Geoff, 2026-07-14): the one-operation design and its sitewide
 inventory are authored in-window (the part where a weak plan compounds); execution
 waits for the off-season, Opus-conducted.
+Pre-spec ruling (Geoff, 2026-07-14, the settle-in-advance round): the rollover ships as
+a GUARDED OWNER-ONLY ADMIN OPERATION (preview → confirm → execute, with a per-season
+audit row) — the board runs the annual transition self-serve, no operator seat. That
+makes it a product feature, and Geoff flagged the design as needing a fair amount of
+interactive brainstorming — NOT overnight-eligible; the brainstorm runs live with him,
+like the class-management one.
 
 ### QuickBooks Online integration `qbo-integration`
 Sync the club's money events to QuickBooks Online: `qbo_ref` population, entity
