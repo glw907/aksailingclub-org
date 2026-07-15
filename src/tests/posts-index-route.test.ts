@@ -2,9 +2,11 @@
 // topic with zero live posts (a "News, 0 posts" card) as a clickable dead end. `load` reads the
 // real content corpus (no D1/mocking needed, the route is prerendered), so this test runs
 // against whatever the corpus currently tags; it asserts the filtering behavior, not fixed counts.
+// Review round (2026-07-15, svelte S1): `load` returned a `topics` payload (the full curated
+// vocabulary) that no consumer ever read; the route now returns only `browseTopics`, so this test
+// no longer references `data.topics`.
 import { describe, expect, it } from 'vitest';
 import { load } from '../routes/(site)/posts/+page.server';
-import type { TopicCount } from '$theme/topic-counts';
 
 type LoadResult = Exclude<Awaited<ReturnType<typeof load>>, void>;
 
@@ -21,19 +23,13 @@ describe('/posts load: browseTopics filters out empty topics', () => {
     }
   });
 
-  it('keeps the full curated vocabulary in topics, but counts only browsable topics in stats.topicCount', async () => {
+  it('counts stats.topicCount as exactly the number of browsable topics', async () => {
     const data = await runLoad();
-    expect(data.topics.some((topic: TopicCount) => topic.count === 0)).toBe(true);
     expect(data.stats.topicCount).toBe(data.browseTopics.length);
-    expect(data.stats.topicCount).toBeLessThan(data.topics.length);
   });
 
-  it('drops exactly the zero-count topics between topics and browseTopics', async () => {
+  it('never exposes the full curated vocabulary as data.topics', async () => {
     const data = await runLoad();
-    const zeroCountValues = data.topics.filter((topic: TopicCount) => topic.count === 0).map((topic: TopicCount) => topic.value);
-    expect(zeroCountValues.length).toBeGreaterThan(0);
-    for (const value of zeroCountValues) {
-      expect(data.browseTopics.some((topic: TopicCount) => topic.value === value)).toBe(false);
-    }
+    expect('topics' in data).toBe(false);
   });
 });

@@ -225,13 +225,16 @@ const facts = defineComponent({
 // top rule (this is a footer-like cross-reference, never an object of its own, so it earns no
 // card chrome), a fixed "Related" eyebrow, then one `:::ref` link per line. The title link is a
 // plain, unclassed anchor so it inherits the site's standard prose link treatment (color,
-// underline, focus ring) unscoped; the trailing arrow is CSS-generated content on that anchor, not
-// its own element. Same nesting mechanic as `facts`/`fact`: the container filters its slot's
-// children by class, and the child component is `hidden` from the standalone insert menu.
+// underline, focus ring) unscoped; the trailing arrow is an inline `aria-hidden` span appended
+// inside the anchor (review round, 2026-07-15: a CSS `::after` arrow was invisible to a screen
+// reader announcing the link name, so it moved into markup). Same nesting mechanic as
+// `facts`/`fact`: the container filters its slot's children by class, and the child component is
+// `hidden` from the standalone insert menu.
 function buildRef(ctx: ComponentContext): Element {
   const href = strAttr(ctx, 'href') ?? '#';
   const note = ctx.slot('body');
-  const kids: ElementContent[] = [h('a', { href }, ctx.slot('title'))];
+  const arrow = h('span', { className: ['asc-related-arrow'], ariaHidden: 'true' }, [' →']);
+  const kids: ElementContent[] = [h('a', { href }, [...ctx.slot('title'), arrow])];
   if (note.length) kids.push(h('span', { className: ['asc-related-note'] }, note));
   return h('div', { className: ['asc-related-item'] }, kids);
 }
@@ -432,9 +435,12 @@ const membershipPricing = defineComponent({
 // risks a stale number. Same nesting mechanic as `facts`/`fact` and `related`/`ref`: the
 // container filters its slot's children by class, and `step` is hidden from the standalone
 // insert menu. The title renders as a `span` (not a heading) because a step is one item in a
-// list, not a section of its own.
+// list, not a section of its own. Both the `<ol>` and each `<li>` carry an explicit `list`/
+// `listitem` role (review round, 2026-07-15): WebKit drops a list's implicit ARIA semantics once
+// `list-style: none` is set (asc-components.css sets it for the CSS-counter rail), so the roles
+// are restored in markup rather than left to a browser default that only some engines honor.
 function buildStep(ctx: ComponentContext): Element {
-  return h('li', { className: ['asc-step'] }, [
+  return h('li', { className: ['asc-step'], role: 'listitem' }, [
     h('span', { className: ['asc-step-title'] }, ctx.slot('title')),
     h('div', { className: ['asc-step-body'] }, ctx.slot('body')),
   ]);
@@ -462,11 +468,48 @@ const steps = defineComponent({
   description: 'A numbered sequence of steps, rendered as an ordered list with CSS-counted numbers.',
   use: 'Walk the reader through an ordered procedure.',
   insertTemplate: '::::steps\n:::step[Title]\nBody copy.\n:::\n::::',
-  build: (ctx) => h('ol', { className: ['asc-steps'] }, nestedChildren(ctx.slot('body'), 'asc-step')),
+  build: (ctx) => h('ol', { className: ['asc-steps'], role: 'list' }, nestedChildren(ctx.slot('body'), 'asc-step')),
   slots: [{ name: 'body', label: 'Steps', kind: 'markdown' }],
   group: 'Page structure',
   icon: 'list-checks',
 });
+
+// A caption or legend's plain text, flattened from its inline/markdown children, for generating a
+// deterministic id (slugifyForId below). Recurses through element children so a legend's markdown
+// (a paragraph, a link's own text) still contributes its words.
+function textContent(nodes: ElementContent[]): string {
+  return nodes
+    .map((node) => {
+      if (node.type === 'text') return node.value;
+      if (isElement(node)) return textContent(node.children);
+      return '';
+    })
+    .join('');
+}
+
+// A minimal, dependency-free slug for an id attribute: lowercase, non-alphanumeric runs collapse
+// to one hyphen, leading/trailing hyphens trimmed. Deterministic across builds since it only ever
+// reads the authored caption/legend text, never a counter or a random value.
+function slugifyForId(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+// Every `<table>` element anywhere inside a component's built children, found before
+// rehypeTableScroll runs (see the pipeline note below), so aria-labelledby/aria-describedby can be
+// stamped directly on the table itself rather than on whatever wrapper eventually surrounds it.
+function findTables(nodes: ElementContent[]): Element[] {
+  const found: Element[] = [];
+  for (const node of nodes) {
+    if (isElement(node)) {
+      if (node.tagName === 'table') found.push(node);
+      found.push(...findTables(node.children));
+    }
+  }
+  return found;
+}
 
 // ─── Table: a wrapped markdown table with a variant and an optional legend (site-declared) ──
 // A `:::table` wraps a standard markdown table for the design spec's per-context styling: a
@@ -478,19 +521,38 @@ const steps = defineComponent({
 // container whose name matches the slot name, the same first-class grammar `serializeComponent`
 // itself generates for any non-title/body slot; no child component definition is needed the way
 // `fact`/`ref`/`step` need one, because a slot only needs a matching nested directive name; it is
-// registered nowhere else. The body slot holds nothing but the markdown table itself; the
-// engine's own rehypeTableScroll (createRenderer's default rehype step, see cairn-cms's
+// registered nowhere else. The body slot usually holds nothing but the markdown table itself, but
+// a figure can legitimately group more than one related table under one shared caption and legend
+// (the recap post's two divisions, with interleaved bold sub-labels between them): one figure is
+// one logical table group, and every `<table>` in it shares the same caption/legend wiring below.
+// The engine's own rehypeTableScroll (createRenderer's default rehype step, see cairn-cms's
 // pipeline.js) wraps every `<table>` anywhere in the fully built tree in `.table-scroll` after
 // every component build() has run, so this build() never constructs that wrapper itself, it only
 // places the table where it belongs relative to the caption and legend.
+//
+// a11y W2 (review round, 2026-07-15): a caption/legend read as nearby prose to a sighted reader,
+// but nothing ties either to the table it describes for a screen reader unless aria-labelledby/
+// aria-describedby point at them explicitly. Both ids are slugified from the authored text (stable
+// and deterministic across builds); when a figure groups multiple tables, every table in it gets
+// the same ids, which is correct since they share one caption and one legend.
 function buildTable(ctx: ComponentContext): Element {
   const variant = strAttr(ctx, 'variant') ?? 'results';
   const caption = ctx.slot('caption');
   const legend = ctx.slot('legend');
+  const body = ctx.slot('body');
+  const tables = findTables(body);
   const kids: ElementContent[] = [];
-  if (caption.length) kids.push(h('figcaption', {}, caption));
-  kids.push(...ctx.slot('body'));
-  if (legend.length) kids.push(h('div', { className: ['asc-table-legend'] }, legend));
+  if (caption.length) {
+    const captionId = `asc-table-caption-${slugifyForId(textContent(caption))}`;
+    kids.push(h('figcaption', { id: captionId }, caption));
+    for (const t of tables) t.properties.ariaLabelledBy = captionId;
+  }
+  kids.push(...body);
+  if (legend.length) {
+    const legendId = `asc-table-legend-${slugifyForId(textContent(legend))}`;
+    kids.push(h('div', { className: ['asc-table-legend'], id: legendId }, legend));
+    for (const t of tables) t.properties.ariaDescribedBy = legendId;
+  }
   return h('figure', { className: ['asc-table', `asc-table-${variant}`] }, kids);
 }
 

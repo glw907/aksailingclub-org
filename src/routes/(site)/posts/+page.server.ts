@@ -3,7 +3,7 @@ import { buildSeoMeta } from '@glw907/cairn-cms/delivery';
 import { extractVocabulary } from '@glw907/cairn-cms';
 import { posts, ORIGIN } from '$chassis/content';
 import { siteConfig } from '$theme/cairn.config';
-import { browsableTopics, type TopicCount } from '$theme/topic-counts';
+import { browsableTopics } from '$theme/topic-counts';
 
 // The public news archive (Task 3): the home page's "View all news" link, and the migrated
 // welcome-new-website post's own historical link, both point here. Task 2's content-migration
@@ -30,19 +30,20 @@ export const load: PageServerLoad = () => {
   // narrower `browseTopics` (B4, 2026-07-15 shared-components pass): a vocabulary value with zero
   // current posts is still a real, curated topic, but a clickable card for it is a dead end, and
   // a stat that says 5 above a grid showing 4 reads as a defect, so both surfaces count only
-  // topics with at least one post.
+  // topics with at least one post. The full curated vocabulary never leaves this function (review
+  // round, 2026-07-15): no consumer ever read it, so only the already-filtered `browseTopics`
+  // is returned.
   const tagCounts = new Map(posts.allTags().map((t) => [t.tag, t.count]));
-  const topics: TopicCount[] = extractVocabulary(siteConfig).map((entry) => ({
-    value: entry.value,
-    label: entry.label,
-    count: tagCounts.get(entry.value) ?? 0,
-  }));
-
-  const browseTopics = browsableTopics(topics);
+  const browseTopics = browsableTopics(
+    extractVocabulary(siteConfig).map((entry) => ({
+      value: entry.value,
+      label: entry.label,
+      count: tagCounts.get(entry.value) ?? 0,
+    })),
+  );
   return {
     years: [...byYear.entries()].sort((a, b) => b[0].localeCompare(a[0])),
     stats: { postCount: all.length, topicCount: browseTopics.length, yearRange },
-    topics,
     browseTopics,
     seo: buildSeoMeta({
       title: 'News',

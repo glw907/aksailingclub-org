@@ -10,8 +10,10 @@ describe(':::steps numbered sequence component', () => {
     const html = await renderMarkdown(md);
     expect(html).toContain('class="asc-steps"');
     expect(html).toContain('<ol');
+    expect(html).toContain('role="list"');
     expect(html).toContain('class="asc-step"');
     expect(html).toContain('<li');
+    expect(html).toContain('role="listitem"');
     expect(html).toContain('<span class="asc-step-title">Arrive early</span>');
     expect(html).toContain('class="asc-step-body"');
     expect(html).toContain('Get to the dock by 9am.');
@@ -57,6 +59,22 @@ describe(':::steps numbered sequence component', () => {
     expect(secondIndex).toBeGreaterThan(firstIndex);
     expect(thirdIndex).toBeGreaterThan(secondIndex);
     expect((html.match(/class="asc-step"/g) ?? []).length).toBe(3);
+  });
+
+  it('gives the ol and every li an explicit list role (WebKit strips list semantics from list-style: none)', async () => {
+    const md = [
+      '::::steps',
+      ':::step[First]',
+      'Body one.',
+      ':::',
+      ':::step[Second]',
+      'Body two.',
+      ':::',
+      '::::',
+    ].join('\n');
+    const html = await renderMarkdown(md);
+    expect(html).toContain('<ol class="asc-steps" role="list" data-rise="0">');
+    expect((html.match(/class="asc-step" role="listitem"/g) ?? []).length).toBe(2);
   });
 
   it('never injects a literal step number into the markup', async () => {

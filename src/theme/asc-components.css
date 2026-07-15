@@ -213,8 +213,9 @@
      footer-like cross-reference, never an object of its own, so it earns no card chrome per A1's
      "cards mark objects" rule), a muted uppercase eyebrow, then one link per line. The title
      link carries no class of its own, so it inherits the site's standard prose link treatment
-     (color, underline, focus ring) unscoped; the trailing arrow is generated content on that
-     anchor, not its own element. */
+     (color, underline, focus ring) unscoped; the trailing arrow is an `aria-hidden` span in the
+     anchor's own markup (review round, 2026-07-15), not CSS-generated content, so it stays
+     invisible to the accessibility tree while still reading identically to a sighted user. */
   .prose .asc-related {
     --flow-space: var(--spacing-l);
     border-top: 1px solid var(--color-card-border);
@@ -233,9 +234,6 @@
   }
   .prose .asc-related-item + .asc-related-item {
     margin-top: var(--spacing-2xs);
-  }
-  .prose .asc-related-item > a::after {
-    content: ' \2192';
   }
   .prose .asc-related-note {
     margin-left: var(--spacing-2xs);
@@ -520,7 +518,7 @@
     display: inline-block;
     flex-shrink: 0;
     padding: 0.1rem 0.5rem;
-    border: 1px solid var(--color-card-border);
+    border: 1px solid color-mix(in oklab, var(--color-muted) 35%, transparent);
     border-radius: var(--radius-selector);
     background: transparent;
     color: var(--color-muted);
