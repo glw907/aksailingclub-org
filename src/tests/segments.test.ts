@@ -62,6 +62,36 @@ describe("resolveSegment: the 'current' segment", () => {
     const segment = await resolveSegment(db, 'current');
     expect(segment.recipients).toEqual([]);
   });
+
+  it('chunks the household-member query at D1s 100-bound-parameter cap: >100 current households still resolves (never throws), with the right total count', async () => {
+    const households = Array.from({ length: 110 }, (_, i) => ({
+      household_id: `hh-${i}`,
+      paid_at: paidAtDaysAgo(10),
+      primary_member_id: null,
+    }));
+    const { db, calls } = fakeD1({
+      allResults: {
+        'FROM households h': households,
+        // Each chunk call binds a different subset of household ids as its own args; answer one
+        // member per bound household id so the merged result covers every household regardless
+        // of how many chunk calls the resolver makes.
+        'FROM members WHERE archived_at': (args: unknown[]) =>
+          args.map((householdId) => ({
+            id: `mem-${householdId as string}`,
+            name: `Member ${householdId as string}`,
+            email: `${householdId as string}@example.com`,
+            household_id: householdId as string,
+          })),
+      },
+    });
+
+    const segment = await resolveSegment(db, 'current');
+    expect(segment.recipients).toHaveLength(110);
+
+    const memberCalls = calls.filter((c) => c.sql.startsWith('SELECT id, name, email, household_id FROM members'));
+    expect(memberCalls.length).toBeGreaterThan(1);
+    for (const call of memberCalls) expect(call.args.length).toBeLessThanOrEqual(90);
+  });
 });
 
 describe("resolveSegment: the 'lapsed' segment", () => {

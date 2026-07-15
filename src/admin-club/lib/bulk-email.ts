@@ -85,13 +85,27 @@ export interface SendSegmentBlastResult {
  * Send `args.subject`/`args.body` to every recipient `args.segment` resolved to, one
  * `sendClubEmail` call per recipient (`{{person_name}}` rendered from that recipient's own
  * `personName`, see {@link sharedBlastVars} for the other two variables), tagging each send's
- * `email_log` row `segment = 'blast:<id>'`. Writes exactly one `email_blasts` row once every send
- * has settled: `recipient_count` is the segment's own resolved size (never re-derived from how
- * many sends happened to succeed), `sent_count`/`failed_count` the real outcome counts -- honest
- * even when a run has failures, per the design's own error-handling rule.
+ * `email_log` row `segment = 'blast:<id>'`.
+ *
+ * The `email_blasts` row is INSERTed BEFORE any send goes out (`recipient_count` the segment's
+ * own resolved size, `sent_count`/`failed_count` both 0), then UPDATEd with the real outcome counts
+ * once every send has settled. Writing the row up front means a D1 failure partway through (or
+ * after) the sends never loses the audit trail for a blast that already reached its recipients --
+ * the old write-once-at-the-end shape could lose that row for a run of ~285 real sends and invite
+ * a duplicate re-blast. The final UPDATE's own failure is caught and logged, never rejecting this
+ * call: the sends already happened, and the caller's returned counts are the real ones either way.
  */
 export async function sendSegmentBlast(env: BulkEmailEnv, db: D1Database, args: SendSegmentBlastArgs): Promise<SendSegmentBlastResult> {
   const blastId = crypto.randomUUID();
+
+  await db
+    .prepare(
+      `INSERT INTO email_blasts (id, segment_key, segment_label, subject, body, recipient_count, sent_count, failed_count, actor)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, 0, ?7)`,
+    )
+    .bind(blastId, args.segment.key, args.segment.label, args.subject, args.body, args.segment.recipients.length, args.actor)
+    .run();
+
   const { sentCount, failedCount } = await sendChunked(args.segment.recipients, (recipient) =>
     sendClubEmail(db, env, {
       to: recipient.email,
@@ -101,13 +115,11 @@ export async function sendSegmentBlast(env: BulkEmailEnv, db: D1Database, args: 
     }),
   );
 
-  await db
-    .prepare(
-      `INSERT INTO email_blasts (id, segment_key, segment_label, subject, body, recipient_count, sent_count, failed_count, actor)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`,
-    )
-    .bind(blastId, args.segment.key, args.segment.label, args.subject, args.body, args.segment.recipients.length, sentCount, failedCount, args.actor)
-    .run();
+  try {
+    await db.prepare(`UPDATE email_blasts SET sent_count = ?1, failed_count = ?2 WHERE id = ?3`).bind(sentCount, failedCount, blastId).run();
+  } catch (error) {
+    console.error('sendSegmentBlast: failed to record final counts on email_blasts', blastId, error);
+  }
 
   return { blastId, sentCount, failedCount };
 }
@@ -119,7 +131,10 @@ export async function sendSegmentBlast(env: BulkEmailEnv, db: D1Database, args: 
 const SAMPLE_TEST_PERSON_NAME = 'Sample Member';
 
 async function resolveTestPersonName(db: D1Database, email: string): Promise<string> {
-  const member = await db.prepare('SELECT name FROM members WHERE email = ?1 AND archived_at IS NULL').bind(email).first<{ name: string }>();
+  const member = await db
+    .prepare('SELECT name FROM members WHERE email = ?1 AND archived_at IS NULL LIMIT 1')
+    .bind(email)
+    .first<{ name: string }>();
   return member?.name ?? SAMPLE_TEST_PERSON_NAME;
 }
 

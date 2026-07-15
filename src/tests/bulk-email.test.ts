@@ -63,11 +63,53 @@ describe('sendSegmentBlast', () => {
       'Fleet update',
       'Hi {{person_name}}, see {{portal_url}}. Questions? {{committee_email}}.',
       2, // recipient_count
-      2, // sent_count
-      0, // failed_count
       'admin@example.com',
     ]);
     expect(result.blastId).toBe(blastInsert?.args[0]);
+
+    const blastUpdate = calls.find((c) => c.sql.startsWith('UPDATE email_blasts'));
+    expect(blastUpdate?.args).toEqual([2, 0, result.blastId]); // sent_count, failed_count, id
+  });
+
+  it('writes the email_blasts row BEFORE any send goes out, so a mid-run crash still leaves an audit row', async () => {
+    const { db, calls } = fakeD1();
+    const send = vi.fn().mockResolvedValue(undefined);
+    await sendSegmentBlast({ EMAIL: { send } }, db, { segment: SEGMENT, subject: 'S', body: 'B', actor: 'a@example.com' });
+
+    const insertIndex = calls.findIndex((c) => c.sql.startsWith('INSERT INTO email_blasts'));
+    const firstLogIndex = calls.findIndex((c) => c.sql.startsWith('INSERT INTO email_log'));
+    expect(insertIndex).toBeGreaterThanOrEqual(0);
+    expect(firstLogIndex).toBeGreaterThan(insertIndex);
+
+    const insert = calls[insertIndex];
+    expect(insert.args.slice(1)).toEqual(['current', 'Current members', 'S', 'B', 2, 'a@example.com']);
+  });
+
+  it('an UPDATE failure after the sends already went out never rejects the call, and still returns the real counts', async () => {
+    const { db, calls } = fakeD1();
+    const originalPrepare = db.prepare.bind(db);
+    db.prepare = ((sql: string) => {
+      if (sql.startsWith('UPDATE email_blasts')) {
+        return {
+          bind: () => ({ run: () => Promise.reject(new Error('D1_ERROR: database is locked')) }),
+        };
+      }
+      return originalPrepare(sql);
+    }) as typeof db.prepare;
+
+    const send = vi.fn().mockResolvedValue(undefined);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await sendSegmentBlast({ EMAIL: { send } }, db, { segment: SEGMENT, subject: 'S', body: 'B', actor: 'a@example.com' });
+
+    expect(result.sentCount).toBe(2);
+    expect(result.failedCount).toBe(0);
+    const insert = calls.find((c) => c.sql.startsWith('INSERT INTO email_blasts'));
+    expect(insert).toBeTruthy();
+    expect(insert?.args.slice(1)).toEqual(['current', 'Current members', 'S', 'B', 2, 'a@example.com']);
+    expect(consoleError).toHaveBeenCalled();
+
+    consoleError.mockRestore();
   });
 
   it('tags every email_log row with segment = blast:<id>', async () => {
@@ -91,8 +133,8 @@ describe('sendSegmentBlast', () => {
     expect(result.failedCount).toBe(1);
     const blastInsert = calls.find((c) => c.sql.startsWith('INSERT INTO email_blasts'));
     expect(blastInsert?.args[5]).toBe(2); // recipient_count: the resolved segment size, never re-derived from outcomes
-    expect(blastInsert?.args[6]).toBe(1); // sent_count
-    expect(blastInsert?.args[7]).toBe(1); // failed_count
+    const blastUpdate = calls.find((c) => c.sql.startsWith('UPDATE email_blasts'));
+    expect(blastUpdate?.args).toEqual([1, 1, result.blastId]); // sent_count, failed_count
   });
 
   it('writes recipient_count 0 and never calls EMAIL.send for an empty segment', async () => {
@@ -105,6 +147,8 @@ describe('sendSegmentBlast', () => {
     expect(result).toEqual({ blastId: result.blastId, sentCount: 0, failedCount: 0 });
     const blastInsert = calls.find((c) => c.sql.startsWith('INSERT INTO email_blasts'));
     expect(blastInsert?.args[5]).toBe(0);
+    const blastUpdate = calls.find((c) => c.sql.startsWith('UPDATE email_blasts'));
+    expect(blastUpdate?.args).toEqual([0, 0, result.blastId]);
   });
 });
 

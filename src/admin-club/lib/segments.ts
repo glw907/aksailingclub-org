@@ -109,17 +109,30 @@ interface MemberContactRow {
   household_id: string;
 }
 
-/** Every non-archived, emailed member in one of `householdIds`. */
+/** D1's own documented cap is 100 bound parameters per query; the live club already has 148
+ *  households, so a single `IN (...)` over every current household's id can exceed it. Chunked
+ *  well under the cap (90, not 100) to leave room for a future query in this same family that
+ *  binds a parameter or two alongside the household ids. */
+const HOUSEHOLD_QUERY_CHUNK_SIZE = 90;
+
+/** Every non-archived, emailed member in one of `householdIds`, queried in chunks of at most
+ *  {@link HOUSEHOLD_QUERY_CHUNK_SIZE} household ids so the bound-parameter count never approaches
+ *  D1's cap. */
 async function membersInHouseholds(db: D1Database, householdIds: readonly string[]): Promise<MemberContactRow[]> {
   if (householdIds.length === 0) return [];
-  const placeholders = householdIds.map((_, index) => `?${index + 1}`).join(', ');
-  const { results } = await db
-    .prepare(
-      `SELECT id, name, email, household_id FROM members WHERE archived_at IS NULL AND email IS NOT NULL AND household_id IN (${placeholders})`,
-    )
-    .bind(...householdIds)
-    .all<MemberContactRow>();
-  return results;
+  const members: MemberContactRow[] = [];
+  for (let i = 0; i < householdIds.length; i += HOUSEHOLD_QUERY_CHUNK_SIZE) {
+    const chunk = householdIds.slice(i, i + HOUSEHOLD_QUERY_CHUNK_SIZE);
+    const placeholders = chunk.map((_, index) => `?${index + 1}`).join(', ');
+    const { results } = await db
+      .prepare(
+        `SELECT id, name, email, household_id FROM members WHERE archived_at IS NULL AND email IS NOT NULL AND household_id IN (${placeholders})`,
+      )
+      .bind(...chunk)
+      .all<MemberContactRow>();
+    members.push(...results);
+  }
+  return members;
 }
 
 /**

@@ -40,6 +40,18 @@ gate; nothing here trusts a count this component computed on its own.
 
   const preview = $derived(renderTemplateWithVariables(subject, body, PREVIEW_SAMPLE_VARS));
 
+  /** The compose step's own page-top banner: any `fail()` this route's actions return with no
+   *  `kind` and no `stage: 'review'` tag (the `review` action's own field-validation failures,
+   *  the only kind-less failure that can happen while still on the compose step). */
+  const composeError = $derived(
+    form && 'error' in form && !('kind' in form) && !('stage' in form && form.stage === 'review') ? form.error : null,
+  );
+
+  /** The review step's own inline banner, near its own actions: the `send` action's field-
+   *  validation failures (`stage: 'review'`, see the server action), unified with the review
+   *  step's existing `test`-send failure display rather than the page-top banner (item 9). */
+  const sendError = $derived(form && 'error' in form && 'stage' in form && form.stage === 'review' ? form.error : null);
+
   // Every action's result routes here: `review` advances the step and seeds this screen's own
   // review state, `test` only ever updates the inline test-send status, `send` returns to the
   // landing list (whose blast history `update()`'s own `invalidateAll` just refreshed) and clears
@@ -63,12 +75,32 @@ gate; nothing here trusts a count this component computed on its own.
     }
   });
 
-  /** Every form on this screen: refresh `data`/`form` from the server's own response (the same
-   *  `update()` the household desk's dialogs call) without a full-page navigation, so the draft
-   *  and step state above survive the round trip. */
+  /** Every plain form on this screen: refresh `data`/`form` from the server's own response (the
+   *  same `update()` the household desk's dialogs call) without a full-page navigation.
+   *  `reset: false` is load-bearing, not cosmetic: SvelteKit's default `update()` also resets the
+   *  underlying native `<form>`, and Svelte 5's `bind:value` re-syncs an input back to its own
+   *  `defaultValue` on a native reset. With the default `reset: true`, the compose form's own
+   *  `bind:value`-d `segmentKey`/`subject`/`body` state would be wiped back to `''` the instant
+   *  the `review` action's response settles -- the compose-to-review transition would silently
+   *  clear the very draft it is supposed to carry into review, and the review step's hidden
+   *  inputs would then post an empty draft to `?/send`. */
   function onSettle(): SubmitFunction {
     return () => async ({ update }) => {
-      await update();
+      await update({ reset: false });
+    };
+  }
+
+  /** The confirm dialog's own submit handler. Cannot use `method="dialog"`: `use:enhance`'s own
+   *  dev-mode guard throws for any form whose `method` is not `"post"`. So this is an ordinary
+   *  `method="post"` form and the dialog is closed explicitly here, at submit time, rather than
+   *  relying on `method="dialog"`'s own implicit close -- there is no reason to keep the confirm
+   *  modal open while the send itself is in flight. */
+  function onSendSubmit(): SubmitFunction {
+    return () => {
+      sendDialog?.close();
+      return async ({ update }) => {
+        await update({ reset: false });
+      };
     };
   }
 
@@ -97,11 +129,10 @@ gate; nothing here trusts a count this component computed on its own.
   <span aria-hidden="true">&larr;</span> Back to Email
 </a>
 
-{#if form && 'error' in form && !('kind' in form)}
-  <p class="mb-4 rounded-box border border-[var(--cairn-card-border)] px-4 py-3 text-sm font-medium text-error" role="alert">
-    {form.error}
-  </p>
-{/if}
+<p
+  class="text-sm font-medium text-error {composeError ? 'mb-4 rounded-box border border-[var(--cairn-card-border)] px-4 py-3' : ''}"
+  role="alert"
+>{composeError ?? ''}</p>
 
 {#if step === 'landing'}
   <OfficeList eyebrow="Club" title="Compose" subtitle={data.error ?? `${data.blasts.length} past ${data.blasts.length === 1 ? 'blast' : 'blasts'}.`}>
@@ -109,11 +140,10 @@ gate; nothing here trusts a count this component computed on its own.
       <button type="button" class="btn btn-primary btn-sm" onclick={startCompose}>New email</button>
     {/snippet}
 
-    {#if sendResult}
-      <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-success" role="status">
-        Sent to {sendResult.segmentLabel}: {sendResult.sentCount} delivered{sendResult.failedCount > 0 ? `, ${sendResult.failedCount} failed` : ''}.
-      </p>
-    {/if}
+    <p
+      class="text-sm font-medium text-success {sendResult ? 'border-b border-[var(--cairn-card-border)] px-6 py-3' : ''}"
+      role="status"
+    >{sendResult ? `Sent to ${sendResult.segmentLabel}: ${sendResult.sentCount} delivered${sendResult.failedCount > 0 ? `, ${sendResult.failedCount} failed` : ''}.` : ''}</p>
 
     <table class="table">
       <caption class="sr-only">Past segment blasts, newest first</caption>
@@ -202,14 +232,10 @@ gate; nothing here trusts a count this component computed on its own.
   </OfficeList>
 {:else if step === 'review' && review}
   <OfficeList eyebrow="Club" title="Review" subtitle="{review.segmentLabel}: {review.recipientCount} recipient{review.recipientCount === 1 ? '' : 's'}.">
-    {#if testStatus}
-      <p
-        class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium {testStatus.ok ? 'text-success' : 'text-error'}"
-        role="status"
-      >
-        {testStatus.ok ? `Test sent to ${data.editorEmail}.` : `Test failed: ${testStatus.error}`}
-      </p>
-    {/if}
+    <p
+      class="text-sm font-medium {testStatus ? (testStatus.ok ? 'border-b border-[var(--cairn-card-border)] px-6 py-3 text-success' : 'border-b border-[var(--cairn-card-border)] px-6 py-3 text-error') : ''}"
+      role="status"
+    >{testStatus ? (testStatus.ok ? `Test sent to ${data.editorEmail}.` : `Test failed: ${testStatus.error}`) : ''}</p>
 
     <div class="grid gap-6 p-6 lg:grid-cols-2">
       <section>
@@ -232,6 +258,11 @@ gate; nothing here trusts a count this component computed on its own.
       </section>
     </div>
 
+    <p
+      class="text-sm font-medium text-error {sendError ? 'border-b border-[var(--cairn-card-border)] px-6 py-3' : ''}"
+      role="alert"
+    >{sendError ?? ''}</p>
+
     <div class="flex flex-wrap justify-between gap-2 border-t border-[var(--cairn-card-border)] p-6">
       <button type="button" class="btn btn-ghost btn-sm" onclick={() => (step = 'compose')}>Back</button>
       <div class="flex flex-wrap gap-2">
@@ -248,11 +279,11 @@ gate; nothing here trusts a count this component computed on its own.
     </div>
   </OfficeList>
 
-  <dialog bind:this={sendDialog} class="modal" oncancel={(event) => event.preventDefault()}>
+  <dialog bind:this={sendDialog} class="modal">
     <div class="modal-box">
       <h2 class="text-lg font-bold">Send to {review.recipientCount} recipient{review.recipientCount === 1 ? '' : 's'}?</h2>
       <p class="py-2 text-sm text-muted">{review.segmentLabel}. This cannot be undone.</p>
-      <form method="dialog" use:enhance={onSettle()}>
+      <form method="post" action="?/send" use:enhance={onSendSubmit()}>
         <CsrfField />
         <input type="hidden" name="segmentKey" value={review.segmentKey} />
         <input type="hidden" name="subject" value={subject} />
@@ -260,8 +291,8 @@ gate; nothing here trusts a count this component computed on its own.
         <input type="hidden" name="confirm" value="on" />
         <div class="modal-action">
           <!-- svelte-ignore a11y_autofocus -->
-          <button type="submit" class="btn" autofocus formnovalidate>Cancel</button>
-          <button type="submit" class="btn btn-primary" formmethod="post" formaction="?/send">
+          <button type="button" class="btn" autofocus onclick={() => sendDialog?.close()}>Cancel</button>
+          <button type="submit" class="btn btn-primary">
             Send to {review.recipientCount} recipient{review.recipientCount === 1 ? '' : 's'}
           </button>
         </div>

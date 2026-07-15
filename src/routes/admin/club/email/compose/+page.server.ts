@@ -126,13 +126,17 @@ export const actions: Actions = {
     async ({ event, form, ctx }) => {
       const { segmentKey, subject, body } = readComposeFields(form);
       const confirmed = form.get('confirm') === 'on';
+      // `stage: 'review'` on every failure below: the send action only ever runs from the review
+      // step (there is no other form on this screen posting to `?/send`), so the client renders
+      // these inline near the review step's own actions rather than the page-top banner the
+      // compose step's own `review` action failures use.
       if (!segmentKey || !subject || !body.trim()) {
         ctx.audit({ action: 'compose-send', entity: 'email-blast', detail: 'rejected: missing segment, subject, or body' });
-        return fail(400, { error: 'Pick a segment and write a subject and body.' });
+        return fail(400, { error: 'Pick a segment and write a subject and body.', stage: 'review' as const });
       }
       if (!confirmed) {
         ctx.audit({ action: 'compose-send', entity: 'email-blast', detail: 'rejected: send not confirmed' });
-        return fail(400, { error: 'Confirm the recipient count before sending.' });
+        return fail(400, { error: 'Confirm the recipient count before sending.', stage: 'review' as const });
       }
       // Re-resolved from scratch, ignoring any count or recipient list the client posted back
       // from an earlier `review` call: this is the only recipient set `sendSegmentBlast` ever
@@ -142,7 +146,7 @@ export const actions: Actions = {
         segment = await resolveSegment(ctx.db, segmentKey as SegmentKey);
       } catch {
         ctx.audit({ action: 'compose-send', entity: 'email-blast', detail: `rejected: unknown segment ${segmentKey}` });
-        return fail(400, { error: 'Unknown segment.' });
+        return fail(400, { error: 'Unknown segment.', stage: 'review' as const });
       }
       const env = (event.platform?.env ?? {}) as BulkEmailEnv;
       const outcome = await sendSegmentBlast(env, ctx.db, { segment, subject, body, actor: ctx.editor.email });

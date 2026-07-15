@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   announceChannelOptions,
   buildAnnouncementEmailContent,
@@ -153,6 +153,42 @@ describe('currentMemberEmails', () => {
     });
     const emails = await currentMemberEmails(db);
     expect(new Set(emails).size).toBe(emails.length);
+  });
+
+  // The grace-window widening is intentional (the conductor's ruling: "current" means "current or
+  // grace", matching resolveSegment('current')'s own definition), pinned at its exact boundary
+  // with a fixed clock -- mirrors segments.test.ts's own convention for the identical boundary.
+  describe('the current/grace boundary', () => {
+    const NOW = new Date('2027-06-15T12:00:00Z');
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(NOW);
+    });
+    afterEach(() => vi.useRealTimers());
+
+    function paidAtDaysAgo(days: number): string {
+      return new Date(NOW.getTime() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+    }
+
+    it('includes a household past its one-year renewal boundary but still inside the default 30-day grace window', async () => {
+      const { db } = fakeD1({
+        allResults: {
+          'FROM households h': [{ household_id: 'hh-grace', paid_at: paidAtDaysAgo(365 + 20), primary_member_id: null }],
+          'FROM members WHERE archived_at': [{ id: 'mem-grace', name: 'Grace Member', email: 'grace@example.com', household_id: 'hh-grace' }],
+        },
+      });
+      await expect(currentMemberEmails(db)).resolves.toEqual(['grace@example.com']);
+    });
+
+    it('excludes a household past the grace window entirely', async () => {
+      const { db, calls } = fakeD1({
+        allResults: { 'FROM households h': [{ household_id: 'hh-lapsed', paid_at: paidAtDaysAgo(365 + 40), primary_member_id: null }] },
+      });
+      const emails = await currentMemberEmails(db);
+      expect(emails).toEqual([]);
+      expect(calls.some((c) => c.sql.startsWith('SELECT id, name, email, household_id FROM members'))).toBe(false);
+    });
   });
 });
 
