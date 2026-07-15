@@ -54,11 +54,15 @@ smoke ALL still wait on you):
   memo field (unmodified, no new public surface), so the smoke's REFUND memo must be written by
   calling executeRefund with the memo directly (a script/one-off), NOT through the plain UI. The
   CHARGE memo rides createCheckout metadata.memo cleanly. Memo string: `live-smoke 2026-07-XX`.
-- HELD DECISIONS still open (spec §6): smoke product ($1 donation default vs $100 domain-unwind);
-  dev-Access posture — dev IS public today, so the now-hardened-but-degrade-to-open magic-link/
-  money endpoints face the open internet against real member data UNTIL these commits deploy
-  (re-protect-dev vs accept-public); memo vs marker-column marking (Task 4 shipped memo only, the
-  column stays your call).
+- SMOKE MARKING: SETTLED (Geoff, 2026-07-15) — MEMO, no marker column. The shipped memo path
+  (Task 4) is the final mechanism; migration 0027 is dropped. Rationale: the smoke is one-time, so
+  a permanent typed column is over-engineering; `memo LIKE 'live-smoke%'` finds the row and the
+  memo column is a legitimate free-text field, not a schema workaround. If a recurring/scheduled
+  smoke is ever wanted, revisit the column then.
+- HELD DECISIONS still open (spec §6), now TWO: smoke product ($1 donation default vs $100
+  domain-unwind); dev-Access posture — the endpoints are now hardened and live on dev (deployed),
+  but dev is still public, so the choice is whether to re-protect dev with Access before the
+  cutover (re-protect-dev vs accept-public).
 - STEPS IN ORDER (push DONE — dev deploy triggered): your before/after on the four changed public
   forms on dev → CONFIRM the deferred-widget fix in a REAL browser against the live secret (drive
   the signup enrolled + renew branches on dev, verify the Turnstile widget renders and injects

@@ -104,9 +104,10 @@ rely on session plus rate limits instead. Rate-limit mechanism is the spec autho
 technical call. Spec authorship is cleared to run unattended (overnight-eligible).
 AUTHORED 2026-07-15 (the overnight run): docs/2026-07-15-payments-live-smoke-design.md
 (spec, incl. the sandbox dry-smoke stage and abort criteria) +
-docs/plans/2026-07-15-payments-live-smoke.md (plan). Three decision points held for Geoff:
+docs/plans/2026-07-15-payments-live-smoke.md (plan). Decision points for Geoff:
 smoke product ($1 donation default vs $100 domain-row alternative), dev-Access posture
-(dev verified PUBLIC today, contra CLAUDE.md), memo vs marker-column smoke marking.
+(dev verified PUBLIC today, contra CLAUDE.md), and smoke marking — SETTLED 2026-07-15 as
+MEMO (no marker column; the shipped memo path is final, migration 0027 dropped). Two remain.
 HARDENING HALF EXECUTED 2026-07-15 overnight (Opus-conducted, plan Tasks 1-6 + conductor
 steps 1-2): Turnstile on all five remaining public POSTs, the [[ratelimits]] layer, the
 optional smoke memo, and the key-swap appendix — 7 commits (56500fb..fd61fcf) gate-green
