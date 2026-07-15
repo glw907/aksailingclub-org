@@ -20,7 +20,9 @@ cairn-doctor role checks). The collapse surface, verified this session: club_rol
 (migration 0001_substrate), src/admin-club/lib/club-roles.ts (incl. the atomic last-owner
 guard), club-action.ts's role gate, the /admin/club layout guard, the Settings
 grant/revoke actions, and filterClubNav. ROADMAP's admin-roles entry updated to match.
-BUG LOGGED (Geoff's report, 2026-07-14, root-caused same session, NOT yet fixed): the
+BUG FIXED AND ON DEV (same session; commits bb1a98f + 491769f simplifier consolidation,
+deployed version b187f391, verified live: zero Teen-Intro/Intro-to-Sailing/Intermediate
+leaks on /events and home, 2026 classes render, home 200). Original log follows: the
 calendar shows duplicate and wrong-dated class entries since the MW import. One root
 cause, two symptoms: `src/theme/season-data.ts` (~line 114, home Season band) and
 `src/theme/events-data.ts` (~line 93, the /events listing) both query
@@ -42,6 +44,24 @@ admin-nav-reorg entry, which rides it): payments-live-smoke spec, the mw-cutover
 runbook, the season-rollover one-operation design, the class-management spec (after
 admin-roles lands its instructor role). Each ruling is recorded on its ROADMAP entry;
 admin-roles + admin-nav-reorg execute fully in-window (auth- and taste-critical).**
+
+**THE CAIRN NAV-LAYOUT DOUBLE-EXECUTION (2026-07-14 evening, recorded for the post-mortem):
+when Geoff directed this session to run the cairn nav-layout pass by workflow, a SECOND
+live session (the fresh cairn session that cairn's own STATUS had pre-baked, running in
+another terminal) was ALREADY executing the same plan via its own workflow
+(wf_ea16ef00-fdb) in the same nav-layout worktree. This session's workflow
+(wf_3ae128ab-ffe, ~1.23M subagent tokens) raced it; the implementer agents detected the
+contention mid-pass and switched to verify-not-duplicate (their recipe is now in cairn's
+agent memory), so all seven tasks landed exactly once and the worktree closed clean —
+but a large fraction of this session's workflow spend was waste. THE DEFECT WAS MINE:
+cairn's STATUS said "fresh session executes it" and my own Task-1 implementer found warm
+uncommitted code in the worktree, and I checked for a live runner only after the fact.
+Lesson for the record: before dispatching into a shared worktree, check for a live
+concurrent executor (pgrep the worktree path, stat the workflow journals, ask Geoff if a
+session is already on it). RESOLUTION: this session STOOD DOWN on the cairn side; the
+other session was observed running the Task-8 close-ritual gate and owns close, merge,
+and the 0.86.0 cut. This session watches the registry and resumes initiative 5 (the
+^0.86.0 bump + brainstorm) when the cut lands.**
 
 **PRIOR: INITIATIVE 4 (segment-email) IS COMPLETE, MERGED TO MAIN (98257fe), MIGRATION LIVE,
 AND ON DEV (2026-07-14, the program's fourth session). Spec
