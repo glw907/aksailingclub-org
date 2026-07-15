@@ -115,10 +115,18 @@ const EVENTS_QUERY = `SELECT id, title, slug, category AS event_type, start_date
  *  duplicate, wrong-dated entries. `events` carries no `season` column and needs no such filter. */
 const CLASSES_QUERY = `SELECT id, name AS title, slug, 'class' AS event_type, start_date, end_date, NULL AS date_history
                         FROM classes WHERE visible = 1 AND season = ?1`;
-/** The current season, read from `settings` the same way `class-schedule.remote.ts`'s
- *  `getClassSchedule` already does. A bound parameter (not a correlated subquery) keeps the
- *  season lookup and the classes read as two separate, independently testable steps. */
 const CURRENT_SEASON_QUERY = `SELECT value FROM settings WHERE key = 'current_season'`;
+
+/** The current season, read from `settings` the same way `class-schedule.remote.ts`'s
+ *  `getClassSchedule` already does; `null` when `current_season` is unset. Shared by the full
+ *  `/events` listing (`$theme/events-data.ts`'s `readEventRows`), which binds it to its own
+ *  classes query the same way `loadSeasonMonths` does below. A bound parameter (not a correlated
+ *  subquery) keeps the season lookup and the classes read as two separate, independently
+ *  testable steps. */
+export async function readCurrentSeason(db: D1Database): Promise<number | null> {
+  const seasonRow = await db.prepare(CURRENT_SEASON_QUERY).first<{ value: string }>();
+  return seasonRow ? Number(seasonRow.value) : null;
+}
 
 /** The best available date for ordering an event with no current-year `start_date`: its most
  *  recent `date_history` entry, or null when the row carries no date at all (a genuinely TBD
@@ -282,8 +290,7 @@ export function splitSeasonColumns(months: SeasonMonth[]): [SeasonMonth[], Seaso
  *  safe-failure posture `class-schedule.remote.ts`'s empty schedule already uses). */
 export async function loadSeasonMonths(db: D1Database, currentYear = new Date().getFullYear()): Promise<SeasonMonth[]> {
   try {
-    const seasonRow = await db.prepare(CURRENT_SEASON_QUERY).first<{ value: string }>();
-    const season = seasonRow ? Number(seasonRow.value) : null;
+    const season = await readCurrentSeason(db);
     const [events, classes] = await Promise.all([
       db.prepare(EVENTS_QUERY).all<EventRow>(),
       season === null ? Promise.resolve({ results: [] as EventRow[] }) : db.prepare(CLASSES_QUERY).bind(season).all<EventRow>(),

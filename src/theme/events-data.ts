@@ -12,7 +12,7 @@
 // of its date, mirroring the legacy main-site Worker's own `buildEventsPage`).
 import type { D1Database } from '@cloudflare/workers-types';
 import type { MediaResolve } from '@glw907/cairn-cms/media';
-import { categorize, DATE_TBD, formatDateRange, monthAndDay, routeIdOf, SEASON_MONTHS } from './season-data';
+import { categorize, DATE_TBD, formatDateRange, monthAndDay, readCurrentSeason, routeIdOf, SEASON_MONTHS } from './season-data';
 import { resolveEventImageUrl } from './event-images';
 
 /** A raw event or class row from D1, the full column set the detailed listing (and the per-event
@@ -94,20 +94,14 @@ const CLASSES_QUERY = `SELECT id, name AS title, slug, 'class' AS event_type, st
                                END AS registration_status,
                                fee
                         FROM classes WHERE visible = 1 AND season = ?1`;
-/** The current season, read from `settings` the same way `class-schedule.remote.ts`'s
- *  `getClassSchedule` and `season-data.ts`'s `loadSeasonMonths` already do. A bound parameter (not
- *  a correlated subquery) keeps the season lookup and the classes read as two separate,
- *  independently testable steps. */
-const CURRENT_SEASON_QUERY = `SELECT value FROM settings WHERE key = 'current_season'`;
 
 /** Read every visible event and class row, full detail. Degrades to an empty list on any D1
  *  failure, the same safe failure `season-data.ts`'s `loadSeasonMonths` uses. The classes arm reads
- *  no rows at all when `current_season` is missing from `settings`, rather than falling back to
- *  every season. */
+ *  no rows at all when `current_season` is missing from `settings` (`readCurrentSeason`), rather
+ *  than falling back to every season. */
 export async function readEventRows(db: D1Database): Promise<EventDetailRow[]> {
   try {
-    const seasonRow = await db.prepare(CURRENT_SEASON_QUERY).first<{ value: string }>();
-    const season = seasonRow ? Number(seasonRow.value) : null;
+    const season = await readCurrentSeason(db);
     const [events, classes] = await Promise.all([
       db.prepare(EVENTS_QUERY).all<EventDetailRow>(),
       season === null
