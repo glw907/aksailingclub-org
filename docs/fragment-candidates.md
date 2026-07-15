@@ -7,6 +7,9 @@
 > content-consolidation pass converts this list and deletes it.
 
 Each entry: what the content is, where it currently lives, and the likely fragment shape.
+Where the 2026-07-15 pass converged duplicated copies on one canonical wording (allowed, per
+Geoff: gentle realignment that makes the future extraction mechanical), the entry records
+that canonical form.
 
 - **Mooring cost and eligibility** — Moorings (facts block) and Join (additional-fees table).
   Fragment: a `:::facts` block (cost, eligibility, waitlist reality).

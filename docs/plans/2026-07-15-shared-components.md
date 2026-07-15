@@ -220,7 +220,13 @@ site-wide content consolidation is a later content pass. Editing rule: existing 
 copy is the specification — restructure into components by moving text, deletion-only trims,
 never paraphrase. When a retrofit touches content that is duplicated on another page, keep
 the duplicate (per Geoff, 2026-07-15) and add or update its entry in
-`docs/fragment-candidates.md`.
+`docs/fragment-candidates.md`. Exception to the no-paraphrase rule (Geoff, 2026-07-15):
+where two pages state the same fact in different words, the retrofit may gently converge
+both on one canonical structure and phrasing — record the canonical form in the
+fragment-candidates entry — so the future fragment extraction is a mechanical lift.
+Component shapes may likewise be gently realigned where a small contract change makes a
+block self-contained enough to live in a fragment (no dependence on surrounding page
+context).
 
 - [ ] Moorings: cost/eligibility as `:::facts` (Cost, Eligibility, Boat size, Waitlist);
   "Active Participating Member" prerequisite as a `requirement` callout; trailing storage
