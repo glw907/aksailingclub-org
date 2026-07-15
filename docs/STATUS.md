@@ -49,7 +49,15 @@ tokens across 13 dispatches (7 implementers, 1 simplifier, 2 reviewers, 1 fix ro
 review-phase observers); ZERO questions asked of Geoff mid-pass (4 unprompted steers received:
 skill routing, Fable economy, fragments x2). NEXT CANDIDATES: the content-consolidation pass
 once cairn fragments ship; the event-detail page's remaining older styling; NMG full
-de-carding; education pacing (existing backlog).**
+de-carding; education pacing (existing backlog). POST-RELEASE FIX (a7c5cae, Geoff-caught on
+dev): the pass's :not(.cta-link) specificity bump made the unlayered prose-link rule beat
+every TOC variant's matched-weight override — doubled underline on the rail. Root-cause fix,
+not a weight bump: TOC furniture stamps `not-prose-links` and the site.css rule excludes that
+subtree (contract over arms race; the loose `not-prose` marker was NOT reused — it wraps real
+prose links). Side effect, deliberate: the mobile boxed .toc's links drop their underline,
+joining every other TOC variant's quiet idiom. e2e re-ran 33/33, no baseline churn (the rail
+sits outside the education test's frame — noting the pixel suite has NO viewport that shows
+the TOC rail, which is how the regression escaped it; candidate rider for a future pass).**
 
 **PAYMENTS HARDENING EXECUTED AND RELEASED TO DEV (2026-07-15 overnight; pushed on Geoff's
 explicit "make the accounting updates, then release"). Ran the hardening half of
