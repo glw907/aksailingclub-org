@@ -160,14 +160,24 @@ body {
    `:not(.cta-link)` excludes the `:::page-cta` actions row's own buttons (chassis prose.css's
    `.cta-link`/`.cta-primary`/`.cta-secondary`) for the same reason: this file is unlayered, so
    without the exclusion its underline would win over the layered button styling regardless of
-   specificity. */
-.site-main .prose a:not(.asc-card-link):not(.asc-cta-btn):not(.cta-link) {
+   specificity.
+   `:not(.not-prose-links *)` is the structural exclusion (2026-07-15, born from a real
+   regression): navigation furniture that owns its own link styling (the TOC rail, the sticky TOC,
+   the jump-links and mobile-toc disclosures) stamps `not-prose-links` on its root, and this rule
+   never reaches into such a subtree. Before this clause, that furniture protected itself by
+   matching this selector's exact specificity and winning on cascade order, an arms race every
+   `:not()` added here silently loses for them: the `.cta-link` addition tipped every TOC variant
+   into a doubled underline. Furniture opts out by contract now, never by weight. (The marker is
+   deliberately NOT the template's existing `not-prose` class: that one is a loose flow-rhythm
+   annotation also stamped on wrappers full of real prose links, e.g. education's registration
+   band, which must keep this rule's dress.) */
+.site-main .prose a:not(.asc-card-link):not(.asc-cta-btn):not(.cta-link):not(.not-prose-links *) {
   color: var(--color-primary);
   text-decoration: underline;
   text-decoration-color: color-mix(in oklab, var(--color-primary) 35%, transparent);
   text-underline-offset: 3px;
 }
-.site-main .prose a:not(.asc-card-link):not(.asc-cta-btn):not(.cta-link):hover {
+.site-main .prose a:not(.asc-card-link):not(.asc-cta-btn):not(.cta-link):not(.not-prose-links *):hover {
   text-decoration-color: currentColor;
 }
 

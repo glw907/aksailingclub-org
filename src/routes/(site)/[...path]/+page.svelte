@@ -566,13 +566,13 @@
          content" at narrow widths. A <details> collapsed by default (the same chevron-disclosure
          gesture the boxed-panel template's own `.toc` already uses below) replaces the always-open
          flex row; the rail past 1280px is untouched (it was never the complaint). -->
-    <details class="jump-links not-prose">
+    <details class="jump-links not-prose not-prose-links">
       <summary class="jump-links-label">On this page</summary>
       <nav aria-label="Jump to section">
         {@render tocList(jumpLinks, null)}
       </nav>
     </details>
-    <aside class="page-toc-rail not-prose">
+    <aside class="page-toc-rail not-prose not-prose-links">
       <p class="page-toc-heading">On this page</p>
       <nav aria-label="On this page">
         {@render tocList(jumpLinks, highlightedId)}
@@ -591,7 +591,7 @@
     {/each}
   {:else}
     {#if showToc}
-      <details class="toc mobile-toc">
+      <details class="toc mobile-toc not-prose-links">
         <summary>Table of contents</summary>
         <nav aria-label="Table of contents">
           {@render tocList(toc, null)}
@@ -604,7 +604,7 @@
         <div class="article-sections">
           {@html sectionsHtml}
         </div>
-        <aside class="page-toc-sticky">
+        <aside class="page-toc-sticky not-prose-links">
           <p class="page-toc-heading">On this page</p>
           <nav aria-label="Table of contents">
             {@render tocList(toc, highlightedId)}
