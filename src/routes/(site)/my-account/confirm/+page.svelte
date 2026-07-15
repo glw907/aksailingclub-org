@@ -25,6 +25,25 @@ could be traced back to a member. -->
   </p>
 {/snippet}
 
+{#snippet confirmFrame(errorMessage: string | null)}
+  <!-- The initial "sign in" frame, shared by a first visit and a confirm-action spam-check
+       failure (both show the same untouched-token frame). `errorMessage` is `null` on the first
+       visit and the spam-check message on a failure. -->
+  <h1 class="m-0 font-display text-step-4 font-semibold leading-tight tracking-tight text-base-content">
+    Sign in to {siteConfig.siteName}
+  </h1>
+  <p class="mt-s max-w-measure-wide text-step-0 text-muted">Click below to finish signing in.</p>
+  {#if errorMessage}
+    {@render spamCheckError(errorMessage)}
+  {/if}
+  <form method="POST" action="?/confirm" class="mt-l flex flex-col items-start gap-s">
+    <input type="hidden" name="csrf" value={data.csrf} />
+    <input type="hidden" name="token" value={data.token} />
+    <div class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY}></div>
+    <button type="submit" class="btn btn-primary">Sign in</button>
+  </form>
+{/snippet}
+
 {#if form?.resent}
   <h1 class="m-0 font-display text-step-4 font-semibold leading-tight tracking-tight text-base-content">
     Check your inbox
@@ -36,17 +55,7 @@ could be traced back to a member. -->
   <!-- The confirm action's own spam-check failure: the same initial "sign in" frame, since the
        magic-link token itself was never consumed or found invalid (a distinct case from a
        genuine expired/invalid token below). -->
-  <h1 class="m-0 font-display text-step-4 font-semibold leading-tight tracking-tight text-base-content">
-    Sign in to {siteConfig.siteName}
-  </h1>
-  <p class="mt-s max-w-measure-wide text-step-0 text-muted">Click below to finish signing in.</p>
-  {@render spamCheckError(form.error)}
-  <form method="POST" action="?/confirm" class="mt-l flex flex-col items-start gap-s">
-    <input type="hidden" name="csrf" value={data.csrf} />
-    <input type="hidden" name="token" value={data.token} />
-    <div class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY}></div>
-    <button type="submit" class="btn btn-primary">Sign in</button>
-  </form>
+  {@render confirmFrame(form.error)}
 
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 {:else if form && !form.ok}
@@ -71,16 +80,7 @@ could be traced back to a member. -->
 
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 {:else}
-  <h1 class="m-0 font-display text-step-4 font-semibold leading-tight tracking-tight text-base-content">
-    Sign in to {siteConfig.siteName}
-  </h1>
-  <p class="mt-s max-w-measure-wide text-step-0 text-muted">Click below to finish signing in.</p>
-  <form method="POST" action="?/confirm" class="mt-l flex flex-col items-start gap-s">
-    <input type="hidden" name="csrf" value={data.csrf} />
-    <input type="hidden" name="token" value={data.token} />
-    <div class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY}></div>
-    <button type="submit" class="btn btn-primary">Sign in</button>
-  </form>
+  {@render confirmFrame(null)}
 
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 {/if}
