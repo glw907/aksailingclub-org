@@ -1,23 +1,17 @@
-// The Club section's Settings screen (Task 4, extended pass 2.2): role management (grant,
-// change, or revoke an owner/admin seat by email), the waitlist offer window, the three
-// membership tier prices, the class registration-opens gate (migration 0018_class_lifecycle),
-// and the season rollover. The parent layout guard
-// (../+layout.server.ts) admits any club role into this section, so an admin can still see the
-// roster and every current value; every WRITE here is owner-only through `clubAdminAction`'s
-// `ownerOnly` option (Task 6's rider 1), since granting or revoking a seat, changing a price, and
-// rolling the season over are all a different trust level than the day-to-day admin work the
+// The Club section's Settings screen (initiative 5 Task 3, superseding Task 4/pass 2.2's role
+// management): the waitlist offer window, the three membership tier prices, the class
+// registration-opens gate (migration 0018_class_lifecycle), and the season rollover. Role
+// management retired with `club-roles.ts`: cairn's own ManageEditors screen
+// (`/admin/editors`), reading the vocabulary declared in `cairn.config.ts`, is the one place a
+// seat is granted or revoked now. The parent layout guard (../+layout.server.ts) admits any club
+// role into this section, so an admin can still see every current value; every WRITE here is
+// owner-only through `clubAdminAction`'s `ownerOnly` option (Task 6's rider 1, now checking the
+// engine's verified `ctx.editor.capability` rather than a `club_roles` row), since changing a
+// price or rolling the season over is a different trust level than the day-to-day admin work the
 // rest of Club allows.
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
-import {
-  getClubRole,
-  LastOwnerError,
-  listClubRoles,
-  removeClubRole,
-  setClubRole,
-  type ClubRoleGrant,
-} from '$admin-club/lib/club-roles';
 import { resolveClubDb } from '$admin-club/lib/club-db';
 import {
   getClassRegistrationOpens,
@@ -36,7 +30,6 @@ export const load: PageServerLoad = async (event) => {
   const db = resolveClubDb(event.platform?.env);
   if (!db) {
     return {
-      roles: [] as ClubRoleGrant[],
       offerWindowHours: null,
       tierPrices: null,
       classRegistrationOpens: null,
@@ -45,21 +38,18 @@ export const load: PageServerLoad = async (event) => {
       error: 'CLUB_DB is not bound.',
     };
   }
-  const [roles, offerWindowHours, tierPrices, classRegistrationOpens, rollover, role] = await Promise.all([
-    listClubRoles(db),
+  const [offerWindowHours, tierPrices, classRegistrationOpens, rollover] = await Promise.all([
     getOfferWindowHours(db),
     getTierPrices(db),
     getClassRegistrationOpens(db),
     getRolloverPreview(db),
-    getClubRole(db, editor.email),
   ]);
   return {
-    roles,
     offerWindowHours,
     tierPrices,
     classRegistrationOpens,
     rollover,
-    isOwner: role === 'owner',
+    isOwner: editor.capability === 'owner',
     error: null as string | null,
   };
 };
@@ -88,56 +78,7 @@ function isTierPriceError(value: number | { error: string }): value is { error: 
   return typeof value === 'object';
 }
 
-const ROLE_DENIED_MESSAGE = 'Only a club owner can manage roles.';
-
 export const actions: Actions = {
-  setRole: clubAdminAction(
-    async ({ form, ctx }) => {
-      const email = form.get('email');
-      const role = form.get('role');
-      if (typeof email !== 'string' || !email.trim() || (role !== 'owner' && role !== 'admin')) {
-        ctx.audit({ action: 'set-role', entity: 'club-role', detail: 'rejected: bad input' });
-        return fail(400, { error: 'A valid email and role are required.' });
-      }
-      const grantedEmail = email.trim();
-      try {
-        await setClubRole(ctx.db, grantedEmail, role, ctx.editor.email);
-      } catch (err) {
-        if (err instanceof LastOwnerError) {
-          ctx.audit({ action: 'set-role', entity: 'club-role', entityId: grantedEmail, detail: 'rejected: last owner' });
-          return fail(400, { error: err.message });
-        }
-        throw err;
-      }
-      ctx.audit({ action: 'set-role', entity: 'club-role', entityId: grantedEmail, detail: role });
-      return { ok: true };
-    },
-    { ownerOnly: true, action: 'set-role', entity: 'club-role', deniedMessage: ROLE_DENIED_MESSAGE },
-  ),
-
-  removeRole: clubAdminAction(
-    async ({ form, ctx }) => {
-      const email = form.get('email');
-      if (typeof email !== 'string' || !email.trim()) {
-        ctx.audit({ action: 'remove-role', entity: 'club-role', detail: 'rejected: missing email' });
-        return fail(400, { error: 'An email is required.' });
-      }
-      const revokedEmail = email.trim();
-      try {
-        await removeClubRole(ctx.db, revokedEmail);
-      } catch (err) {
-        if (err instanceof LastOwnerError) {
-          ctx.audit({ action: 'remove-role', entity: 'club-role', entityId: revokedEmail, detail: 'rejected: last owner' });
-          return fail(400, { error: err.message });
-        }
-        throw err;
-      }
-      ctx.audit({ action: 'remove-role', entity: 'club-role', entityId: revokedEmail });
-      return { ok: true };
-    },
-    { ownerOnly: true, action: 'remove-role', entity: 'club-role', deniedMessage: ROLE_DENIED_MESSAGE },
-  ),
-
   updateOfferWindow: clubAdminAction(
     async ({ form, ctx }) => {
       const raw = form.get('offerWindowHours');

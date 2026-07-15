@@ -1,12 +1,13 @@
 <!--
 @component
-The Club section's Settings screen (Task 4, extended pass 2.2): who holds an owner or admin seat,
-how long a waitlist offer stays open before it expires, the three membership tier prices, and the
-season rollover. All are the kind of setting an owner touches rarely, so one screen suits them
-better than several. Every write is owner-only (see the route's own header comment); an admin
-still sees the roster and every current value, just not the forms to change any of them, the same
-"sees the section, some actions still refuse" posture Signups already uses for its own audit-gated
-writes.
+The Club section's Settings screen (initiative 5 Task 3, superseding Task 4/pass 2.2's role
+management): how long a waitlist offer stays open before it expires, the three membership tier
+prices, and the season rollover. All are the kind of setting an owner touches rarely, so one
+screen suits them better than several. Every write is owner-only (see the route's own header
+comment); an admin still sees every current value, just not the forms to change any of them, the
+same "sees the section, some actions still refuse" posture Signups already uses for its own
+audit-gated writes. Role management moved to cairn's own ManageEditors screen
+(`/admin/editors`), so this screen only points there rather than duplicating it.
 
 The rollover section is this screen's one DESTRUCTIVE action (per the design suite's own naming:
 "the type-to-confirm gate every serious admin uses"): a `<dialog>` asking the owner to type the
@@ -21,13 +22,11 @@ forward-only check collapse into the one comparison).
   import { untrack } from 'svelte';
   import type { PageData, ActionData } from './$types';
   import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
-  import { SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
-  import { HEADER_CELL, formatCivilDate } from '$admin-club/lib/ui';
+  import { TextField } from '@glw907/cairn-cms/admin-fields';
+  import { HEADER_CELL } from '$admin-club/lib/ui';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
-  let newRoleEmail = $state('');
-  let newRole = $state('admin');
   // A one-time seed from the load's current value, not a live mirror (the post-submit re-render
   // would otherwise clobber whatever the owner just typed); `untrack` marks that deliberately, the
   // same idiom the engine's own settings screens use (CairnTidySettings.svelte).
@@ -64,47 +63,9 @@ forward-only check collapse into the one comparison).
   <div class="grid gap-8 p-6 lg:grid-cols-2">
     <section>
       <h2 class={HEADER_CELL}>Club roles</h2>
-      <ul class="list mt-3">
-        {#each data.roles as grant (grant.email + grant.role)}
-          <li class="list-row items-center">
-            <div class="list-col-grow">
-              <span class="font-semibold">{grant.email}</span>
-              <span class="badge badge-ghost badge-sm ml-2 font-medium">{grant.role === 'owner' ? 'Owner' : 'Admin'}</span>
-              <p class="text-xs text-muted">
-                Granted by {grant.grantedBy} &middot; {formatCivilDate(grant.grantedAt.slice(0, 10))}
-              </p>
-            </div>
-            {#if data.isOwner}
-              <form method="post" action="?/removeRole">
-                <input type="hidden" name="email" value={grant.email} />
-                <CsrfField />
-                <button type="submit" class="btn btn-ghost btn-sm">Revoke</button>
-              </form>
-            {/if}
-          </li>
-        {:else}
-          <li class="list-row">
-            <p class="w-full py-4 text-center text-sm text-muted">No roles granted yet.</p>
-          </li>
-        {/each}
-      </ul>
-
-      {#if data.isOwner}
-        <form method="post" action="?/setRole" class="mt-4 flex flex-wrap items-end gap-3">
-          <TextField label="Email" name="email" type="email" bind:value={newRoleEmail} />
-          <SelectField
-            label="Role"
-            name="role"
-            bind:value={newRole}
-            options={[
-              { value: 'admin', label: 'Admin' },
-              { value: 'owner', label: 'Owner' },
-            ]}
-          />
-          <CsrfField />
-          <button type="submit" class="btn btn-sm">Grant</button>
-        </form>
-      {/if}
+      <p class="mt-1 text-sm text-muted">
+        Grant, change, or revoke a seat from <a href="/admin/editors" class="link">Editors</a>.
+      </p>
     </section>
 
     <section>
