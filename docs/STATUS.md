@@ -20,6 +20,20 @@ cairn-doctor role checks). The collapse surface, verified this session: club_rol
 (migration 0001_substrate), src/admin-club/lib/club-roles.ts (incl. the atomic last-owner
 guard), club-action.ts's role gate, the /admin/club layout guard, the Settings
 grant/revoke actions, and filterClubNav. ROADMAP's admin-roles entry updated to match.
+BUG LOGGED (Geoff's report, 2026-07-14, root-caused same session, NOT yet fixed): the
+calendar shows duplicate and wrong-dated class entries since the MW import. One root
+cause, two symptoms: `src/theme/season-data.ts` (~line 114, home Season band) and
+`src/theme/events-data.ts` (~line 93, the /events listing) both query
+`FROM classes WHERE visible = 1` with NO season filter — latent while every class row
+was season 2026, exposed when the import minted the 10 historical 2024/2025 instances
+(all visible=1; verified live: 5 rows per season 2024/2025/2026). The historical
+instances leak into the current calendar's month buckets, reading as doubles and as
+wrong-dated entries (Geoff's "1st intro wasn't July 11" = the 2024 instance's real
+2024-07-11 date beside the real 2026-06-18 class). The education class-schedule island
+is NOT affected (class-schedule.remote.ts already filters `season = ?1` off settings
+current_season — the pattern the fix should reuse). Fix shape: season-filter the class
+arm of both modules keyed on current_season, + a regression test with multi-season
+fixture rows. Small, well-specified; should land before Geoff's dev walkthrough.
 THE FABLE-WINDOW SPEC QUEUE (Geoff, 2026-07-14, same session): while the Fable window
 holds (~07-19, verify before relying), bank the judgment layer of the remaining
 program as SPEC-ONLY initiatives — Fable authors the brainstorm/spec/plan in-window,
