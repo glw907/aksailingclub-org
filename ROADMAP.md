@@ -121,14 +121,25 @@ six primary pages carry promise heroes, every secondary content page renders thr
 the tier system's catch-all (plain hero + TOC standard), and the routes that bypass it
 are deliberate machinery (forms, portal, posts/tags; /events/ mirrors the promise hero
 locally — consolidate to a shared component on a third consumer). What remains is a
-punch list, not a migration: the `.page-cta` closing-panel ratification and rollout to
-its five queued pages (join, members, visiting-the-club, renewing-your-membership,
+punch list plus a sweep. THE METHOD (Geoff's ruling, 2026-07-14): move through the
+site PAGE-BY-PAGE and confirm good design — every page gets an affirmative
+confirmation against the design contract (the density recipes, editorial pacing, the
+image standard, the color story, the type spine), not just the pages that drew
+complaints. Shape: pages grouped by template kind for review economy — (1) home +
+the six primary pages (mostly round-hardened already; fast confirms), (2) the
+Members-menu children and membership/renewal how-tos, (3) governance and policy
+documents, (4) storage pages, (5) form/confirmation and system pages, (6) the news
+surfaces (index, tag pages, post/bulletin rendering). Per group: conductor render
+reads at the five-viewport bar, fixes for what misses the contract, then Geoff's live
+localhost read confirms the group; a confirmed page is logged and not revisited unless
+he reopens it. Rolled into the sweep: the `.page-cta` ratification and rollout to its
+five queued pages (join, members, visiting-the-club, renewing-your-membership,
 new-member-guide; education already renders it), the posts/bulletins composition spec
 (the phased half of the template-system spec, never written), and the polish backlog
-(docs/2026-07-07-polish-backlog.md) triaged into live rounds. Method: the
-design-refinement live-round loop with Geoff's optical read as the gate; decisions.md
-rules stand, never re-litigated. Outside the mw-* program — runs interleaved with it
-on Geoff's review availability.
+(docs/2026-07-07-polish-backlog.md) triaged into the groups. decisions.md rules stand,
+never re-litigated. Outside the mw-* program — paced by Geoff's review availability.
+The ledger: docs/design-benchmark/page-confirmations.md (home + education already
+confirmed, Geoff 2026-07-14).
 Fable-window ruling (Geoff, 2026-07-14): FABLE-PRIORITY IN-WINDOW. Geoff finds Fable
 much stronger in the design realm, and unlike the mechanical initiatives this edge
 cannot be banked as a spec — the taste lives in the conducting (probe authorship,
