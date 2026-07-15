@@ -14,7 +14,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
-import { resolveClubDb } from '$admin-club/lib/club-roles';
+import { resolveClubDb } from '$admin-club/lib/club-db';
 import { clubAdminAction } from '$admin-club/lib/club-action';
 import { createHousehold, listHouseholds, type HouseholdListRow } from '$admin-club/lib/households-store';
 

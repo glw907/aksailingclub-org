@@ -8,7 +8,10 @@ import { actions as detailActions } from '../routes/admin/club/classes/[id]/+pag
 import { fakeD1 } from './_fake-d1';
 
 const admin: Editor = { email: 'admin@example.com', displayName: 'Admin', role: 'club-admin', capability: 'editor' };
-const noRole: Editor = { email: 'no-role@example.com', displayName: 'No Role', role: 'club-admin', capability: 'editor' };
+// 'instructor' is the site's own declared no-club-access role (initiative 5 Task 2):
+// clubAdminAction's gate now reads `editor.role` directly instead of a `club_roles` row, so a
+// fixture meant to fail that gate must carry a role outside {'owner', 'club-admin'}.
+const noRole: Editor = { email: 'no-role@example.com', displayName: 'No Role', role: 'instructor', capability: 'none' };
 
 const CSRF_COOKIE_NAME = '__Host-cairn_csrf';
 const CSRF_TOKEN = 'test-csrf-token';
@@ -237,9 +240,10 @@ describe('classes actions: instructor assignment', () => {
       postEvent(admin, { email: 'coach@example.com', name: 'Coach' }, { db, auditSink: sink }),
     );
     expect(result).toEqual({ ok: true });
-    // the role check, ensureMember's own lookup, then the one class_instructors insert
-    // (the fixture's already-known member means ensureMember writes nothing of its own)
-    expect(calls).toHaveLength(3);
+    // ensureMember's own lookup, then the one class_instructors insert (the fixture's
+    // already-known member means ensureMember writes nothing of its own; clubAdminAction's role
+    // gate no longer queries club_roles, initiative 5 Task 2).
+    expect(calls).toHaveLength(2);
     const insert = calls.find((c) => c.sql.startsWith('INSERT INTO class_instructors'));
     expect(insert?.args).toEqual(['fleet-tune-up-weekend', 'mem-1', 'Coach']);
     expect(calls.some((c) => c.sql.startsWith('UPDATE') || c.sql.startsWith('DELETE'))).toBe(false);
@@ -267,8 +271,9 @@ describe('classes actions: instructor assignment', () => {
       postEvent(admin, { email: 'coach@example.com' }, { db, auditSink: sink }),
     );
     expect(result).toEqual({ ok: true });
+    // clubAdminAction's role gate no longer queries club_roles (initiative 5 Task 2): it is the
+    // only DB call this handler makes.
     expect(calls).toEqual([
-      expect.objectContaining({ sql: expect.stringContaining('FROM club_roles') }),
       {
         sql: 'DELETE FROM class_instructors WHERE class_id = ?1 AND member_id = (SELECT id FROM members WHERE email = ?2)',
         args: ['fleet-tune-up-weekend', 'coach@example.com'],

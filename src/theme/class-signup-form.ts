@@ -92,7 +92,7 @@ export async function resolveClassEligibility(db: D1Database, email: string): Pr
 }
 
 /** The slice of `App.Platform['env']` this handler actually reads, narrowed the same way
- *  `club-roles.ts`'s own `resolveClubDb` narrows `platform.env`: a plain `env: unknown` argument,
+ *  `club-db.ts`'s own `resolveClubDb` narrows `platform.env`: a plain `env: unknown` argument,
  *  cast internally, so a caller (or a test) never has to satisfy the engine's full
  *  `CairnPlatformBindings` shape just to exercise this one form. `EMAIL` threads through to
  *  `signUpForClass`'s own optional `notify` (the class-reminder set's `welcome` touch); missing

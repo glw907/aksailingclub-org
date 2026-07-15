@@ -11,7 +11,7 @@
 import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle } from '@sveltejs/kit';
 import { createAuthGuard } from '@glw907/cairn-cms/sveltekit';
-import { resolveClubDb } from '$admin-club/lib/club-roles';
+import { resolveClubDb } from '$admin-club/lib/club-db';
 import { createClubAuditSink } from '$admin-club/lib/audit-sink';
 
 // The root `_headers` file covers static assets only: on Cloudflare, Worker-rendered (SSR)

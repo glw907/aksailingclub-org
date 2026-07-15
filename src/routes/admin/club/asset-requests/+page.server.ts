@@ -6,7 +6,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
 import { clubAdminAction } from '$admin-club/lib/club-action';
-import { resolveClubDb } from '$admin-club/lib/club-roles';
+import { resolveClubDb } from '$admin-club/lib/club-db';
 import { approveNewRequest, approveRetentionRequest, denyAssetRequest, listPendingAssetRequests } from '$member-portal/lib/assets';
 
 export const load: PageServerLoad = async (event) => {

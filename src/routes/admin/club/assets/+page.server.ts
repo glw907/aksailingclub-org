@@ -6,7 +6,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
-import { resolveClubDb } from '$admin-club/lib/club-roles';
+import { resolveClubDb } from '$admin-club/lib/club-db';
 import { clubAdminAction } from '$admin-club/lib/club-action';
 import { getCurrentSeason } from '$admin-club/lib/club-settings';
 import {

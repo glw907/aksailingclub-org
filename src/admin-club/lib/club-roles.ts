@@ -3,13 +3,17 @@
 // carries a second table, `club_roles`, that this module is the one reader and writer of. The
 // stored vocabulary ('owner', 'club-admin', 'instructor') and the API vocabulary ('owner',
 // 'admin', null) deliberately differ: the schema's ratified enum names the seat a member holds
-// day to day ("club-admin"), while every caller here (the layout guard, the nav filter, the
-// settings screen) only ever needs the shorter word. An instructor grant carries no admin
-// surface at all (the member-facing roster is 2.2's), so it maps to the same `null` a bare email
-// with no grant gets.
+// day to day ("club-admin"), while every caller here (the nav filter, the settings screen) only
+// ever needs the shorter word. An instructor grant carries no admin surface at all (the
+// member-facing roster is 2.2's), so it maps to the same `null` a bare email with no grant gets.
+// Initiative 5 Task 2 collapsed the layout guard and the action wrapper onto the engine's typed
+// session (`locals.editor.role`), so this table is now read only by the settings screen and the
+// nav filter, both retiring in Tasks 3 and 4; `resolveClubDb`, shared plumbing unrelated to this
+// table, moved out to `club-db.ts`.
 import type { D1Database } from '@cloudflare/workers-types';
 import type { Editor } from '@glw907/cairn-cms';
 import type { ContentEvent, ResolvedLayoutNode } from '@glw907/cairn-cms/sveltekit';
+import { resolveClubDb } from './club-db';
 
 /** The API-facing club role: the seat an /admin/club/* action or guard checks against. */
 export type ClubRole = 'owner' | 'admin';
@@ -25,17 +29,6 @@ export interface ClubRoleGrant {
 }
 
 const STORED_ROLE: Record<ClubRole, string> = { owner: 'owner', admin: 'club-admin' };
-
-/** The narrow, explained bridge every server file in this section uses to read the site's own
- *  `CLUB_DB` binding off a platform env. The engine types the events it hands sites (`ContentEvent`,
- *  `AdminActionEvent`) narrowly by its own need (`BackendEnv`, `AuthEnv`), so `CLUB_DB`, a binding
- *  this site alone declares (`app.d.ts`, `wrangler.toml`), is never on those types; widening an
- *  engine type for one site's binding would be the wrong fix. The real runtime object always
- *  carries the full `Platform.env` intersection regardless of which narrower type a given engine
- *  seam declares for it, so this cast is safe, just not expressible without it. */
-export function resolveClubDb(env: unknown): D1Database | undefined {
-  return (env as { CLUB_DB?: D1Database } | undefined)?.CLUB_DB;
-}
 
 /** Read a signed-in editor's club role. An email can hold more than one granted row over time
  *  (a role change adds rather than replaces, by design: see {@link setClubRole}); 'owner'

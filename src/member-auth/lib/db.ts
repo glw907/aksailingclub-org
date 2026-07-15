@@ -1,5 +1,5 @@
 // The narrow, explained cast every member-auth route uses to read CLUB_DB off a platform env.
-// Mirrors `$admin-club/lib/club-roles.ts`'s own `resolveClubDb` (same binding, same reasoning)
+// Mirrors `$admin-club/lib/club-db.ts`'s own `resolveClubDb` (same binding, same reasoning)
 // but kept as this module's own copy rather than an import, so `src/member-auth/` stays
 // independent of `src/admin-club/` (this tree's own boundary, stated in `auth.ts`'s header: the
 // member-facing identity, not the club-admin surface). `CLUB_DB` is the SAME asc-club database

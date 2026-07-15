@@ -5,7 +5,7 @@
 // destructive delete and instructor assignment both live at `classes/[id]`.
 import type { PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
-import { resolveClubDb } from '$admin-club/lib/club-roles';
+import { resolveClubDb } from '$admin-club/lib/club-db';
 import { listClassesWithCounts, type ClassWithCounts } from '$admin-club/lib/classes-store';
 
 export const load: PageServerLoad = async (event) => {

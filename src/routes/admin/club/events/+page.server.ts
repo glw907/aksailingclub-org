@@ -6,7 +6,7 @@
 // actions behind the detail's confirm, so there is deliberately no per-row delete here).
 import type { PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
-import { resolveClubDb } from '$admin-club/lib/club-roles';
+import { resolveClubDb } from '$admin-club/lib/club-db';
 import { listEvents, type EventRow } from '$admin-club/lib/events-store';
 
 export const load: PageServerLoad = async (event) => {

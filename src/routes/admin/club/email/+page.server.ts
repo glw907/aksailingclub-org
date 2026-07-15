@@ -3,7 +3,7 @@
 // preview, and reset-to-default.
 import type { PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
-import { resolveClubDb } from '$admin-club/lib/club-roles';
+import { resolveClubDb } from '$admin-club/lib/club-db';
 import { listEmailLog, listEmailTemplates, type EmailLogRow, type EmailTemplateRow } from '$admin-club/lib/club-email';
 
 export const load: PageServerLoad = async (event) => {

@@ -10,7 +10,10 @@ import { actions } from '../routes/admin/club/assets/+page.server';
 import { fakeD1 } from './_fake-d1';
 
 const admin: Editor = { email: 'admin@example.com', displayName: 'Admin', role: 'club-admin', capability: 'editor' };
-const noRole: Editor = { email: 'no-role@example.com', displayName: 'No Role', role: 'club-admin', capability: 'editor' };
+// 'instructor' is the site's own declared no-club-access role (initiative 5 Task 2):
+// clubAdminAction's gate now reads `editor.role` directly instead of a `club_roles` row, so a
+// fixture meant to fail that gate must carry a role outside {'owner', 'club-admin'}.
+const noRole: Editor = { email: 'no-role@example.com', displayName: 'No Role', role: 'instructor', capability: 'none' };
 
 const CSRF_COOKIE_NAME = '__Host-cairn_csrf';
 const CSRF_TOKEN = 'test-csrf-token';
@@ -178,10 +181,9 @@ describe('assets actions: waitlist', () => {
     const sink = vi.fn();
     const result = await actions.waitlistRemove(postEvent(admin, { waitlistId: 'w-1' }, { db, auditSink: sink }));
     expect(result).toEqual({ ok: true });
-    expect(calls).toEqual([
-      expect.objectContaining({ sql: expect.stringContaining('FROM club_roles') }),
-      { sql: 'DELETE FROM asset_waitlist WHERE id = ?1', args: ['w-1'] },
-    ]);
+    // clubAdminAction's role gate no longer queries club_roles (initiative 5 Task 2): it is the
+    // only DB call this handler makes.
+    expect(calls).toEqual([{ sql: 'DELETE FROM asset_waitlist WHERE id = ?1', args: ['w-1'] }]);
     expect(sink).toHaveBeenCalledWith({ action: 'remove', entity: 'asset-waitlist', entityId: 'w-1', editor: admin.email });
   });
 

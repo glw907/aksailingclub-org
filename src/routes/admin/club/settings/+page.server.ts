@@ -15,10 +15,10 @@ import {
   LastOwnerError,
   listClubRoles,
   removeClubRole,
-  resolveClubDb,
   setClubRole,
   type ClubRoleGrant,
 } from '$admin-club/lib/club-roles';
+import { resolveClubDb } from '$admin-club/lib/club-db';
 import {
   getClassRegistrationOpens,
   getOfferWindowHours,

@@ -5,7 +5,7 @@
 // dashboard grows around it later, per the design doc's own note.
 import type { PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
-import { resolveClubDb } from '$admin-club/lib/club-roles';
+import { resolveClubDb } from '$admin-club/lib/club-db';
 import { pendingSignupReviews } from '$admin-club/lib/signup-reviews-store';
 import { listPendingAssetRequests } from '$member-portal/lib/assets';
 

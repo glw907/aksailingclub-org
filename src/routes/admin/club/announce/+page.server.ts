@@ -5,7 +5,7 @@
 // action itself lives on the `[id]` detail route.
 import type { PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
-import { resolveClubDb } from '$admin-club/lib/club-roles';
+import { resolveClubDb } from '$admin-club/lib/club-db';
 import { latestAnnouncementByPost, listAnnouncements, type AnnouncementRow } from '$admin-club/lib/announcements';
 import { posts } from '$chassis/content';
 

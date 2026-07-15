@@ -7,6 +7,10 @@ import { actions } from '../routes/admin/club/signups/+page.server';
 import { fakeD1 } from './_fake-d1';
 
 const owner: Editor = { email: 'owner@example.com', displayName: 'Owner', role: 'owner', capability: 'owner' };
+// 'instructor' is the site's own declared no-club-access role (initiative 5 Task 2):
+// clubAdminAction's gate now reads `editor.role` directly instead of a `club_roles` row, so a
+// fixture meant to fail that gate must carry a role outside {'owner', 'club-admin'}.
+const noRole: Editor = { email: 'no-role@example.com', displayName: 'No Role', role: 'instructor', capability: 'none' };
 
 /** The double-submit pair `adminAction` checks: a `__Host-`-prefixed cookie (issued over https,
  *  matching every real admin request) against the posted `csrf` field. */
@@ -86,14 +90,14 @@ describe('signups actions: club role guard', () => {
   // engine's bare `adminAction`.
   it('rejects approve for a signed-in editor with no club role', async () => {
     const db = fakeD1({ allResults: { 'FROM club_roles': [] } }).db;
-    const result = await actions.approve(postEvent(owner, { id: 'ms-oyelaran-2026' }, { db }));
+    const result = await actions.approve(postEvent(noRole, { id: 'ms-oyelaran-2026' }, { db }));
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number }).status).toBe(403);
   });
 
   it('rejects deny for a signed-in editor with no club role', async () => {
     const db = fakeD1({ allResults: { 'FROM club_roles': [] } }).db;
-    const result = await actions.deny(postEvent(owner, { id: 'ms-oyelaran-2026', reason: 'x' }, { db }));
+    const result = await actions.deny(postEvent(noRole, { id: 'ms-oyelaran-2026', reason: 'x' }, { db }));
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number }).status).toBe(403);
   });

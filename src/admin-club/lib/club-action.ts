@@ -4,18 +4,22 @@
 // `load` first (traced in club-roles.ts's `hasAnyClubRole` comment). Tasks 4/5 each hand-rolled
 // the same three lines (resolve `CLUB_DB`, check the role, `fail` cleanly) at the top of every
 // action; this is the one place that check lives now, so a new screen cannot forget it.
+// Initiative 5 Task 2: the role check reads the engine's own verified session
+// (`ctx.editor.role`/`ctx.editor.capability`, typed to the site's declared vocabulary via
+// `CairnRolesRegister`) instead of a `club_roles` query, since cairn 0.86.0's roles seam is now
+// the only role system this site carries.
 import { fail } from '@sveltejs/kit';
 import type { D1Database } from '@cloudflare/workers-types';
 import { adminAction } from '@glw907/cairn-cms/sveltekit';
 import type { AdminActionContext, AdminActionEvent } from '@glw907/cairn-cms/sveltekit';
-import { getClubRole, resolveClubDb, type ClubRole } from './club-roles';
+import { resolveClubDb } from './club-db';
 
 /** What a `clubAdminAction` handler receives: the engine's own verified `editor`/`audit`, plus
- *  the resolved `CLUB_DB` handle and the acting editor's own club role, both already checked by
- *  the wrapper so no handler re-resolves either. */
+ *  the resolved `CLUB_DB` handle, already checked by the wrapper so no handler re-resolves it.
+ *  A handler that needs the acting editor's role reads `ctx.editor.role`/`ctx.editor.capability`
+ *  directly; both are already the wrapper-checked values by the time a handler runs. */
 export interface ClubActionContext extends AdminActionContext {
   db: D1Database;
-  clubRole: ClubRole;
 }
 
 export interface ClubActionOptions {
@@ -42,10 +46,12 @@ export interface ClubActionOptions {
  *    own doc comment).
  * 2. `CLUB_DB` must resolve off `event.platform.env`, or the action fails closed (500) with an
  *    audited rejection: a missing binding is a deployment misconfiguration, not a normal denial.
- * 3. The acting editor's club role must satisfy `opts.ownerOnly` (owner only) or else be any
- *    granted role (owner or admin); a role that does not fails closed (403), also audited.
- * 4. The handler runs with `ctx` extended by the resolved `db` and `clubRole`, so it never
- *    re-resolves either.
+ * 3. The acting editor's role, per the engine's own verified session, must be `'owner'` or
+ *    `'club-admin'` (named roles, not capability, so a future editor-level role does not
+ *    silently inherit club access); `opts.ownerOnly` additionally requires owner CAPABILITY
+ *    (`ctx.editor.capability === 'owner'`), the design's distinction between "may act in this
+ *    section" and "may act as its owner". Either failure fails closed (403), audited.
+ * 4. The handler runs with `ctx` extended by the resolved `db`, so it never re-resolves it.
  */
 export function clubAdminAction<T>(
   handler: (args: { event: AdminActionEvent; form: FormData; ctx: ClubActionContext }) => Promise<T>,
@@ -59,11 +65,9 @@ export function clubAdminAction<T>(
       ctx.audit({ action: opts.action, entity: opts.entity, detail: 'rejected: CLUB_DB not bound' });
       return fail(500, { error: 'CLUB_DB is not bound.' });
     }
-    const clubRole = await getClubRole(db, ctx.editor.email);
-    // Written as one `||` so TypeScript narrows `clubRole` past the `null` arm for every line
-    // below: after this returns, `clubRole === null` is false, and if `opts.ownerOnly` then
-    // `clubRole === 'owner'` too, exactly what `ClubActionContext.clubRole` promises a handler.
-    if (clubRole === null || (opts.ownerOnly && clubRole !== 'owner')) {
+    const hasClubRole = ctx.editor.role === 'owner' || ctx.editor.role === 'club-admin';
+    const satisfiesOwnerOnly = !opts.ownerOnly || ctx.editor.capability === 'owner';
+    if (!hasClubRole || !satisfiesOwnerOnly) {
       ctx.audit({
         action: opts.action,
         entity: opts.entity,
@@ -71,6 +75,6 @@ export function clubAdminAction<T>(
       });
       return fail(403, { error: deniedMessage });
     }
-    return handler({ event, form, ctx: { ...ctx, db, clubRole } });
+    return handler({ event, form, ctx: { ...ctx, db } });
   });
 }

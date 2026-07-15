@@ -5,7 +5,7 @@
 // blocking the jobs after it, and every job (success or failure) writes exactly one `audit_log`
 // row for the tick, actor `'system:cron'`.
 import type { D1Database } from '@cloudflare/workers-types';
-import { resolveClubDb } from '$admin-club/lib/club-roles';
+import { resolveClubDb } from '$admin-club/lib/club-db';
 import { JOBS, type JobRunnerEnv, type SendBudget } from './registry';
 
 const CRON_ACTOR = 'system:cron';

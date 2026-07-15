@@ -11,7 +11,10 @@ import { actions } from '../routes/admin/club/classes/[id]/+page.server';
 import { fakeD1 } from './_fake-d1';
 
 const admin: Editor = { email: 'admin@example.com', displayName: 'Admin', role: 'club-admin', capability: 'editor' };
-const noRole: Editor = { email: 'no-role@example.com', displayName: 'No Role', role: 'club-admin', capability: 'editor' };
+// 'instructor' is the site's own declared no-club-access role (initiative 5 Task 2):
+// clubAdminAction's gate now reads `editor.role` directly instead of a `club_roles` row, so a
+// fixture meant to fail that gate must carry a role outside {'owner', 'club-admin'}.
+const noRole: Editor = { email: 'no-role@example.com', displayName: 'No Role', role: 'instructor', capability: 'none' };
 
 const CSRF_COOKIE_NAME = '__Host-cairn_csrf';
 const CSRF_TOKEN = 'test-csrf-token';

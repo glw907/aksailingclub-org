@@ -7,14 +7,14 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
-import { resolveClubDb } from '$admin-club/lib/club-roles';
+import { resolveClubDb } from '$admin-club/lib/club-db';
 import { clubAdminAction } from '$admin-club/lib/club-action';
 import { deleteEvent, getEvent, updateEvent, type EventRow } from '$admin-club/lib/events-store';
 import { parseEventForm } from '../event-form-input';
 
 /** `AdminActionEvent`'s own type is narrowed to what `adminAction` itself needs (cookies,
  *  locals, platform), the same way `AuthEnv` narrows `platform.env` elsewhere in this site (see
- *  club-roles.ts's `resolveClubDb` comment for the identical reasoning). The real underlying
+ *  club-db.ts's `resolveClubDb` comment for the identical reasoning). The real underlying
  *  SvelteKit `RequestEvent` this dynamic route dispatches always carries `params.id`, so this is
  *  a narrow, explained cast, not a widening of the engine's own public event type. */
 function routeId(event: unknown): string {
