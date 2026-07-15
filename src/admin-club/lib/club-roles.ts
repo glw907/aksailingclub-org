@@ -9,7 +9,7 @@
 // with no grant gets.
 import type { D1Database } from '@cloudflare/workers-types';
 import type { Editor } from '@glw907/cairn-cms';
-import type { ContentEvent, ResolvedNavItem } from '@glw907/cairn-cms/sveltekit';
+import type { ContentEvent, ResolvedLayoutNode } from '@glw907/cairn-cms/sveltekit';
 
 /** The API-facing club role: the seat an /admin/club/* action or guard checks against. */
 export type ClubRole = 'owner' | 'admin';
@@ -166,9 +166,9 @@ export async function removeClubRole(db: D1Database, email: string): Promise<voi
  *  misconfigured environment) fails closed the same way a missing role does, rather than
  *  showing a section that would 403 on click. */
 export async function filterClubNav(
-  items: ResolvedNavItem[],
+  items: ResolvedLayoutNode[],
   ctx: { editor: Editor; event: ContentEvent },
-): Promise<ResolvedNavItem[]> {
+): Promise<ResolvedLayoutNode[]> {
   const db = resolveClubDb(ctx.event.platform?.env);
   const role = db ? await getClubRole(db, ctx.editor.email) : null;
   return role ? items : items.filter((item) => item.label !== 'Club');

@@ -6,7 +6,7 @@ import type { AdminActionAuditRecord } from '@glw907/cairn-cms/sveltekit';
 import { actions } from '../routes/admin/club/signups/+page.server';
 import { fakeD1 } from './_fake-d1';
 
-const owner: Editor = { email: 'owner@example.com', displayName: 'Owner', role: 'owner' };
+const owner: Editor = { email: 'owner@example.com', displayName: 'Owner', role: 'owner', capability: 'owner' };
 
 /** The double-submit pair `adminAction` checks: a `__Host-`-prefixed cookie (issued over https,
  *  matching every real admin request) against the posted `csrf` field. */

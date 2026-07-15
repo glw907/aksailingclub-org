@@ -5,8 +5,8 @@ import type { AdminActionAuditRecord } from '@glw907/cairn-cms/sveltekit';
 import { actions } from '../routes/admin/club/settings/+page.server';
 import { fakeD1 } from './_fake-d1';
 
-const admin: Editor = { email: 'admin@example.com', displayName: 'Admin', role: 'editor' };
-const owner: Editor = { email: 'owner@example.com', displayName: 'Owner', role: 'editor' };
+const admin: Editor = { email: 'admin@example.com', displayName: 'Admin', role: 'editor', capability: 'editor' };
+const owner: Editor = { email: 'owner@example.com', displayName: 'Owner', role: 'editor', capability: 'editor' };
 
 const CSRF_COOKIE_NAME = '__Host-cairn_csrf';
 const CSRF_TOKEN = 'test-csrf-token';

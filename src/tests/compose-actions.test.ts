@@ -12,8 +12,8 @@ import { actions, load } from '../routes/admin/club/email/compose/+page.server';
 import type { SegmentOption } from '$admin-club/lib/segments';
 import { fakeD1 } from './_fake-d1';
 
-const admin: Editor = { email: 'admin@example.com', displayName: 'Admin', role: 'editor' };
-const noRole: Editor = { email: 'no-role@example.com', displayName: 'No Role', role: 'editor' };
+const admin: Editor = { email: 'admin@example.com', displayName: 'Admin', role: 'editor', capability: 'editor' };
+const noRole: Editor = { email: 'no-role@example.com', displayName: 'No Role', role: 'editor', capability: 'editor' };
 
 const CSRF_COOKIE_NAME = '__Host-cairn_csrf';
 const CSRF_TOKEN = 'test-csrf-token';

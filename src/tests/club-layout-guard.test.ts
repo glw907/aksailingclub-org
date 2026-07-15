@@ -12,8 +12,8 @@ function eventFor(editor: Editor | null, db: unknown): LayoutEvent {
   return { locals: { editor }, platform: { env: { CLUB_DB: db } } } as unknown as LayoutEvent;
 }
 
-const admin: Editor = { email: 'admin@example.com', displayName: 'Admin', role: 'editor' };
-const owner: Editor = { email: 'owner@example.com', displayName: 'Owner', role: 'editor' };
+const admin: Editor = { email: 'admin@example.com', displayName: 'Admin', role: 'editor', capability: 'editor' };
+const owner: Editor = { email: 'owner@example.com', displayName: 'Owner', role: 'editor', capability: 'editor' };
 
 describe('/admin/club layout guard', () => {
   it('403s a signed-in editor with no club role', async () => {
