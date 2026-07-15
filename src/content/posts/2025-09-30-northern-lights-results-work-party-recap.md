@@ -50,35 +50,47 @@ Scoring uses the *Low Point System* (1 point for 1st, 2 for 2nd, etc.).
 **Fleet Summary Columns:**
 *Nett* = Total score with throw-outs applied (one throw-out allowed per 7 races)
 
-**Scoring Codes:**
-*DNC* = Did Not Come to Starting Area | *DNS* = Did Not Start | *DNF* = Did Not Finish | *DSQ* = Disqualified | *OCS* = On Course Side at Start
-
-**Race Detail Columns:**
-*USPN* = US Sailing Portsmouth Number (handicap rating) | *EL* = Elapsed Time | *COR* = Corrected Time | *BCE* = Corrected Time expressed as Boat-on-Boat (minutes:seconds behind leader) | *Pts* = Points awarded
-
 ### Fleet Summary
 
+::::table{variant="results"}
 **BCN Fleet**
 
 <table><thead><tr><th>Pos</th><th>Helm</th><th>Crew</th><th>Class</th><th>R1</th><th>R2</th><th>Total</th><th>Nett</th></tr></thead><tbody><tr><td>1</td><td>Steve R.</td><td>Hannah W.</td><td>BCN</td><td>1.00</td><td>1.00</td><td>2.00</td><td>2.00</td></tr><tr><td>2</td><td>Gabe B.</td><td>Jake B.</td><td>BCN</td><td>2.50</td><td>2.00</td><td>4.50</td><td>4.50</td></tr><tr><td>3</td><td>Geoff W.</td><td>Cathy W.</td><td>BCN</td><td>2.50</td><td>3.00</td><td>5.50</td><td>5.50</td></tr><tr><td>4</td><td>Christ. C.</td><td>Adam</td><td>BCN</td><td>4.00</td><td>4.00</td><td>8.00</td><td>8.00</td></tr><tr><td>5</td><td>Darren B.</td><td>Nancy B.</td><td>BCN</td><td>5.00</td><td>5.00</td><td>10.00</td><td>10.00</td></tr><tr><td>6</td><td>Jim A.</td><td>Lauren A.</td><td>BCN</td><td>6.00</td><td>6.00</td><td>12.00</td><td>12.00</td></tr></tbody></table>
+
 **PN Fleet**
 
 <table><thead><tr><th>Pos</th><th>Helm</th><th>Crew</th><th>Class</th><th>R1</th><th>R2</th><th>Total</th><th>Nett</th></tr></thead><tbody><tr><td>1</td><td>Kara N.</td><td></td><td>LASE</td><td>3.00</td><td>2.00</td><td>5.00</td><td>5.00</td></tr><tr><td>2</td><td>Raia S.</td><td></td><td>LASE</td><td>6.00</td><td>1.00</td><td>7.00</td><td>7.00</td></tr><tr><td>3</td><td>Benj. S.</td><td>Charlotte</td><td>BCNS</td><td>1.00</td><td>8.00 DNC</td><td>9.00</td><td>9.00</td></tr><tr><td>4</td><td>Bob C.</td><td>Shannon W.</td><td>DM</td><td>2.00</td><td>8.00 DNC</td><td>10.00</td><td>10.00</td></tr><tr><td>5</td><td>Brie B.</td><td>Allie and Matt</td><td>EN</td><td>4.00</td><td>8.00 DNC</td><td>12.00</td><td>12.00</td></tr><tr><td>6</td><td>Will M.</td><td>Henry and Ethan</td><td>INT</td><td>5.00</td><td>8.00 DNC</td><td>13.00</td><td>13.00</td></tr><tr><td>7</td><td>Adrian C.</td><td></td><td>LASE</td><td>8.00 DNF</td><td>8.00 DNC</td><td>16.00</td><td>16.00</td></tr></tbody></table>
 
+:::legend
+**Scoring Codes:**
+*DNC* = Did Not Come to Starting Area | *DNS* = Did Not Start | *DNF* = Did Not Finish | *DSQ* = Disqualified | *OCS* = On Course Side at Start
+:::
+::::
+
 ### Race Detail
 
+::::table{variant="results"}
 **R1 – BCN Fleet – 9/20/25**
 
 <table><thead><tr><th>Rank</th><th>Class</th><th>Sail</th><th>Helm</th><th>Crew</th><th>USPN</th><th>EL</th><th>COR</th><th>BCE</th><th>Pts</th></tr></thead><tbody><tr><td>1</td><td>BCN</td><td>5245</td><td>Steve R.</td><td>Hannah W.</td><td>87</td><td></td><td></td><td></td><td>1.00</td></tr><tr><td>2</td><td>BCN</td><td>5267</td><td>Gabe B.</td><td>Jake B.</td><td>87</td><td></td><td></td><td></td><td>2.50</td></tr><tr><td>2</td><td>BCN</td><td>5262</td><td>Geoff W.</td><td>Cathy W.</td><td>87</td><td></td><td></td><td></td><td>2.50</td></tr><tr><td>4</td><td>BCN</td><td>5281a</td><td>Christ. C.</td><td>Adam</td><td>87</td><td></td><td></td><td></td><td>4.00</td></tr><tr><td>5</td><td>BCN</td><td>5281b</td><td>Darren B.</td><td>Nancy B.</td><td>87</td><td></td><td></td><td></td><td>5.00</td></tr><tr><td>6</td><td>BCN</td><td>2838</td><td>Jim A.</td><td>Lauren A.</td><td>87</td><td></td><td></td><td></td><td>6.00</td></tr></tbody></table>
+
 **R1 – PN Fleet – 9/20/25**
 
 <table><thead><tr><th>Rank</th><th>Class</th><th>Sail</th><th>Helm</th><th>Crew</th><th>USPN</th><th>EL</th><th>COR</th><th>BCE</th><th>Pts</th></tr></thead><tbody><tr><td>1</td><td>BCNS</td><td>966</td><td>Benj. S.</td><td>Charlotte</td><td>87.8</td><td>25:21</td><td>0:28:52</td><td>0:00:00</td><td>1.00</td></tr><tr><td>2</td><td>DM</td><td>007</td><td>Bob C.</td><td>Shannon W.</td><td>95.4</td><td>32:30</td><td>0:34:04</td><td>0:04:57</td><td>2.00</td></tr><tr><td>3</td><td>LASE</td><td>19473</td><td>Kara N.</td><td></td><td>91.1</td><td>36:43</td><td>0:40:18</td><td>0:10:25</td><td>3.00</td></tr><tr><td>4</td><td>EN</td><td>EN</td><td>Brie B.</td><td>Allie and Matt</td><td>95.7</td><td>39:14</td><td>0:41:00</td><td>0:11:36</td><td>4.00</td></tr><tr><td>5</td><td>INT</td><td>1158</td><td>Will M.</td><td>Henry and Ethan</td><td>89.1</td><td>37:01</td><td>0:41:33</td><td>0:11:17</td><td>5.00</td></tr><tr><td>6</td><td>LASE</td><td>3</td><td>Raia S.</td><td></td><td>91.1</td><td>46:33</td><td>0:51:06</td><td>0:20:15</td><td>6.00</td></tr><tr><td>7</td><td>LASE</td><td>44357</td><td>Adrian C.</td><td></td><td>91.1</td><td>DNF</td><td></td><td></td><td>8.00</td></tr></tbody></table>
+
 **R2 – BCN Fleet – 9/20/25**
 
 <table><thead><tr><th>Rank</th><th>Class</th><th>Sail</th><th>Helm</th><th>Crew</th><th>USPN</th><th>EL</th><th>COR</th><th>BCE</th><th>Pts</th></tr></thead><tbody><tr><td>1</td><td>BCN</td><td>5245</td><td>Steve R.</td><td>Hannah W.</td><td>87</td><td></td><td></td><td></td><td>1.00</td></tr><tr><td>2</td><td>BCN</td><td>5267</td><td>Gabe B.</td><td>Jake B.</td><td>87</td><td></td><td></td><td></td><td>2.00</td></tr><tr><td>3</td><td>BCN</td><td>5262</td><td>Geoff W.</td><td>Cathy W.</td><td>87</td><td></td><td></td><td></td><td>3.00</td></tr><tr><td>4</td><td>BCN</td><td>5281a</td><td>Christ. C.</td><td>Adam</td><td>87</td><td></td><td></td><td></td><td>4.00</td></tr><tr><td>5</td><td>BCN</td><td>5281b</td><td>Darren B.</td><td>Nancy B.</td><td>87</td><td></td><td></td><td></td><td>5.00</td></tr><tr><td>6</td><td>BCN</td><td>2838</td><td>Jim A.</td><td>Lauren A.</td><td>87</td><td></td><td></td><td></td><td>6.00</td></tr></tbody></table>
+
 **R2 – PN Fleet – 9/20/25**
 
 <table><thead><tr><th>Rank</th><th>Class</th><th>Sail</th><th>Helm</th><th>Crew</th><th>USPN</th><th>EL</th><th>COR</th><th>BCE</th><th>Pts</th></tr></thead><tbody><tr><td>1</td><td>LASE</td><td>3</td><td>Raia S.</td><td></td><td>91.1</td><td></td><td></td><td></td><td>1.00</td></tr><tr><td>2</td><td>LASE</td><td>19473/44357</td><td>Kara N.</td><td></td><td>91.1</td><td></td><td></td><td></td><td>2.00</td></tr></tbody></table>
+
+:::legend
+**Race Detail Columns:**
+*USPN* = US Sailing Portsmouth Number (handicap rating) | *EL* = Elapsed Time | *COR* = Corrected Time | *BCE* = Corrected Time expressed as Boat-on-Boat (minutes:seconds behind leader) | *Pts* = Points awarded
+:::
+::::
 
 *With gratitude to Principal Race Officer Brie Busey and the Race Committee (Joyce Cryan) for running the Northern Lights Regatta.*
 

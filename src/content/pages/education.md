@@ -281,12 +281,9 @@ If you need to cancel, please give us as much notice as possible. Courses at the
 
 ## Questions?
 
-<div class="page-cta not-prose">
+::::page-cta[Not finding what you need?]
+We're real people, happy to talk sailing.
 
-<p class="page-cta-lead">Not finding what you need?</p>
-
-<p class="page-cta-body">We're real people, happy to talk sailing.</p>
-
-<a class="asc-cta-btn" href="/contact/">Email us any time</a>
-
-</div>
+:::cta-action[Email us any time]{href="/contact/" kind="primary"}
+:::
+::::

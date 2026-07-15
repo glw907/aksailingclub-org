@@ -45,12 +45,19 @@ Full seasonal access to club grounds, including the clubhouse, sauna, campfire, 
   :::membership-pricing{tier="young-adult"}
   :::
 
-**Additional Fees:**
-- Trailer row storage: $100/season
-- RV seasonal parking: $100/season
-- Moorings: $300/season
-- Rack storage (kayaks, paddleboards, small sailboats): $50/season
-- Sailing classes: $100 per class (see [Education](/education/))
+::::table{variant="fees"}
+:::caption
+Additional Fees
+:::
+
+| Item | Fee |
+| --- | --- |
+| Trailer row storage | $100/season |
+| RV seasonal parking | $100/season |
+| Moorings | $300/season |
+| Rack storage (kayaks, paddleboards, small sailboats) | $50/season |
+| Sailing classes | $100 per class (see [Education](/education/)) |
+::::
 
 **What's included in dues:** Access to club grounds, tent camping, club boat use (after qualification), regatta participation, member directory, and Discord community.
 
@@ -76,9 +83,17 @@ If you're joining for the boats, the racing, or the community rather than a begi
 
 ### New Members
 
-1. **[Apply and pay online](/join/apply).** Your membership is active immediately.
-2. **Check your email** for your welcome message with your class credit, Discord invite, and account link.
-3. **The board reviews** new applications in the background (typically 2-3 business days). You won't hear anything unless there's an issue.
+::::steps
+:::step[[Apply and pay online](/join/apply)]
+Your membership is active immediately.
+:::
+:::step[Check your email]
+for your welcome message with your class credit, Discord invite, and account link.
+:::
+:::step[The board reviews]
+new applications in the background (typically 2-3 business days). You won't hear anything unless there's an issue.
+:::
+::::
 
 ### Returning Members
 
@@ -120,11 +135,10 @@ The ASC is most active from May through September, with regattas, classes, and s
 
 The Alaska Sailing Club does not and shall not discriminate based on race, color, religion (creed), gender, gender expression, age, national origin (ancestry), disability, marital status, sexual orientation, or military status for its activities or operations. These activities include but are not limited to the application for membership, the appointment to and termination from its Board of Directors, hiring and firing of staff or contractors, selection of volunteers, selection of vendors, and providing services.
 
-## Questions?
-
-::::cards
-:::card[Contact us]{icon="envelope-simple" href="/contact/"}
+::::page-cta[Questions?]
 Questions about membership, facilities, or anything else? We're here to help. You can also join one of our public events to visit the club and meet members before you commit.
+
+:::cta-action[Contact us]{href="/contact/" kind="secondary"}
 :::
 ::::
 

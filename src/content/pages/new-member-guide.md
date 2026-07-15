@@ -156,17 +156,17 @@ Log in to manage your membership, register for events, and update your profile.
 
 You've got the basics. Now make the club your own. Here are some good places to start.
 
-::::cards
-:::card[Member Directory]{icon="users-three" href="/directory/"}
+::::related
+:::ref[Member Directory]{href="/directory/"}
 Find fellow members.
 :::
-:::card[Events Calendar]{icon="calendar-dots" href="/events/"}
+:::ref[Events Calendar]{href="/events/"}
 See what's coming.
 :::
-:::card[Club Boats]{icon="sailboat" href="/club-boat-use-and-qualification/"}
+:::ref[Club Boats]{href="/club-boat-use-and-qualification/"}
 Qualification and checkout.
 :::
-:::card[Sailing Classes]{icon="graduation-cap" href="/education/"}
+:::ref[Sailing Classes]{href="/education/"}
 Course schedule.
 :::
 ::::
@@ -181,18 +181,12 @@ Join a committee, support club projects, or learn about board service.
 :::
 ::::
 
-## Need Help?
-
+::::page-cta[Need Help?]
 Every member was new once, and we're happy to help you find your way. Here's where to go depending on what you need:
 
-::::cards
-:::card[Sailing questions]{icon="chats" href="/discord-server/"}
-Ask in `#education` on Discord. Instructors and experienced members are happy to help.
-:::
-:::card[Something broken at the club]{icon="wrench" href="/issues-and-support/"}
-Report boat, dock, or site issues. You can also post directly in Discord.
-:::
-:::card[Membership or account questions]{icon="envelope-simple" href="/contact/"}
-Use the contact form and we'll get back to you.
+- **Sailing questions:** Ask in `#education` on Discord. Instructors and experienced members are happy to help.
+- **Something broken at the club:** Report boat, dock, or site issues. You can also post directly in Discord.
+
+:::cta-action[Contact us]{href="/contact/" kind="secondary"}
 :::
 ::::

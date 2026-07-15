@@ -2,19 +2,30 @@
 title: "Moorings"
 ---
 
-The ASC has a small number of seasonal moorings for member-owned keelboats. Moorings are managed by the Harbormaster and are among the club's most in-demand resources, waitlists commonly span multiple years. If you're interested in a mooring, the best path is to get involved first: [race](/racing/), volunteer, and [attend work parties](/get-involved/).
+The ASC has a small number of seasonal moorings for member-owned keelboats. Moorings are managed by the Harbormaster and are among the club's most in-demand resources. If you're interested in a mooring, the best path is to get involved first: [race](/racing/), volunteer, and [attend work parties](/get-involved/).
 
-All mooring spaces require **[Active Participating Member](/member-expectations/#member-status-definitions)** status. See [Seasonal Storage](/seasonal-storage/) for the full eligibility requirements. For current availability, see [Storage Waitlists](/waitlists/).
+:::callout[Active Participating Member status required]{tone="requirement" icon="anchor"}
+All mooring spaces require **[Active Participating Member](/member-expectations/#member-status-definitions)** status.
+:::
 
-## What We Have
-
-Most spots accommodate boats up to 22'. A few can handle boats up to 26'. Spaces are limited and in high demand: a waitlist position is the most likely outcome when you apply.
+::::facts
+:::fact[Cost]
+$300/season
+:::
+:::fact[Eligibility]
+See [Seasonal Storage](/seasonal-storage/) for the full eligibility requirements.
+:::
+:::fact[Boat size]
+Most spots accommodate boats up to 22'. A few can handle boats up to 26'.
+:::
+:::fact[Waitlist reality]
+Waitlists commonly span multiple years. A waitlist position is the most likely outcome when you apply. For current availability, see [Storage Waitlists](/waitlists/).
+:::
+::::
 
 ## Expressing Interest
 
 To ask about mooring availability, use the [Issues & Support form](/issues-and-support/?category=storage#report-an-issue) and select **Mooring** as the storage type. You can also ask in `#harbor` on Discord.
-
-**Cost:** $300/season
 
 ## Rules
 
@@ -26,4 +37,7 @@ Detailed mooring rules are established by the Harbormaster and the ASC board. At
 - The club may need to move moored vessels as necessary for club activities
 - Spaces are seasonal and subject to annual renewal
 
-[All seasonal storage options →](/seasonal-storage/)
+::::related
+:::ref[All seasonal storage options]{href="/seasonal-storage/"}
+:::
+::::
