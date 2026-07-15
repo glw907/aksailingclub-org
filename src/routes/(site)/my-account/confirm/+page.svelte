@@ -16,6 +16,15 @@ could be traced back to a member. -->
   <title>Sign In — {siteConfig.siteName}</title>
 </svelte:head>
 
+{#snippet spamCheckError(message: string)}
+  <!-- A Turnstile/rate-limit failure (review fix, 2026-07-15): kept out of the "link expired"
+       heading below, since the token itself was never evaluated, and out of a silent re-render,
+       since the member needs to know this particular submit sent nothing (WCAG 3.3.1/4.1.3). -->
+  <p class="mt-s max-w-measure-wide rounded-field border border-error bg-error/10 px-s py-xs text-step--1 text-error">
+    {message}
+  </p>
+{/snippet}
+
 {#if form?.resent}
   <h1 class="m-0 font-display text-step-4 font-semibold leading-tight tracking-tight text-base-content">
     Check your inbox
@@ -23,6 +32,23 @@ could be traced back to a member. -->
   <p class="mt-s max-w-measure-wide text-step-0 text-muted">
     If that address is on file with the club, a fresh sign-in link is on its way.
   </p>
+{:else if form && 'error' in form && form.error && !('resent' in form)}
+  <!-- The confirm action's own spam-check failure: the same initial "sign in" frame, since the
+       magic-link token itself was never consumed or found invalid (a distinct case from a
+       genuine expired/invalid token below). -->
+  <h1 class="m-0 font-display text-step-4 font-semibold leading-tight tracking-tight text-base-content">
+    Sign in to {siteConfig.siteName}
+  </h1>
+  <p class="mt-s max-w-measure-wide text-step-0 text-muted">Click below to finish signing in.</p>
+  {@render spamCheckError(form.error)}
+  <form method="POST" action="?/confirm" class="mt-l flex flex-col items-start gap-s">
+    <input type="hidden" name="csrf" value={data.csrf} />
+    <input type="hidden" name="token" value={data.token} />
+    <div class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY}></div>
+    <button type="submit" class="btn btn-primary">Sign in</button>
+  </form>
+
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 {:else if form && !form.ok}
   <h1 class="m-0 font-display text-step-4 font-semibold leading-tight tracking-tight text-base-content">
     That sign-in link expired
@@ -30,6 +56,9 @@ could be traced back to a member. -->
   <p class="mt-s max-w-measure-wide text-step-0 text-muted">
     Links work once and for a short while, to keep your account safe. No harm done.
   </p>
+  {#if 'error' in form && form.error}
+    {@render spamCheckError(form.error)}
+  {/if}
   <form method="POST" action="?/resend" class="mt-l flex max-w-measure-wide flex-col gap-m">
     <input type="hidden" name="csrf" value={data.csrf} />
     <fieldset class="fieldset">

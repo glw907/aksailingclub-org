@@ -20,7 +20,11 @@ async function catchThrown(value: unknown): Promise<unknown> {
   }
 }
 
-function confirmEvent(form: Record<string, string>, db: unknown, opts: { emailBinding?: { send: ReturnType<typeof vi.fn> }; turnstileSecret?: string } = {}) {
+function confirmEvent(
+  form: Record<string, string>,
+  db: unknown,
+  opts: { emailBinding?: { send: ReturnType<typeof vi.fn> }; turnstileSecret?: string; rateLimit?: { limit: ReturnType<typeof vi.fn> } } = {},
+) {
   const fd = new FormData();
   fd.append('csrf', 'token');
   for (const [key, value] of Object.entries(form)) fd.append(key, value);
@@ -35,29 +39,55 @@ function confirmEvent(form: Record<string, string>, db: unknown, opts: { emailBi
         CLUB_DB: db,
         ...(opts.emailBinding ? { EMAIL: opts.emailBinding } : {}),
         ...(opts.turnstileSecret ? { TURNSTILE_SECRET_KEY: opts.turnstileSecret } : {}),
+        ...(opts.rateLimit ? { RATE_LIMIT_PUBLIC_POST: opts.rateLimit } : {}),
       },
     },
   };
 }
+
+const SPAM_CHECK_MESSAGE = 'Spam check failed. Please try again.';
 
 describe('?/confirm (the Turnstile gate, 2026-07-15 hardening pass)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it('rejects a missing token when a secret is configured, never consuming the magic-link token', async () => {
+  it('rejects a missing token when a secret is configured, never consuming the magic-link token, with the spam-check error shape (review fix)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: false }) }));
     const { db, calls } = fakeD1({});
     const result = await actions.confirm(confirmEvent({ token: 'a-magic-link-token' }, db, { turnstileSecret: 'secret' }) as never);
-    expect(result).toEqual({ ok: false, prefillEmail: null });
+    expect(result).toEqual({ ok: false, prefillEmail: null, error: SPAM_CHECK_MESSAGE });
     expect(calls.some((c) => c.sql.startsWith('UPDATE member_tokens'))).toBe(false);
   });
 
-  it('rejects an invalid token when a secret is configured', async () => {
+  it('rejects an invalid token when a secret is configured, with the spam-check error shape (review fix)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: false }) }));
     const { db } = fakeD1({});
     const result = await actions.confirm(
       confirmEvent({ token: 'a-magic-link-token', 'cf-turnstile-response': 'a-bad-token' }, db, { turnstileSecret: 'secret' }) as never,
+    );
+    expect(result).toEqual({ ok: false, prefillEmail: null, error: SPAM_CHECK_MESSAGE });
+  });
+
+  it('rejects an over-limit caller before ever checking Turnstile, with the same spam-check error shape (review fix)', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    const { db, calls } = fakeD1({});
+    const rateLimit = { limit: vi.fn().mockResolvedValue({ success: false }) };
+    const result = await actions.confirm(confirmEvent({ token: 'a-magic-link-token' }, db, { rateLimit }) as never);
+    expect(result).toEqual({ ok: false, prefillEmail: null, error: SPAM_CHECK_MESSAGE });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(calls.some((c) => c.sql.startsWith('UPDATE member_tokens'))).toBe(false);
+  });
+
+  it('returns the plain expired shape (no error) for a genuinely invalid token, distinct from a spam-check failure (review fix)', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: true }) });
+    vi.stubGlobal('fetch', fetchSpy);
+    // consumeMemberToken's own conditional UPDATE matches zero rows for an already-used or
+    // unknown token; findMemberByTokenHash then also finds nothing to pre-fill.
+    const { db } = fakeD1({ runResults: { 'UPDATE member_tokens': { changes: 0 } } });
+    const result = await actions.confirm(
+      confirmEvent({ token: 'a-magic-link-token', 'cf-turnstile-response': 'a-good-token' }, db, { turnstileSecret: 'secret' }) as never,
     );
     expect(result).toEqual({ ok: false, prefillEmail: null });
   });
@@ -86,23 +116,35 @@ describe('?/resend (the Turnstile gate, 2026-07-15 hardening pass)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('rejects a missing token when a secret is configured, never sending the email', async () => {
+  it('rejects a missing token when a secret is configured, never sending the email, with the spam-check error shape (review fix)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: false }) }));
     const { db } = fakeD1({ firstResults: { 'FROM members WHERE lower(email)': null } });
     const send = vi.fn().mockResolvedValue(undefined);
     const result = await actions.resend(confirmEvent({ email: MEMBER_ROW.email }, db, { emailBinding: { send }, turnstileSecret: 'secret' }) as never);
-    expect(result).toEqual({ ok: false, prefillEmail: MEMBER_ROW.email, resent: false });
+    expect(result).toEqual({ ok: false, prefillEmail: MEMBER_ROW.email, resent: false, error: SPAM_CHECK_MESSAGE });
     expect(send).not.toHaveBeenCalled();
   });
 
-  it('rejects an invalid token when a secret is configured', async () => {
+  it('rejects an invalid token when a secret is configured, with the spam-check error shape (review fix)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: false }) }));
     const { db } = fakeD1({ firstResults: { 'FROM members WHERE lower(email)': null } });
     const send = vi.fn().mockResolvedValue(undefined);
     const result = await actions.resend(
       confirmEvent({ email: MEMBER_ROW.email, 'cf-turnstile-response': 'a-bad-token' }, db, { emailBinding: { send }, turnstileSecret: 'secret' }) as never,
     );
-    expect(result).toEqual({ ok: false, prefillEmail: MEMBER_ROW.email, resent: false });
+    expect(result).toEqual({ ok: false, prefillEmail: MEMBER_ROW.email, resent: false, error: SPAM_CHECK_MESSAGE });
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('rejects an over-limit caller before ever checking Turnstile, never sending the email, with the same spam-check error shape (review fix)', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    const { db } = fakeD1({ firstResults: { 'FROM members WHERE lower(email)': null } });
+    const send = vi.fn().mockResolvedValue(undefined);
+    const rateLimit = { limit: vi.fn().mockResolvedValue({ success: false }) };
+    const result = await actions.resend(confirmEvent({ email: MEMBER_ROW.email }, db, { emailBinding: { send }, rateLimit }) as never);
+    expect(result).toEqual({ ok: false, prefillEmail: MEMBER_ROW.email, resent: false, error: SPAM_CHECK_MESSAGE });
+    expect(fetchSpy).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
   });
 

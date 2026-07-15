@@ -18,6 +18,11 @@ export const prerender = false;
 // Matches +page.server.ts's own copy of the site's established from-address.
 const FROM_ADDRESS = 'noreply@aksailingclub.org';
 
+// Matches my-account/+page.server.ts's own `requestLink` copy (review fix, 2026-07-15): the same
+// wording regardless of which action or code path rejected the submission, so the text itself
+// carries no information about which check failed or why.
+const SPAM_CHECK_MESSAGE = 'Spam check failed. Please try again.';
+
 export const load: PageServerLoad = async (event) => {
   // The token rides a query param on a link a member's inbox client can prefetch or preview;
   // Referrer-Policy: no-referrer keeps it out of any onward Referer header (mirrors cairn's own
@@ -34,6 +39,13 @@ export const actions: Actions = {
   // reaches this button by clicking their own magic-link email, so a Turnstile challenge here
   // adds friction to the confirm step itself. The ruling stands (Turnstile on every public
   // unauthenticated POST) unless Geoff overrides in review.
+  //
+  // A spam-check failure (Turnstile or rate limit) returns `{ ok: false, error }` distinct from a
+  // genuine expired/invalid token's bare `{ ok: false, prefillEmail }` (review fix, 2026-07-15):
+  // the template funnels any `!form.ok` into the "That sign-in link expired" heading, which was
+  // wrong for a member who simply failed the spam check (WCAG 3.3.1, a false diagnosis of their
+  // own link). `error`'s text stays identical regardless of the token's own validity, so this adds
+  // no enumeration signal beyond what the existing shape already carried.
   confirm: async (event) => {
     if (!(await validateMemberCsrfToken(event))) return { ok: false as const, prefillEmail: null };
 
@@ -48,12 +60,12 @@ export const actions: Actions = {
     // confirm action carries no email field (the magic-link token only), so this keys on IP
     // alone.
     const rateLimitAllowed = await checkRateLimit(event.platform?.env.RATE_LIMIT_PUBLIC_POST, `ip:${event.getClientAddress()}`);
-    if (!rateLimitAllowed) return { ok: false as const, prefillEmail: null };
+    if (!rateLimitAllowed) return { ok: false as const, prefillEmail: null, error: SPAM_CHECK_MESSAGE };
 
     const secret = event.platform?.env.TURNSTILE_SECRET_KEY;
     const turnstileToken = String(form.get('cf-turnstile-response') ?? '');
     if (secret && !(await verifyTurnstile(turnstileToken, event.getClientAddress(), secret))) {
-      return { ok: false as const, prefillEmail: null };
+      return { ok: false as const, prefillEmail: null, error: SPAM_CHECK_MESSAGE };
     }
 
     const result = await confirmMemberToken(db, token);
@@ -87,12 +99,12 @@ export const actions: Actions = {
     // `resend` is the higher-value target of the confirm page's two actions (it sends a fresh
     // magic-link email on every valid submit), so this keys on both IP and the submitted email.
     const rateLimitAllowed = await checkRateLimitKeys(event.platform?.env.RATE_LIMIT_PUBLIC_POST, [`ip:${event.getClientAddress()}`, `email:${email.toLowerCase()}`]);
-    if (!rateLimitAllowed) return { ok: false as const, prefillEmail: email, resent: false as const };
+    if (!rateLimitAllowed) return { ok: false as const, prefillEmail: email, resent: false as const, error: SPAM_CHECK_MESSAGE };
 
     const secret = event.platform?.env.TURNSTILE_SECRET_KEY;
     const turnstileToken = String(form.get('cf-turnstile-response') ?? '');
     if (secret && !(await verifyTurnstile(turnstileToken, event.getClientAddress(), secret))) {
-      return { ok: false as const, prefillEmail: email, resent: false as const };
+      return { ok: false as const, prefillEmail: email, resent: false as const, error: SPAM_CHECK_MESSAGE };
     }
 
     await requestMemberLink(db, email, (message) => emailBinding.send(message), {

@@ -81,10 +81,69 @@ pivot before the visitor fills out the rest of the form. -->
     const url = payClassFee.result && 'url' in payClassFee.result ? payClassFee.result.url : undefined;
     if (url) window.location.href = url;
   });
+
+  /**
+   * Waits for `window.turnstile` to exist, then hands off to Turnstile's own `ready()` (Cloudflare's
+   * client-side rendering docs: `ready()` queues a callback until the API has finished its own
+   * internal setup, not just until the object exists) before invoking `callback`. `api.js` loads
+   * `async`, and the two explicit-render widgets below (see {@link turnstileExplicit}) can mount
+   * before it has finished loading (the pay-fee panel and the renew pivot both appear right after a
+   * form submit, which can beat a slow network to api.js), so this polls rather than assuming any
+   * ordering between the two. Returns a cancel function so a widget torn down mid-wait never fires a
+   * stray render.
+   */
+  function onTurnstileReady(callback: () => void): () => void {
+    let cancelled = false;
+    function poll(): void {
+      if (cancelled) return;
+      if (window.turnstile) {
+        window.turnstile.ready(callback);
+        return;
+      }
+      window.setTimeout(poll, 50);
+    }
+    poll();
+    return () => {
+      cancelled = true;
+    };
+  }
+
+  /**
+   * Svelte action that explicitly renders a Turnstile widget into `node`, following Cloudflare's
+   * client-side/explicit-rendering pattern
+   * (developers.cloudflare.com/turnstile/get-started/client-side-rendering). Turnstile's implicit
+   * auto-render (the `class="cf-turnstile" data-sitekey=...` convention the plain signup form below
+   * still uses) only scans the document for `.cf-turnstile` elements once, when `api.js` first
+   * loads; a widget an `{#if}` branch reveals afterward, like the pay-fee and renew-link widgets
+   * this action is used on, is never picked up by that scan and so is never rendered without this.
+   * Renders at most once per mount (the wait in {@link onTurnstileReady} self-terminates after its
+   * first callback) and removes the widget on teardown, so re-entering the branch later never
+   * leaves a duplicate.
+   */
+  function turnstileExplicit(node: HTMLElement): { destroy(): void } {
+    let widgetId: string | undefined;
+    const cancelWait = onTurnstileReady(() => {
+      widgetId = window.turnstile?.render(node, { sitekey: TURNSTILE_SITE_KEY });
+    });
+    return {
+      destroy() {
+        cancelWait();
+        if (widgetId !== undefined) window.turnstile?.remove(widgetId);
+      },
+    };
+  }
 </script>
 
 <svelte:head>
   <title>{data.cls.name} — Sign Up — {siteConfig.siteName}</title>
+  <!-- Loaded exactly once, unconditionally: previously this page carried three copies of this
+       tag, one per outcome branch below, so transitioning between branches (e.g. plain form ->
+       enrolled) removed and re-inserted the tag, re-fetching and re-executing api.js. A single
+       tag in the document head persists across every branch transition. The plain signup form's
+       widget still renders via Turnstile's own implicit auto-render (its `class="cf-turnstile"`
+       markup, scanned once when this loads); the pay-fee and renew-link widgets render via
+       {@link turnstileExplicit} instead, since they are not in the DOM at that first scan. -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </svelte:head>
 
 <h1 class="m-0 font-display text-step-4 font-semibold leading-tight tracking-tight text-base-content">
@@ -132,13 +191,11 @@ pivot before the visitor fills out the rest of the form. -->
         <form {...payClassFee} class="mt-s flex flex-col items-start gap-s">
           <input type="hidden" name="enrollmentId" value={joinClass.result.enrollmentId} />
           <input type="hidden" name="classId" value={data.cls.id} />
-          <div class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY}></div>
+          <div use:turnstileExplicit></div>
           <button type="submit" class="btn btn-primary btn-sm" disabled={!!payClassFee.pending}>
             {payClassFee.pending ? 'Redirecting…' : `Pay $${data.cls.fee} now`}
           </button>
         </form>
-
-        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
       {/if}
     {:else}
       <!-- The free-clinic journey (Geoff, 2026-07-07): the signup IS the roster, so the
@@ -170,13 +227,11 @@ pivot before the visitor fills out the rest of the form. -->
     {:else}
       <form {...requestRenewLink} class="mt-s flex flex-col items-start gap-s">
         <input type="hidden" name="email" value={pivot.email} />
-        <div class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY}></div>
+        <div use:turnstileExplicit></div>
         <button type="submit" class="btn btn-primary btn-sm" disabled={!!requestRenewLink.pending}>
           {requestRenewLink.pending ? 'Sending…' : 'Email me a sign-in link'}
         </button>
       </form>
-
-      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     {/if}
   </div>
 {:else if pivot}
@@ -245,8 +300,6 @@ pivot before the visitor fills out the rest of the form. -->
       {/if}
     </button>
   </form>
-
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 {/if}
 
 <style>

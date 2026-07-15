@@ -18,3 +18,17 @@ export async function verifyTurnstile(token: string, ip: string, secret: string)
  * paired secret key, which stays a Worker secret).
  */
 export const TURNSTILE_SITE_KEY = '0x4AAAAAACaRcPmackdot0hZ';
+
+declare global {
+  interface Window {
+    /** Cloudflare's Turnstile client API (`api.js`): present once that script has executed,
+     *  `undefined` before then and during SSR. Any explicit-render caller (a widget added to the
+     *  DOM after the page's initial paint, which Turnstile's implicit auto-render never picks up;
+     *  see the class-signup page's own `turnstileExplicit` action) needs this ambient type. */
+    turnstile?: {
+      render: (container: HTMLElement, options: { sitekey: string }) => string;
+      remove: (widgetId: string) => void;
+      ready: (callback: () => void) => void;
+    };
+  }
+}
