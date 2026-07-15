@@ -142,6 +142,72 @@
     }
   }
 
+  /* ─── Facts: a quiet label/value list, no card chrome (2026-07-15) ─────── */
+  /* A `<dl>` of at-a-glance facts (cost, eligibility, and similar): quiet structure inside the
+     prose measure, not a card, per A1's "cards mark objects" rule (facts describe the topic, they
+     are not one). Each `:::fact` row builds to a `.asc-fact` wrapper div; `display: contents`
+     drops the wrapper's own box so its `dt`/`dd` children sit as direct grid items of the `dl`'s
+     own two-column grid, while the markup still nests validly inside a `<dl>`. */
+  .prose .asc-facts {
+    --flow-space: var(--spacing-m);
+    display: grid;
+    grid-template-columns: minmax(8rem, 12rem) 1fr;
+    margin: 0;
+  }
+  .prose .asc-fact {
+    display: contents;
+  }
+  .prose .asc-fact-label,
+  .prose .asc-fact-value {
+    margin: 0;
+    padding: var(--spacing-2xs) 0;
+    border-top: 1px solid var(--color-card-border);
+  }
+  /* The first row has nothing above it to separate from. */
+  .prose .asc-fact:first-child .asc-fact-label,
+  .prose .asc-fact:first-child .asc-fact-value {
+    border-top: none;
+  }
+  .prose .asc-fact-label {
+    padding-right: var(--spacing-s);
+    font-size: var(--text-step--1);
+    font-weight: 600;
+    color: var(--color-muted);
+  }
+  .prose .asc-fact-value {
+    font-size: var(--text-step-0);
+    color: var(--color-base-content);
+  }
+  .prose .asc-fact-value > * {
+    margin: 0;
+  }
+  .prose .asc-fact-value > * + * {
+    margin-top: var(--spacing-2xs);
+  }
+  /* Below 40rem: single column, label above value, one tighter hairline per row (on the label
+     only, so the pair reads as one row instead of drawing a line between its own label and
+     value). */
+  @media (max-width: 40rem) {
+    .prose .asc-facts {
+      grid-template-columns: 1fr;
+    }
+    .prose .asc-fact-label,
+    .prose .asc-fact-value {
+      padding: var(--spacing-3xs) 0;
+    }
+    .prose .asc-fact-value {
+      border-top: none;
+    }
+    .prose .asc-fact-label {
+      border-top: 1px solid var(--color-card-border);
+      padding-top: var(--spacing-2xs);
+    }
+    .prose .asc-fact:first-child .asc-fact-label {
+      border-top: none;
+      padding-top: 0;
+    }
+  }
+
   /* ─── Action button: the fireweed "act now" verb, in content (2026-07-13) ─ */
   /* Home's own `.cta-btn` recipe, made reachable from page markdown. The color story's accent
      budget ("the single pop, at most twice a page") is spent ONLY through this class, on a page's

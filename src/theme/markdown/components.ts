@@ -1,15 +1,18 @@
 // ASC's component registry. `callout` reuses cairn's own showcase build function verbatim (same
 // class names: `.callout`/`.callout-title`/`.callout-body`/`.callout-points`), which the copied
 // `prose.css` already styles, so it renders correctly with zero new CSS (the
-// reuse-Waymark's-own-shape lesson from the ecxc-ski rebuild). `passage` and the `cards`/`card`
-// pair have no Waymark equivalent and are this site's own components (Task 2's content-migration
-// findings #1 and the icon-headed prose block): `passage` is a titled prose block with no card
-// chrome (an icon-headed heading followed by a paragraph, the shape the migrated content already
-// used); `cards`/`card` is the one flexible card-grid family that answers both the migrated
-// `.cta-list` (a whole-card link, `href` present) and `.card-grid.icon-cards` (a static feature
-// card, `href` absent) shapes from the old Hugo site, closest in spirit to the ecxc-ski `week`/
-// `day` and `programs`/`program` nested-composite pattern. Both get their own styling in
-// `asc-components.css`.
+// reuse-Waymark's-own-shape lesson from the ecxc-ski rebuild). `passage`, the `cards`/`card` pair,
+// and the `facts`/`fact` pair have no Waymark equivalent and are this site's own components (Task
+// 2's content-migration findings #1 and the icon-headed prose block, and the 2026-07-15 shared-
+// components review): `passage` is a titled prose block with no card chrome (an icon-headed
+// heading followed by a paragraph, the shape the migrated content already used); `cards`/`card` is
+// the one flexible card-grid family that answers both the migrated `.cta-list` (a whole-card link,
+// `href` present) and `.card-grid.icon-cards` (a static feature card, `href` absent) shapes from
+// the old Hugo site, closest in spirit to the ecxc-ski `week`/`day` and `programs`/`program`
+// nested-composite pattern; `facts`/`fact` is a quiet label/value list (cost, eligibility, and
+// similar at-a-glance attributes of the surrounding topic) that renders a semantic `<dl>` with no
+// card chrome at all, per A1's "cards mark objects, facts describe them" reading. All three get
+// their own styling in `asc-components.css`.
 import { h } from 'hastscript';
 import type { Element, ElementContent } from 'hast';
 import { defineRegistry, defineComponent, fields } from '@glw907/cairn-cms';
@@ -144,6 +147,50 @@ const cards = defineComponent({
   icon: 'grid-nine',
 });
 
+// ─── Facts / fact: a quiet label/value list, no card chrome (site-declared) ─
+// A `:::facts` list summarizes a handful of at-a-glance attributes of the surrounding topic (cost,
+// eligibility, boat size, and similar): quiet structure inside the prose measure, not an object of
+// its own, so it never earns card chrome. Each `:::fact` row builds to a `.asc-fact` wrapper `div`
+// (styled `display: contents` in asc-components.css) holding a real `<dt>`/`<dd>` pair, so the
+// wrapper disappears from layout and the `dt`/`dd` sit as direct children of the enclosing `<dl>`'s
+// own CSS grid, while the markup still nests validly inside a `<dl>` (HTML5 groups `dt`/`dd` pairs
+// inside a `div`). Same nesting mechanic as `cards`/`card`: the container filters its slot's
+// children by class, and the child component is `hidden` from the standalone insert menu.
+function buildFact(ctx: ComponentContext): Element {
+  return h('div', { className: ['asc-fact'] }, [
+    h('dt', { className: ['asc-fact-label'] }, ctx.slot('title')),
+    h('dd', { className: ['asc-fact-value'] }, ctx.slot('body')),
+  ]);
+}
+
+const fact = defineComponent({
+  name: 'fact',
+  label: 'Fact',
+  description: 'One label/value row in a :::facts key-facts list.',
+  use: 'One entry inside a :::facts list (used nested).',
+  insertTemplate: ':::fact[Label]\nValue.\n:::',
+  build: buildFact,
+  slots: [
+    { name: 'title', label: 'Label', kind: 'inline', required: true },
+    { name: 'body', label: 'Value', kind: 'markdown' },
+  ],
+  group: 'Page structure',
+  icon: 'list-checks',
+  hidden: true,
+});
+
+const facts = defineComponent({
+  name: 'facts',
+  label: 'Key facts',
+  description: 'A label/value list of key facts (cost, eligibility, and similar), rendered as a definition list.',
+  use: 'Summarize a handful of at-a-glance facts about the surrounding topic.',
+  insertTemplate: '::::facts\n:::fact[Label]\nValue.\n:::\n::::',
+  build: (ctx) => h('dl', { className: ['asc-facts'] }, ctx.slot('body').filter((c) => hasClass(c, 'asc-fact'))),
+  slots: [{ name: 'body', label: 'Facts', kind: 'markdown' }],
+  group: 'Page structure',
+  icon: 'list-checks',
+});
+
 // ─── Contact / donate forms: hydrated islands (completion-pass manifest item 2) ─
 // Both are content-authored placements with no attributes: build() emits only the no-JavaScript
 // fallback (a plain mailto link), and the live, interactive form (ContactForm.svelte,
@@ -231,5 +278,16 @@ const membershipPricing = defineComponent({
 });
 
 export const ascRegistry = defineRegistry({
-  components: [callout, passage, cards, card, contactForm, donateForm, classSchedule, membershipPricing],
+  components: [
+    callout,
+    passage,
+    cards,
+    card,
+    facts,
+    fact,
+    contactForm,
+    donateForm,
+    classSchedule,
+    membershipPricing,
+  ],
 });
