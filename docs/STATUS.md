@@ -1,6 +1,27 @@
 # asc-site status
 
-**INITIATIVE 4 (segment-email) IS COMPLETE, MERGED TO MAIN (98257fe), MIGRATION LIVE,
+**INITIATIVE 5 (admin-roles) OPENS ON CAIRN SEQUENCING (2026-07-14, Geoff's calls at
+the session-5 open). The conflict found at open: cairn's STATUS (committed 16:33) ratified
+an admin NAV-LAYOUT pass shipping as 0.86.0 with explicit sequencing — "the ASC session
+waits for this cut so it bumps ONCE for roles + navLayout together" — while this file's
+prior entry (16:47, written without that ruling) said bump ^0.85.0 now. Geoff ruled: the
+cairn nav-layout pass runs first, and then directed THIS session to execute it by
+workflow and proceed to the 0.86.0 release (superseding the fresh-cairn-session note;
+the plan is committed in cairn at 7eac1007). The
+navLayout seam is squarely inside initiative 5's surface — ASC's `filterClubNav` (wired as
+the engine `navFilter` in src/chassis/cairn.server.ts) collapses to a declarative
+`roles: ['owner', 'club-admin']` on the Club section — so the bump-once ruling stands.
+AFTER 0.86.0 SHIPS: resume initiative 5 in a fresh ASC session — bump ^0.84.4 → ^0.86.0,
+then brainstorm the collapse against BOTH shipped seams (roles + navLayout). Contract:
+docs/2026-07-13-cairn-editor-roles-consumer-brief.md (0.85.0 answered its seam question —
+a `none` session stays authenticated, carries typed `locals.editor`, and passes through
+CairnAdminShell untouched; plus bootstrapOwner, per-role `home`, migration 0001_roles.sql,
+cairn-doctor role checks). The collapse surface, verified this session: club_roles
+(migration 0001_substrate), src/admin-club/lib/club-roles.ts (incl. the atomic last-owner
+guard), club-action.ts's role gate, the /admin/club layout guard, the Settings
+grant/revoke actions, and filterClubNav. ROADMAP's admin-roles entry updated to match.**
+
+**PRIOR: INITIATIVE 4 (segment-email) IS COMPLETE, MERGED TO MAIN (98257fe), MIGRATION LIVE,
 AND ON DEV (2026-07-14, the program's fourth session). Spec
 `docs/2026-07-14-segment-email-design.md` + plan `docs/plans/2026-07-14-segment-email.md`,
 both implemented. What landed: `/admin/club/email/compose` (landing = `email_blasts`

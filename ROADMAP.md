@@ -62,12 +62,16 @@ segments, not a campaign product.
 ### Custom admin roles `admin-roles`
 The staff-roles collapse onto cairn's editor-roles seam, ruled the NEXT initiative by
 Geoff 2026-07-14 now that cairn 0.85.0 ships the seam (one identity, site-declared
-role vocabulary; ASC is the named first consumer). The work: bump the dependency
-^0.84.4 → ^0.85.0 (a 0.x caret excludes 0.85.0), declare owner/club-admin/instructor
-in site config mapped to engine capability levels, collapse `club_roles` onto the seam
-(retiring the table, the Settings grant/revoke UI, and the site-side last-owner
-guard), and keep member-scale auth separate per Geoff's ruling. The contract:
-`docs/2026-07-13-cairn-editor-roles-consumer-brief.md`.
+role vocabulary; ASC is the named first consumer). SEQUENCING (Geoff, 2026-07-14, at
+the session-5 open): the initiative waits for cairn's admin nav-layout pass (0.86.0),
+so ASC bumps ONCE for roles + navLayout together — the navLayout seam replaces this
+site's `filterClubNav` with declarative role visibility, inside this initiative's
+surface. The work, once 0.86.0 is on the registry: bump the dependency ^0.84.4 →
+^0.86.0 (a 0.x caret excludes higher minors), declare owner/club-admin/instructor in
+site config mapped to engine capability levels, adopt `navLayout` for the sidebar,
+collapse `club_roles` onto the seam (retiring the table, the Settings grant/revoke UI,
+and the site-side last-owner guard), and keep member-scale auth separate per Geoff's
+ruling. The contract: `docs/2026-07-13-cairn-editor-roles-consumer-brief.md`.
 
 ### Payments hardening & live smoke `payments-live-smoke`
 The deliberate live-Stripe smoke that has been queued since pass 2.1, plus Turnstile
