@@ -57,14 +57,17 @@ now FIVE stops (Members, household desk, Money & Renewals, Compose with the anno
 grace widening, and the NEW SIDEBAR + ManageEditors as the one role screen); the 07-15
 apology-send verification (check the JSONL beside
 ~/.local/asc-data/send-apology-2026-07-15.mjs if that session died). NEXT SESSION, the
-overnight run — CONDUCTOR CHOICE PENDING GEOFF (he flagged 75% weekly Fable spend):
-recommendation is OPUS-conducted against the settled rulings, reserving Fable for the
-interactive brainstorms and design rounds where his ruling says the edge lives. Resume
-prompt: "Author the payments-live-smoke spec and the mw-cutover runbook per their
-ROADMAP entries' pre-spec rulings (settled 2026-07-14; no questions — default
-conservatively and flag in the doc). Read docs/STATUS.md first. No deploys, no live D1
-writes, no design rounds. Riders if budget allows: the admin e2e login helper (use the
-corrected session recipe) and the polish-backlog triage into design groups."**
+overnight run — CONDUCTOR MODE RULED (Geoff, at this close, with 75% weekly Fable
+spent): FABLE CONDUCTS AT VERY HIGH ALTITUDE — judgment, dispatch, and triage only,
+near-zero main-loop drafting or bulk reading — and DISPATCHES OPUS AGENTS for the
+research and spec drafting. Resume prompt: "Author the payments-live-smoke spec and
+the mw-cutover runbook per their ROADMAP entries' pre-spec rulings (settled
+2026-07-14; no questions — default conservatively and flag in the doc). Operating
+mode per Geoff's ruling: Fable stays at very high altitude and dispatches Opus agents
+for research and drafting; the main loop only briefs, reviews, and triages. Read
+docs/STATUS.md first. No deploys, no live D1 writes, no design rounds. Riders if
+budget allows: the admin e2e login helper (use the corrected session recipe) and the
+polish-backlog triage into design groups."**
 
 **SESSION 5 CLOSED PRE-BRAINSTORM (2026-07-14 night, deliberate clear on Geoff's call —
 the session ran long and noisy: the cairn double-execution below, the calendar fix, the
