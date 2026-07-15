@@ -12,7 +12,17 @@
 // of its date, mirroring the legacy main-site Worker's own `buildEventsPage`).
 import type { D1Database } from '@cloudflare/workers-types';
 import type { MediaResolve } from '@glw907/cairn-cms/media';
-import { categorize, DATE_TBD, formatDateRange, monthAndDay, readCurrentSeason, routeIdOf, SEASON_MONTHS } from './season-data';
+import {
+  categorize,
+  DATE_TBD,
+  formatDateRange,
+  monthAndDay,
+  readCurrentSeason,
+  routeIdOf,
+  seasonDotKind,
+  SEASON_MONTHS,
+  type SeasonDotKind,
+} from './season-data';
 import { resolveEventImageUrl } from './event-images';
 
 /** A raw event or class row from D1, the full column set the detailed listing (and the per-event
@@ -175,6 +185,11 @@ export interface EventCard {
    *  event. */
   dot?: boolean;
   muted?: boolean;
+  /** The home Season list's own four-way taxonomy (`season-data.ts`'s `seasonDotKind`, reused
+   *  verbatim, never a second mapping), so the category chip's dot color and the class/clinic
+   *  star glyph match the home band exactly. Undefined only for a category outside the ratified
+   *  taxonomy, the same defensive fallback `seasonDotKind` itself documents. */
+  dotKind?: SeasonDotKind;
   dateDisplay: string;
   isTbd: boolean;
   /** A friendly 12-hour rendering of `start_time`/`end_time` (events only; `classes` carries no
@@ -271,8 +286,10 @@ function stripMarkdown(md: string): string {
 }
 
 /** Truncate `text` at the last word boundary within `maxLen` characters, so the spine row's
- *  teaser never cuts a word in half; the ellipsis marks a real truncation only. */
-function truncateSummary(text: string, maxLen = 90): string {
+ *  teaser never cuts a word in half; the ellipsis marks a real truncation only. Exported so this
+ *  bug fix (B2, the shared-components pass) is directly unit-testable rather than only through
+ *  `buildEventsPage`'s own summary field. */
+export function truncateSummary(text: string, maxLen = 90): string {
   if (text.length <= maxLen) return text;
   const cut = text.slice(0, maxLen);
   const lastSpace = cut.lastIndexOf(' ');
@@ -302,6 +319,7 @@ export async function toEventCard(
     typeLabel: TYPE_LABELS[row.event_type] ?? row.event_type,
     typeIcon: TYPE_ICONS[row.event_type] ?? 'sailboat',
     ...categorize(row.event_type),
+    dotKind: seasonDotKind(row.event_type),
     dateDisplay,
     isTbd,
     timeDisplay: row.start_time ? formatTimeRange(row.start_time, row.end_time) : undefined,

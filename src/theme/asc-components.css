@@ -456,4 +456,64 @@
   .prose .asc-table-legend > * + * {
     margin-top: var(--spacing-3xs);
   }
+
+  /* ─── Event chips: category and availability, shared by both event surfaces (2026-07-15) ── */
+  /* Unifies EventsListing's spine rows and the education page's live class schedule on the home
+     Season list's settled C7 vocabulary (season-data.ts's `seasonDotKind`, the same mapping
+     SeasonList.svelte renders): a category chip is the same colored dot the Season list uses
+     (`--color-racing-dot`/`--color-sage-dot`/`--color-business-dot`) plus a small-caps label,
+     muted ink; a class or clinic gets the gold star glyph in place of a dot, since color is
+     never the only channel carrying a mark's meaning. Availability (Open/Full/Completed and
+     similar) is a SEPARATE chip, never sharing the category's slot, and deliberately uncolored:
+     a quiet outline, no semantic-palette token, since that vocabulary stays reserved for the
+     site's actual warning/success/error system elsewhere. Each component keeps its own local
+     class for layout only (grid placement, flex-shrink); these two classes carry the look. */
+  .prose .asc-category-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-variant: small-caps;
+    font-size: var(--text-step--2);
+    color: var(--color-muted);
+    white-space: nowrap;
+  }
+  .prose .asc-category-mark {
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .prose .asc-category-mark--racing,
+  .prose .asc-category-mark--social,
+  .prose .asc-category-mark--business {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+  }
+  .prose .asc-category-mark--racing {
+    background: var(--color-racing-dot);
+  }
+  .prose .asc-category-mark--social {
+    background: var(--color-sage-dot);
+  }
+  .prose .asc-category-mark--business {
+    background: var(--color-business-dot);
+  }
+  .prose .asc-category-mark--star {
+    font-size: 0.65rem;
+    line-height: 1;
+    color: var(--color-star-gold-dot);
+  }
+  .prose .asc-availability-chip {
+    display: inline-block;
+    flex-shrink: 0;
+    padding: 0.1rem 0.5rem;
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-selector);
+    background: transparent;
+    color: var(--color-muted);
+    font-size: var(--text-step--2);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
 }

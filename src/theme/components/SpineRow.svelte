@@ -1,11 +1,17 @@
 <!-- @component
 The events-redesign pass: one event or class hanging off the season spine (`EventsListing.svelte`)
 — a uniform, quiet compact row: a tabular-nums date block, the event's name (linking to its own
-`/events/[id]` page), a category chip, a registration-status chip when meaningful, and a one-line
+`/events/[id]` page), a category chip, an availability chip when meaningful, and a one-line
 truncated description. Its marker dot sits ON the spine line (`.spine-marker`, positioned via the
 shared `--spine-content-gap` custom property the parent `.spine` declares); a class or clinic gets
 the established gold marker (`--color-star-gold-dot`), the same vocabulary the home page's Season
-band and the C7 taxonomy already use, with the matching sr-only text for a screen reader. -->
+band and the C7 taxonomy already use, with the matching sr-only text for a screen reader.
+
+The category and availability chips (2026-07-15 shared-components pass) are the same two classes
+`ClassSchedule.svelte`'s status cell uses (`.asc-category-chip`/`.asc-availability-chip` in
+`asc-components.css`), so both event surfaces read as one vocabulary: category is a colored dot
+(or the gold star glyph for a class/clinic) plus a small-caps label, and availability is a
+separate, deliberately uncolored outline chip, never sharing the category's slot. -->
 <script lang="ts">
   import type { EventCard } from '$theme/events-data';
 
@@ -16,8 +22,6 @@ band and the C7 taxonomy already use, with the matching sr-only text for a scree
     event: EventCard;
     showTypeBadge?: boolean;
   } = $props();
-
-  const typeClass = $derived(event.dot ? 'type-accent' : event.muted ? 'type-muted' : 'type-plain');
 </script>
 
 <div class="spine-row" id={event.routeId}>
@@ -30,10 +34,17 @@ band and the C7 taxonomy already use, with the matching sr-only text for a scree
     <div class="spine-row-title-line">
       <a href="/events/{event.routeId}" class="spine-row-title">{event.title}</a>
       {#if showTypeBadge}
-        <span class="spine-chip {typeClass}">{event.typeLabel}</span>
+        <span class="spine-chip asc-category-chip">
+          {#if event.dotKind === 'class'}
+            <span class="asc-category-mark asc-category-mark--star" aria-hidden="true">★</span>
+          {:else if event.dotKind}
+            <span class="asc-category-mark asc-category-mark--{event.dotKind}" aria-hidden="true"></span>
+          {/if}
+          <span class="asc-category-label">{event.typeLabel}</span>
+        </span>
       {/if}
       {#if event.registrationStatusLabel}
-        <span class="spine-chip spine-chip--reg-{event.registrationStatusKind}">{event.registrationStatusLabel}</span>
+        <span class="spine-chip asc-availability-chip">{event.registrationStatusLabel}</span>
       {/if}
     </div>
     {#if event.summary}
@@ -83,48 +94,10 @@ band and the C7 taxonomy already use, with the matching sr-only text for a scree
     text-decoration: underline;
   }
 
+  /* Layout only: the chip's own look (color, border, radius) comes from the shared
+     `.asc-category-chip`/`.asc-availability-chip` classes in asc-components.css. */
   .spine-chip {
     flex-shrink: 0;
-    display: inline-block;
-    padding: 0.1rem 0.5rem;
-    border-radius: 999px;
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-  }
-  .spine-chip.type-accent {
-    background: color-mix(in oklab, var(--color-secondary) 18%, transparent);
-    color: color-mix(in oklab, var(--color-secondary) 55%, var(--color-base-content));
-  }
-  .spine-chip.type-plain {
-    background: transparent;
-    border: 1px solid var(--color-card-border);
-    color: var(--color-base-content);
-  }
-  .spine-chip.type-muted {
-    background: var(--color-base-200);
-    color: var(--color-muted);
-  }
-  .spine-chip--reg-success {
-    background: color-mix(in oklab, var(--color-success) 14%, transparent);
-    color: var(--cairn-success-ink);
-  }
-  .spine-chip--reg-info {
-    background: color-mix(in oklab, var(--color-info) 14%, transparent);
-    color: var(--cairn-info-ink);
-  }
-  .spine-chip--reg-warning {
-    background: color-mix(in oklab, var(--color-warning) 18%, transparent);
-    color: var(--cairn-warning-ink);
-  }
-  .spine-chip--reg-error {
-    background: color-mix(in oklab, var(--color-error) 14%, transparent);
-    color: var(--cairn-error-ink);
-  }
-  .spine-chip--reg-muted {
-    background: var(--color-base-200);
-    color: var(--color-muted);
   }
 
   .spine-row-summary {

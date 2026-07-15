@@ -6,7 +6,12 @@ clinic). Mounted as a `class-schedule` island (markdown/components.ts): the stat
 a pointer to the events page, and this component replaces it once mounted, reading through
 `getClassSchedule` (class-schedule.remote.ts). While the read is in flight it renders ghost
 rows in the final geometry, so the mount never shifts the page. An empty or failed read renders
-the same events-page pointer the fallback carries, permanently. -->
+the same events-page pointer the fallback carries, permanently.
+
+The status chip (2026-07-15 shared-components pass) is the same `.asc-availability-chip` class
+`SpineRow.svelte`'s registration-status chip uses (asc-components.css): a quiet outline, no
+semantic-palette color, since Open/Full/Completed and every other lifecycle label now read the
+same neutral chip rather than a color-per-status vocabulary. -->
 <script lang="ts">
   import { getClassSchedule } from '$theme/class-schedule.remote';
 
@@ -44,7 +49,7 @@ the same events-page pointer the fallback carries, permanently. -->
           <li class="cs-row">
             <span class="cs-name">{entry.name}</span>
             <span class="cs-dates">{entry.dateDisplay}</span>
-            <span class="cs-chip cs-chip--{entry.statusKind}">{entry.statusLabel}</span>
+            <span class="cs-chip asc-availability-chip">{entry.statusLabel}</span>
             {#if entry.action}
               <a class="cs-action" href={entry.action.href}>{entry.action.label}</a>
             {:else if entry.note}
@@ -104,37 +109,11 @@ the same events-page pointer the fallback carries, permanently. -->
     white-space: nowrap;
   }
 
+  /* Layout only: the chip's own look (color, border, radius) comes from the shared
+     `.asc-availability-chip` class in asc-components.css. */
   .cs-chip {
     grid-area: chip;
     justify-self: start;
-    display: inline-block;
-    padding: 0.1rem 0.5rem;
-    border-radius: 999px;
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-  .cs-chip--success {
-    background: color-mix(in oklab, var(--color-success) 14%, transparent);
-    color: var(--cairn-success-ink);
-  }
-  .cs-chip--info {
-    background: color-mix(in oklab, var(--color-info) 14%, transparent);
-    color: var(--cairn-info-ink);
-  }
-  .cs-chip--warning {
-    background: color-mix(in oklab, var(--color-warning) 18%, transparent);
-    color: var(--cairn-warning-ink);
-  }
-  .cs-chip--error {
-    background: color-mix(in oklab, var(--color-error) 14%, transparent);
-    color: var(--cairn-error-ink);
-  }
-  .cs-chip--muted {
-    background: var(--color-base-200);
-    color: var(--color-muted);
   }
 
   .cs-action {

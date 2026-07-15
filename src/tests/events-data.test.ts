@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { buildEventOrder, buildEventsPage, readEventRows, toEventCard, type EventDetailRow } from '$theme/events-data';
+import {
+  buildEventOrder,
+  buildEventsPage,
+  readEventRows,
+  toEventCard,
+  truncateSummary,
+  type EventDetailRow,
+} from '$theme/events-data';
 import type { MediaRef } from '@glw907/cairn-cms/media';
 import { fakeD1 } from './_fake-d1';
 
@@ -250,6 +257,46 @@ describe('buildEventsPage', () => {
       { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
     );
     expect(data.monthSections[0].events[0].summary).toBe('Bring your own gear See the list for details.');
+  });
+  it('tags each card with the Season list\'s C7 dot kind, reused verbatim from season-data.ts', async () => {
+    const data = await buildEventsPage(
+      [
+        row({ title: 'Regatta', slug: 'regatta', event_type: 'racing', start_date: '2026-06-01' }),
+        row({ title: 'Adult Intro', slug: 'adult-intro', event_type: 'class', start_date: '2026-06-02' }),
+        row({ title: 'Potluck', slug: 'potluck', event_type: 'social', start_date: '2026-06-03' }),
+        row({ title: 'Work Party', slug: 'work-party', event_type: 'operations', start_date: '2026-06-04' }),
+        row({ title: 'Meeting', slug: 'meeting', event_type: 'governance', start_date: '2026-06-05' }),
+      ],
+      { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+    );
+    const allEvents = [...data.monthSections[0].events, ...data.meetings];
+    const byTitle = Object.fromEntries(allEvents.map((e) => [e.title, e.dotKind]));
+    expect(byTitle['Regatta']).toBe('racing');
+    expect(byTitle['Adult Intro']).toBe('class');
+    expect(byTitle['Potluck']).toBe('social');
+    expect(byTitle['Work Party']).toBe('business');
+    expect(byTitle['Meeting']).toBe('business');
+  });
+});
+
+describe('truncateSummary', () => {
+  it('returns text unchanged when it already fits', () => {
+    expect(truncateSummary('Bring gloves.')).toBe('Bring gloves.');
+  });
+
+  it('cuts at the last word boundary, never mid-word, and marks the cut with an ellipsis', () => {
+    const text =
+      'This is a deliberately long lede sentence meant to exceed the ninety character truncation boundary by a fair margin.';
+    const truncated = truncateSummary(text, 90);
+    expect(truncated.length).toBeLessThanOrEqual(91);
+    expect(truncated.endsWith('…')).toBe(true);
+    expect(truncated.endsWith(' …')).toBe(false);
+    // The character immediately before the cut must be a real word's own last letter, not a
+    // fragment: the source text has no word starting at any offset this truncation could stop
+    // mid-way through without landing on a space.
+    const withoutEllipsis = truncated.slice(0, -1);
+    expect(text.startsWith(withoutEllipsis)).toBe(true);
+    expect(text[withoutEllipsis.length]).toBe(' ');
   });
 });
 
