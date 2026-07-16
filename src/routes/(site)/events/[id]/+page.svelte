@@ -219,18 +219,28 @@ both event surfaces. -->
     align-items: center;
     gap: var(--spacing-m);
   }
+  /* The solid CTA tier (two-tier CTA grammar, ratified 2026-07-15): the same craft recipe as the
+     home closing band's `.cta-btn`, using the light-ground shadow variant (asc-components.css's
+     `.prose .asc-cta-btn`) since this page's action zone sits on the plain page ground, not navy. */
   .cta-btn {
     display: inline-block;
     background: var(--color-fireweed);
     color: white;
     font-weight: 650;
     font-size: var(--text-step--1);
-    padding: 0.6rem 1.25rem;
+    padding: 0.625rem 1.375rem;
     border-radius: var(--radius-field);
     text-decoration: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 1px 2px color-mix(in oklab, var(--color-fireweed) 40%, transparent),
+      0 4px 12px -6px color-mix(in oklab, var(--color-fireweed) 55%, transparent);
+    transition: background 0.15s ease, box-shadow 0.15s ease;
   }
   .cta-btn:hover {
-    filter: brightness(1.08);
+    background: color-mix(in oklab, var(--color-fireweed), black 8%);
+  }
+  .cta-btn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
   }
   .event-detail-registration-note {
     margin: 0;

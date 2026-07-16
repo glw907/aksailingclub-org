@@ -156,7 +156,7 @@ before the photography existed, never a broken image. -->
           community-involved 501(c)(3) with an active yearly schedule of classes, regattas, and
           family-friendly events &mdash; fun, friends, and sailing under the midnight sun.
         </p>
-        <a href="/education/" class="cta-btn mt-s">Take a sailing class &rarr;</a>
+        <a href="/education/" class="cta-btn-quiet mt-s">Take a sailing class &rarr;</a>
       </div>
       <div class="hero-figure" class:has-photo={!!data.images.hero}>
         {#if data.images.hero}
@@ -477,20 +477,48 @@ before the photography existed, never a broken image. -->
 </div>
 
 <style>
+  /* The two-tier CTA grammar (Geoff-ratified, 2026-07-15): "quiet tier" is the invitation, spent
+     only on the hero's own low-stakes first ask; "solid tier" is the ask, the fireweed button
+     everywhere else spends its budget on a real commitment (joining, registering, paying). Both
+     read from `--color-fireweed` directly; only their weight differs. */
+  .cta-btn-quiet {
+    display: inline-block;
+    align-self: flex-start;
+    background: color-mix(in oklab, var(--color-fireweed) 6%, transparent);
+    color: var(--color-fireweed);
+    border: 1px solid color-mix(in oklab, var(--color-fireweed) 55%, transparent);
+    font-weight: 600;
+    font-size: var(--text-step--1);
+    padding: 0.55rem 1.3rem;
+    border-radius: var(--radius-field);
+    text-decoration: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .cta-btn-quiet:hover {
+    background: color-mix(in oklab, var(--color-fireweed) 12%, transparent);
+    border-color: var(--color-fireweed);
+  }
+  .cta-btn-quiet:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  /* Solid tier: the closing band's "Ready to join?" ask. The craft hover (a background darken, no
+     filter/transform) plus the inset highlight and dual drop-shadow read as a real pressable
+     object against the navy closing-band ground it sits on. */
   .cta-btn {
     display: inline-block;
     background: var(--color-fireweed);
     color: white;
     font-weight: 650;
     font-size: var(--text-step--1);
-    padding: 0.6rem 1.25rem;
+    padding: 0.625rem 1.375rem;
     border-radius: var(--radius-field);
     text-decoration: none;
-    transition: filter 0.15s ease, transform 0.15s ease;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 1px 2px rgba(0, 0, 0, 0.35), 0 4px 12px -6px rgba(0, 0, 0, 0.45);
+    transition: background 0.15s ease, box-shadow 0.15s ease;
   }
   .cta-btn:hover {
-    filter: brightness(1.08);
-    transform: translateY(-1px);
+    background: color-mix(in oklab, var(--color-fireweed), black 8%);
   }
   /* Navy on white by default (the hero's own ground): the completion pass's contrast fix, manifest
      item 1. The prior white outline was invisible against the hero's white background, since this
@@ -1181,6 +1209,7 @@ before the photography existed, never a broken image. -->
 
   @media (prefers-reduced-motion: reduce) {
     .cta-btn,
+    .cta-btn-quiet,
     .ghost-btn,
     .news-card {
       transition: none;
