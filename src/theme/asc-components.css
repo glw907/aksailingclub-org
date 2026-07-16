@@ -146,6 +146,9 @@
     font-family: var(--font-display);
     font-weight: 600;
     font-size: var(--text-step-0);
+    /* A narrow lattice track can wrap a title with a one-letter orphan; balance splits the
+       lines evenly instead. */
+    text-wrap: balance;
   }
   /* A link card's title carries the affordance instead of site.css's whole-block underline (see
      that file's own comment): navy ink, underlined only on hover, so the card reads as one clean

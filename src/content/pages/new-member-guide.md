@@ -15,7 +15,7 @@ By the time you finish reading, you should feel ready to plan your first visit w
 :::card[Join the Discord server]{icon="chats" href="/discord-server/"}
 Our digital clubhouse. Introduce yourself in `#introductions` and connect with fellow members.
 :::
-:::card[Read the Member Expectations]{icon="clipboard-text" href="/member-expectations/"}
+:::card[Member Expectations]{icon="clipboard-text" href="/member-expectations/"}
 The shared rules we all agree to follow. Brief, common-sense, and important.
 :::
 :::card[Plan your first visit on an event weekend]{icon="calendar-dots" href="/events/"}
