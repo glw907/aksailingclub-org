@@ -8,6 +8,17 @@
 > entries beyond the top two or three to the archive — this file is @-imported into every
 > session's context, so its length is a per-session token tax.
 
+**NEXT INITIATIVE: THE PORTAL REDESIGN PASS — spec docs/2026-07-16-portal-redesign-design.md
++ plan docs/plans/2026-07-16-portal-redesign.md (both Geoff-ratified from the mock-D probe
+arc; a fresh session executes T1-T6). Round-1's ratified settle batch (CTA matched pair
+sitewide, TOC nested tier, racing lede link, decisions distillation) was dispatched at this
+session's close — if its commit is absent from main, check the arc log and redispatch. Still
+awaiting Geoff verdicts (arc log): racing passage treatment, class-door template line.
+QUEUED BEHIND IT (ROADMAP, Geoff 2026-07-16): the events-redesign initiative (from-scratch,
+FUNCTIONAL brainstorm first, own template licensed) and the member-directory initiative
+(number-one member-requested feature, full brainstorm + pass) — both open INTERACTIVE with
+Geoff, fresh sessions, probe-iteration process governing the design work.**
+
 **ROUNDS 2-3 LANDED + THE PROCESS SHIFT TO PROBE ITERATION (2026-07-16 day, same session
 continuing the arc below on Geoff's live notes). ROUND 2 (Geoff's five gallery notes, ruled
 whole): the CARD FAMILY REDESIGNED (239b995/820fa64 — hanging icon column, count-aware
