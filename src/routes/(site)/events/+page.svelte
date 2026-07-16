@@ -128,6 +128,10 @@ description, and register link. -->
   .calendar-subscribe-link:hover {
     color: var(--color-primary);
   }
+  .calendar-subscribe-link:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
   .calendar-subscribe-link svg {
     opacity: 0.7;
   }

@@ -665,6 +665,10 @@
   .back-link:hover {
     color: var(--color-primary);
   }
+  .back-link:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
 
   /* The subtitle line under the title (manifest item 10): a distinct, quieter line, not another
      prose paragraph. */

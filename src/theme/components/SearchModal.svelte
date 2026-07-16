@@ -186,6 +186,10 @@ ecxc.ski's own SearchModal, the family's standing Pagefind pattern.
   .search-result-link:hover {
     background-color: var(--color-base-200);
   }
+  .search-result-link:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
 
   @media (prefers-reduced-motion: reduce) {
     .search-trigger {

@@ -93,6 +93,10 @@ separate, deliberately uncolored outline chip, never sharing the category's slot
     color: var(--color-primary);
     text-decoration: underline;
   }
+  .spine-row-title:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
 
   /* Layout only: the chip's own look (color, border, radius) comes from the shared
      `.asc-category-chip`/`.asc-availability-chip` classes in asc-components.css. */

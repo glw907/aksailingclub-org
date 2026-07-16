@@ -503,6 +503,12 @@ before the photography existed, never a broken image. -->
     background: color-mix(in oklab, var(--color-fireweed-ink) 12%, transparent);
     border-color: var(--color-fireweed-ink);
   }
+  /* One step past hover (2026-07-15 invisible-polish fix): the wash steps to 16% (hover is 12%);
+     the border is already solid ink at hover, with no further step to take. Applied instantly. */
+  .cta-btn-quiet:active {
+    background: color-mix(in oklab, var(--color-fireweed-ink) 16%, transparent);
+    transition: none;
+  }
   .cta-btn-quiet:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
@@ -524,6 +530,11 @@ before the photography existed, never a broken image. -->
   }
   .cta-btn:hover {
     background: color-mix(in oklab, var(--color-fireweed), black 8%);
+  }
+  /* One step past hover on the same axis (2026-07-15 invisible-polish fix), applied instantly. */
+  .cta-btn:active {
+    background: color-mix(in oklab, var(--color-fireweed), black 12%);
+    transition: none;
   }
   /* Navy on white by default (the hero's own ground): the completion pass's contrast fix, manifest
      item 1. The prior white outline was invisible against the hero's white background, since this
@@ -549,6 +560,12 @@ before the photography existed, never a broken image. -->
   }
   .ghost-btn:hover {
     background: rgba(255, 255, 255, 0.08);
+  }
+  /* One step past hover, same one-step rule as the quiet CTA tier (2026-07-15 invisible-polish
+     fix), applied instantly. */
+  .ghost-btn:active {
+    background: rgba(255, 255, 255, 0.14);
+    transition: none;
   }
   .ghost-btn:focus-visible {
     outline: 2px solid white;
@@ -1206,6 +1223,13 @@ before the photography existed, never a broken image. -->
   }
   .arrow-link:hover {
     text-decoration-color: currentColor;
+  }
+  /* Ink deepens one step past hover (2026-07-15 invisible-polish fix): the underline is already
+     maxed at hover (solid `currentColor`), so the further step is the text ink itself, darkened
+     past its rest `--color-primary`. Applied instantly. */
+  .arrow-link:active {
+    color: color-mix(in oklab, var(--color-primary), black 15%);
+    transition: none;
   }
   .arrow-link:focus-visible {
     outline: 2px solid var(--color-primary);

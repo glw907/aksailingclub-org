@@ -48,7 +48,7 @@ reader with no JavaScript. -->
       {#each DONATE_PRESETS as preset (preset)}
         <button
           type="button"
-          class="btn"
+          class="btn preset-btn"
           class:btn-primary={selected === preset && !custom}
           onclick={() => choosePreset(preset)}
         >
@@ -100,5 +100,18 @@ reader with no JavaScript. -->
     letter-spacing: var(--tracking-eyebrow);
     text-transform: uppercase;
     color: var(--color-muted);
+  }
+
+  /* Dark-mode preset-amount contrast fix (2026-07-15 invisible-polish fix, color lens finding):
+     DaisyUI's plain `.btn` renders its border and fill at the same base-200 lightness as the dark
+     theme's own page ground (measured via rendered pixels, not computed CSS: fill-vs-page-
+     background contrast 1.00:1, no visible edge), so an unselected preset button disappears into
+     the page. `--color-card-border` is the site's own existing token for a hairline that stays
+     visible on a dark ground (already dark-mode-adjusted in theme.css); reusing it here gives the
+     unselected state a real edge with no new color. The selected `.btn-primary` state already
+     reads clearly via its navy fill, so `:not(.btn-primary)` leaves it untouched, and light mode
+     is untouched too (its own border already reads fine, unflagged by the audit). */
+  :global([data-theme='asc-dark']) .preset-btn:not(.btn-primary) {
+    border-color: var(--color-card-border);
   }
 </style>

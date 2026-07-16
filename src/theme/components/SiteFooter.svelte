@@ -50,6 +50,13 @@ weights. -->
   .footer-link:hover {
     color: var(--color-footer-ink-strong);
   }
+  /* One step past hover on the same axis (2026-07-15 invisible-polish fix): footer-ink is already
+     the "brighten toward white" family (the two tokens above), so a further step in that direction,
+     not a darken, reads as "deepened" ink against this navy ground. Applied instantly. */
+  .footer-link:active {
+    color: color-mix(in oklab, var(--color-footer-ink-strong), white 15%);
+    transition: none;
+  }
   .footer-link:focus-visible {
     outline: 2px solid var(--color-footer-ink-strong);
     outline-offset: 2px;

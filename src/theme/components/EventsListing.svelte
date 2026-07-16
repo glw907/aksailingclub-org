@@ -78,6 +78,10 @@ back with nothing visible) shows one honest line instead of a silent blank page.
   .events-toc-link:hover {
     color: var(--color-base-content);
   }
+  .events-toc-link:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
 
   /* The season spine: one vertical line down the whole listing (`::before`, drawn once on this
      wrapper rather than per-row), with every waypoint and row's own marker positioned off the

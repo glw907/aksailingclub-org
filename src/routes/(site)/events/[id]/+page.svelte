@@ -238,6 +238,11 @@ both event surfaces. -->
   .cta-btn:hover {
     background: color-mix(in oklab, var(--color-fireweed), black 8%);
   }
+  /* One step past hover on the same axis (2026-07-15 invisible-polish fix), applied instantly. */
+  .cta-btn:active {
+    background: color-mix(in oklab, var(--color-fireweed), black 12%);
+    transition: none;
+  }
   .cta-btn:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
@@ -256,6 +261,10 @@ both event surfaces. -->
   .ics-link:hover {
     color: var(--color-primary);
   }
+  .ics-link:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
 
   .event-detail-nav {
     margin-top: var(--spacing-xl);
@@ -273,6 +282,10 @@ both event surfaces. -->
   }
   .event-detail-nav-link:hover {
     color: var(--color-primary);
+  }
+  .event-detail-nav-link:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
   }
   .event-detail-nav-link--next {
     text-align: right;

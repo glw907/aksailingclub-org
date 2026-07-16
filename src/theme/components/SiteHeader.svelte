@@ -404,6 +404,13 @@ state. -->
     font-weight: 650;
     box-shadow: 0 2px 0 var(--color-secondary);
   }
+  /* One step past hover, applied instantly (2026-07-15 invisible-polish fix): declared last so it
+     wins the press moment even on the current-page link, whose `.active` class rule above sits at
+     equal (0,2,0) specificity. */
+  .nav-link:active {
+    color: color-mix(in oklab, var(--color-primary), black 15%);
+    transition: none;
+  }
 
   .theme-toggle,
   .donate-link,
@@ -442,6 +449,18 @@ state. -->
     content: '';
     position: absolute;
     inset: -4px;
+  }
+  /* `.nav-caret`'s own 44px pointer target (2026-07-15 invisible-polish fix): the same expanded-
+     `::before` technique as the trio above, sized to its own smaller visible box. The trio's icons
+     are `h-9 w-9` (36px), so their `-4px` inset reaches 44px (36 + 2*4); the caret is `h-6 w-6`
+     (24px), so it needs a deeper `-10px` inset to reach the same ~44px target (24 + 2*10). */
+  .nav-caret {
+    position: relative;
+  }
+  .nav-caret::before {
+    content: '';
+    position: absolute;
+    inset: -10px;
   }
 
   /* The trio's own hairline (round-3 fix): 1px wide, the same muted hairline token the header's
