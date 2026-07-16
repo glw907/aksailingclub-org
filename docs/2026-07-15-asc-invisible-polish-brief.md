@@ -65,10 +65,18 @@ the ledger left open or what postdates it, not what it already settled.
 
 ### Known-open items from the ledger
 
-- **`::selection`**: no rule exists anywhere (`theme.css`, `site.css`, chassis); text selection
-  renders in the OS default blue. Logged N/A in the ledger as a nice-to-have, not applied.
-- **`:active` states**: no `:active` pseudo-class exists on the site; every interactive element
-  relies on hover plus `:focus-visible` alone. Also logged N/A, not applied.
+**Correction (2026-07-16): both items below shipped during this pass and no longer describe
+the site.** `::selection` landed at `site.css:271` (part of this pass's own work). `:active`
+states landed across the CTA tiers, nav/footer/arrow links, and the header icon trio
+(`cbdbaee`, plus the `4b757af` rider for mobile links and the remaining icon trio); see
+`docs/design-benchmark/ledger.md` for the settled verdicts. The two bullets are left in place
+below, struck through in spirit, as a record of what this pass started from — do not act on
+them as open items.
+
+- ~~**`::selection`**: no rule exists anywhere (`theme.css`, `site.css`, chassis); text selection
+  renders in the OS default blue. Logged N/A in the ledger as a nice-to-have, not applied.~~
+- ~~**`:active` states**: no `:active` pseudo-class exists on the site; every interactive element
+  relies on hover plus `:focus-visible` alone. Also logged N/A, not applied.~~
 
 ### Ungraded since the ledger
 

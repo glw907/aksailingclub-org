@@ -82,7 +82,14 @@ build against a screenshot-compare loop, verify with fresh eyes (not the same se
 the change), then the one-check gate above. The family five-viewport bar (320, 390, 768, 1440,
 2560, composed at the extremes) is the acceptance bar for responsiveness; `e2e/site-visual.spec.ts`
 is the CI-enforced form of it, and any change that alters rendering must regenerate its baselines
-in the same change, never leave them stale.
+in the same change, never leave them stale. **Baselines are CI-canonical and regenerate only via
+`ci.yml`'s `workflow_dispatch` `update_snapshots` mode** (`gh workflow run ci.yml -f
+update_snapshots=true`), which runs the visual spec on the CI runner and commits the resulting
+PNGs straight back to the branch — never a local `--update-snapshots` run (`ci.yml`'s own comment
+names the reason: baselines are CI-canonical, and a workstation render is never an acceptable
+substitute — rendering-environment differences between a workstation and the CI runner produce a
+pixel delta the comparison catches). A workstation-rendered PNG committed as a baseline silently
+breaks CI on the very next run; it happened 2026-07-15.
 
 ## The asc-club schema is fully evolvable — never write around it (Geoff, 2026-07-13)
 
@@ -202,6 +209,13 @@ npx wrangler secret list
 - `docs/events-integration-findings.md`: the `EVENTS_DB` schema verification and taxonomy rules.
 - `docs/verification-findings.md`: the phase-1 verification pass, the pixel-diff rider, and the
   dev takeover record.
+- `docs/content-guide.md`: **does not exist yet.** The `content-draft`/`content-review` skills
+  and the shared `web-content-method.md` expect each site to supply its own generative content
+  guide at this path (see `ecxc-ski/docs/content-guide.md` for the family shape); ASC has never
+  authored one. Until it exists, content work runs on the shared method's rubric alone plus this
+  repo's own locked references (`docs/2026-07-06-asc-phase-1-design.md`, `docs/image-standard.md`)
+  — verified 2026-07-16, investigated rather than assumed (checked this repo, cairn-cms, and the
+  sibling site repos; no ASC-specific content guide exists anywhere).
 
 
 ## The repo family (renamed 2026-07-06)

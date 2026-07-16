@@ -41,3 +41,71 @@ APPLIED 2026-07-08 (commit 02fc6c1) and are now already-right.
 - **Members dropdown hover-intent timing (open/close delay asymmetry)** — RIGHT. The Members flyout opens after a 120ms hover delay (avoids flicker for a passing pointer) and closes after a longer 250ms delay (gives a pointer travelling diagonally into the panel time to arrive). This asymmetry is the
 - **Search input focus treatment inside the search modal** — RIGHT. The search field uses Tailwind's `outline-hidden` utility, which suppresses the ring cosmetically while keeping it available for forced-colors mode, the accessible variant of `outline-none`. This is appropriate here: the
 - **Hover feedback on the What-we-do triptych tiles and news cards** — RIGHT. Both the triptych panel links and the news cards use the same lift/shadow (or background-shift) pattern at the same 150ms timing as the card grid elsewhere on the site, reinforcing one hover language across every card-sh
+
+---
+
+# Audit ledger — invisible-polish pass (mechanical + optical audits, 2026-07-15)
+
+Four fresh-context audits ran 2026-07-15 against the shared-components vocabulary and the
+portal/forms surfaces: `mechanical-audit.md` (static grep/read), `optical-typography.md`,
+`optical-color.md`, `optical-micro.md` (pixel-measured, PIL/numpy on the render set). The
+authoring session crashed before folding these into this ledger; full verbatim text was
+recovered from the crashed session's subagent transcripts and lives at
+`docs/design-benchmark/audits-2026-07-15/` — that directory is now the durable source for any
+finding's exact wording and evidence, not this summary. Verdicts below stand unless the graded
+code changes again. RIGHT/N-A verdicts from these audits are not repeated here in full; consult
+the source files for anything not listed as APPLIED or OPEN.
+
+Fixed by the invisible-polish batches (`e07fc45..d3e73e7`) or the 2026-07-16 basic-polish arc
+(`c78b77d`, `0225f6c`, `4c79cdb`, `fa46a15`, `9a21ba3`) unless noted OPEN.
+
+**mechanical-audit.md**
+- Interaction-state gaps (`:active` absent sitewide; six hover-only link families — search
+  results, spine-row title, events-toc link, ics/event-nav links, calendar-subscribe link,
+  back-link — with no `:focus-visible`; `.nav-caret` a 24px hit area with no expansion) —
+  APPLIED, `cbdbaee` (items 1–3) + `4b757af` (rider, mobile links + header icon trio).
+- `join/apply` purchaser name/email/phone fields placeholder-only, no visible label — APPLIED,
+  `4b757af` (item 1).
+- Portal receipts dollar column missing `tabular-nums` — APPLIED, `4b757af` (item 3).
+- Standing-gate candidates (hover/focus-visible selector parity, `:active` existence,
+  touch-target hit-area incl. pseudo-element expansion) — APPLIED as `design-probe.mjs` checks,
+  `d3e73e7`.
+- **OPEN**: spacing literals off the token scale (§1, severity graded low at audit time — the
+  `0.6rem 1.25rem` CTA padding tripled across three files was flagged as a shared-mixin
+  candidate, not fixed); literal-white color bypassing the token system (§7, severity low,
+  deliberate/commented); `:disabled` state styling absent; `-webkit-tap-highlight-color`
+  absent; `.prose h4` lacks `text-wrap: balance` (h1–h3 have it).
+
+**optical-typography.md**
+- `:::related` eyebrow (0.06em) and availability-chip label (0.03em) letter-spacing diverging
+  from `var(--tracking-eyebrow)` — APPLIED, `cbdbaee` (item 6).
+- All other checks (leading-by-role, measure/measure-drift, hierarchy-from-weight, tabular
+  numerals, rag control/widows-orphans, faux-bold, vertical rhythm, proximity grouping, optical
+  centering, padding asymmetry) — RIGHT, no change. Coherence question: no AI-default tells.
+
+**optical-color.md**
+- All in-lens color/depth/surface checks (facts-label ink, chip-dot role discipline, table
+  header rule, requirement-callout tone, related eyebrow, steps-rail ink, portal status accents,
+  flatness-by-design, hairlines, radius consistency, elevation logic, dark-mode photo/scrim/band
+  survival) — RIGHT, no change.
+- Two observations flagged outside the lens, to interaction/forms: portal secondary/destructive
+  buttons (`Sign out`, `Leave the club`, `Update listing`) rendering as chromeless bold text —
+  APPLIED, `4b757af` (item 2, moved to plain `.btn` + muted ink). Donate dark-mode preset-amount
+  buttons low-contrast unselected state — APPLIED, `cbdbaee` (item 5).
+- **OPEN** (coverage gap, not a defect): portal pages (`my-account*`) have no dark-mode captures
+  in the render set — dark-mode status card, danger card, and form inputs remain unaudited.
+
+**optical-micro.md**
+- `:::facts`/`:::steps` collapsed top margin (`margin: 0` co-declared with `--flow-space`,
+  out-specifying the chassis flow-space owl selector, verified live via `getComputedStyle`) —
+  APPLIED, `cbdbaee` (item 4).
+- Dead `icon="anchor"` attribute on moorings.md's requirement callout (component never read
+  `ctx.attributes.icon`) — APPLIED, `cbdbaee` (item 7, attribute dropped) + `0225f6c` (icon-slot
+  support added to the callout component, closing the raised-not-applied follow-up).
+- `/my-account/classes/` no designed empty state for zero classes/zero waitlist — APPLIED,
+  `4b757af` (item 4).
+- All measured ALREADY-RIGHT/NOT-APPLICABLE checks (steps counter optical centering, category
+  dot/star vs. small-caps baseline, availability-chip padding, table left-edge alignment,
+  requirement-callout padding, facts-row descender room, passage-icon baseline, chip truncation
+  at 390, results-table numeral alignment, dark-mode callout parity; fees-table margin; posts/
+  tags empty states untestable against current fixtures) — RIGHT or N/A, no change.
