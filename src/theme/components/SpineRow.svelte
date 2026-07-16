@@ -56,7 +56,9 @@ separate, deliberately uncolored outline chip, never sharing the category's slot
 <style>
   .spine-row {
     position: relative;
-    padding: var(--spacing-2xs) 0;
+    /* Register round (2026-07-15): one token step tighter than the prior --spacing-2xs, matching
+       ClassSchedule.svelte's row-padding treatment. */
+    padding: var(--spacing-3xs) 0;
     scroll-margin-top: 6rem;
   }
 
@@ -84,7 +86,9 @@ separate, deliberately uncolored outline chip, never sharing the category's slot
   }
   .spine-row-title {
     font-family: var(--font-display);
-    font-size: var(--text-step-0);
+    /* Register round (2026-07-15): row hierarchy comes from weight and ink, not size, so the
+       title steps down to the component-body register alongside the date below. */
+    font-size: var(--text-step--1);
     font-weight: 600;
     color: var(--color-base-content);
     text-decoration: none;

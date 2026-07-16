@@ -181,6 +181,32 @@ body {
   text-decoration-color: currentColor;
 }
 
+/* Sitewide en-dash list markers (2026-07-15 register round): an unclassed prose bullet list (a
+   plain markdown `- item` list, never a themed component like `.fleet-list` or `.amenity-list`,
+   which already carry their own dash-marker construction) replicates that same idiom exactly,
+   rather than the chassis's stock disc bullet, so an ordinary list inside an article reads with
+   the site's own quiet dash instead of a foreign round dot. `:not([class])` scopes to the
+   literal unclassed list only; a themed list keeps whatever marker its own class already draws.
+   The muted ink comes along with the idiom (the same `color-mix` step every dash list on the
+   site already carries), and both tokens it mixes carry their own dark-mode value, so the ink
+   inherits correctly with no separate dark-mode rule. Unlayered, so it outranks prose.css's
+   `@layer components` `list-style: disc` rule the same way the link-color rule above does. */
+.site-main .prose ul:not([class]) {
+  padding: 0;
+  list-style: none;
+  color: color-mix(in oklab, var(--color-muted) 67%, var(--color-base-content) 33%);
+}
+.site-main .prose ul:not([class]) li {
+  position: relative;
+  padding-block: 0.2rem;
+  padding-left: 1em;
+}
+.site-main .prose ul:not([class]) li::before {
+  content: '\2013';
+  position: absolute;
+  left: 0;
+}
+
 /* The site-wide reduced-motion gate (the completion pass's a11y fix, manifest item 5): every
    component's own scoped `prefers-reduced-motion` rule (SiteHeader, SiteFooter, SearchModal,
    asc-components.css, the home template) already turns off ITS OWN hand-written transitions, but

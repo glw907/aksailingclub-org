@@ -1177,7 +1177,7 @@
   }
   .prose :global(.course-day p:not(.course-day-label)) {
     margin: 0;
-    font-size: var(--text-step-0);
+    font-size: var(--text-step--1);
     color: var(--color-base-content);
   }
 

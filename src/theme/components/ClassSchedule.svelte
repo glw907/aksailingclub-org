@@ -90,7 +90,10 @@ same neutral chip rather than a color-per-status vocabulary. -->
     grid-template-areas: 'name dates chip action';
     gap: 0.35rem 1rem;
     align-items: baseline;
-    padding-block: 0.6rem;
+    /* Register round (2026-07-15): one step tighter than the row's old 0.6rem literal, moved
+       onto the site's own spacing scale so the row rhythm reads off the same tokens as
+       everything around it rather than a hand-picked value. */
+    padding-block: var(--spacing-2xs);
   }
   .cs-row + .cs-row {
     border-block-start: 1px solid var(--color-card-border);
@@ -98,6 +101,7 @@ same neutral chip rather than a color-per-status vocabulary. -->
 
   .cs-name {
     grid-area: name;
+    font-size: var(--text-step--1);
     font-weight: 600;
   }
 

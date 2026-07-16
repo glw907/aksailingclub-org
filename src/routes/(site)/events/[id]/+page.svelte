@@ -181,16 +181,17 @@ both event surfaces. -->
     border: var(--border) solid var(--color-card-border);
     border-radius: var(--radius-box);
   }
+  /* Register round (2026-07-15): dt/dd share one size (the component-body step, matching the
+     shared-components `:::facts` label/value idiom in asc-components.css) and split hierarchy
+     by weight and ink alone, not by size. */
   .event-fact dt {
-    font-size: var(--text-step--2);
+    font-size: var(--text-step--1);
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-eyebrow);
     color: var(--color-muted);
   }
   .event-fact dd {
     margin: 0.15rem 0 0;
-    font-size: var(--text-step-0);
+    font-size: var(--text-step--1);
     color: var(--color-base-content);
   }
   .event-fact dd.is-tbd {
