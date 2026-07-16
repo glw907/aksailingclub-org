@@ -30,4 +30,16 @@ memory); the full rebuild runs once at settle.
   components licensed. Next: conductor designs 2-3 direction candidates (frontend-design
   method), presented as token-true static mocks in a probe page for Geoff's pick; the picked
   direction specs and lands as its own pass, not inside this round's settle.
+  RESEARCH (Geoff-licensed, synthesis in the session transcript): status-first semantics are
+  evidence-mandated (standing always visible kills the ~32% forgot-to-renew lapse; ONE
+  weighted next action; equal-weight tile walls are the named anti-pattern; empty states are
+  teachable moments; off-season mode = reassure-and-anticipate) but the two-column working
+  area is NOT supported for a mobile-majority small club — so candidate C (hybrid: A's
+  masthead band over B's calm single column + the research devices incl. the value mirror
+  and the off-season anticipate state) was added mid-build, conductor-recommended.
+  DOSE WORDS (Geoff, verbatim, binding on the portal spec): "We want an attractive design,
+  but we also want something that is highly usable, with a focus on making it effective for
+  members who are only using it occasionally." Governing principle: recognition over recall —
+  zero-click answers, plain-language self-labeling, full dates, one obvious action,
+  no memory-dependent cleverness.
 - Class-door whole-template verdict — probe page open. AWAITING VERDICT.
