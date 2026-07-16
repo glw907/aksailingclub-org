@@ -62,4 +62,12 @@ memory); the full rebuild runs once at settle.
   (thumb-reach action placement, 44px targets, zero horizontal cleverness, the
   occasional-user recognition principle applied doubly). The portal spec designs mobile
   first-class and verifies it with the same rigor as desktop.
+- Mobile action card (Geoff live, on mock D's 390 frame): "the gear locker fee outstanding
+  card on mobile is super-awkward looking" — owner confirmation of the conductor-flagged
+  defect; the spec's stacked mobile action anatomy (label line, then amount + button line)
+  is the binding fix, T3 acceptance criterion.
+- Mock D RATIFIED as the portal build reference (committed:
+  docs/design-benchmark/portal-mock-d/ holds the probe page HTML + the reference capture);
+  the spec + plan are docs/2026-07-16-portal-redesign-design.md +
+  docs/plans/2026-07-16-portal-redesign.md. The pass executes post-clear.
 - Class-door whole-template verdict — probe page open. AWAITING VERDICT.

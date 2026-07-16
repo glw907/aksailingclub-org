@@ -52,10 +52,18 @@ a seasonal club's off-season portal job is reassure-and-anticipate.
 
 Compact masthead (greeting + standing sentence; chip optional) → the one weighted action
 directly beneath, STACKED anatomy (label line, then amount + button on their own line —
-the probe's three-line wrap is the named defect to avoid; button full thumb width is
-acceptable) → full-width reference sections in recognition order: gear & moorings, household,
-receipts, doors. Classes rides the doors row (ruled acceptable on the probe). No tiles, no
-two-line buttons, no horizontal scrolling anywhere.
+the probe's three-line wrap is the named defect; Geoff confirmed it live on mock D: "the
+gear locker fee outstanding card on mobile is super-awkward looking… that needs better
+responsive treatment"; button full thumb width is acceptable) → full-width reference
+sections in recognition order: gear & moorings, household, receipts, doors. Classes rides
+the doors row (ruled acceptable on the probe). No tiles, no two-line buttons, no horizontal
+scrolling anywhere.
+
+**Responsive acceptance (owner-emphasized):** the action row and the whole mobile
+composition read DESIGNED at 320, 390, and 768 — no mid-phrase wraps, no multi-line
+buttons, no cramped columns at any width; the transition between the mobile composition
+and the desktop grid happens at one deliberate breakpoint with both sides verified either
+side of it.
 
 ## States (all four are first-class; each gets a render check)
 

@@ -1,0 +1,1219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Portal directions — masthead vs. logbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@600;700&family=Source+Sans+3:wght@400;600;650;700&display=swap" rel="stylesheet" />
+<style>
+  /* ────────────────────────────────────────────────────────────────────────
+     TOKENS — extracted verbatim from src/theme/theme.css (the club-grounds
+     story, 2026-07-06 spec) and src/theme/asc-components.css. Every color,
+     size, and radius below is a real token value from those two files, not
+     an approximation. Fireweed is defined for completeness but spent ZERO
+     times in either mock (see report).
+     ──────────────────────────────────────────────────────────────────── */
+  :root {
+    /* Roles — theme.css lines 53-72 (light theme block) */
+    --color-base-100: oklch(100% 0 0);
+    --color-base-200: oklch(96.7% 0.006 137.8);
+    --color-base-300: oklch(90.9% 0.011 141.3);
+    --color-base-content: oklch(24.7% 0.029 249);
+    --color-primary: oklch(38.7% 0.086 251); /* flag navy */
+    --color-primary-content: oklch(100% 0 0);
+    --color-secondary: oklch(75.1% 0.155 78.3); /* star gold */
+    --color-secondary-content: oklch(24.7% 0.029 249);
+    --color-neutral: oklch(28.2% 0.068 257.6); /* flag navy deep */
+    --color-neutral-content: oklch(100% 0 0);
+
+    /* Brand names — theme.css lines 189-240 */
+    --color-muted: oklch(51.8% 0.021 227.6);
+    --color-card-border: oklch(90.9% 0.011 141.3);
+    --color-flag-navy: oklch(38.7% 0.086 251);
+    --color-flag-navy-deep: oklch(28.2% 0.068 257.6);
+    --color-star-gold: oklch(75.1% 0.155 78.3);
+    --color-star-gold-dot: oklch(62% 0.155 78.3); /* contrast-safe gold for marks */
+    --color-fireweed: oklch(53.9% 0.166 352.8); /* defined, unspent in these mocks */
+    --color-sage: oklch(96.7% 0.006 137.8);
+    --color-sage-mid: oklch(93.3% 0.012 137.8);
+    --color-harbor-ink: oklch(24.7% 0.029 249);
+
+    /* Fonts — theme.css lines 125-127 (Figtree/Source Sans loaded via Google
+       Fonts here as the closest network-available match to the site's own
+       self-hosted @fontsource-variable packages; same families/weights) */
+    --font-display: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-body: 'Source Sans 3', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+    /* --text-step scale — theme.css lines 138-164 */
+    --text-step--2: clamp(0.76rem, 0.73rem + 0.13vw, 0.82rem);
+    --text-step--1: clamp(0.86rem, 0.83rem + 0.14vw, 0.95rem);
+    --text-step-0: clamp(1.0625rem, 1.0393rem + 0.0952vw, 1.125rem);
+    --text-step-1: clamp(1.19rem, 1.17rem + 0.1vw, 1.25rem);
+    --text-step-2: clamp(1.27rem, 1.25rem + 0.1vw, 1.33rem);
+    --text-step-3: clamp(1.52rem, 1.47rem + 0.24vw, 1.66rem);
+    --text-step-4: clamp(1.83rem, 1.74rem + 0.43vw, 2.08rem);
+    --text-step-5: clamp(2.19rem, 2.05rem + 0.71vw, 2.6rem);
+
+    /* --spacing scale — theme.css lines 166-173 */
+    --spacing-3xs: clamp(0.31rem, 0.3rem + 0.05vw, 0.34rem);
+    --spacing-2xs: clamp(0.5rem, 0.48rem + 0.11vw, 0.56rem);
+    --spacing-xs: clamp(0.75rem, 0.72rem + 0.16vw, 0.84rem);
+    --spacing-s: clamp(1rem, 0.96rem + 0.22vw, 1.13rem);
+    --spacing-m: clamp(1.5rem, 1.43rem + 0.33vw, 1.69rem);
+    --spacing-l: clamp(2rem, 1.91rem + 0.43vw, 2.25rem);
+    --spacing-xl: clamp(3rem, 2.83rem + 0.87vw, 3.5rem);
+    --spacing-2xl: clamp(4rem, 3.74rem + 1.3vw, 4.75rem);
+
+    /* leading / tracking — theme.css lines 177-181 */
+    --leading-body: 1.6;
+    --leading-snug: 1.4;
+    --leading-tight: 1.12;
+    --tracking-tight: -0.011em;
+    --tracking-eyebrow: 0.12em;
+
+    /* radius — theme.css lines 74-76 */
+    --radius-selector: 0.28rem;
+    --radius-field: 0.4rem;
+    --radius-box: 0.5rem;
+
+    /* shadow — theme.css line 257 */
+    --cairn-shadow: 0 1px 2px color-mix(in oklab, var(--color-base-content) 6%, transparent),
+      0 6px 20px -8px color-mix(in oklab, var(--color-base-content) 12%, transparent);
+
+    /* measures — theme.css lines 183-184 */
+    --container-measure: 44rem;
+    --container-measure-wide: 58rem;
+
+    /* category dot inks — asc-components.css §"Event chips" / theme.css 226-237 */
+    --color-racing-dot: oklch(53% 0.15 245);
+    --color-sage-dot: oklch(46% 0.14 155);
+    --color-business-dot: oklch(48% 0 0);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--color-base-200);
+    font-family: var(--font-body);
+    font-size: var(--text-step-0);
+    line-height: var(--leading-body);
+    color: var(--color-harbor-ink);
+    padding: var(--spacing-xl) var(--spacing-m) var(--spacing-2xl);
+  }
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-primary) 28%, transparent);
+  }
+  a {
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklab, var(--color-primary) 35%, transparent);
+    text-underline-offset: 3px;
+  }
+  a:hover { text-decoration-color: currentColor; }
+  a:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+    box-shadow: 0 0 0 4px var(--color-base-100);
+  }
+  button { font-family: inherit; cursor: pointer; }
+
+  .probe-shell { max-width: 78rem; margin: 0 auto; }
+
+  /* ─── Probe chrome (not part of either mock's own design) ───────────── */
+  .probe-header {
+    margin: 0 0 var(--spacing-2xl);
+    max-width: var(--container-measure-wide);
+  }
+  .probe-kicker {
+    margin: 0 0 var(--spacing-2xs);
+    font-size: var(--text-step--1);
+    font-weight: 600;
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .probe-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--text-step-4);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    color: var(--color-harbor-ink);
+  }
+  .probe-block { margin-bottom: var(--spacing-2xl); }
+  .probe-label {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-s);
+    margin: 0 0 var(--spacing-m);
+    padding-top: var(--spacing-l);
+    border-top: 1px solid var(--color-card-border);
+  }
+  .probe-block:first-of-type .probe-label { border-top: none; padding-top: 0; }
+  .probe-label-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--text-step-2);
+    color: var(--color-harbor-ink);
+  }
+  .probe-label-sub {
+    font-size: var(--text-step--1);
+    color: var(--color-muted);
+  }
+  .probe-caption {
+    margin: var(--spacing-l) 0 var(--spacing-s);
+    font-size: var(--text-step--1);
+    font-weight: 600;
+    color: var(--color-muted);
+  }
+  .probe-verdict {
+    margin-top: var(--spacing-xl);
+    padding-top: var(--spacing-l);
+    border-top: 1px solid var(--color-card-border);
+    max-width: var(--container-measure-wide);
+    font-size: var(--text-step-0);
+    color: var(--color-harbor-ink);
+  }
+  .probe-verdict strong { font-weight: 700; }
+
+  /* ─── Viewport frame: the bordered "real page" container ────────────── */
+  .frame {
+    width: min(1100px, 100%);
+    margin: 0 auto;
+    background: var(--color-base-100);
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-box);
+    box-shadow: var(--cairn-shadow);
+    overflow: hidden;
+  }
+  .frame-small { width: min(700px, 100%); }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     SHARED FURNITURE — reproduced from asc-components.css's real recipes
+     ═══════════════════════════════════════════════════════════════════ */
+
+  /* Eyebrow register — asc-related-eyebrow recipe (asc-components.css L303-310) */
+  .eyebrow {
+    margin: 0 0 var(--spacing-2xs);
+    font-size: var(--text-step--2);
+    font-weight: 600;
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  /* Availability-chip recipe, reused verbatim for every quiet-status chip
+     (asc-components.css L683-697: outline, uppercase, tracked, muted ink,
+     transparent ground — deliberately uncolored, no semantic-palette token) */
+  .chip {
+    display: inline-block;
+    flex-shrink: 0;
+    padding: 0.1rem 0.5rem;
+    border: 1px solid color-mix(in oklab, var(--color-muted) 35%, transparent);
+    border-radius: var(--radius-selector);
+    background: transparent;
+    color: var(--color-muted);
+    font-size: var(--text-step--2);
+    font-weight: 600;
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* Facts dl — asc-facts recipe (asc-components.css L206-259) */
+  .facts {
+    display: grid;
+    grid-template-columns: minmax(8rem, max-content) 1fr;
+    margin: 0;
+  }
+  .fact { display: contents; }
+  .fact dt, .fact dd {
+    margin: 0;
+    padding: var(--spacing-2xs) 0;
+    border-top: 1px solid var(--color-card-border);
+  }
+  .fact:first-child dt, .fact:first-child dd { border-top: none; }
+  .fact dt {
+    padding-right: var(--spacing-s);
+    font-size: var(--text-step--1);
+    font-weight: 600;
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .fact dd {
+    font-size: var(--text-step-0);
+    color: var(--color-base-content);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Navy compact action button — the pay affordance in BOTH directions.
+     Anatomy borrowed from .asc-cta-btn (asc-components.css L412-447) but in
+     --color-primary, not fireweed: neither mock spends the fireweed budget
+     on this page. Focus ring borrowed from the .prose a:focus-visible halo
+     (chassis prose.css L162-167) so the ring reads against the page ground
+     rather than disappearing into the button's own navy fill. */
+  .btn-navy {
+    display: inline-flex;
+    align-items: center;
+    border: none;
+    background: var(--color-primary);
+    color: var(--color-primary-content);
+    font-weight: 650;
+    font-size: var(--text-step--1);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-field);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 1px 2px color-mix(in oklab, var(--color-primary) 40%, transparent);
+    transition: background 0.15s ease;
+  }
+  .btn-navy:hover { background: color-mix(in oklab, var(--color-primary), black 10%); }
+  .btn-navy:active { background: color-mix(in oklab, var(--color-primary), black 16%); }
+  .btn-navy:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px var(--color-base-100);
+  }
+
+  /* Action row — the one colored-affordance zone in both directions: a
+     hairline card, 3px navy left edge (new device, tokens only: border
+     recipe from .asc-card, L114-122, left edge widened and inked navy). */
+  .action-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-s);
+    background: var(--color-base-100);
+    border: 1px solid var(--color-card-border);
+    border-left: 3px solid var(--color-primary);
+    border-radius: var(--radius-box);
+    padding: var(--spacing-s) var(--spacing-m);
+  }
+  .action-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--color-primary);
+  }
+  .action-icon svg { width: 1.35rem; height: 1.35rem; }
+  .action-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: var(--text-step-0);
+    font-weight: 600;
+    color: var(--color-harbor-ink);
+  }
+  .action-amount {
+    flex-shrink: 0;
+    font-size: var(--text-step-0);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-harbor-ink);
+  }
+
+  /* Receipt rows — flat, quiet, tabular */
+  .receipt-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-s);
+    padding: var(--spacing-2xs) 0;
+    border-top: 1px solid var(--color-card-border);
+    font-size: var(--text-step--1);
+  }
+  .receipt-row:first-of-type { border-top: none; }
+  .receipt-desc { flex: 1 1 auto; color: var(--color-harbor-ink); }
+  .receipt-date {
+    flex-shrink: 0;
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .receipt-amount {
+    flex-shrink: 0;
+    width: 4ch;
+    text-align: right;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-harbor-ink);
+  }
+
+  /* All-clear state: the burgee mark plus one warm line — shared idiom */
+  .all-clear {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-s);
+  }
+  .burgee {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--color-star-gold-dot);
+  }
+  .burgee svg { width: 1.6rem; height: 1.6rem; }
+  .all-clear-text {
+    margin: 0;
+    font-size: var(--text-step-0);
+    color: var(--color-harbor-ink);
+  }
+  .all-clear-link {
+    margin: var(--spacing-3xs) 0 0;
+    font-size: var(--text-step--1);
+  }
+
+  /* Doors row — the site's real en-dash list marker (site.css L203-217),
+     turned sideways into a wrapping horizontal row instead of a vertical
+     list. */
+  .doors-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-2xs) var(--spacing-m);
+    padding: var(--spacing-m) var(--spacing-l);
+    border-top: 1px solid var(--color-card-border);
+    font-size: var(--text-step--1);
+  }
+  .doors-row a {
+    position: relative;
+    padding-left: 1.1em;
+    color: var(--color-primary);
+  }
+  .doors-row a::before {
+    content: '\2013';
+    position: absolute;
+    left: 0;
+    color: color-mix(in oklab, var(--color-muted) 67%, var(--color-harbor-ink) 33%);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     MOCK A — the member masthead
+     ═══════════════════════════════════════════════════════════════════ */
+  .mockA-band {
+    background: var(--color-sage);
+    padding: var(--spacing-2xl) var(--spacing-l);
+  }
+  .mockA-band-inner { max-width: var(--container-measure-wide); margin: 0 auto; }
+  .mockA-greeting {
+    margin: 0 0 var(--spacing-2xs);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--text-step-5);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    color: var(--color-harbor-ink);
+  }
+  .mockA-standing {
+    margin: 0 0 var(--spacing-s);
+    font-size: var(--text-step-1);
+    color: var(--color-muted);
+  }
+
+  .mockA-work {
+    display: grid;
+    grid-template-columns: 1fr 19rem;
+    gap: var(--spacing-l);
+    padding: var(--spacing-l);
+    align-items: start;
+  }
+  .mockA-h2 {
+    margin: 0 0 var(--spacing-s);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--text-step-2);
+    line-height: var(--leading-snug);
+    color: var(--color-harbor-ink);
+  }
+  .mockA-h2-tight { margin-top: var(--spacing-l); }
+  .mockA-rail-tile {
+    background: var(--color-base-100);
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-box);
+    padding: var(--spacing-s) var(--spacing-m);
+  }
+  .mockA-rail-tile + .mockA-rail-tile { margin-top: var(--spacing-s); }
+  .mockA-tile-label {
+    margin: 0 0 var(--spacing-2xs);
+    font-size: var(--text-step--1);
+    font-weight: 600;
+    color: var(--color-muted);
+  }
+  .mockA-tile-value { margin: 0; font-size: var(--text-step-0); color: var(--color-harbor-ink); }
+  .mockA-tile-list { margin: 0; padding: 0; list-style: none; }
+  .mockA-tile-list li {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2xs);
+    font-size: var(--text-step-0);
+    color: var(--color-harbor-ink);
+  }
+  .mockA-tile-list li + li { margin-top: var(--spacing-2xs); }
+  .mockA-tile-empty { margin: 0; font-size: var(--text-step-0); color: var(--color-muted); }
+
+  .mockA-allclear-panel {
+    padding: var(--spacing-l);
+  }
+
+  @media (max-width: 700px) {
+    .mockA-work { grid-template-columns: 1fr; }
+    .mockA-band { padding: var(--spacing-l) var(--spacing-m); }
+    .mockA-work { padding: var(--spacing-m); }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     MOCK B — the logbook
+     ═══════════════════════════════════════════════════════════════════ */
+  .mockB-page {
+    max-width: var(--container-measure-wide);
+    margin: 0 auto;
+    padding: var(--spacing-2xl) var(--spacing-l);
+  }
+  .mockB-greeting {
+    margin: 0 0 var(--spacing-2xs);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--text-step-4);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    color: var(--color-harbor-ink);
+  }
+  .mockB-standing { margin: 0; font-size: var(--text-step-0); color: var(--color-muted); }
+
+  .mockB-section { margin-top: var(--spacing-xl); }
+  .mockB-section:first-of-type { margin-top: var(--spacing-2xl); }
+
+  /* The "gold tick" — a small waypoint mark over the section heading,
+     using the site's real h2 typography (chassis prose.css L112-121:
+     font-display, 700, --text-step-3, tight leading, tracking-tight,
+     balanced wrap) with a short gold rule above it. Gold reads only as a
+     mark here, never as text ink, matching the story's "marks and
+     waypoints only" rule (theme.css header comment). */
+  .mockB-h2-wrap { margin: 0 0 var(--spacing-s); }
+  .mockB-tick {
+    display: block;
+    width: 1.75rem;
+    height: 3px;
+    margin-bottom: var(--spacing-2xs);
+    background: var(--color-star-gold-dot);
+    border-radius: 2px;
+  }
+  .mockB-h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--text-step-3);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    color: var(--color-harbor-ink);
+    text-wrap: balance;
+  }
+
+  .mockB-asset-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-s);
+    padding: var(--spacing-2xs) 0;
+    border-top: 1px solid var(--color-card-border);
+  }
+  .mockB-asset-row:first-of-type { border-top: none; }
+  .mockB-asset-name { flex: 1 1 auto; font-size: var(--text-step-0); color: var(--color-harbor-ink); }
+  .mockB-asset-detail { font-size: var(--text-step--1); color: var(--color-muted); }
+
+  .mockB-todo-panel { padding: var(--spacing-l); }
+
+  @media (max-width: 700px) {
+    .mockB-page { padding: var(--spacing-l) var(--spacing-m); }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     MOCK C — the hybrid (A's band signature + B's calm single column)
+     ═══════════════════════════════════════════════════════════════════ */
+  .mockC-page {
+    max-width: var(--container-measure-wide);
+    margin: 0 auto;
+    padding: var(--spacing-l) var(--spacing-l) var(--spacing-2xl);
+  }
+  .mockC-page-tight { padding-bottom: var(--spacing-l); }
+  .mockC-mirror {
+    margin: 0 0 var(--spacing-xl);
+    font-size: var(--text-step--1);
+    color: var(--color-muted);
+  }
+  .mockC-update-link { margin: var(--spacing-2xs) 0 0; font-size: var(--text-step--1); }
+
+  @media (max-width: 700px) {
+    .mockC-page { padding: var(--spacing-l) var(--spacing-m) var(--spacing-l); }
+  }
+
+  /* ─── Research capsule — the conductor's ruling behind C, five lines ─── */
+  .research-capsule {
+    margin: var(--spacing-xl) 0 0;
+    padding: var(--spacing-m);
+    max-width: var(--container-measure-wide);
+    background: var(--color-sage);
+    border-radius: var(--radius-box);
+    font-size: var(--text-step--1);
+  }
+  .research-capsule p { margin: 0; }
+  .research-capsule p + p { margin-top: var(--spacing-3xs); }
+  .research-capsule-kicker {
+    margin: 0 0 var(--spacing-2xs) !important;
+    font-size: var(--text-step--2);
+    font-weight: 600;
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     MOCK D — the ruled direction (C's function, A's body): A's band and
+     two-column working area, disciplined by C's research so the rail
+     reads as clearly subordinate to the one weighted action, never a
+     menu of equal tiles. Copy rule for this mock only, binding: no em
+     dashes anywhere — asset rows go stacked-line or middot-joined.
+     ═══════════════════════════════════════════════════════════════════ */
+  .mockD-body { padding: var(--spacing-l) var(--spacing-l) 0; }
+  .mockD-body-tight { padding-bottom: var(--spacing-l); }
+  .mockD-mirror {
+    margin: 0 0 var(--spacing-l);
+    font-size: var(--text-step--1);
+    color: var(--color-muted);
+  }
+  .mockD-work {
+    display: grid;
+    grid-template-columns: 1fr 22rem;
+    gap: var(--spacing-l);
+    padding-bottom: var(--spacing-l);
+    align-items: start;
+  }
+
+  /* Owner steer (2026-07-16): the desktop mock uses the desktop width —
+     not pinned to the site's prose measure. ~1280px lets the working
+     area breathe at a 1440 viewport (masthead band stays full-bleed via
+     .mockA-band's own unconstrained background; only band-inner reads
+     at the site's measure), and the 22rem (352px) rail above is real
+     rail width, not a squeezed sidebar. */
+  .frame-wide { width: min(1280px, 100%); }
+
+  /* Rail tiles, restyled subordinate to the main column: one type step
+     down from A's rail (text-step--1 instead of text-step-0), muted
+     eyebrow-style labels instead of A's plain small label, a fainter
+     hairline border, and more generous internal padding — the tile
+     reads as reference material, not a peer card. No buttons anywhere
+     in the rail, links only. */
+  .mockD-rail-tile {
+    background: var(--color-base-100);
+    border: 1px solid color-mix(in oklab, var(--color-card-border) 65%, transparent);
+    border-radius: var(--radius-box);
+    padding: var(--spacing-m);
+  }
+  .mockD-rail-tile + .mockD-rail-tile { margin-top: var(--spacing-s); }
+  .mockD-tile-label {
+    margin: 0 0 var(--spacing-2xs);
+    font-size: var(--text-step--2);
+    font-weight: 600;
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .mockD-tile-value { margin: 0; font-size: var(--text-step--1); color: var(--color-harbor-ink); }
+  .mockD-tile-empty { margin: 0; font-size: var(--text-step--1); color: var(--color-muted); }
+
+  /* Stacked two-line asset rows — the fix for A's cramped mid-phrase
+     wrap: name on its own line, detail plus chip on the line below,
+     never sharing one flex row with a chip at rail width. */
+  .mockD-asset-list { margin: 0; padding: 0; list-style: none; }
+  .mockD-asset-item {
+    padding: var(--spacing-2xs) 0;
+    border-top: 1px solid color-mix(in oklab, var(--color-card-border) 65%, transparent);
+  }
+  .mockD-asset-item:first-child { border-top: none; padding-top: 0; }
+  .mockD-asset-name {
+    display: block;
+    font-size: var(--text-step--1);
+    font-weight: 600;
+    color: var(--color-harbor-ink);
+  }
+  .mockD-asset-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2xs);
+    margin-top: var(--spacing-3xs);
+    font-size: var(--text-step--2);
+    color: var(--color-muted);
+  }
+
+  /* Narrow-viewport frame: owner steer (2026-07-16) — mobile is licensed
+     to be a genuinely different composition, not a collapse of the
+     desktop grid. A hard-coded 390px screen for an occasional member on
+     a phone: compact masthead (name + standing only, chip optional, no
+     eyebrow, no full-bleed band padding), the one weighted action
+     immediately under it, then tight full-width reference rows (no
+     tile chrome, no shrunken cards) in recognition order. */
+  .frame-mobile { width: min(390px, 100%); }
+  .mockD-mobile-masthead {
+    background: var(--color-sage);
+    padding: var(--spacing-m);
+  }
+  .mockD-mobile-greeting {
+    margin: 0 0 var(--spacing-3xs);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--text-step-3);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    color: var(--color-harbor-ink);
+  }
+  .mockD-mobile-standing {
+    margin: 0 0 var(--spacing-2xs);
+    font-size: var(--text-step--1);
+    color: var(--color-muted);
+  }
+  .mockD-mobile-section {
+    padding: var(--spacing-m);
+    border-top: 1px solid var(--color-card-border);
+  }
+  .mockD-mobile-section-action { border-top: none; }
+</style>
+</head>
+<body>
+<div class="probe-shell">
+
+  <header class="probe-header">
+    <p class="probe-kicker">ASC member portal — landing redesign</p>
+    <p class="probe-title">Pick the portal&rsquo;s direction &mdash; A masthead hub / B logbook / C hybrid / D ruled direction &mdash; or name a further hybrid.</p>
+  </header>
+
+  <!-- ═══════════════════════ MOCK A ═══════════════════════ -->
+  <section class="probe-block">
+    <div class="probe-label">
+      <span class="probe-label-name">Mock A &mdash; The Member Masthead</span>
+      <span class="probe-label-sub">status-first hub</span>
+    </div>
+
+    <div class="frame">
+      <article class="mockA">
+        <section class="mockA-band">
+          <div class="mockA-band-inner">
+            <p class="eyebrow">Member Home</p>
+            <h1 class="mockA-greeting">Welcome back, Geoff.</h1>
+            <p class="mockA-standing">You&rsquo;re current through May 17, 2027.</p>
+            <span class="chip">2026 Season</span>
+          </div>
+        </section>
+
+        <div class="mockA-work">
+          <main>
+            <h2 class="mockA-h2">Needs your attention</h2>
+            <div class="action-row">
+              <span class="action-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <circle cx="10" cy="10" r="8.2" />
+                  <line x1="10" y1="6" x2="10" y2="11.2" stroke-linecap="round" />
+                  <circle cx="10" cy="14" r="0.9" fill="currentColor" stroke="none" />
+                </svg>
+              </span>
+              <span class="action-title">Gear locker fee outstanding</span>
+              <span class="action-amount">$150</span>
+              <button type="button" class="btn-navy">Pay now</button>
+            </div>
+
+            <h2 class="mockA-h2 mockA-h2-tight">Recent receipts</h2>
+            <div class="receipt-row">
+              <span class="receipt-desc">Membership dues 2026</span>
+              <span class="receipt-date">May 17, 2026</span>
+              <span class="receipt-amount">$250</span>
+            </div>
+            <div class="receipt-row">
+              <span class="receipt-desc">Class fee</span>
+              <span class="receipt-date">June 20, 2026</span>
+              <span class="receipt-amount">$150</span>
+            </div>
+          </main>
+
+          <aside>
+            <div class="mockA-rail-tile">
+              <p class="mockA-tile-label">Household</p>
+              <p class="mockA-tile-value">Wright &mdash; 2 members</p>
+            </div>
+            <div class="mockA-rail-tile">
+              <p class="mockA-tile-label">Your assets</p>
+              <ul class="mockA-tile-list">
+                <li>Mooring &mdash; B-Dock slip 12</li>
+                <li>Gear locker <span class="chip">Waitlist</span> position 3</li>
+              </ul>
+            </div>
+            <div class="mockA-rail-tile">
+              <p class="mockA-tile-label">Classes</p>
+              <p class="mockA-tile-empty">No classes this season &mdash; <a href="#">see what&rsquo;s coming</a></p>
+            </div>
+          </aside>
+        </div>
+
+        <footer class="doors-row">
+          <a href="#">Profile</a>
+          <a href="#">Household</a>
+          <a href="#">Classes</a>
+          <a href="#">Directory</a>
+          <a href="#">Discord</a>
+          <a href="#">Events</a>
+        </footer>
+      </article>
+    </div>
+
+    <p class="probe-caption">Mock A &mdash; all-clear variant of the action rail</p>
+    <div class="frame frame-small">
+      <div class="mockA-allclear-panel">
+        <h2 class="mockA-h2">Needs your attention</h2>
+        <div class="all-clear">
+          <span class="burgee" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M5 2v20" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+              <path d="M5 3.5 L18 7 L5 10.5 Z" fill="currentColor" />
+            </svg>
+          </span>
+          <p class="all-clear-text">Nothing needs you. See you at the lake.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════ MOCK B ═══════════════════════ -->
+  <section class="probe-block">
+    <div class="probe-label">
+      <span class="probe-label-name">Mock B &mdash; The Logbook</span>
+      <span class="probe-label-sub">calm editorial single column</span>
+    </div>
+
+    <div class="frame">
+      <article class="mockB-page">
+        <header>
+          <p class="eyebrow">Member Home</p>
+          <h1 class="mockB-greeting">Welcome back, Geoff.</h1>
+          <p class="mockB-standing">You&rsquo;re current through May 17, 2027.</p>
+        </header>
+
+        <section class="mockB-section">
+          <div class="mockB-h2-wrap">
+            <span class="mockB-tick" aria-hidden="true"></span>
+            <h2 class="mockB-h2">Needs your attention</h2>
+          </div>
+          <div class="all-clear">
+            <span class="burgee" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M5 2v20" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+                <path d="M5 3.5 L18 7 L5 10.5 Z" fill="currentColor" />
+              </svg>
+            </span>
+            <div>
+              <p class="all-clear-text">Nothing needs you &mdash; see you at the lake.</p>
+              <p class="all-clear-link"><a href="#">See what&rsquo;s on at Events</a></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="mockB-section">
+          <div class="mockB-h2-wrap">
+            <span class="mockB-tick" aria-hidden="true"></span>
+            <h2 class="mockB-h2">Your membership</h2>
+          </div>
+          <dl class="facts">
+            <div class="fact"><dt>Standing</dt><dd>Current through May 17, 2027</dd></div>
+            <div class="fact"><dt>Household</dt><dd>Wright &mdash; 2 members</dd></div>
+            <div class="fact"><dt>Season</dt><dd>2026 season member</dd></div>
+          </dl>
+        </section>
+
+        <section class="mockB-section">
+          <div class="mockB-h2-wrap">
+            <span class="mockB-tick" aria-hidden="true"></span>
+            <h2 class="mockB-h2">Your gear &amp; moorings</h2>
+          </div>
+          <div class="mockB-asset-row">
+            <span class="mockB-asset-name">Mooring &mdash; B-Dock slip 12</span>
+            <span class="chip">Assigned</span>
+          </div>
+          <div class="mockB-asset-row">
+            <span class="mockB-asset-name">Gear locker</span>
+            <span class="chip">Waitlist</span>
+            <span class="mockB-asset-detail">position 3</span>
+          </div>
+        </section>
+
+        <section class="mockB-section">
+          <div class="mockB-h2-wrap">
+            <span class="mockB-tick" aria-hidden="true"></span>
+            <h2 class="mockB-h2">Recent receipts</h2>
+          </div>
+          <div class="receipt-row">
+            <span class="receipt-desc">Membership dues 2026</span>
+            <span class="receipt-date">May 17, 2026</span>
+            <span class="receipt-amount">$250</span>
+          </div>
+          <div class="receipt-row">
+            <span class="receipt-desc">Class fee</span>
+            <span class="receipt-date">June 20, 2026</span>
+            <span class="receipt-amount">$150</span>
+          </div>
+        </section>
+      </article>
+
+      <footer class="doors-row">
+        <a href="#">Profile</a>
+        <a href="#">Household</a>
+        <a href="#">Classes</a>
+        <a href="#">Directory</a>
+        <a href="#">Discord</a>
+        <a href="#">Events</a>
+      </footer>
+    </div>
+
+    <p class="probe-caption">Mock B &mdash; to-do variant of &ldquo;Needs your attention&rdquo;</p>
+    <div class="frame frame-small">
+      <div class="mockB-todo-panel">
+        <div class="mockB-h2-wrap">
+          <span class="mockB-tick" aria-hidden="true"></span>
+          <h2 class="mockB-h2">Needs your attention</h2>
+        </div>
+        <div class="action-row">
+          <span class="action-icon" aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+              <circle cx="10" cy="10" r="8.2" />
+              <line x1="10" y1="6" x2="10" y2="11.2" stroke-linecap="round" />
+              <circle cx="10" cy="14" r="0.9" fill="currentColor" stroke="none" />
+            </svg>
+          </span>
+          <span class="action-title">Gear locker fee outstanding</span>
+          <span class="action-amount">$150</span>
+          <button type="button" class="btn-navy">Pay now</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════ MOCK C ═══════════════════════ -->
+  <section class="probe-block">
+    <div class="probe-label">
+      <span class="probe-label-name">Mock C &mdash; The Hybrid</span>
+      <span class="probe-label-sub">recommended: status-first band, calm single column</span>
+    </div>
+
+    <div class="frame">
+      <article class="mockC">
+        <section class="mockA-band">
+          <div class="mockA-band-inner">
+            <p class="eyebrow">Member Home</p>
+            <h1 class="mockA-greeting">Welcome back, Geoff.</h1>
+            <p class="mockA-standing">You&rsquo;re current through May 17, 2027.</p>
+            <span class="chip">2026 Season</span>
+          </div>
+        </section>
+
+        <div class="mockC-page">
+          <p class="mockC-mirror">This season: mooring B-Dock 12 &middot; 2 household members &middot; 1 class credit available</p>
+
+          <section class="mockB-section" style="margin-top:0">
+            <div class="mockB-h2-wrap">
+              <span class="mockB-tick" aria-hidden="true"></span>
+              <h2 class="mockB-h2">Needs your attention</h2>
+            </div>
+            <div class="action-row">
+              <span class="action-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <circle cx="10" cy="10" r="8.2" />
+                  <line x1="10" y1="6" x2="10" y2="11.2" stroke-linecap="round" />
+                  <circle cx="10" cy="14" r="0.9" fill="currentColor" stroke="none" />
+                </svg>
+              </span>
+              <span class="action-title">Gear locker fee outstanding</span>
+              <span class="action-amount">$150</span>
+              <button type="button" class="btn-navy">Pay now</button>
+            </div>
+          </section>
+
+          <section class="mockB-section">
+            <div class="mockB-h2-wrap">
+              <span class="mockB-tick" aria-hidden="true"></span>
+              <h2 class="mockB-h2">Your gear &amp; moorings</h2>
+            </div>
+            <div class="mockB-asset-row">
+              <span class="mockB-asset-name">Mooring &mdash; B-Dock slip 12</span>
+              <span class="chip">Assigned</span>
+            </div>
+            <div class="mockB-asset-row">
+              <span class="mockB-asset-name">Gear locker</span>
+              <span class="chip">Waitlist</span>
+              <span class="mockB-asset-detail">position 3</span>
+            </div>
+          </section>
+
+          <section class="mockB-section">
+            <div class="mockB-h2-wrap">
+              <span class="mockB-tick" aria-hidden="true"></span>
+              <h2 class="mockB-h2">Your household</h2>
+            </div>
+            <dl class="facts">
+              <div class="fact"><dt>Wright</dt><dd>Geoff, Sam</dd></div>
+            </dl>
+            <p class="mockC-update-link"><a href="#">Update household</a></p>
+          </section>
+
+          <section class="mockB-section">
+            <div class="mockB-h2-wrap">
+              <span class="mockB-tick" aria-hidden="true"></span>
+              <h2 class="mockB-h2">Recent receipts</h2>
+            </div>
+            <div class="receipt-row">
+              <span class="receipt-desc">Membership dues 2026</span>
+              <span class="receipt-date">May 17, 2026</span>
+              <span class="receipt-amount">$250</span>
+            </div>
+            <div class="receipt-row">
+              <span class="receipt-desc">Class fee</span>
+              <span class="receipt-date">June 20, 2026</span>
+              <span class="receipt-amount">$150</span>
+            </div>
+          </section>
+        </div>
+
+        <footer class="doors-row">
+          <a href="#">Profile</a>
+          <a href="#">Household</a>
+          <a href="#">Classes</a>
+          <a href="#">Directory</a>
+          <a href="#">Discord</a>
+          <a href="#">Events</a>
+        </footer>
+      </article>
+    </div>
+
+    <p class="probe-caption">Mock C &mdash; off-season / all-clear variant of the top (band + first section only). Reassure-and-anticipate, the portal&rsquo;s dormant-months job. Fireweed stays reserved here too &mdash; the one place C would spend it is a future renewal-season CTA, once standing approaches expiry.</p>
+    <div class="frame frame-small">
+      <div class="mockA-band">
+        <div class="mockA-band-inner">
+          <p class="eyebrow">Member Home</p>
+          <h1 class="mockA-greeting">Welcome back, Geoff.</h1>
+          <p class="mockA-standing">You&rsquo;re current through May 17, 2027.</p>
+          <span class="chip">2026 Season</span>
+        </div>
+      </div>
+      <div class="mockC-page mockC-page-tight">
+        <div class="mockB-h2-wrap" style="margin-top: var(--spacing-l)">
+          <span class="mockB-tick" aria-hidden="true"></span>
+          <h2 class="mockB-h2">Needs your attention</h2>
+        </div>
+        <div class="all-clear">
+          <span class="burgee" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M5 2v20" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+              <path d="M5 3.5 L18 7 L5 10.5 Z" fill="currentColor" />
+            </svg>
+          </span>
+          <div>
+            <p class="all-clear-text">Nothing needs you &mdash; see you at the lake.</p>
+            <p class="all-clear-link"><a href="#">Class registration opens in mid-March &mdash; see the 2027 schedule &rarr;</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="research-capsule">
+    <p class="research-capsule-kicker">Why C &mdash; the research capsule</p>
+    <p>Standing always visible kills forgot-to-renew churn (roughly 32% of lapses trace to the member simply never seeing where they stood).</p>
+    <p>One weighted next action beats a menu of equals &mdash; a member acts on the single real to-do, not a wall of options pretending to be equally urgent.</p>
+    <p>The equal-weight tile wall is the named anti-pattern: three same-size cards read as three same-priority asks, which is rarely true.</p>
+    <p>An empty state is a teachable moment, not a blank &mdash; both mocks&rsquo; all-clear states spend that moment on warmth or on what&rsquo;s next.</p>
+    <p>Off-season mode is reassure-and-anticipate: no manufactured urgency, one line pointing at what&rsquo;s coming.</p>
+  </div>
+
+  <!-- ═══════════════════════ MOCK D ═══════════════════════ -->
+  <section class="probe-block">
+    <div class="probe-label">
+      <span class="probe-label-name">Mock D &mdash; The Ruled Direction</span>
+      <span class="probe-label-sub">C&rsquo;s function, A&rsquo;s body: the rail disciplined into reference material</span>
+    </div>
+
+    <div class="frame frame-wide">
+      <article class="mockD">
+        <section class="mockA-band">
+          <div class="mockA-band-inner">
+            <p class="eyebrow">Member Home</p>
+            <h1 class="mockA-greeting">Welcome back, Geoff.</h1>
+            <p class="mockA-standing">You&rsquo;re current through May 17, 2027.</p>
+            <span class="chip">2026 Season</span>
+          </div>
+        </section>
+
+        <div class="mockD-body">
+          <p class="mockD-mirror">This season: mooring B-Dock 12 &middot; 2 household members &middot; 1 class credit available</p>
+
+          <div class="mockD-work">
+            <main>
+              <h2 class="mockA-h2">Needs your attention</h2>
+              <div class="action-row">
+                <span class="action-icon" aria-hidden="true">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <circle cx="10" cy="10" r="8.2" />
+                    <line x1="10" y1="6" x2="10" y2="11.2" stroke-linecap="round" />
+                    <circle cx="10" cy="14" r="0.9" fill="currentColor" stroke="none" />
+                  </svg>
+                </span>
+                <span class="action-title">Gear locker fee outstanding</span>
+                <span class="action-amount">$150</span>
+                <button type="button" class="btn-navy">Pay now</button>
+              </div>
+
+              <h2 class="mockA-h2 mockA-h2-tight">Recent receipts</h2>
+              <div class="receipt-row">
+                <span class="receipt-desc">Membership dues 2026</span>
+                <span class="receipt-date">May 17, 2026</span>
+                <span class="receipt-amount">$250</span>
+              </div>
+              <div class="receipt-row">
+                <span class="receipt-desc">Class fee</span>
+                <span class="receipt-date">June 20, 2026</span>
+                <span class="receipt-amount">$150</span>
+              </div>
+            </main>
+
+            <aside>
+              <div class="mockD-rail-tile">
+                <p class="mockD-tile-label">Household</p>
+                <p class="mockD-tile-value">Wright household &middot; 2 members</p>
+              </div>
+              <div class="mockD-rail-tile">
+                <p class="mockD-tile-label">Your gear &amp; moorings</p>
+                <ul class="mockD-asset-list">
+                  <li class="mockD-asset-item">
+                    <span class="mockD-asset-name">Mooring</span>
+                    <span class="mockD-asset-meta"><span>B-Dock slip 12</span></span>
+                  </li>
+                  <li class="mockD-asset-item">
+                    <span class="mockD-asset-name">Gear locker</span>
+                    <span class="mockD-asset-meta"><span class="chip">Waitlist</span><span>position 3</span></span>
+                  </li>
+                </ul>
+              </div>
+              <div class="mockD-rail-tile">
+                <p class="mockD-tile-label">Classes</p>
+                <p class="mockD-tile-empty">No classes this season. <a href="#">See what&rsquo;s coming</a></p>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <footer class="doors-row">
+          <a href="#">Profile</a>
+          <a href="#">Household</a>
+          <a href="#">Classes</a>
+          <a href="#">Directory</a>
+          <a href="#">Discord</a>
+          <a href="#">Events</a>
+        </footer>
+      </article>
+    </div>
+
+    <p class="probe-caption">Mock D &mdash; off-season / all-clear variant of the band and main-column top. The rail stays as-is below it (it is reference, always valid). Fireweed still unspent here too, reserved for the same future renewal-season CTA as C.</p>
+    <div class="frame frame-small">
+      <div class="mockA-band">
+        <div class="mockA-band-inner">
+          <p class="eyebrow">Member Home</p>
+          <h1 class="mockA-greeting">Welcome back, Geoff.</h1>
+          <p class="mockA-standing">You&rsquo;re current through May 17, 2027.</p>
+          <span class="chip">2026 Season</span>
+        </div>
+      </div>
+      <div class="mockD-body mockD-body-tight">
+        <p class="mockD-mirror">This season: mooring B-Dock 12 &middot; 2 household members &middot; 1 class credit available</p>
+        <h2 class="mockA-h2">Needs your attention</h2>
+        <div class="all-clear">
+          <span class="burgee" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M5 2v20" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+              <path d="M5 3.5 L18 7 L5 10.5 Z" fill="currentColor" />
+            </svg>
+          </span>
+          <div>
+            <p class="all-clear-text">Nothing needs you. See you at the lake.</p>
+            <p class="all-clear-link"><a href="#">Class registration opens in mid-March &middot; see the 2027 schedule &rarr;</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="probe-caption">Mock D &mdash; 390px, mobile as its own composition (not a collapse of the desktop grid): compact masthead, the one weighted action immediately under it, then tight full-width reference rows in recognition order &mdash; gear &amp; moorings, household, receipts, doors.</p>
+    <div class="frame frame-mobile">
+      <article class="mockD-mobile">
+        <div class="mockD-mobile-masthead">
+          <h1 class="mockD-mobile-greeting">Welcome back, Geoff.</h1>
+          <p class="mockD-mobile-standing">You&rsquo;re current through May 17, 2027.</p>
+          <span class="chip">2026 Season</span>
+        </div>
+
+        <div class="mockD-mobile-section mockD-mobile-section-action">
+          <p class="mockD-tile-label">Needs your attention</p>
+          <div class="action-row">
+            <span class="action-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+                <circle cx="10" cy="10" r="8.2" />
+                <line x1="10" y1="6" x2="10" y2="11.2" stroke-linecap="round" />
+                <circle cx="10" cy="14" r="0.9" fill="currentColor" stroke="none" />
+              </svg>
+            </span>
+            <span class="action-title">Gear locker fee outstanding</span>
+            <span class="action-amount">$150</span>
+            <button type="button" class="btn-navy">Pay now</button>
+          </div>
+        </div>
+
+        <div class="mockD-mobile-section">
+          <p class="mockD-tile-label">Your gear &amp; moorings</p>
+          <ul class="mockD-asset-list">
+            <li class="mockD-asset-item">
+              <span class="mockD-asset-name">Mooring</span>
+              <span class="mockD-asset-meta"><span>B-Dock slip 12</span></span>
+            </li>
+            <li class="mockD-asset-item">
+              <span class="mockD-asset-name">Gear locker</span>
+              <span class="mockD-asset-meta"><span class="chip">Waitlist</span><span>position 3</span></span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="mockD-mobile-section">
+          <p class="mockD-tile-label">Household</p>
+          <p class="mockD-tile-value">Wright household &middot; 2 members</p>
+        </div>
+
+        <div class="mockD-mobile-section">
+          <p class="mockD-tile-label">Recent receipts</p>
+          <div class="receipt-row">
+            <span class="receipt-desc">Membership dues 2026</span>
+            <span class="receipt-date">May 17, 2026</span>
+            <span class="receipt-amount">$250</span>
+          </div>
+          <div class="receipt-row">
+            <span class="receipt-desc">Class fee</span>
+            <span class="receipt-date">June 20, 2026</span>
+            <span class="receipt-amount">$150</span>
+          </div>
+        </div>
+
+        <footer class="doors-row">
+          <a href="#">Profile</a>
+          <a href="#">Household</a>
+          <a href="#">Classes</a>
+          <a href="#">Directory</a>
+          <a href="#">Discord</a>
+          <a href="#">Events</a>
+        </footer>
+      </article>
+    </div>
+  </section>
+
+  <footer class="probe-verdict">
+    <p><strong>Verdict: A &middot; B &middot; C &middot; D &middot; hybrid tweaks.</strong> A leads with standing &mdash; a full-bleed band makes &ldquo;you&rsquo;re current&rdquo; the first thing read, at the cost of a heavier top-of-page and a two-column working area that trends toward an equal-weight tile wall and degrades on mobile-majority traffic. B reads as one more calm club page, and its all-clear state does real emotional work by sitting inline as the page&rsquo;s own opening beat. C carries A&rsquo;s band-first standing signature into B&rsquo;s single calm column, keeps exactly one weighted action instead of a tile menu, and gives the dormant months their own reassure-and-anticipate job. None of the three spends fireweed; C reserves it for a future renewal-season CTA. Open question worth Geoff&rsquo;s eye: does the value-mirror line in C earn its place, or does the facts-style &ldquo;Your membership&rdquo; block from B belong in C too.</p>
+    <p><strong>D is the ruled direction (C&rsquo;s function, A&rsquo;s body) &mdash; confirm, tweak, or push further.</strong> D keeps A&rsquo;s full-bleed band and two-column working area &mdash; now breathing at the desktop&rsquo;s own width instead of the site&rsquo;s prose measure &mdash; but rules the rail into subordinate reference material: one type step down, muted eyebrow labels, a fainter hairline border, a real 22rem column, and stacked two-line asset rows that fix A&rsquo;s cramped mid-phrase wrap. The one weighted action and the value-mirror line both carry over from C unchanged, and the off-season variant keeps C&rsquo;s reassure-and-anticipate close with the rail left as-is (reference is always valid). Mobile is licensed to be its own composition rather than a collapse of the desktop grid: a compact masthead, the one action, then flat full-width reference rows in recognition order, with the Classes tile dropped from that order (still reachable via the doors row) since an occasional phone check doesn&rsquo;t need its empty-state line. Fireweed stays unspent in D too, reserved for the same future renewal-season CTA.</p>
+  </footer>
+
+</div>
+</body>
+</html>
