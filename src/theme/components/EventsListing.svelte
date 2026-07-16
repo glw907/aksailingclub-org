@@ -68,15 +68,20 @@ back with nothing visible) shows one honest line instead of a silent blank page.
     gap: var(--spacing-2xs) var(--spacing-m);
     padding: var(--spacing-xs) 0 var(--spacing-m);
   }
+  /* Basic-polish batch 1 (2026-07-16): the quiet link idiom (navy, underline only on hover),
+     the same affordance every other cross-page link on the site carries, in place of a muted
+     gray with no underline at any state, which read as inert text rather than a jump link. */
   .events-toc-link {
     font-family: var(--font-display);
     font-size: var(--text-step-1);
     font-weight: 300;
-    color: var(--color-muted);
+    color: var(--color-primary);
     text-decoration: none;
   }
   .events-toc-link:hover {
-    color: var(--color-base-content);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklab, var(--color-primary) 35%, transparent);
+    text-underline-offset: 3px;
   }
   .events-toc-link:focus-visible {
     outline: 2px solid var(--color-primary);
@@ -95,14 +100,38 @@ back with nothing visible) shows one honest line instead of a silent blank page.
     position: relative;
     padding-left: calc(var(--spine-line-x) + var(--spine-content-gap));
   }
+  /* Basic-polish batch 1 (2026-07-16): the line used to run the full height of `.spine` (`top: 0;
+     bottom: 0`), overshooting past both the first waypoint marker's own top offset and the last
+     row's marker, into that row's own trailing padding and description text. `top` now starts
+     exactly at the first waypoint marker's vertical center (its own `top: 0.5em` plus half its
+     0.75rem diameter); the tail past the last row's marker is erased below, since a marker's own
+     vertical offset is a fixed, content-independent value but the LAST row's total height is not
+     (a longer description wraps to more lines), so trimming the far end from this side alone isn't
+     expressible in one static value. */
   .spine::before {
     content: '';
     position: absolute;
-    top: 0;
+    top: calc(0.5em + 0.375rem);
     bottom: 0;
     left: var(--spine-line-x);
     width: 1px;
     background: var(--color-card-border);
+  }
+  /* Erases the line's tail below the last row's own marker center, from that row's own box
+     (`.spine-row`, rendered by the child `SpineRow.svelte` component, reached with `:global()`):
+     positioning relative to the row's own top edge, rather than `.spine`'s, keeps this correct
+     regardless of the row's own content-driven height. The left offset mirrors `.spine-marker`'s
+     own centering math in SpineRow.svelte (`-(content-gap)`, the line's x position expressed in
+     the row's local coordinate space, offset from `.spine`'s padding-box by that same gap). Painted
+     in the page's own ground color, matching every card/band surface `.spine` ever sits on. */
+  :global(.spine-row:last-child)::after {
+    content: '';
+    position: absolute;
+    top: calc(0.65em + 0.25rem);
+    bottom: 0;
+    left: calc(-1 * var(--spine-content-gap));
+    width: 1px;
+    background: var(--color-base-100);
   }
 
   .spine-waypoint {

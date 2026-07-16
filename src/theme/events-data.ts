@@ -199,9 +199,10 @@ export interface EventCard {
   /** A class's whole-dollar fee; never set on a plain event (which has no fee column). */
   fee?: number;
   shortDescription?: string;
-  /** A plain-text, word-boundary-truncated teaser (~90 characters) for the spine row's one-line
-   *  description: `short_description` when present, else a stripped-markdown pass over
-   *  `long_description` (a class's only description field). */
+  /** A plain-text teaser (~90 characters), truncated at a sentence or clause boundary rather
+   *  than mid-clause, for the spine row's one-line description: `short_description` when
+   *  present, else a stripped-markdown pass over `long_description` (a class's only description
+   *  field). */
   summary?: string;
   /** Pre-rendered markdown (the async render step runs once, in the page's own server load). */
   longDescriptionHtml?: string;
@@ -285,13 +286,35 @@ function stripMarkdown(md: string): string {
     .trim();
 }
 
-/** Truncate `text` at the last word boundary within `maxLen` characters, so the spine row's
- *  teaser never cuts a word in half; the ellipsis marks a real truncation only. Exported so this
- *  bug fix (B2, the shared-components pass) is directly unit-testable rather than only through
- *  `buildEventsPage`'s own summary field. */
+/** The index just past the last occurrence of a `punctuation`-matching character in `cut` that
+ *  reads as a real boundary (followed by a space, or sitting at the very end of `cut`), no
+ *  earlier than a third of the way in (guards a stray early match, an abbreviation's period,
+ *  from producing a near-empty teaser). `null` when no such boundary exists. */
+function lastBoundary(cut: string, punctuation: RegExp): number | null {
+  const minIndex = Math.floor(cut.length / 3);
+  for (let i = cut.length - 1; i >= minIndex; i--) {
+    if (punctuation.test(cut[i]) && (i + 1 === cut.length || cut[i + 1] === ' ')) return i + 1;
+  }
+  return null;
+}
+
+/** Truncate `text` at the best available boundary within `maxLen` characters: a real sentence
+ *  end (a period, question mark, or exclamation point) reads as a complete thought and needs no
+ *  ellipsis; failing that, a clause end (a comma, semicolon, or colon) still needs the ellipsis,
+ *  since it signals the sentence keeps going; failing that, the plain last word boundary, so the
+ *  teaser never cuts a word or a clause in half (basic-polish batch 1, 2026-07-16: a mid-clause
+ *  cut like "…relaxed and fun, no prior" read as an amputated fragment). Exported so this is
+ *  directly unit-testable rather than only through `buildEventsPage`'s own summary field. */
 export function truncateSummary(text: string, maxLen = 90): string {
   if (text.length <= maxLen) return text;
   const cut = text.slice(0, maxLen);
+
+  const sentenceEnd = lastBoundary(cut, /[.!?]/);
+  if (sentenceEnd !== null) return cut.slice(0, sentenceEnd).trimEnd();
+
+  const clauseEnd = lastBoundary(cut, /[,;:]/);
+  if (clauseEnd !== null) return `${cut.slice(0, clauseEnd - 1).trimEnd()}…`;
+
   const lastSpace = cut.lastIndexOf(' ');
   return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }

@@ -207,6 +207,38 @@ body {
   left: 0;
 }
 
+/* Form control accent (basic-polish batch 1, 2026-07-16): a plain, unclassed radio or checkbox
+   (join/apply's membership-tier radios, the liability-waiver checkbox on join/apply and class
+   signup) renders the browser's own UA-default cornflower blue, a color from no palette this
+   site owns. One accent-color rule reaches every native form control under the public site
+   shell, DaisyUI's own `.checkbox`/`.radio` classes included, since accent-color is the same
+   channel DaisyUI itself would set (this rule composes with those classes rather than fighting
+   them). */
+.site-main input[type='radio'],
+.site-main input[type='checkbox'] {
+  accent-color: var(--color-primary);
+}
+
+/* Reserved Turnstile slot (basic-polish batch 1, 2026-07-16): the `<div class="cf-turnstile">`
+   every public form (join/apply, donate, contact, my-account's sign-in) renders is empty until
+   Cloudflare's `api.js` implicit-render scan inserts the widget iframe as a child, so the div
+   collapses to zero height at first paint and then jumps open the moment the widget lands,
+   pushing the submit button down; a genuinely blocked load (an ad-blocker, an offline network)
+   leaves it empty forever, a dead gap. `:empty` reads that exact DOM state with no JS of this
+   site's own: a small fixed gap (matching the row rhythm every other field in these forms
+   already uses) before the widget lands or if it never does, sized to the widget's own default
+   "normal" dimensions (~300x65, Cloudflare's own default) once it has, so the space a form
+   reserves always matches what it is actually holding open. */
+.site-main .cf-turnstile {
+  margin-block: var(--spacing-2xs);
+  min-height: 0;
+}
+.site-main .cf-turnstile:not(:empty) {
+  width: 300px;
+  max-width: 100%;
+  min-height: 65px;
+}
+
 /* The site-wide reduced-motion gate (the completion pass's a11y fix, manifest item 5): every
    component's own scoped `prefers-reduced-motion` rule (SiteHeader, SiteFooter, SearchModal,
    asc-components.css, the home template) already turns off ITS OWN hand-written transitions, but

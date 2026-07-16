@@ -114,10 +114,15 @@ same neutral chip rather than a color-per-status vocabulary. -->
   }
 
   /* Layout only: the chip's own look (color, border, radius) comes from the shared
-     `.asc-availability-chip` class in asc-components.css. */
+     `.asc-availability-chip` class in asc-components.css. `.cs-row`'s `align-items: baseline`
+     measures a grid item's baseline from its own content-box top, so the chip's border and
+     padding push its text baseline down past its plain-text siblings (`.cs-name`, `.cs-dates`),
+     which carry neither (basic-polish batch 1, 2026-07-16). `align-self: center` opts this one
+     item out of that baseline math and centers it on the row instead. */
   .cs-chip {
     grid-area: chip;
     justify-self: start;
+    align-self: center;
   }
 
   .cs-action {

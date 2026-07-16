@@ -126,15 +126,9 @@
   .prose .asc-card-body > * + * {
     margin-top: var(--spacing-2xs);
   }
-  .prose .asc-card-arrow {
-    display: inline-flex;
-    margin-top: 0.5rem;
-    color: var(--color-primary);
-  }
-  .prose .asc-card-arrow .ec-glyph {
-    width: 0.85rem;
-    height: 0.85rem;
-  }
+  /* Basic-polish batch 1 (2026-07-16): the arrow is now plain text inside the title span (the
+     :::related idiom), so it inherits the title's own navy link color and hover underline with
+     no rule of its own. */
 
   @media (prefers-reduced-motion: reduce) {
     .prose a.asc-card-link {
@@ -420,12 +414,13 @@
 
   /* ─── Table: a wrapped, context-tuned table with an optional caption/legend (2026-07-15) ── */
   /* `:::table` wraps a markdown table in a `<figure>` so the surrounding caption and legend read
-     as one object with it. The table itself, the `.table-scroll` region around it, the header
-     rule, the zebra, and the row hairlines are chassis prose.css's own generic table rules (that
-     file's own comment explains the wrapper); this block only overrides what a table's context
-     asks for (the header rule's color, tabular figures, and the per-variant density) and adds the
-     figure's own caption/legend chrome, all scoped under `.asc-table` so a plain, unwrapped
-     markdown table elsewhere on the site keeps the chassis default untouched. */
+     as one object with it. The table itself and the `.table-scroll` region around it are chassis
+     prose.css's own generic table rules (that file's own comment explains the wrapper); this
+     block overrides what a table's context asks for (the header rule's color, tabular figures,
+     alignment, wrap, row separation, and the per-variant density) and adds the figure's own
+     caption/legend chrome, all scoped under `.asc-table` so it can never fight a raw migrated
+     `.prose table` elsewhere on the site (the two share only the header-rule and row-separation
+     treatment declared on the bare `table` element below, basic-polish batch 1, 2026-07-16). */
   .prose .asc-table {
     --flow-space: var(--spacing-m);
     margin: 0;
@@ -444,9 +439,54 @@
   .prose .asc-table td {
     font-variant-numeric: tabular-nums;
   }
-  /* The one color override every variant shares: the club's own navy in place of the chassis
-     default's neutral base-300 rule, so the header reads as this site's table, not a generic one. */
-  .prose .asc-table thead th {
+  /* A GFM right-aligned column (`| --- | ---: |`) renders `align="right"` on its th/td; the
+     deprecated HTML attribute already right-aligns by itself via the UA's own presentational
+     hint, but stating it in author CSS keeps the alignment out of a legacy attribute's hands and
+     next to the tabular-figure rule above it belongs with. */
+  .prose .asc-table td[align='right'],
+  .prose .asc-table th[align='right'] {
+    text-align: right;
+  }
+  /* A dense results/fees/gear row (a full member name, a class title) wrapped mid-word at narrow
+     widths even though chassis prose.css deliberately wraps an ordinary prose cell (see that
+     file's own table comment, and the raw-table exception directly below): a variant table's own
+     `.table-scroll` wrapper (chassis, `overflow-x: auto`) is the correct escape hatch for THESE
+     tables specifically, a dense numeric grid or a short fee/gear list, never for a raw
+     paragraph-length legacy table, which keeps the chassis wrap so a full sentence in a cell still
+     reads as a sentence. */
+  .prose .asc-table td,
+  .prose .asc-table th {
+    white-space: nowrap;
+  }
+  /* One row-separation treatment, not both: chassis prose.css draws a hairline under every tbody
+     cell AND a zebra tint on even rows, doubling the row division on every table site-wide,
+     directive and raw migrated legacy alike (the elections timeline table, the sweep's clean
+     exemplar, already reads right with the zebra alone; the doubled treatment also showed up on
+     visiting's packing checklist and the committees roster). Scoped to the bare `table` element so
+     it reaches every table under `.prose`, not only the `.asc-table` figure wrapper. */
+  .prose table tbody td {
+    border-bottom: none;
+  }
+  /* The key/first column reads as a row header at the same weight prose.css already gives
+     `thead th`, so a scan down the left edge names each row (a member's name, a milestone, a
+     roster role) with no card or bolded label wrapper needed. Scoped to the bare `table` element:
+     a raw migrated table and a directive table both get it. `.asc-table-results` resets it right
+     below: a results grid has no single "key" column, every column already competes for the same
+     scan, and the reset wins on specificity (two classes) over this rule (one) regardless of
+     source order. */
+  .prose table tbody td:first-child {
+    font-weight: 600;
+  }
+  .prose .asc-table-results td:first-child {
+    font-weight: 400;
+  }
+  /* The club's own navy header rule, in place of the chassis default's neutral base-300 line,
+     extends to every table under `.prose`, not only a `:::table` directive: a raw migrated legacy
+     table (visiting's packing checklist, the committees roster, elections' timeline) reads as the
+     same family as a directive table rather than a generic one. Scoped to the bare `table`
+     element so a directive variant's own padding/size overrides below, all scoped under
+     `.asc-table`, keep winning on specificity regardless of source order. */
+  .prose table thead th {
     border-bottom: 2px solid var(--color-primary);
   }
   /* `results` (a results grid, a dense scoreboard) stays at the chassis default type size

@@ -131,15 +131,16 @@ function buildCard(ctx: ComponentContext): Element {
   const href = strAttr(ctx, 'href');
   const kids: ElementContent[] = [];
   if (icon) kids.push(h('span', { className: ['asc-card-icon'] }, [makeIcon(icon)]));
-  kids.push(h('span', { className: ['asc-card-title'] }, ctx.slot('title')));
+  // Basic-polish batch 1 (2026-07-16): the arrow rides inline at the end of the title text, an
+  // aria-hidden trailing span exactly like :::related's own arrow idiom, rather than a floating
+  // block glyph stranded on its own line under the card body.
+  const titleKids: ElementContent[] = [...ctx.slot('title')];
+  if (href) titleKids.push(h('span', { className: ['asc-card-arrow'], ariaHidden: 'true' }, [' →']));
+  kids.push(h('span', { className: ['asc-card-title'] }, titleKids));
   const head = h('div', { className: ['asc-card-head'] }, kids);
   const body = h('div', { className: ['asc-card-body'] }, ctx.slot('body'));
   if (href) {
-    return h('a', { className: ['asc-card', 'asc-card-link'], href }, [
-      head,
-      body,
-      h('span', { className: ['asc-card-arrow'] }, [makeIcon('arrow-right')]),
-    ]);
+    return h('a', { className: ['asc-card', 'asc-card-link'], href }, [head, body]);
   }
   return h('div', { className: ['asc-card'] }, [head, body]);
 }

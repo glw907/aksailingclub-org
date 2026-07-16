@@ -192,6 +192,14 @@ both event surfaces. -->
   .event-fact dd {
     margin: 0.15rem 0 0;
     font-size: var(--text-step--1);
+    /* Basic-polish batch 1 (2026-07-16): an `em`-relative (not unitless) line-height computes
+       once, off `dd`'s own font-size, and inherits to a nested child as that fixed length rather
+       than recomputing against the child's own smaller font-size. The Category/Registration
+       facts nest a chip at a step down in size (`.asc-category-chip`/`.asc-availability-chip`,
+       asc-components.css); without this, that smaller font gave the chip a shorter line box than
+       its plain-text siblings (Date, Location, Fee), so its own text baseline sat visibly higher
+       in the row. */
+    line-height: 1.3em;
     color: var(--color-base-content);
   }
   .event-fact dd.is-tbd {

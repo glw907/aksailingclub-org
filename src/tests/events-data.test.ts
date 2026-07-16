@@ -298,6 +298,18 @@ describe('truncateSummary', () => {
     expect(text.startsWith(withoutEllipsis)).toBe(true);
     expect(text[withoutEllipsis.length]).toBe(' ');
   });
+
+  it('prefers a real sentence boundary over an arbitrary word cut, dropping the ellipsis (basic-polish batch 1)', () => {
+    const text =
+      'Four-day on-site class for adults and teens 13+. Covers all the fundamentals of dinghy sailing, from basic boat handling to racing starts.';
+    expect(truncateSummary(text, 90)).toBe('Four-day on-site class for adults and teens 13+.');
+  });
+
+  it('falls back to a clause boundary (a comma) when no sentence end fits, keeping the ellipsis', () => {
+    const text =
+      'Covers all the fundamentals of dinghy sailing, from basic boat handling to racing starts and a sunset sail with instructors.';
+    expect(truncateSummary(text, 90)).toBe('Covers all the fundamentals of dinghy sailing…');
+  });
 });
 
 describe('toEventCard', () => {
