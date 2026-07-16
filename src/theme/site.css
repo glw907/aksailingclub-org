@@ -229,20 +229,26 @@ body {
 }
 
 /* Reserved Turnstile slot: the `<div class="cf-turnstile">`
-   every public form (join/apply, donate, contact, my-account's sign-in) renders is empty until
-   Cloudflare's `api.js` implicit-render scan inserts the widget iframe as a child, so the div
+   every public form (join/apply, donate, contact, my-account's sign-in, class-door) renders is
+   empty until Cloudflare's `api.js` implicit-render scan inserts the widget as a child, so the div
    collapses to zero height at first paint and then jumps open the moment the widget lands,
    pushing the submit button down; a genuinely blocked load (an ad-blocker, an offline network)
-   leaves it empty forever, a dead gap. `:empty` reads that exact DOM state with no JS of this
-   site's own: a small fixed gap (matching the row rhythm every other field in these forms
-   already uses) before the widget lands or if it never does, sized to the widget's own default
-   "normal" dimensions (~300x65, Cloudflare's own default) once it has, so the space a form
-   reserves always matches what it is actually holding open. */
+   leaves it empty forever, a dead gap. A small fixed gap (matching the row rhythm every other
+   field in these forms already uses) covers both of those states.
+
+   `:has(iframe)`, not `:empty` (basic-polish round 3, 2026-07-16 fix): the managed challenge's
+   quiet, invisible pass never renders a visible widget at all, but it still writes a
+   `cf-turnstile-response` hidden input into the div, so `:empty` reads it as "landed" and reserves
+   the full ~65px widget box for nothing, a floating dead gap before the submit button. `:has(iframe)`
+   reads the state that actually matters, an interactive challenge (or the widget's success
+   checkmark) rendering real visible chrome, so the reserved space collapses correctly in the
+   invisible-pass case and still sizes to the widget the moment a real one appears, in either
+   direction, with no jump. */
 .site-main .cf-turnstile {
   margin-block: var(--spacing-2xs);
   min-height: 0;
 }
-.site-main .cf-turnstile:not(:empty) {
+.site-main .cf-turnstile:has(iframe) {
   width: 300px;
   max-width: 100%;
   min-height: 65px;

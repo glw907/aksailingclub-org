@@ -6,6 +6,18 @@ We have space for member-owned trailered boats during the sailing season. Spaces
 
 All trailered boat parking requires **Active Participating Member** status. See [Seasonal Storage](/seasonal-storage/) for the full eligibility requirements. For current availability, see [Storage Waitlists](/waitlists/).
 
+::::facts
+:::fact[Cost]
+$100/season
+:::
+:::fact[Eligibility]
+Active Participating Member status. See [Seasonal Storage](/seasonal-storage/) for the full eligibility requirements.
+:::
+:::fact[Contact]
+Use the [Issues & Support form](/issues-and-support/?category=storage#report-an-issue) and select **Trailered boat parking**.
+:::
+::::
+
 ## Eligibility
 
 Spaces are for actively used boats: at minimum, your boat should sail at least three times per season. The waitlist is managed by the Site Committee Chair; spaces are assigned in order of application.
@@ -13,12 +25,6 @@ Spaces are for actively used boats: at minimum, your boat should sail at least t
 ## Expressing Interest
 
 Use the [Issues & Support form](/issues-and-support/?category=storage#report-an-issue) and select **Trailered boat parking**. You can also ask in `#site` on Discord.
-
-::::facts
-:::fact[Cost]
-$100/season
-:::
-::::
 
 ## Rules
 
@@ -28,4 +34,7 @@ $100/season
 - We may need to move stored property as necessary for club activities
 - You must vacate your space at the end of each season
 
-[All seasonal storage options →](/seasonal-storage/)
+::::related
+:::ref[All seasonal storage options]{href="/seasonal-storage/"}
+:::
+::::

@@ -55,7 +55,7 @@ test('class-door pivot: an unknown email at the class door invites into join, ca
   page,
 }) => {
   await page.goto('/classes/test-intro-class/signup');
-  await expect(page.getByRole('heading', { level: 1, name: 'Sign up: Test Intro Class' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Test Intro Class' })).toBeVisible();
 
   await page.getByRole('group', { name: 'Full name' }).getByRole('textbox').fill('Casey Classdoor');
   const emailField = page.getByRole('group', { name: 'Email address' }).getByRole('textbox');

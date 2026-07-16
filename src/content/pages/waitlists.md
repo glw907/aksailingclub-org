@@ -16,7 +16,7 @@ Multi-year wait is typical.
 
 Moorings are the most in-demand resource at the club. Most members wait two or more seasons before a space opens. Get involved early: race, volunteer, attend work parties. You'll get priority consideration when spots open up.
 
-**To express interest:** Use the [Issues & Support form](/issues-and-support/?category=storage#report-an-issue) and select **Mooring** as the storage type.
+Use the [Issues & Support form](/issues-and-support/?category=storage#report-an-issue) and select **Mooring** as the storage type.
 
 ## Long-Term RV Parking
 
@@ -26,7 +26,7 @@ Multi-year wait is typical.
 
 Spaces on Trailer Row fill up nearly every year. Waitlists commonly run multiple seasons. Spaces renew annually, so spots do open periodically, but demand stays high.
 
-**To express interest:** Use the [Issues & Support form](/issues-and-support/?category=storage#report-an-issue) and select **Long-term RV parking**.
+Use the [Issues & Support form](/issues-and-support/?category=storage#report-an-issue) and select **Long-term RV parking**.
 
 ## Trailered Boat Parking
 
@@ -35,7 +35,7 @@ Spaces on Trailer Row fill up nearly every year. Waitlists commonly run multiple
 
 Availability varies season to season. Contact the Site Committee Chair to find out whether spaces are open or whether you'd be joining a waitlist.
 
-**To ask about availability:** Use the [Issues & Support form](/issues-and-support/?category=storage#report-an-issue) and select **Trailered boat parking**.
+Use the [Issues & Support form](/issues-and-support/?category=storage#report-an-issue) and select **Trailered boat parking**.
 
 ## Rack Storage
 
@@ -44,4 +44,11 @@ Availability varies season to season. Contact the Site Committee Chair to find o
 
 Rack storage is the most accessible of our four storage options. Spaces are usually available without a long wait.
 
-**To ask about availability:** Use the [Issues & Support form](/issues-and-support/?category=storage#report-an-issue) and select **Small boat rack**.
+Use the [Issues & Support form](/issues-and-support/?category=storage#report-an-issue) and select **Small boat rack**.
+
+::::related
+:::ref[Seasonal Storage]{href="/seasonal-storage/"}
+:::
+:::ref[Issues & Support]{href="/issues-and-support/"}
+:::
+::::

@@ -602,6 +602,12 @@ function buildTable(ctx: ComponentContext): Element {
     const captionId = `asc-table-caption-${slugifyForId(textContent(caption))}`;
     kids.push(h('figcaption', { id: captionId }, caption));
     for (const t of tables) t.properties.ariaLabelledBy = captionId;
+  } else {
+    // A heading directly above the table can already name it (racing's "What to Bring" h3, basic-
+    // polish round 3, 2026-07-16), making a `:::caption` slot a redundant echo; `ariaLabel` gives
+    // that table an accessible name without one, so dropping the caption never strips it.
+    const ariaLabel = strAttr(ctx, 'ariaLabel');
+    if (ariaLabel) for (const t of tables) t.properties.ariaLabel = ariaLabel;
   }
   kids.push(...body);
   if (legend.length) {
@@ -622,6 +628,10 @@ const table = defineComponent({
   build: buildTable,
   attributes: {
     variant: fields.select({ label: 'Variant', required: true, options: ['results', 'fees', 'gear'] }),
+    ariaLabel: fields.text({
+      label: 'Accessible name (optional, when no caption)',
+      help: 'Only read when a heading directly above the table already names it visually, so no caption is authored.',
+    }),
   },
   slots: [
     { name: 'caption', label: 'Caption (optional)', kind: 'inline' },

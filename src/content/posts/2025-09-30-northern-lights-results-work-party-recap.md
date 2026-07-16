@@ -93,5 +93,3 @@ Scoring uses the *Low Point System* (1 point for 1st, 2 for 2nd, etc.).
 ::::
 
 *With gratitude to Principal Race Officer Brie Busey and the Race Committee (Joyce Cryan) for running the Northern Lights Regatta.*
-
-And here’s a PDF copy to download:

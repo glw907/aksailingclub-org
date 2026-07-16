@@ -241,9 +241,18 @@
     const raw = data.entry.frontmatter.imageFocus;
     return typeof raw === 'string' && /^\d{1,3}% \d{1,3}%$/.test(raw.trim()) ? raw.trim() : undefined;
   });
-  // Every other derived value below reads `contentHtml`, never `data.html` directly, so the hero
-  // lede (once split off) does not also appear a second time further down the document.
-  const contentHtml = $derived(ledeSplit ? ledeSplit.rest : data.html);
+
+  // A post's own opening paragraph, split the same missing-key-safe way `ledeSplit` splits a
+  // page's (basic-polish round 3, 2026-07-16): posts never merge into the title-adjacent hero
+  // (they keep their own contained `.hero` figure, see `titleBlock`/the plain branch below), so
+  // this is a second, independent split rather than a `SECONDARY_PAGE_OVERRIDES`-style opt-in
+  // into the pages-only device above.
+  const postLedeSplit = $derived(isPost ? splitLede(data.html) : null);
+
+  // Every other derived value below reads `contentHtml`, never `data.html` directly, so a split-off
+  // lede (a page's hero lede or a post's own lede) does not also appear a second time further down
+  // the document.
+  const contentHtml = $derived(ledeSplit ? ledeSplit.rest : postLedeSplit ? postLedeSplit.rest : data.html);
 
   // Gated on a heading count, not a hardcoded slug list, so this generalizes to any page that
   // grows into a long reference document rather than special-casing bylaws and the new-member
@@ -268,14 +277,28 @@
 
   const linkClusterHeadingIds = $derived(pageOverrides?.linkClusterHeadingIds ?? new Set<string>());
 
-  // The long-form site TOC standard's own list (Geoff, 2026-07-07): h2 sections only, computed
-  // over the whole document (`contentHtml`, which already excludes the hero's own lede paragraph
-  // when `mergeLedeIntoHero`), so the navigation is present and complete from the top of the
-  // article rather than appearing only once a reader reaches the tail. Read by both `jumpLinks`
-  // (the in-flow list, <1280px and as the printed/no-JS baseline) and `.page-toc-rail` (the fixed
+  // A long-form page whose own h3 subsections are dense enough to be worth their own TOC tier
+  // (basic-polish round 3, 2026-07-16: racing's 9 h3s across 6 h2s were reachable only by
+  // scrolling, invisible from its own 6-entry TOC). Opt-in by slug, same shape as every other
+  // per-page override on this file, so the long-form site TOC standard's own "h2 sections only"
+  // rule (below) stays the default for every other primary page, education's settled baseline
+  // included.
+  const NESTED_TOC_SLUGS = new Set(['racing']);
+
+  // The long-form site TOC standard's own list (Geoff, 2026-07-07): h2 sections only by default,
+  // computed over the whole document (`contentHtml`, which already excludes the hero's own lede
+  // paragraph when `mergeLedeIntoHero`), so the navigation is present and complete from the top of
+  // the article rather than appearing only once a reader reaches the tail. A page in
+  // `NESTED_TOC_SLUGS` keeps its h3s too, rendered as `tocList`'s own indented second tier (the
+  // `item.level === 3 ? 'ml-m' : ''` rule it already carries). Read by both `jumpLinks` (the
+  // in-flow list, <1280px and as the printed/no-JS baseline) and `.page-toc-rail` (the fixed
   // gutter rail, >=1280px) below; the two never render at once, CSS toggles between them by
   // breakpoint.
-  const jumpLinks = $derived(longFormSlug ? extractToc(contentHtml).filter((item) => item.level === 2) : []);
+  const jumpLinks = $derived(
+    longFormSlug
+      ? extractToc(contentHtml).filter((item) => item.level === 2 || NESTED_TOC_SLUGS.has(longFormSlug))
+      : [],
+  );
 
   /** Splits rendered HTML at each top-level `<h2>` boundary: everything before the first h2 (the
    *  lede under the title) is the preamble, and each h2 through the content up to (but excluding)
@@ -536,6 +559,17 @@
 {/snippet}
 
 {#snippet titleBlock()}
+  {#if isPost}
+    <!-- The post-head "News" back-link (basic-polish round 3, 2026-07-16): mirrors the
+         governance subpage's own `.back-link` device above, exactly (same icon, same class),
+         pointed at the news archive instead of Governance. -->
+    <a href="/posts" class="not-prose back-link">
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M19 12H5M11 6l-6 6 6 6" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      News
+    </a>
+  {/if}
   {#if showDate && data.entry.date}
     <p class="post-date">{formatDate(data.entry.date)}</p>
   {/if}
@@ -615,6 +649,13 @@
       </figure>
     {/if}
     {@render titleBlock()}
+    {#if isPost && postLedeSplit?.lede}
+      <!-- The post's own opening-line treatment (basic-polish round 3): a modest slice of the
+           pages' `.hero-lede` recipe (snug leading, one size up), NOT its full recessed-ink
+           treatment (`.hero-lede :global(p)`'s own comment) -- a post's lede sits at the top of
+           plain text flow, not beside a big hero, and reads better at full ink. -->
+      <div class="post-lede">{@html postLedeSplit.lede}</div>
+    {/if}
   {/if}
   {#if longFormSlug}
     <!-- The long-form template (originally education-only, 2026-07-07; every primary page since
@@ -675,12 +716,43 @@
       </div>
     {/if}
   {/if}
-  {#if isPost && data.entry.tags.length > 0}
-    <ul class="post-tags" aria-label="Tags">
-      {#each data.entry.tags as tag (tag)}
-        <li>{tag}</li>
-      {/each}
-    </ul>
+  {#if isPost}
+    <!-- The post tail (basic-polish round 3, 2026-07-16): "Filed under" tag links (previously
+         inert decoration, see `.post-tags a`'s own comment below), date-adjacent prev/next
+         (`data.older`/`data.newer`, both computed for free by `routes.entryLoad`'s own
+         `site.adjacent(entry)` call, scoped to the posts concept), and a "More news" index link.
+         `not-prose-links` opts this furniture out of the sitewide prose-link underline the same
+         way the TOC rail does (site.css's own comment on that exclusion), since every link here
+         carries its own hand-styled affordance instead. -->
+    <footer class="post-tail not-prose not-prose-links">
+      {#if data.entry.tags.length > 0}
+        <div class="post-tail-tags">
+          <p class="post-tail-eyebrow">Filed under</p>
+          <ul class="post-tags" aria-label="Tags">
+            {#each data.entry.tags as tag (tag)}
+              <li><a href="/tags/{tag}">{tag}</a></li>
+            {/each}
+          </ul>
+        </div>
+      {/if}
+      {#if data.older || data.newer}
+        <nav class="post-tail-nav" aria-label="Other posts">
+          {#if data.older}
+            <a href={data.older.permalink} class="post-tail-nav-link post-tail-nav-link--prev">
+              &larr; {data.older.title}
+            </a>
+          {:else}
+            <span></span>
+          {/if}
+          {#if data.newer}
+            <a href={data.newer.permalink} class="post-tail-nav-link post-tail-nav-link--next">
+              {data.newer.title} &rarr;
+            </a>
+          {/if}
+        </nav>
+      {/if}
+      <a href="/posts" class="post-tail-more">More news &rarr;</a>
+    </footer>
   {/if}
 </article>
 
@@ -694,27 +766,111 @@
     color: var(--color-muted);
     margin: 0 0 var(--spacing-2xs);
   }
+  /* The post tail (basic-polish round 3, 2026-07-16): a hairline rule opens it, matching every
+     other sitewide closer (`.asc-related`, `.event-detail-nav`). */
+  .post-tail {
+    margin-top: var(--spacing-xl);
+    padding-top: var(--spacing-m);
+    border-top: var(--border) solid var(--color-card-border);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-m);
+  }
+  .post-tail-eyebrow {
+    margin: 0 0 var(--spacing-2xs);
+    font-size: var(--text-step--2);
+    font-weight: 600;
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
   .post-tags {
     list-style: none;
     padding: 0;
-    margin: var(--spacing-l) 0 0;
+    margin: 0;
     display: flex;
     flex-wrap: wrap;
     gap: var(--spacing-2xs);
   }
-  .post-tags li {
+  /* The tag chips are real links now (basic-polish round 3: they used to be plain `<li>` text
+     that only LOOKED tappable), so the border/padding/radius that used to sit on the `<li>` moves
+     to the `<a>`, sizing the chip's whole clickable box around the actual interactive element.
+     `--radius-field`, not the pill-shaped `--radius-selector` the status chips use: a tag is a
+     link, not a status. */
+  .post-tags a {
+    display: inline-block;
     font-family: var(--font-display);
     font-weight: 700;
     font-size: var(--text-step--1);
     letter-spacing: 0.05em;
     color: var(--color-muted);
+    text-decoration: none;
     padding: 0.2em 0.55em;
     border: var(--border) solid var(--color-card-border);
-    border-radius: var(--radius-selector);
+    border-radius: var(--radius-field);
+  }
+  .post-tags a:hover {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+  .post-tags a:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* Date-adjacent prev/next, the same layout and link treatment as the event detail page's own
+     `.event-detail-nav` (that page's own comment explains the split-row shape). */
+  .post-tail-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--spacing-m);
+  }
+  .post-tail-nav-link {
+    font-size: var(--text-step--1);
+    color: var(--color-muted);
+    text-decoration: none;
+    max-width: 40ch;
+  }
+  .post-tail-nav-link:hover {
+    color: var(--color-primary);
+  }
+  .post-tail-nav-link:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  .post-tail-nav-link--next {
+    text-align: right;
+    margin-left: auto;
+  }
+
+  .post-tail-more {
+    align-self: start;
+    font-size: var(--text-step--1);
+    font-weight: 600;
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+  .post-tail-more:hover {
+    text-decoration: underline;
+  }
+  .post-tail-more:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* The post's own opening-line treatment (basic-polish round 3): a modest slice of `.hero-lede`'s
+     own recipe below, snug leading and one size up, kept at full ink (see the markup's own
+     comment for why this stays a separate, smaller rule rather than reusing `.hero-lede` itself). */
+  .post-lede :global(p) {
+    margin: 0;
+    font-size: var(--text-step-1);
+    line-height: var(--leading-snug);
+    color: var(--color-base-content);
   }
 
   /* The governance subpage "back to Governance" link (manifest item 10), restoring the live
-     site's own secondary-page back-link. */
+     site's own secondary-page back-link; the post-head "News" back-link (basic-polish round 3)
+     reuses this same class unscoped by concept. */
   .back-link {
     display: inline-flex;
     align-items: center;

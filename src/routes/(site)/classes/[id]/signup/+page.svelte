@@ -146,23 +146,24 @@ pivot before the visitor fills out the rest of the form. -->
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </svelte:head>
 
+<p class="class-signup-eyebrow">Class signup</p>
 <h1 class="m-0 font-display text-step-4 font-semibold leading-tight tracking-tight text-base-content">
-  Sign up: {data.cls.name}
+  {data.cls.name}
 </h1>
 
-<dl class="class-meta mt-s flex flex-wrap gap-x-l gap-y-2xs text-step--1 text-muted">
-  <div><dt class="sr-only">Track</dt><dd>{CLASS_TRACK_LABEL[data.cls.track]}</dd></div>
-  <div><dt class="sr-only">Dates</dt><dd>{dateDisplay}</dd></div>
-  {#if data.cls.location}
-    <div><dt class="sr-only">Location</dt><dd>{data.cls.location}</dd></div>
+<dl class="class-facts mt-s max-w-measure-wide">
+  <div class="class-fact"><dt>Track</dt><dd>{CLASS_TRACK_LABEL[data.cls.track]}</dd></div>
+  <div class="class-fact"><dt>Dates</dt><dd>{dateDisplay}</dd></div>
+  {#if data.cls.fee > 0}
+    <div class="class-fact"><dt>Fee</dt><dd>${data.cls.fee}</dd></div>
   {/if}
+  <div class="class-fact">
+    <dt>Availability</dt>
+    <dd><span class="asc-availability-chip">{data.open ? 'Open' : 'Full'}</span></dd>
+  </div>
 </dl>
 
-{#if data.cls.description}
-  <p class="mt-m max-w-measure-wide text-step-0 text-base-content">{data.cls.description}</p>
-{/if}
-
-<p class="mt-s max-w-measure-wide text-step-0" class:text-warning={!data.open} class:text-success={data.open}>
+<p class="mt-s max-w-measure-wide text-step-0 text-base-content">
   {#if data.open}
     {spotsLeft} {spotsLeft === 1 ? 'spot' : 'spots'} open.
   {:else}
@@ -170,9 +171,13 @@ pivot before the visitor fills out the rest of the form. -->
   {/if}
 </p>
 
+{#if data.cls.description}
+  <p class="mt-m max-w-measure-wide text-step-0 text-base-content">{data.cls.description}</p>
+{/if}
+
 {#if joinClass.result && 'outcome' in joinClass.result && joinClass.result.outcome === 'enrolled'}
-  <div class="mt-l max-w-measure-wide rounded-box border border-success bg-success/10 p-m">
-    <p class="m-0 font-semibold text-base-content">You're signed up for {data.cls.name}.</p>
+  <div class="outcome-panel mt-l max-w-measure-wide rounded-box p-m">
+    <p class="outcome-panel-title m-0 font-semibold">You're signed up for {data.cls.name}.</p>
     {#if data.cls.fee > 0}
       <p class="mt-xs mb-0 text-step--1 text-base-content">
         The ${data.cls.fee} class fee is due before your first day. We'll follow up by email with
@@ -207,8 +212,8 @@ pivot before the visitor fills out the rest of the form. -->
     {/if}
   </div>
 {:else if joinClass.result && 'outcome' in joinClass.result && joinClass.result.outcome === 'waitlisted'}
-  <div class="mt-l max-w-measure-wide rounded-box border border-info bg-info/10 p-m">
-    <p class="m-0 font-semibold text-base-content">You're on the waitlist, position {joinClass.result.position}.</p>
+  <div class="outcome-panel mt-l max-w-measure-wide rounded-box p-m">
+    <p class="outcome-panel-title m-0 font-semibold">You're on the waitlist, position {joinClass.result.position}.</p>
     <p class="mt-xs mb-0 text-step--1 text-base-content">
       Cancellations are common in the weeks before class. If a spot opens, we'll email you a link to
       claim it, good for a limited window; passing on an offer is a fine choice and keeps your place
@@ -216,8 +221,8 @@ pivot before the visitor fills out the rest of the form. -->
     </p>
   </div>
 {:else if pivot && pivot.mode === 'renew'}
-  <div class="mt-l max-w-measure-wide rounded-box border border-info bg-info/10 p-m">
-    <p class="m-0 font-semibold text-base-content">Renew to sign up for {data.cls.name}.</p>
+  <div class="outcome-panel mt-l max-w-measure-wide rounded-box p-m">
+    <p class="outcome-panel-title m-0 font-semibold">Renew to sign up for {data.cls.name}.</p>
     <p class="mt-xs mb-0 text-step--1 text-base-content">
       Your membership has lapsed. We'll email you a sign-in link; you can renew and register for
       classes from your account.
@@ -235,8 +240,8 @@ pivot before the visitor fills out the rest of the form. -->
     {/if}
   </div>
 {:else if pivot}
-  <div class="mt-l max-w-measure-wide rounded-box border border-info bg-info/10 p-m">
-    <p class="m-0 font-semibold text-base-content">Classes are for current members.</p>
+  <div class="outcome-panel mt-l max-w-measure-wide rounded-box p-m">
+    <p class="outcome-panel-title m-0 font-semibold">Classes are for current members.</p>
     <p class="mt-xs mb-0 text-step--1 text-base-content">
       Join the club to sign up for {data.cls.name}; we'll carry your class pick over so you don't
       have to enter it twice.
@@ -253,27 +258,31 @@ pivot before the visitor fills out the rest of the form. -->
 
     <input type="hidden" name="classId" value={data.cls.id} />
 
-    <fieldset class="fieldset">
-      <legend class="fieldset-legend">Full name</legend>
-      <input class="input w-full" autocomplete="name" required {...name.as('text')} />
-    </fieldset>
+    <fieldset class="details-group flex flex-col gap-m">
+      <legend class="group-legend">Your details</legend>
 
-    <fieldset class="fieldset">
-      <legend class="fieldset-legend">Email address</legend>
-      <input class="input w-full" autocomplete="email" required {...email.as('email')} onblur={onEmailBlur} />
-    </fieldset>
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Full name</legend>
+        <input class="input w-full" autocomplete="name" required {...name.as('text')} />
+      </fieldset>
 
-    <fieldset class="fieldset">
-      <legend class="fieldset-legend">Phone number (optional)</legend>
-      <input class="input w-full" autocomplete="tel" {...phone.as('tel')} />
-    </fieldset>
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Email address</legend>
+        <input class="input w-full" autocomplete="email" required {...email.as('email')} onblur={onEmailBlur} />
+      </fieldset>
 
-    <fieldset class="fieldset">
-      <legend class="fieldset-legend">Anything specific you'd like to learn?</legend>
-      <textarea class="textarea h-24 w-full" {...interests.as('text')}></textarea>
-      <p class="mt-2xs mb-0 text-step--2 text-muted">
-        Optional. Your answer helps us shape class time around what you want to learn.
-      </p>
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Phone number (optional)</legend>
+        <input class="input w-full" autocomplete="tel" {...phone.as('tel')} />
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Anything specific you'd like to learn?</legend>
+        <textarea class="textarea h-24 w-full" {...interests.as('text')}></textarea>
+        <p class="mt-2xs mb-0 text-step--2 text-muted">
+          Optional. Your answer helps us shape class time around what you want to learn.
+        </p>
+      </fieldset>
     </fieldset>
 
     <fieldset class="fieldset">
@@ -303,18 +312,104 @@ pivot before the visitor fills out the rest of the form. -->
 {/if}
 
 <style>
-  /* Every legend in this form is a field-level label (this form declares no separate group
-     legend), so round 2's field-label register applies to all of them: sentence case, dark ink,
-     no tracking or uppercase (Geoff, 2026-07-16: "the labels and form title look too similar,"
-     overruling the earlier one-idiom eyebrow ruling — docs/design-benchmark/decisions.md). */
+  /* Every INDIVIDUAL field's own legend (Full name, Email address, and the rest) is a field-level
+     label, so round 2's field-label register applies to it: sentence case, dark ink, no tracking
+     or uppercase (Geoff, 2026-07-16: "the labels and form title look too similar," overruling the
+     earlier one-idiom eyebrow ruling — docs/design-benchmark/decisions.md). Round 3 (basic-polish)
+     adds the one group-level legend this form was missing, `.group-legend` below, in the OTHER
+     half of that same two-level scheme. */
   .fieldset-legend {
     font-size: var(--text-step--1);
     font-weight: 600;
     color: var(--color-base-content);
   }
 
-  .class-meta dd {
+  /* The "Your details" seam (basic-polish round 3): one light group legend opening the reading
+     half of the form (name/email/phone/interests), in the uppercase tracked group-tier register
+     join/apply's own `.fieldset-legend` uses for its real groups ("Membership tier," "Your
+     details"). A plain `<fieldset>`, not the `class="fieldset"` DaisyUI utility (that utility's
+     own grid layout is for a single field, not a group of nested fieldsets), so the browser's
+     default fieldset border/margin/padding is reset here explicitly. */
+  .details-group {
     margin: 0;
+    padding: 0;
+    border: none;
+  }
+  .group-legend {
+    margin: 0 0 var(--spacing-2xs);
+    padding: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-step--1);
+    font-weight: 700;
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  /* The title-adjacent kicker (basic-polish round 3): replaces the "Sign up: {name}" setup-colon
+     h1 with an eyebrow over the plain class name, the same uppercase tracked recipe the long-form
+     template's own `.promise-hero-eyebrow` uses ([...path]/+page.svelte). */
+  .class-signup-eyebrow {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-eyebrow);
+    font-size: var(--text-step--1);
+    color: var(--color-muted);
+  }
+
+  /* The class-door meta row, recomposed as the facts-family anatomy (basic-polish round 3): the
+     same borderless label/value `<dl>` idiom the event-detail page's own `.event-facts` restates
+     locally (that page's own comment explains why: this route sits outside `.prose`, so
+     asc-components.css's `.prose .asc-facts` never reaches it). Two fixed tracks, `display:
+     contents` on `.class-fact` so `dt`/`dd` sit as direct grid items while the markup still nests
+     validly in the `<dl>`. */
+  .class-facts {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    column-gap: var(--spacing-m);
+  }
+  .class-fact {
+    display: contents;
+  }
+  .class-fact dt,
+  .class-fact dd {
+    padding: var(--spacing-2xs) 0;
+    border-top: var(--border) solid var(--color-card-border);
+  }
+  .class-fact:first-child dt,
+  .class-fact:first-child dd {
+    border-top: none;
+  }
+  .class-fact dt {
+    margin: 0;
+    font-size: var(--text-step--1);
+    font-weight: 600;
+    color: var(--color-muted);
+  }
+  .class-fact dd {
+    margin: 0;
+    font-size: var(--text-step--1);
+    /* An em-relative line-height (see .event-fact dd's own comment for the same fix): the
+       Availability fact nests the shared `.asc-availability-chip`, a step down in size, and
+       without this its line box sat shorter than its plain-text siblings, visibly raising its
+       baseline. */
+    line-height: 1.3em;
+    color: var(--color-base-content);
+  }
+
+  /* The outcome/pivot panels (enrolled/pay-fee, waitlisted, renew, join pivot): the site's own
+     quiet callout register (asc-components.css's `.callout-requirement` recipe, restated here
+     since this route sits outside `.prose`) in place of DaisyUI's border-info/bg-info/10 and
+     border-success/bg-success/10 tints, which spent the site's reserved semantic palette on a
+     plain "here's what happens next" notice, not a real warning or success state. */
+  .outcome-panel {
+    border: 1px solid var(--color-primary);
+    background: var(--color-base-200);
+  }
+  .outcome-panel-title {
+    color: var(--color-primary);
   }
 
   .waiver-text summary {

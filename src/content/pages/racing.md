@@ -63,11 +63,7 @@ For Wet Wednesdays, it's even simpler. There's no skippers meeting. Arrive a bit
 
 Weather on Big Lake runs the full range: 50°F, windy, and rainy to 80°F and sunny, sometimes in the same afternoon. Pack for both.
 
-::::table{variant="gear"}
-:::caption
-What to Bring
-:::
-
+::::table{variant="gear" ariaLabel="What to Bring"}
 | Item | Notes |
 |------|-------|
 | Layers and foul weather gear | A jacket and pants that can handle wind and spray are the most important items on this list. |
@@ -165,3 +161,12 @@ These are questions about **wind shifts**: the constant small (and sometimes lar
 Laylines. Tactical positioning at mark roundings. The rules as a tool, not just a constraint; knowing when another boat owes you room, and how to claim it confidently. Sail trim: small adjustments to leech tension or sail twist that change how fast you're moving without touching the rudder. The moment it all starts to come together in real time is one of the better feelings in the sport.
 
 The club's teaching culture doesn't stop at the end of the beginner class. Experienced sailors debrief after races and share what they saw on the course. [Skills & Drills Weekend](/education/) each June is specifically designed to sharpen racing skills before the season hits full stride. Ask questions on `#racing`. People will answer.
+
+::::page-cta[Ready to try it?]
+Wet Wednesdays are the easiest way to start: arrive around 6:00 p.m. and we'll find you a spot on a boat. Dates are on the [Events page](/events/).
+
+:::cta-action[See race dates]{href="/events/" kind="primary"}
+:::
+:::cta-action[Start with a class]{href="/education/" kind="secondary"}
+:::
+::::
