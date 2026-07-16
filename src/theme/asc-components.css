@@ -145,7 +145,15 @@
   .prose .asc-facts {
     --flow-space: var(--spacing-m);
     display: grid;
-    grid-template-columns: minmax(8rem, 12rem) 1fr;
+    /* Basic-polish composition round (2026-07-16, item 7): a fixed `12rem` growth limit stretched
+       every label column to that width regardless of the block's own content (CSS Grid grows a
+       definite-max track to fill leftover space when nothing else claims it), opening a dead
+       gutter on a short-label block like moorings' (Cost, Eligibility, Boat size). `max-content`
+       instead sizes the column to THIS block's own longest label, so a short-label block tightens
+       and a long-label one (new-member-guide's "Update your contact information", the governance
+       docs' "Document"/"Authority" pairs) keeps exactly the room it needs — verified against both
+       ends, not just moorings. */
+    grid-template-columns: minmax(8rem, max-content) 1fr;
     /* margin-block-end only (2026-07-15 invisible-polish fix): a bare `margin: 0` here also zeroed
        margin-top, out-specifying the chassis owl selector (`.prose > * + * { margin-top:
        var(--flow-space) }`, prose.css) at (0,2,0) against its (0,1,0) and collapsing the intended

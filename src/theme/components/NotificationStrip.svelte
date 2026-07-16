@@ -4,9 +4,13 @@ The home page's notification card: the north star's own bounded block (round-5 r
 quiet ("needs to be a little more present") and too hero-attached. The reference
 (docs/2026-07-06-asc-home-northstar.html in this repo) is a light-fill, rounded, left-accented
 card sitting directly under the hero's CTA; this rebuilds that form with the club's own pennant
-glyph standing in for the reference's bare gold accent bar, the one gold element in the card
-(the mast in navy, the burgee in the theme's own `--color-secondary` gold), set at the card's own
-left edge so it reads as the accent a separate border-left bar would otherwise duplicate.
+glyph standing in for the reference's bare gold accent bar, the one gold element in the card, set
+at the card's own left edge so it reads as the accent a separate border-left bar would otherwise
+duplicate. The basic-polish composition round (2026-07-16, item 6) swapped the marker's own
+one-off inline path for the theme icon set's `flag-pennant` glyph (`$theme/markdown/icons`), the
+same source every other icon="..." marker on the site draws from, in the star-gold token
+(`--color-secondary`, "marks and waypoints only"): one shared icon vocabulary rather than a
+bespoke shape that happened to draw a similar flag.
 
 Dosage (Geoff's own calibration): the light fill and bounded edges alone do the "more present"
 work. Type stays at plain body scale and ink (`text-step-0 text-base-content`, unchanged from the
@@ -19,15 +23,15 @@ the card the page's full content measure, below both hero columns (the round-6 f
 superseding round-5's own hero-left-column width, which read as an inadvertent grid cell). -->
 <script lang="ts">
   import { parseBoldSegments, type ActiveNotification } from '$theme/active-notification';
+  import { ICON_PATHS } from '$theme/markdown/icons';
 
   let { notification }: { notification: ActiveNotification } = $props();
   const segments = $derived(parseBoldSegments(notification.body));
 </script>
 
 <div class="notification-card">
-  <svg class="notification-pennant" viewBox="0 0 24 24" aria-hidden="true">
-    <line x1="5" y1="2" x2="5" y2="22" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" />
-    <polygon points="5,3 18,7.5 5,12" fill="var(--color-secondary)" />
+  <svg class="notification-pennant" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+    <path d={ICON_PATHS['flag-pennant']}></path>
   </svg>
   <p class="notification-text m-0 text-step-0 text-base-content">
     {#each segments as segment, i (i)}{#if segment.bold}<strong>{segment.text}</strong>{:else}{segment.text}{/if}{/each}
@@ -58,6 +62,7 @@ superseding round-5's own hero-left-column width, which read as an inadvertent g
     height: 1.3em;
     flex-shrink: 0;
     margin-top: 0.2em;
+    color: var(--color-secondary);
   }
   .notification-link {
     text-decoration-color: color-mix(in oklab, var(--color-primary) 35%, transparent);

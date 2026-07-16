@@ -5,8 +5,8 @@ description: "We've rebuilt the ASC website from the ground up on a new platform
 tags:
   - club
 image:
-  src: "media:new-website-launch-graphic.113a916181ab6f25"
-  alt: "A stylized graphic of club sailboats sailing across a field of green code, marking the new website's launch."
+  src: "media:kids-reading-on-dock.3d4d4b99f74ca4c2"
+  alt: "Two kids sitting together reading a book on the dock among moored club sailboats."
 ---
 We've rebuilt the ASC website from the ground up on a new platform. We've been working on this since last fall, and it's finally live!
 

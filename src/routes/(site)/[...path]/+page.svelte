@@ -19,6 +19,13 @@
   const isGovernanceSubpage = $derived(
     data.entry.concept === 'pages' && GOVERNANCE_SUBPAGE_SLUGS.has(data.entry.slug),
   );
+  // Basic-polish composition round (2026-07-16, item 8): members' own card rows mix one- and
+  // two-line descriptions ("Manage your membership." beside "Find members."), so the base
+  // `.asc-cards` `align-items: start` (deliberately kept elsewhere for education's own
+  // wildly-different-length cards, see asc-components.css) leaves a short sibling's bottom edge
+  // and trailing link riding above a taller one in the same row. Scoped to members alone so every
+  // other card grid on the site keeps its own top-aligned sizing unchanged.
+  const equalizeCardRows = $derived(data.entry.slug === 'members');
   // B3 (2026-07-15 shared-components pass): a post's `description` frontmatter is a meta-only SEO
   // summary (CairnHead's own <meta name="description">, via `data.seo`), not a second visible
   // subtitle. Every migrated post's description is a truncated prefix of its own opening
@@ -178,16 +185,19 @@
    *  only) rather than mis-slicing unrelated markup. Powers the title-adjacent hero's own lede
    *  (axis A of the 2026-07-08 benchmark-alignment pass): title, lede, and photo compose as one
    *  visual unit, matching the home page's own hero grammar, rather than floating the lede below
-   *  the whole hero row. Scoped to long-form pages only (`mergeLedeIntoHero` below), not every
-   *  `isPageHero` page, so the composition change stays inside this pass's own target rather than
-   *  reaching into donate/join/members/racing/new-member-guide, none of which this pass reviewed. */
+   *  the whole hero row. Originally scoped to long-form pages only, not every `isPageHero` page, so
+   *  the composition change stayed inside that pass's own target. The basic-polish composition
+   *  round (2026-07-16) reaches into two of those held-back pages by name (`LEDE_MERGE_SLUGS`
+   *  below): new-member-guide's own hero left an L-shaped dead quadrant beside the title with the
+   *  lede stranded below the whole hero row, and donate's hero carried the same void. */
   function splitLede(html: string): { lede: string; rest: string } {
     const match = /^\s*<p>[\s\S]*?<\/p>/.exec(html);
     if (!match) return { lede: '', rest: html };
     return { lede: match[0], rest: html.slice(match[0].length) };
   }
 
-  const mergeLedeIntoHero = $derived(isPageHero && Boolean(longFormSlug));
+  const LEDE_MERGE_SLUGS = new Set(['new-member-guide', 'donate']);
+  const mergeLedeIntoHero = $derived(isPageHero && (Boolean(longFormSlug) || LEDE_MERGE_SLUGS.has(data.entry.slug)));
   const ledeSplit = $derived(mergeLedeIntoHero ? splitLede(data.html) : null);
 
   /** Marks the lede's trailing action link ("See class dates →") so the CSS can promote it to its
@@ -225,10 +235,29 @@
   // it unchanged.
   const toc = $derived(extractToc(contentHtml));
   const showToc = $derived(toc.length >= 8 && !longFormSlug);
+
+  // The basic-polish composition round (2026-07-16): four secondary pages' own per-h2 card stack
+  // reads as heavy assembly, not designed prose (the design contract's own phase-1 defect: "heavy
+  // card use"). Keyed by slug, the same tolerance every other page-specific map in this file
+  // carries: a page not listed here keeps the density-gated panel frame exactly as it already
+  // works (bylaws, moorings, waitlists, and the rest of the long secondary catalog). Opting a page
+  // out here still keeps its TOC (`showToc` is independent), only the card chrome drops.
+  const FLAT_SECONDARY_SLUGS = new Set(['new-member-guide', 'articles-of-incorporation', 'member-expectations', 'committees']);
   // The section-panel treatment (the presentation round's Strand 2) is the pages concept's own
   // template device, not a general density-gated feature: a long post or bulletin still earns the
   // sticky gutter TOC below, but its body stays plain prose, unpanelled.
-  const showPanels = $derived(showToc && data.entry.concept === 'pages');
+  const showPanels = $derived(showToc && data.entry.concept === 'pages' && !FLAT_SECONDARY_SLUGS.has(data.entry.slug));
+
+  // New-member-guide's own exception inside its flattened body (Batch 3, item 1): the page's two
+  // genuine link-card clusters ("Your First Week", "Ready to Get More Involved?") keep the site's
+  // one reserved tinted-panel idiom, the same "a page may use ONE tinted panel around its primary
+  // action group" amendment REGISTRATION_BAND_HEADING_ID already spends for education, so the card
+  // grids inside them read as a deliberate destination rather than orphaned white boxes on the bare
+  // page ground. Every other page's own h2 sections are untouched (the set below is empty for them).
+  const LINK_CLUSTER_PANEL_HEADING_IDS: Record<string, Set<string>> = {
+    'new-member-guide': new Set(['your-first-week', 'ready-to-get-more-involved']),
+  };
+  const linkClusterHeadingIds = $derived(LINK_CLUSTER_PANEL_HEADING_IDS[data.entry.slug] ?? new Set<string>());
 
   // The long-form site TOC standard's own list (Geoff, 2026-07-07): h2 sections only, computed
   // over the whole document (`contentHtml`, which already excludes the hero's own lede paragraph
@@ -262,13 +291,33 @@
     return `<section class="content-panel">${withLede}</section>`;
   }
 
+  /** The link-cluster panel (new-member-guide's own reserved tint, see LINK_CLUSTER_PANEL_HEADING_IDS
+   *  above): the same lede-marking touch as `toPanel`, in the lighter `.link-cluster-panel` shell
+   *  (a flat tint, no border/shadow) rather than the bordered white `.content-panel` card, since this
+   *  page's own card grid already carries its own hairline chrome one level in. */
+  function toLinkClusterPanel(sectionHtml: string): string {
+    const withLede = sectionHtml.replace(/(<\/h2>\s*)<p>/, '$1<p class="panel-lede">');
+    return `<section class="link-cluster-panel">${withLede}</section>`;
+  }
+
+  /** One h2 section's own wrap, on a flattened secondary page (`showPanels` false): the link-cluster
+   *  panel when the section's own heading id is in `linkClusterHeadingIds`, otherwise the section
+   *  passes through as plain prose. A section with no `<h2 id="...">` match (should not happen,
+   *  splitAtH2 only ever starts a section at one) also passes through unwrapped. */
+  function wrapFlatSection(sectionHtml: string, clusterHeadingIds: Set<string>): string {
+    const headingId = /<h2 id="([^"]+)"/.exec(sectionHtml)?.[1];
+    return headingId && clusterHeadingIds.has(headingId) ? toLinkClusterPanel(sectionHtml) : sectionHtml;
+  }
+
   // Splits `contentHtml`, the whole document (minus a merged-away hero lede): `preambleHtml`
   // (rare, since the split heading is itself an h2) and `sectionsHtml` only ever cover the
   // material this template panelizes.
   const split = $derived(showToc ? splitAtH2(contentHtml) : null);
   const preambleHtml = $derived(split ? split.preamble : contentHtml);
   const sectionsHtml = $derived(
-    split ? split.sections.map((section) => (showPanels ? toPanel(section) : section)).join('') : '',
+    split
+      ? split.sections.map((section) => (showPanels ? toPanel(section) : wrapFlatSection(section, linkClusterHeadingIds))).join('')
+      : '',
   );
 
   /** Splits rendered HTML at each of `boundaries`' heading ids, in the order they actually occur
@@ -380,11 +429,35 @@
     );
   }
 
+  // Basic-polish composition round (2026-07-16, item 8's coverage-debt addition): members' own
+  // "At the Club & On the Water" section holds 4 cards, which the base `.asc-cards` auto-fill
+  // grid renders as 3 fitting columns plus one stranded on its own row at every width past the
+  // mobile single column. Keyed by slug, like every other per-page map in this file: a page not
+  // listed here keeps the grid's own auto-fill column count.
+  const TWO_UP_CARDS_HEADING_IDS: Record<string, string[]> = {
+    members: ['at-the-club--on-the-water'],
+  };
+
+  /** Marks the first `.asc-cards` grid inside one h2 section (the heading through the next h2) with
+   *  `cards-two-up`, so that one card row can rebalance to a fixed 2-column grid (CSS below)
+   *  without touching the `.asc-cards` default every other card row on the site still uses. A
+   *  missing heading id, or a section with no card grid, leaves the html unchanged. */
+  function markCardsTwoUp(html: string, headingId: string): string {
+    const match = new RegExp(`<h[23] id="${headingId}"[^>]*>`).exec(html);
+    if (!match) return html;
+    const start = match.index;
+    const end = nextHeadingAtOrAbove(html, start + match[0].length, 2);
+    const before = html.slice(0, start);
+    const section = html.slice(start, end).replace('class="asc-cards"', 'class="asc-cards cards-two-up"');
+    return `${before}${section}${html.slice(end)}`;
+  }
+
   /** Applies one long-form page's own wraps, program sections, then the registration band, then
-   *  the closing card, to a single already-split group segment's own html (used by groupSegments
-   *  below). wrapRange's missing-id tolerance (its own doc comment above) makes running every wrap
-   *  against every segment safe: a heading id absent from a given segment simply no-ops there, so
-   *  only the segment that actually contains a wrap's own heading is ever changed. */
+   *  the closing card, then a fixed-column card grid marker, to a single already-split group
+   *  segment's own html (used by groupSegments below). wrapRange's missing-id tolerance (its own
+   *  doc comment above) makes running every wrap against every segment safe: a heading id absent
+   *  from a given segment simply no-ops there, so only the segment that actually contains a wrap's
+   *  own heading is ever changed. */
   function wrapLongFormSegment(html: string, slug: string): string {
     let wrapped = html;
     for (const { headingId, level } of PROGRAM_SECTION_HEADINGS[slug] ?? []) {
@@ -394,6 +467,9 @@
     if (bandHeadingId) wrapped = wrapSectionAsBand(wrapped, bandHeadingId);
     const closingHeadingId = CLOSING_SECTION_HEADING_ID[slug];
     if (closingHeadingId) wrapped = wrapClosingSection(wrapped, closingHeadingId);
+    for (const headingId of TWO_UP_CARDS_HEADING_IDS[slug] ?? []) {
+      wrapped = markCardsTwoUp(wrapped, headingId);
+    }
     return wrapped;
   }
 
@@ -490,7 +566,7 @@
      hardcoded education-only set, so every primary page picks up both the long-form template
      below and the gold waypoint rule (see `article.prose.long-form-page :global(h2)::before`)
      from this one class. -->
-<article class="prose" class:long-form-page={Boolean(longFormSlug)}>
+<article class="prose" class:long-form-page={Boolean(longFormSlug)} class:equalize-card-rows={equalizeCardRows}>
   {#if isGovernanceSubpage}
     <a href="/governance/" class="not-prose back-link">
       <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -1036,6 +1112,25 @@
     justify-content: stretch;
   }
 
+  /* Basic-polish composition round (2026-07-16, item 8, coverage-debt addition): the fixed
+     2-column rebalance for members' "At the Club & On the Water" row (`markCardsTwoUp` above sets
+     `cards-two-up` on that one grid only). Gated to `min-width: 40rem`: below it the row's own
+     breakout measure is already too narrow for two comfortable columns, and the base `.asc-cards`
+     auto-fill rule already renders a single column there, so no override is needed. */
+  @media (min-width: 40rem) {
+    article.prose.long-form-page :global(.asc-cards.cards-two-up) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  /* Item 8: members' own row-height equalizer (`equalize-card-rows`, set above). Scoped past
+     asc-components.css's own tied specificity the same way the single-card rule right above does,
+     so this beats the shared `.prose .asc-cards { align-items: start }` default regardless of
+     build-time source order. */
+  article.prose.equalize-card-rows :global(.asc-cards) {
+    align-items: stretch;
+  }
+
   /* Round 3, owner note 9: the page's own warm close (wrapClosingSection above wraps the
      "Questions?" heading through the end of its own group segment in this card), a bordered card
      rather than plain prose trailing off the document's end. Full width of the reading measure, no
@@ -1532,6 +1627,32 @@
       padding: var(--spacing-l);
     }
     .prose :global(.content-panel) {
+      padding: var(--spacing-l);
+    }
+  }
+
+  /* Basic-polish composition round (2026-07-16, item 1): new-member-guide's one reserved tinted
+     panel, around its two genuine link-card clusters only (LINK_CLUSTER_PANEL_HEADING_IDS above).
+     A flat tint, not the bordered/shadowed `.content-panel` card: the `:::cards` grid one level
+     inside already carries its own hairline chrome (asc-components.css's `.asc-card`), so a second
+     white card wrapping it would double that chrome exactly the way the per-section panel stack
+     used to. No separate `:has()` trigger on `.article-sections` either (unlike `.content-panel`
+     above), since only two of this page's many sections ever carry this class — tinting the whole
+     sections column for two panels would read as a mistake, not a deliberate accent. */
+  .prose :global(.link-cluster-panel) {
+    --flow-space: var(--spacing-m);
+    background: var(--color-base-200);
+    border-radius: var(--radius-box);
+    padding: var(--spacing-m);
+  }
+  .prose :global(.link-cluster-panel > * + *) {
+    margin-top: var(--flow-space);
+  }
+  .prose :global(.link-cluster-panel .panel-lede) {
+    font-weight: 450;
+  }
+  @media (min-width: 48rem) {
+    .prose :global(.link-cluster-panel) {
       padding: var(--spacing-l);
     }
   }
