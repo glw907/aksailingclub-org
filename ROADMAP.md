@@ -149,6 +149,24 @@ the apex A record is a proxied placeholder), so the flip is a custom-domain/rout
 reassignment, edge-instant both ways — the low-TTL ruling's intent (instant rollback) is
 satisfied by the mechanism, stated in the doc.
 
+### Events page from-scratch redesign `events-redesign`
+A full from-scratch design of the events page, OPENING WITH A FUNCTIONAL BRAINSTORM
+(what the page must do for members and visitors before any visual work), interactive
+with Geoff. Licensed its own template and one-time design features; deserves special
+focus because the page is important (Geoff, 2026-07-16). The probe-iteration process
+governs the design work (HTML probes, verdicts, one rebuild per settle); the current
+events page's timeline/chips/season machinery is evidence of requirements, not a
+design to preserve.
+
+### Member directory brainstorm & pass `member-directory`
+Full brainstorm and build pass on the member directory, the NUMBER-ONE member-requested
+feature (Geoff, 2026-07-16). Opens interactive with Geoff: what members want from it
+(find people, boats, moorings? contact? opt-in privacy model?), then designs and builds
+against the portal redesign's rulings (occasional-user recognition principle, mobile
+co-primary, the portal's own component license). The existing /my-account/directory
+screen and MW's directory function (one of the four absorbed MW functions) are the
+requirements evidence.
+
 ### Design propagation & continuing rounds `design-propagation`
 Keep the design rounds moving on the ratified Home/Education system (Geoff,
 2026-07-14). The 2026-07-14 inventory confirmed the TEMPLATE MIGRATION IS DONE: all
