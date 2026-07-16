@@ -15,3 +15,10 @@ If you need one of these spaces and don't currently have one (or if you just hav
 ## Classes
 
 Class registration opens soon. Members get advance notice before we open signup to the public, so friends and family have a chance to sign up. Watch Discord and your email!
+
+::::page-cta[Ready to join or renew?]
+:::cta-action[Join the club]{href="/join/" kind="primary"}
+:::
+:::cta-action[Renew your membership]{href="/my-account/" kind="secondary"}
+:::
+::::

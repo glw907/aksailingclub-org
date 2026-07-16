@@ -14,9 +14,17 @@ Our official web address is **aksailingclub.org**. All club communications, even
 
 ## Find what you need
 
-- [Join the club →](/join/)
-- [Sailing classes and education →](/education/)
-- [Racing schedule and results →](/racing/)
-- [Events calendar →](/events/)
-- [Member resources →](/members/)
-- [Contact us →](/contact/)
+::::related
+:::ref[Join the club]{href="/join/"}
+:::
+:::ref[Sailing classes and education]{href="/education/"}
+:::
+:::ref[Racing schedule and results]{href="/racing/"}
+:::
+:::ref[Events calendar]{href="/events/"}
+:::
+:::ref[Member resources]{href="/members/"}
+:::
+:::ref[Contact us]{href="/contact/"}
+:::
+::::

@@ -78,7 +78,7 @@
       "concept": "pages",
       "title": "You're Registered!",
       "permalink": "/class-registration-complete",
-      "summary": "You're all set. Check your email for a confirmation and receipt, if you don't see it within a few minutes, check your spam folder. Here are a few things to help you prepare: Class details and…",
+      "summary": "Your class registration is confirmed.",
       "draft": false,
       "links": []
     },
@@ -105,7 +105,7 @@
       "concept": "pages",
       "title": "Payment Confirmation",
       "permalink": "/confirmation",
-      "summary": "Thank you for your payment. You'll receive a confirmation email shortly.",
+      "summary": "Your payment is confirmed.",
       "draft": false,
       "links": []
     },
@@ -114,7 +114,7 @@
       "concept": "pages",
       "title": "Contact",
       "permalink": "/contact",
-      "summary": "Send Us a Message Use the form below and choose a topic; we'll route your message to the right volunteer committee. We typically respond within a few days. :::contact-form ::: Our Location…",
+      "summary": "Send Us a Message Use the form below and choose a topic; we'll route your message to the right volunteer committee. We typically respond within a few days. :::contact-form ::: Our Location Our club…",
       "draft": false,
       "links": []
     },

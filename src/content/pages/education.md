@@ -182,7 +182,7 @@ Skills & Drills Weekend is open to members who have taken an ASC *Introduction t
 | Membership | Price | Ages | Class credits |
 |---|---|---|---|
 | Individual | $250/year | 18+ | 1 |
-| Young Adult | $100/year | 18-25 | 1 |
+| Young Adult | $100/year | 18–25 | 1 |
 | Family | $500/year | All ages | 2 |
 
 When you join as a new member, your membership includes credit for your first class (or first two classes for families). This means an individual pays $250 total for membership plus their first beginner sailing course; a young adult pays just $100. Additional classes are $100 each.

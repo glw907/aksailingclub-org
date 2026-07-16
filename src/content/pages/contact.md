@@ -13,20 +13,20 @@ committee. We typically respond within a few days.
 
 ## Our Location
 
-:::passage[Big Lake, Alaska]{icon="compass"}
 Our club sits on Big Lake in the Mat-Su Valley, about an hour north of Anchorage on the Parks Highway.
 
-**Physical address:**
+::::facts
+:::fact[Physical address]
 Mile 8.2 South Big Lake Road
 Big Lake, AK 99654
 
 [Get directions on Google Maps](https://www.google.com/maps/search/?api=1&query=Alaska+Sailing+Club+Big+Lake+AK)
 :::
-
-:::passage[Mailing Address]{icon="envelope-simple"}
-**PO Box 92554**
+:::fact[Mailing address]
+PO Box 92554
 Anchorage, AK 99509
 :::
+::::
 
 ## Other Ways to Reach Us
 

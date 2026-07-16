@@ -160,7 +160,7 @@ earlier "sign in instead" dead end, unchanged. -->
       <div class="flex flex-col gap-s">
         <label class="flex flex-col gap-2xs text-step--1">
           Full name
-          <input class="input w-full" name="purchaserName" autocomplete="name" placeholder="Full name" required bind:value={purchaserName} />
+          <input class="input w-full" name="purchaserName" autocomplete="name" required bind:value={purchaserName} />
         </label>
         <label class="flex flex-col gap-2xs text-step--1">
           Email address
@@ -169,7 +169,7 @@ earlier "sign in instead" dead end, unchanged. -->
             name="purchaserEmail"
             type="email"
             autocomplete="email"
-            placeholder="Email address"
+            placeholder="you@example.com"
             required
             bind:value={purchaserEmail}
             onblur={onPurchaserEmailBlur}
@@ -177,7 +177,7 @@ earlier "sign in instead" dead end, unchanged. -->
         </label>
         <label class="flex flex-col gap-2xs text-step--1">
           Phone number (optional)
-          <input class="input w-full" name="purchaserPhone" type="tel" autocomplete="tel" placeholder="Phone number (optional)" bind:value={purchaserPhone} />
+          <input class="input w-full" name="purchaserPhone" type="tel" autocomplete="tel" bind:value={purchaserPhone} />
         </label>
         {#if tier === 'young-adult'}
           <label class="flex flex-col gap-2xs text-step--1">
@@ -284,7 +284,7 @@ earlier "sign in instead" dead end, unchanged. -->
       {/if}
     </div>
 
-    <fieldset class="fieldset waiver-fieldset">
+    <fieldset class="fieldset">
       <legend class="fieldset-legend">Liability release</legend>
       <details class="waiver-text">
         <summary>Read the release (version {data.waiverVersion})</summary>
@@ -325,11 +325,6 @@ earlier "sign in instead" dead end, unchanged. -->
     color: var(--color-muted);
   }
 
-  .waiver-fieldset {
-    border: var(--border) solid var(--color-card-border);
-    border-radius: var(--radius-box);
-    padding: var(--spacing-s) var(--spacing-m);
-  }
   .waiver-text summary {
     cursor: pointer;
     font-size: var(--text-step--1);

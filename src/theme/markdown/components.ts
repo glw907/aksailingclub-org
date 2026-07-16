@@ -42,7 +42,15 @@ const makeIcon = makeIconRenderer(ICON_PATHS);
 const LINK_PATTERN = '^(#|/|cairn:|https?://)';
 const LINK_HELP = 'Use an anchor (#id), a path (/page), a cairn: link, or a full URL.';
 
-// ─── Callout: cairn's own showcase shape, unchanged ─────────────────────────
+// ─── Callout: cairn's own showcase shape, plus a rendered icon (basic-polish batch 2) ───
+// The `icon` attribute below was declared but never drawn: `ctx.attributes.icon` reached the
+// hast tree as a data attribute (remarkDirectiveStamp carries every declared attribute), but
+// build() never read it, so authoring `icon="anchor"` on a `requirement` callout (the field's
+// own help text suggestion, above) silently rendered no glyph at all. The system-success surface
+// (payment confirmation, class-registration-complete) is this bug's first real content usage, so
+// it is fixed here rather than routed around: a leading inline icon in `.callout-title`, the same
+// "icon rides inside the heading" idiom `card`'s title and `passage`'s headRow already use, gated
+// on the attribute being set so every existing icon-less callout site-wide renders unchanged.
 const callout = defineComponent({
   name: 'callout',
   label: 'Callout',
@@ -50,12 +58,17 @@ const callout = defineComponent({
   use: 'Draw the reader to one important idea.',
   group: 'Callouts',
   icon: 'compass',
-  build: (ctx) =>
-    h('aside', { className: ['callout', `callout-${String(ctx.attributes.tone ?? 'note')}`] }, [
-      h('p', { className: ['callout-title'] }, ctx.slot('title')),
+  build: (ctx) => {
+    const icon = strAttr(ctx, 'icon');
+    const titleKids: ElementContent[] = icon
+      ? [h('span', { className: ['callout-icon'] }, [makeIcon(icon)]), ...ctx.slot('title')]
+      : ctx.slot('title');
+    return h('aside', { className: ['callout', `callout-${String(ctx.attributes.tone ?? 'note')}`] }, [
+      h('p', { className: ['callout-title'] }, titleKids),
       h('div', { className: ['callout-body'] }, ctx.slot('body')),
       h('ul', { className: ['callout-points'] }, ctx.items('points').map((item) => h('li', item))),
-    ]),
+    ]);
+  },
   attributes: {
     // 'interim' (the design-polish pass, 2026-07-07): a quiet, deliberately unremarkable tone for
     // a "not built yet" placeholder notice, so a page with real content around it doesn't read as

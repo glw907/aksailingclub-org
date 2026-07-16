@@ -178,10 +178,15 @@
     font-size: var(--text-step--1);
     font-weight: 600;
     color: var(--color-muted);
+    /* Basic-polish batch 2 (2026-07-16): a fact's label or value can hold a dollar amount
+       (join's dues, donate's tier prices), and proportional figures wobble beside a currency
+       sign. Tabular figures on both slots cover whichever one an amount lands in. */
+    font-variant-numeric: tabular-nums;
   }
   .prose .asc-fact-value {
     font-size: var(--text-step-0);
     color: var(--color-base-content);
+    font-variant-numeric: tabular-nums;
   }
   .prose .asc-fact-value > * {
     margin: 0;
@@ -606,5 +611,21 @@
   }
   .prose .callout-requirement .callout-title {
     color: var(--color-primary);
+  }
+
+  /* ─── Callout: the rendered icon (basic-polish batch 2, 2026-07-16) ────────────────────── */
+  /* Inline before the title text (the `.asc-card-icon`/`.ec-glyph` sizing idiom right above,
+     restated here since a callout-title is plain inline text, not a flex row): a callout is a
+     compact aside, not a titled section, so the glyph rides inside the heading rather than a
+     separate block. `vertical-align: -0.15em` nudges the glyph's optical center onto the text
+     baseline, the correction card/passage's own icon slots get for free from their flex layout. */
+  .prose .callout-icon {
+    display: inline-flex;
+    vertical-align: -0.15em;
+    color: currentColor;
+  }
+  .prose .callout-icon .ec-glyph {
+    width: 1.1em;
+    height: 1.1em;
   }
 }

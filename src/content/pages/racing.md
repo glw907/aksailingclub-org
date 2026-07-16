@@ -13,7 +13,7 @@ Racing at the ASC picks up where our sailing classes leave off, giving experienc
 
 Our season runs Memorial Day through September. It starts informal and stays that way for most sailors: Wednesday evening races, weekend regattas with potlucks and camping, a pirate-themed scavenger hunt, and a season closer that uses islands as marks. If you just finished a beginner class, Wet Wednesdays are the natural next step.
 
-:::passage[Wet Wednesdays]{icon="waves"}
+:::passage[Wet Wednesdays]
 Our midweek evening series and the easiest way to start racing. Sailors arrive at 6:00 p.m., with racing starting around 7:00 p.m. Short windward/leeward courses, rabbit start format. No regatta scoring, no formal skippers meeting: just show up and sail.
 
 New sailors are always welcome. We find everyone a spot on a boat, usually crewing for an experienced skipper who can talk you through the race in real time. Everything you practiced in Introduction to Dinghy Sailing, from tacking and jibing to right-of-way, shows up here at a slightly faster pace.
@@ -21,7 +21,7 @@ New sailors are always welcome. We find everyone a spot on a boat, usually crewi
 Six designated Wednesdays form a summer-long high-point series. Dates are on the [Events page](/events/).
 :::
 
-:::passage[Weekend Regattas]{icon="flag-pennant"}
+:::passage[Weekend Regattas]
 The season includes four weekend regattas: the Icebreaker, Firecracker, Fireweed Ladies Race, and Governor's Cup. Dates and details are on the [Events page](/events/).
 
 More structured than Wednesdays. On Saturday, the skippers meeting starts at 1:00 p.m. Racing follows when conditions allow. Sunday's meeting is at 11:00 a.m. We aim for five to seven races over two days with formal scoring across multiple fleets.
@@ -29,17 +29,17 @@ More structured than Wednesdays. On Saturday, the skippers meeting starts at 1:0
 Regattas are where you start to feel the rhythm of racing: skippers meetings, starting sequences, mark roundings, and a potluck after Saturday's races. If you've done a few Wet Wednesdays, you're ready. The same people who helped you on Wednesday will be on the starting line Saturday.
 :::
 
-:::passage[The Pirate Race]{icon="skull"}
+:::passage[The Pirate Race]
 Not really a race. The Pirate Race is the biggest on-water scavenger hunt and water fight in Alaska. It's the club's signature party event, and the rules are rarely the regular rules of sailing. People dress as pirates (not required, but the costumes are spectacular). Creative cheating and skullduggery are strongly encouraged.
 
 If you're nervous about racing, this is the perfect first event. Nobody is keeping score in any meaningful sense, and you'll meet half the club.
 :::
 
-:::passage[The Northern Lights Race]{icon="moon-stars"}
+:::passage[The Northern Lights Race]
 Racing on Saturday, work party on Sunday. The Northern Lights weekend is how ASC closes its season in two acts. Race day is quiet and low-key, with islands as marks instead of buoys and a full-club campfire afterward. Northern Lights are optional but frequently delivered. On Sunday, the whole club reconvenes for the annual work party: pulling out docks, winterizing equipment, and putting the place to bed until spring.
 :::
 
-:::passage[Buccaneer North American Championship (BNAC)]{icon="trophy"}
+:::passage[Buccaneer North American Championship (BNAC)]
 The BNAC rotates to a different host club each year, including Alaska. ASC hosted the 2025 BNAC on Big Lake and sends sailors to the championship annually, wherever it lands. If you're racing the Buccaneer Fleet competitively, this is the marquee event on the calendar.
 :::
 
@@ -63,6 +63,11 @@ For Wet Wednesdays, it's even simpler. There's no skippers meeting. Arrive a bit
 
 Weather on Big Lake runs the full range: 50°F, windy, and rainy to 80°F and sunny, sometimes in the same afternoon. Pack for both.
 
+::::table{variant="gear"}
+:::caption
+What to Bring
+:::
+
 | Item | Notes |
 |------|-------|
 | Layers and foul weather gear | A jacket and pants that can handle wind and spray are the most important items on this list. |
@@ -71,6 +76,7 @@ Weather on Big Lake runs the full range: 50°F, windy, and rainy to 80°F and su
 | Water and snacks | Races run longer than you expect and the clubhouse isn't always accessible mid-event. |
 | Watch with countdown timer | Essential for timing your start. Any sports watch works. |
 | Handheld VHF radio | Required for the Buccaneer Fleet; strongly recommended for the Open Fleet. The race committee communicates on Channel 68. |
+::::
 
 ## Racing Fleets
 
@@ -128,11 +134,11 @@ If you break a rule, take a penalty turn on the spot and keep sailing. Everyone 
 
 Racing runs on a short list of documents and channels. Before your first event, knowing where things live is more useful than studying the rules.
 
-:::passage[Notice of Race and Sailing Instructions]{icon="newspaper"}
+:::passage[Notice of Race and Sailing Instructions]
 Every regatta is announced with a **Notice of Race (NOR)**: the schedule, format, and entry details, published in advance. On race day, the **Sailing Instructions (SI)** govern what happens on the water, the specific course, the starting sequence, how scoring works, and any special rules for that event. Both documents are posted on this site. Links go out in `#racing` on Discord and via email, typically at least a day or two before the event, so you can read through the SI at home rather than scrambling on the dock the morning of.
 :::
 
-:::passage[The Skippers Meeting]{icon="compass"}
+:::passage[The Skippers Meeting]
 Every race day begins on shore with the skippers meeting, run by the **Principal Race Officer (PRO)**, who leads the race committee. The PRO describes the course, covers any special instructions, and takes questions. If multiple fleets are racing, the meeting includes the starting order so every fleet knows when to get on the water.
 
 For new racers, the skippers meeting is the most useful five minutes of the day. Ask questions. Veterans do too.
@@ -140,11 +146,11 @@ For new racers, the skippers meeting is the most useful five minutes of the day.
 For Wet Wednesdays, there is no skippers meeting. Arrive by 6:00 p.m. to rig up and get on the water before the 7:00 p.m. start.
 :::
 
-:::passage[VHF Channel 68]{icon="radio"}
+:::passage[VHF Channel 68]
 The race committee monitors **VHF Channel 68** throughout racing. Course changes, postponements, weather calls, and safety messages all go out over the radio. A handheld VHF marine radio is required for Buccaneer Fleet races and strongly recommended for the Open Fleet.
 :::
 
-:::passage[The #racing Channel]{icon="chats"}
+:::passage[The #racing Channel]
 `#racing` on Discord is the hub for all racing communication outside of race day: regatta announcements, NOR and SI links, results after each event, and general discussion. If you want to know what's coming up, it's the first place to look.
 :::
 

@@ -34,8 +34,11 @@ test('join happy path: individual tier submits and surfaces the stub checkout de
   await expect(page.getByRole('heading', { level: 1, name: 'Join the club' })).toBeVisible();
 
   await page.getByRole('radio', { name: /Individual/ }).check();
-  await page.getByPlaceholder('Full name').fill('Pat Purchaser');
-  await page.getByPlaceholder('Email address').fill('pat.purchaser@example.com');
+  // Located by label, not placeholder: the basic-polish batch 2 pass dropped these fields'
+  // label-echoing placeholders (join/apply/+page.svelte), so a placeholder locator no longer
+  // finds them.
+  await page.getByLabel('Full name').fill('Pat Purchaser');
+  await page.getByLabel('Email address').fill('pat.purchaser@example.com');
 
   await page
     .getByRole('checkbox', { name: /I have read and accept the liability release/ })

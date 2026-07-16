@@ -34,29 +34,37 @@ Full seasonal access to club grounds, including the clubhouse, sauna, campfire, 
 
 ## What It Costs
 
-**Annual Membership Dues:**
-- **Individual:**
-  :::membership-pricing{tier="individual"}
-  :::
-- **Family:**
-  :::membership-pricing{tier="family"}
-  :::
-- **Young adult (under 26):**
-  :::membership-pricing{tier="young-adult"}
-  :::
+### Annual Membership Dues
+
+::::facts
+:::fact[Individual]
+:::membership-pricing{tier="individual"}
+:::
+:::
+:::fact[Family]
+:::membership-pricing{tier="family"}
+:::
+:::
+:::fact[Young adult (under 26)]
+:::membership-pricing{tier="young-adult"}
+:::
+:::
+::::
+
+### Additional Fees
 
 ::::table{variant="fees"}
-:::caption
-Additional Fees
-:::
-
 | Item | Fee |
 | --- | --- |
 | Trailer row storage | $100/season |
 | RV seasonal parking | $100/season |
 | Moorings | $300/season |
 | Rack storage (kayaks, paddleboards, small sailboats) | $50/season |
-| Sailing classes | $100 per class (see [Education](/education/)) |
+| Sailing classes | $100 per class |
+
+:::legend
+See [Education](/education/) for class dates and registration.
+:::
 ::::
 
 **What's included in dues:** Access to club grounds, tent camping, club boat use (after qualification), regatta participation, member directory, and Discord community.
@@ -69,8 +77,8 @@ An individual membership pays for itself in 2-3 uses of club boats (equivalent t
 
 Before you apply, check the [Education](/education/) page to see if there are open spots. Classes are popular and often fill within a week of registration opening. If a class shows as available, don't wait. You can pick classes for anyone in your household right in the join form: membership and class registration happen in one pass, and your credits apply automatically.
 
-::::cards
-:::card[Class schedule & registration]{icon="graduation-cap" href="/education/"}
+::::related
+:::ref[Class schedule & registration]{href="/education/"}
 View the 2026 class schedule, dates, and registration links for all four beginner sessions.
 :::
 ::::
@@ -97,35 +105,36 @@ The board reviews new applications in the background (typically 2-3 business day
 
 ### Returning Members
 
-::::cards
-:::card[Renew your membership]{icon="user-circle" href="/my-account/"}
+::::related
+:::ref[Renew your membership]{href="/my-account/"}
 Already a member? Renewing is straightforward: log in to your account and complete payment. No approval needed.
 :::
 ::::
 
 ### Apply Now
 
-:::callout[Ready to Join?]{tone="note"}
-[Apply and pay online](/join/apply).
+::::page-cta[Ready to Join?]
+:::cta-action[Apply and pay online]{href="/join/apply" kind="primary"}
 :::
+::::
 
 ## About the Club
 
-:::passage[Big Lake, Alaska]{icon="compass"}
+:::passage[Big Lake, Alaska]
 Our club sits on beautiful lakeside property on Big Lake in the Mat-Su Valley, about an hour north of Anchorage. We embrace a rustic character, members bring their own drinking water, we have porta-potties and outhouses, and you pack out what you pack in. Many members find this simplicity refreshing. Fewer distractions, more sailing.
 
 Membership includes access to club grounds and tent camping at no extra charge. We also offer seasonal storage for trailered boats, RVs, kayaks, and small sailboats (see our [storage policies](/seasonal-storage/) for options and fees).
 :::
 
-:::passage[The Volunteer Culture]{icon="handshake"}
+:::passage[The Volunteer Culture]
 **The ASC runs entirely on volunteer power.** We have no paid staff. Every dock repair, every mowed lawn, every regatta, and every sailing class happens because a member stepped up. We ask all members to attend at least one work party per year (Spring and Fall) and to pitch in when they visit. Members who actively contribute get priority consideration for storage spots, moorings, and other limited resources.
 :::
 
-:::passage[Club Boats]{icon="sailboat"}
+:::passage[Club Boats]
 Our fleet of club boats is available to all qualified members at no additional charge. New to sailing? Take one of our [beginner courses](/education/) and you'll be qualified by the end of the class. Already know how to sail? Complete a [qualification checkout](/club-boat-use-and-qualification/) and you're all set.
 :::
 
-:::passage[Community]{icon="users-three"}
+:::passage[Community]
 Most club communication happens on our [Discord server](/discord-server/): it's where members plan sailing trips, coordinate work parties, and generally hang out. You'll receive an invite when you join.
 
 The ASC is most active from May through September, with regattas, classes, and social events throughout the summer. Check our [events calendar](/events/) to see what's coming up.
