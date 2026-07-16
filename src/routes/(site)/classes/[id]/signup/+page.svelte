@@ -303,14 +303,14 @@ pivot before the visitor fills out the rest of the form. -->
 {/if}
 
 <style>
-  /* Matches ContactForm/DonateForm's own eyebrow legend, the site's field-label convention. */
+  /* Every legend in this form is a field-level label (this form declares no separate group
+     legend), so round 2's field-label register applies to all of them: sentence case, dark ink,
+     no tracking or uppercase (Geoff, 2026-07-16: "the labels and form title look too similar,"
+     overruling the earlier one-idiom eyebrow ruling — docs/design-benchmark/decisions.md). */
   .fieldset-legend {
-    font-family: var(--font-display);
     font-size: var(--text-step--1);
-    font-weight: 700;
-    letter-spacing: var(--tracking-eyebrow);
-    text-transform: uppercase;
-    color: var(--color-muted);
+    font-weight: 600;
+    color: var(--color-base-content);
   }
 
   .class-meta dd {

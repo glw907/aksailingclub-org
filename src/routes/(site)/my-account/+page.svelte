@@ -284,14 +284,14 @@ section's own "Pay" doors do the same for an approved, unpaid asset assignment t
     max-width: 300px;
   }
 
-  /* Matches the class-signup/DonateForm/ContactForm family's own eyebrow legend convention. */
+  /* Every legend in this form is a field-level label (this page declares no separate group
+     legend), so round 2's field-label register applies to all of them: sentence case, dark ink,
+     no tracking or uppercase (Geoff, 2026-07-16: "the labels and form title look too similar,"
+     overruling the earlier one-idiom eyebrow ruling — docs/design-benchmark/decisions.md). */
   .fieldset-legend {
-    font-family: var(--font-display);
     font-size: var(--text-step--1);
-    font-weight: 700;
-    letter-spacing: var(--tracking-eyebrow);
-    text-transform: uppercase;
-    color: var(--color-muted);
+    font-weight: 600;
+    color: var(--color-base-content);
   }
 
   /* Portal quiet-action tier (2026-07-15 invisible-polish fix): the profile page's own "Update"

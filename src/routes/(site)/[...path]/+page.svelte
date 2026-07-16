@@ -19,13 +19,6 @@
   const isGovernanceSubpage = $derived(
     data.entry.concept === 'pages' && GOVERNANCE_SUBPAGE_SLUGS.has(data.entry.slug),
   );
-  // Members' own card rows mix one- and two-line descriptions ("Manage your membership." beside
-  // "Find members."), so the base `.asc-cards` `align-items: start` (deliberately kept elsewhere
-  // for education's own wildly-different-length cards, see asc-components.css) leaves a short
-  // sibling's bottom edge
-  // and trailing link riding above a taller one in the same row. Scoped to members alone so every
-  // other card grid on the site keeps its own top-aligned sizing unchanged.
-  const equalizeCardRows = $derived(data.entry.slug === 'members');
   // B3 (2026-07-15 shared-components pass): a post's `description` frontmatter is a meta-only SEO
   // summary (CairnHead's own <meta name="description">, via `data.seo`), not a second visible
   // subtitle. Every migrated post's description is a truncated prefix of its own opening
@@ -445,36 +438,15 @@
     );
   }
 
-  // Members' own "At the Club & On the Water" section holds 4 cards, which the base `.asc-cards`
-  // auto-fill grid renders as 3 fitting columns plus one stranded on its own row at every width
-  // past the mobile single column. "Getting Started" and "Governance" each hold only 2 cards,
-  // which the same auto-fill grid hugs to the left of the 3-column track instead of centering an
-  // even 2-up row. Keyed by slug, like every other per-page map in this file: a page not listed
-  // here keeps the grid's own auto-fill column count.
-  const TWO_UP_CARDS_HEADING_IDS: Record<string, string[]> = {
-    members: ['getting-started', 'at-the-club--on-the-water', 'governance'],
-  };
-
-  /** Marks the first `.asc-cards` grid inside one h2 section (the heading through the next h2) with
-   *  `cards-two-up`, so that one card row can rebalance to a fixed 2-column grid (CSS below)
-   *  without touching the `.asc-cards` default every other card row on the site still uses. A
-   *  missing heading id, or a section with no card grid, leaves the html unchanged. */
-  function markCardsTwoUp(html: string, headingId: string): string {
-    const match = new RegExp(`<h[23] id="${headingId}"[^>]*>`).exec(html);
-    if (!match) return html;
-    const start = match.index;
-    const end = nextHeadingAtOrAbove(html, start + match[0].length, 2);
-    const before = html.slice(0, start);
-    const section = html.slice(start, end).replace('class="asc-cards"', 'class="asc-cards cards-two-up"');
-    return `${before}${section}${html.slice(end)}`;
-  }
-
   /** Applies one long-form page's own wraps, program sections, then the registration band, then
-   *  the closing card, then a fixed-column card grid marker, to a single already-split group
-   *  segment's own html (used by groupSegments below). wrapRange's missing-id tolerance (its own
-   *  doc comment above) makes running every wrap against every segment safe: a heading id absent
-   *  from a given segment simply no-ops there, so only the segment that actually contains a wrap's
-   *  own heading is ever changed. */
+   *  the closing card, to a single already-split group segment's own html (used by groupSegments
+   *  below). wrapRange's missing-id tolerance (its own doc comment above) makes running every wrap
+   *  against every segment safe: a heading id absent from a given segment simply no-ops there, so
+   *  only the segment that actually contains a wrap's own heading is ever changed. Members' own
+   *  2- and 4-card rows ("Getting Started," "At the Club & On the Water," "Governance") used to
+   *  need a heading-id-keyed `cards-two-up` marker here; the count-aware card lattice
+   *  (asc-components.css, round 2) now rules an even 2-up or 2x2 grid straight off each row's own
+   *  card count, so that device retired with no successor. */
   function wrapLongFormSegment(html: string, slug: string): string {
     let wrapped = html;
     for (const { headingId, level } of PROGRAM_SECTION_HEADINGS[slug] ?? []) {
@@ -484,9 +456,6 @@
     if (bandHeadingId) wrapped = wrapSectionAsBand(wrapped, bandHeadingId);
     const closingHeadingId = CLOSING_SECTION_HEADING_ID[slug];
     if (closingHeadingId) wrapped = wrapClosingSection(wrapped, closingHeadingId);
-    for (const headingId of TWO_UP_CARDS_HEADING_IDS[slug] ?? []) {
-      wrapped = markCardsTwoUp(wrapped, headingId);
-    }
     return wrapped;
   }
 
@@ -583,7 +552,7 @@
      hardcoded education-only set, so every primary page picks up both the long-form template
      below and the gold waypoint rule (see `article.prose.long-form-page :global(h2)::before`)
      from this one class. -->
-<article class="prose" class:long-form-page={Boolean(longFormSlug)} class:equalize-card-rows={equalizeCardRows}>
+<article class="prose" class:long-form-page={Boolean(longFormSlug)}>
   {#if isGovernanceSubpage}
     <a href="/governance/" class="not-prose back-link">
       <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -1115,38 +1084,12 @@
     align-items: center;
     justify-content: center;
   }
-  /* Item 6, the Questions close (conductor's decided direction, 2026-07-08): the single "Get in
-     touch" card widens to the full content measure instead of `asc-components.css`'s own
-     centered-narrow single-card treatment (`.asc-cards:has(> :only-child)`, tuned for a small
-     closing nudge elsewhere on the site, not this page's own full-width prose-with-inline-action
-     close). Scoped to `.long-form-page` so the site-wide single-card default is untouched
-     everywhere else; `article.prose.long-form-page` (rather than the plain `.long-form-page
-     :global(...)` prefix the breakout rule above uses) adds one more type selector specifically to
-     beat asc-components.css's own tied specificity outright, regardless of build-time source
-     order, since this rule has no in-band position to rely on for a same-file tie-break. */
-  article.prose.long-form-page :global(.asc-cards:has(> :only-child)) {
-    grid-template-columns: minmax(0, 1fr);
-    justify-content: stretch;
-  }
-
-  /* The fixed 2-column rebalance for members' 2-card rows ("Getting Started", "At the Club & On
-     the Water", "Governance"; `markCardsTwoUp` above sets `cards-two-up` on each one). Gated to
-     `min-width: 40rem`: below it the row's own breakout measure is already too narrow for two
-     comfortable columns, and the base `.asc-cards` auto-fill rule already renders a single column
-     there, so no override is needed. */
-  @media (min-width: 40rem) {
-    article.prose.long-form-page :global(.asc-cards.cards-two-up) {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  /* Members' own row-height equalizer (`equalize-card-rows`, set above). Scoped past
-     asc-components.css's own tied specificity the same way the single-card rule right above does,
-     so this beats the shared `.prose .asc-cards { align-items: start }` default regardless of
-     build-time source order. */
-  article.prose.equalize-card-rows :global(.asc-cards) {
-    align-items: stretch;
-  }
+  /* Item 6, the Questions close single-card widen, the members two-up rebalance, and the members
+     row-height equalizer all retired in round 2 (2026-07-16): the count-aware card lattice
+     (asc-components.css's `.asc-cards-1`/`.asc-cards-2`/`.asc-cards-4`, plus its universal
+     `align-items: stretch` + `grid-auto-rows: 1fr`) now produces the same full-measure single
+     card, even 2-up row, and matched row heights straight from each grid's own card count, with
+     no page-scoped override needed here. */
 
   /* Round 3, owner note 9: the page's own warm close (wrapClosingSection above wraps the
      "Questions?" heading through the end of its own group segment in this card), a bordered card
@@ -1615,6 +1558,21 @@
   .article-sections > :global(* + *) {
     margin-top: var(--spacing-xl);
   }
+  /* Round 2 (Geoff, 2026-07-16 gallery read: an awkward gap between a heading and its own
+     content on new-member-guide's "Life at the Club"): a flattened page (`showPanels` false,
+     `wrapFlatSection` above) renders every top-level element as a direct child of
+     `.article-sections` with no per-section wrapper, so the rule right above (written for the
+     section-to-section gap) also governs every heading-to-content pair, the same
+     un-tightened section gap chassis prose.css's own `.prose h2 + *`/`.prose h3 + *` already
+     fix everywhere else `.prose`'s owl selector reaches directly. This is `.article-sections`'s
+     own restatement of that same override, the same shape `.content-panel`/
+     `.registration-band-inner`/`.questions-close`/`.program-section` below all already carry
+     one level deeper for the same reason, at chassis's own settled value (education's measured
+     13px gap) so a flattened page reads the identical rhythm a panelled one already does. */
+  .prose :global(.article-sections > h2 + *),
+  .prose :global(.article-sections > h3 + *) {
+    margin-top: var(--spacing-xs);
+  }
   .prose :global(.content-panel) {
     /* Redeclared here, the same owl-selector idiom `.toc` uses on itself just above: with no
        redeclaration this custom property inherits `.article-toc-shell`'s own `--spacing-xl`,
@@ -1672,6 +1630,27 @@
     .prose :global(.link-cluster-panel) {
       padding: var(--spacing-l);
     }
+  }
+  /* "Your First Week"'s own 3-card lattice (round 2, measured at 1440px against this template's
+     TOC-rail content column, ~614px here, not the full container-measure-wide prose): the
+     count-aware grid (asc-components.css) holds 3-up at full comfortable width elsewhere on the
+     site, but this panel's column is narrower than a plain long-form section (the sticky TOC
+     rail beside it claims 14rem plus its own gutter). Per the round-2 ruling ("3-up must still
+     balance, reduce card padding one step rather than dropping to 2+1"), both the panel's own
+     outer padding and each card's own inline padding step down one token inside this panel only,
+     recovering enough width that "Read the Member Expectations," the longest of the three
+     titles, wraps near the end of the word instead of deep into its middle (the site's own
+     `overflow-wrap: anywhere` safety net, chassis prose.css, still breaks the final syllable at
+     this column width; a genuinely word-boundary wrap would need a fourth column's worth of
+     room this panel does not have). Every other card grid on the site keeps its own default
+     padding. */
+  @media (min-width: 48rem) {
+    .prose :global(.link-cluster-panel) {
+      padding: var(--spacing-m);
+    }
+  }
+  .prose :global(.link-cluster-panel .asc-card) {
+    padding-inline: var(--spacing-s);
   }
 
   /* The mobile/tablet collapsible TOC (the pre-existing `.toc` recipe above) and the wide-viewport

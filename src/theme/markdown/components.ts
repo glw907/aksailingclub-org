@@ -139,23 +139,34 @@ function nestedChildren(children: ElementContent[], markerClass: string): Elemen
   return children.filter((c) => hasClass(c, markerClass));
 }
 
+// Round 2 anatomy (Geoff, 2026-07-16: "this card idiom is a problem in all cases, and the
+// component needs a redesign"): the icon, when present, hangs in its own fixed leading grid
+// column, top-aligned to the title's own first line, and NEVER rides inline with the title text
+// (the earlier round's flex head row let a wrapping title text wander out from under a
+// short icon). The title and its description now share one text column (`.asc-card-text`), the
+// description directly below the title rather than a sibling of a separate head row, so a
+// wrapped title's second line still sits flush under the icon-clear left edge. `asc-components.css`
+// collapses the icon column entirely (`:not(:has(.asc-card-icon))`) when a card carries no icon,
+// so a plain text card's title and body span the card's full width.
 function buildCard(ctx: ComponentContext): Element {
   const icon = strAttr(ctx, 'icon');
   const href = strAttr(ctx, 'href');
-  const kids: ElementContent[] = [];
-  if (icon) kids.push(h('span', { className: ['asc-card-icon'] }, [makeIcon(icon)]));
   // The arrow rides inline at the end of the title text, an aria-hidden trailing span exactly
   // like :::related's own arrow idiom, rather than a floating block glyph stranded on its own
   // line under the card body.
   const titleKids: ElementContent[] = [...ctx.slot('title')];
   if (href) titleKids.push(h('span', { className: ['asc-card-arrow'], ariaHidden: 'true' }, [' →']));
-  kids.push(h('span', { className: ['asc-card-title'] }, titleKids));
-  const head = h('div', { className: ['asc-card-head'] }, kids);
-  const body = h('div', { className: ['asc-card-body'] }, ctx.slot('body'));
+  const text = h('div', { className: ['asc-card-text'] }, [
+    h('span', { className: ['asc-card-title'] }, titleKids),
+    h('div', { className: ['asc-card-body'] }, ctx.slot('body')),
+  ]);
+  const kids: ElementContent[] = [];
+  if (icon) kids.push(h('span', { className: ['asc-card-icon'] }, [makeIcon(icon)]));
+  kids.push(text);
   if (href) {
-    return h('a', { className: ['asc-card', 'asc-card-link'], href }, [head, body]);
+    return h('a', { className: ['asc-card', 'asc-card-link'], href }, kids);
   }
-  return h('div', { className: ['asc-card'] }, [head, body]);
+  return h('div', { className: ['asc-card'] }, kids);
 }
 
 const card = defineComponent({
@@ -178,13 +189,30 @@ const card = defineComponent({
   hidden: true,
 });
 
+// The count-aware lattice (round 2, Geoff, 2026-07-16: "this card idiom is a problem in all
+// cases, and the component needs a redesign"): buildCards knows how many :::card children it
+// holds and stamps `asc-cards-N` so asc-components.css can rule each count's own grid (2-up,
+// 3-up, 2x2, 3x2) instead of leaning on the generic auto-fill fallback the retired per-page
+// equalize/two-up patches used to paper over. `asc-cards-1` gets its own full-measure row-card
+// treatment, not a one-cell grid. A count past the site's own observed range (1 through 6) falls
+// back to the plain auto-fill grid with no lattice class.
+const MAX_LATTICE_COUNT = 6;
+
+function buildCards(ctx: ComponentContext): Element {
+  const kids = nestedChildren(ctx.slot('body'), 'asc-card');
+  const count = kids.length;
+  const className = ['asc-cards'];
+  if (count >= 1 && count <= MAX_LATTICE_COUNT) className.push(`asc-cards-${count}`);
+  return h('div', { className }, kids);
+}
+
 const cards = defineComponent({
   name: 'cards',
   label: 'Card grid',
   description: 'A row of side-by-side cards (nested :::card blocks).',
   use: 'List a handful of related destinations or features together.',
   insertTemplate: '::::cards\n:::card[Title]{icon="compass" href="/page/"}\nShort description.\n:::\n::::',
-  build: (ctx) => h('div', { className: ['asc-cards'] }, nestedChildren(ctx.slot('body'), 'asc-card')),
+  build: buildCards,
   slots: [{ name: 'body', label: 'Cards', kind: 'markdown' }],
   group: 'Page structure',
   icon: 'grid-nine',

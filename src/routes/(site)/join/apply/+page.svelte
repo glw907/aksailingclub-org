@@ -316,15 +316,23 @@ earlier "sign in instead" dead end, unchanged. -->
 {/if}
 
 <style>
-  /* Matches ContactForm/DonateForm/the class-signup form's own eyebrow legend. */
-  .fieldset-legend,
-  .field-label {
+  /* Round 2 (Geoff, 2026-07-16: "the labels and form title look too similar," overruling the
+     earlier one-idiom ruling — docs/design-benchmark/decisions.md carries the two-level
+     register): the group/section legend keeps the uppercase tracked eyebrow, but an individual
+     field's own label drops to sentence case, dark ink, no tracking, so the two never read as
+     the same device. */
+  .fieldset-legend {
     font-family: var(--font-display);
     font-size: var(--text-step--1);
     font-weight: 700;
     letter-spacing: var(--tracking-eyebrow);
     text-transform: uppercase;
     color: var(--color-muted);
+  }
+  .field-label {
+    font-size: var(--text-step--1);
+    font-weight: 600;
+    color: var(--color-base-content);
   }
 
   .waiver-text summary {

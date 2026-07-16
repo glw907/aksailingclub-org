@@ -40,29 +40,69 @@
     margin-top: var(--spacing-2xs);
   }
 
-  /* ─── Cards: a quiet grid, one to a handful of cards, never nested ─────── */
+  /* ─── Cards: count-aware lattices, one to a handful of cards (round 2, 2026-07-16) ──────── */
+  /* Geoff, live gallery read: "this card idiom is a problem in all cases, and the component
+     needs a redesign." Two changes from the original single auto-fill grid: (1) buildCards
+     (markdown/components.ts) now stamps `asc-cards-N` for N = 1 through 6, the site's whole
+     observed range, so each count rules its own column layout instead of the generic auto-fill
+     grid guessing at it row by row (join's own six-card grid rendered a ragged
+     169/145/145/169/145/169 stagger, members' 4-card grid a stranded third-row single, under the
+     old auto-fill sizing); (2) `align-items: stretch` plus `grid-auto-rows: 1fr` now apply to
+     every lattice by default, so every card in a row shares one height (join's mix, members'
+     120/96 mix, the new-member-guide panel's 198/173/202 2+1, all fixed at the source instead of
+     page-local patches). This retires two page-local devices that existed only because the
+     shared grid didn't do this on its own: members' own `equalize-card-rows` wrapper class and
+     the `cards-two-up`/`TWO_UP_CARDS_HEADING_IDS` device ([...path]/+page.svelte); a 2- or
+     4-card grid now gets its own even columns from its count alone, with no page naming its own
+     heading ids to opt in.
+
+     Education's one card grid (Your Registration Path) renders inside
+     `.registration-band-inner`, which overrides `.asc-cards` to a numbered flex column
+     regardless of count (see that file's own comment on the registration band); it never reaches
+     this stretch/lattice rule, so the redesign leaves it pixel-unchanged. */
   .prose .asc-cards {
     --flow-space: var(--spacing-m);
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
     gap: var(--spacing-m);
-    /* Grid's own default (stretch) equal-heights every row: a short card (education's "Arrival"
-       day, "For Current Members") stretched to match a much longer sibling, leaving a tall empty
-       lower half (the design-polish pass's finding, 2026-07-07). Cards mark objects that size to
-       their own content; `start` lets each card end where its own content ends. */
-    align-items: start;
+    align-items: stretch;
+    grid-auto-rows: 1fr;
   }
-  /* A grid with exactly one card (a single closing "Contact us" or "Renew your membership" link
-     at the end of a section) still computes `auto-fill` columns for the section's full width, so
-     the lone card fills only the first track and strands a large empty gap beside it (the craft
-     sweep's finding, 2026-07-07). One column, centered, in that case: the card keeps its own
-     content-sized width instead of stretching edge to edge, but no longer reads as an orphan. */
-  .prose .asc-cards:has(> :only-child) {
-    grid-template-columns: minmax(14rem, 28rem);
-    justify-content: center;
+  /* Below 40rem every lattice collapses to the auto-fill single column above (14rem leaves no
+     room for a second track at a phone width); the fixed per-count columns below apply from
+     40rem up, the breakpoint the retired `cards-two-up` device used. Grids span the full
+     available measure at every count: 2 and 4 cards read as 2-up (4 as 2x2, via row wrap), 3, 5,
+     and 6 read as 3-up (6 as 3x2). */
+  @media (min-width: 40rem) {
+    .prose .asc-cards-2,
+    .prose .asc-cards-4 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .prose .asc-cards-3,
+    .prose .asc-cards-5,
+    .prose .asc-cards-6 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
-  .prose .asc-card {
+  /* A single card (a lone closing "Contact us" or "Renew your membership" link at the end of a
+     section) is not a grid at all: a full-measure quiet row-card, icon left, title and
+     description right (below), replacing the earlier round's narrow centered box (round 2:
+     "the lone 448px box floating in a 614px container," new-member-guide's Discord/Account/
+     Get-Involved cards). */
+  .prose .asc-cards-1 {
     display: block;
+  }
+  /* The card's own anatomy: a fixed leading icon column, top-aligned to the title's first line,
+     and a text column carrying the title with its description directly below it (round 2: the
+     icon must never sit inline with the title text, and a wrapping title stays in its own text
+     column rather than drifting out from under a head-row icon). `:not(:has(.asc-card-icon))`
+     collapses the icon column entirely on an icon-less card, so its text spans the card's full
+     width rather than leaving an empty leading track. */
+  .prose .asc-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: start;
+    column-gap: var(--spacing-2xs);
     background: var(--color-base-100);
     border: var(--border) solid var(--color-card-border);
     border-radius: var(--radius-box);
@@ -70,6 +110,9 @@
     color: inherit;
     text-decoration: none;
     /* Only a link card animates; a static feature card has nothing to invite a hover toward. */
+  }
+  .prose .asc-card:not(:has(.asc-card-icon)) {
+    grid-template-columns: 1fr;
   }
   .prose a.asc-card-link {
     transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -82,12 +125,6 @@
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
-  .prose .asc-card-head {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-2xs);
-    margin-bottom: 0.3rem;
-  }
   .prose .asc-card-icon {
     display: inline-flex;
     color: var(--color-primary);
@@ -95,6 +132,15 @@
   .prose .asc-card-icon .ec-glyph {
     width: 1.2rem;
     height: 1.2rem;
+  }
+  /* The text column: title then description, stacked (round 2 moves the description out from
+     under a separate head row into the same column as the title). `min-width: 0` keeps a long
+     unbreakable title/URL from pushing the grid track wider than the card itself. */
+  .prose .asc-card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
   }
   .prose .asc-card-title {
     font-family: var(--font-display);

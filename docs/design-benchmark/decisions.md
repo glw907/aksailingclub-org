@@ -170,12 +170,24 @@ Dates are 2026-07-07/08 (the home convergence arc) unless noted.
   membership.
 
 - **Form field labels: the uppercase tracked muted label is the one idiom (ratified by the
-  conductor 2026-07-16, from the coherence read)**: every field label on the site (a
+  conductor 2026-07-16, from the coherence read; OVERRULED by Geoff the same day, round 2 of the
+  basic-polish pass — see the two-level entry directly below)**: every field label on the site (a
   `<legend class="fieldset-legend">`, or an inline `<label>`'s own visible text) reads in the
   site's eyebrow device — `font-display`, `text-step--1`, weight 700, `tracking-eyebrow`,
   uppercase, `color-muted` — matching ContactForm/DonateForm/the class-signup form/my-account's
   own precedent. A fieldset's group legend carries the same register as a single field's own
   label; there is no separate, quieter treatment for a group heading.
+
+- **Form field labels, two-level register (Geoff, 2026-07-16, overruling the entry above): "the
+  labels and form title look too similar"**: a group or section legend (join/apply's "Membership
+  tier," "Your details," "Household members," "Classes (optional)," "Liability release") keeps
+  the uppercase tracked muted eyebrow unchanged. An individual field's own label (join/apply's
+  `.field-label` span; every other form's `.fieldset-legend`, since those forms declare no
+  separate group tier) drops to sentence case, weight 600, `text-step--1`, `base-content` ink —
+  no tracking, no uppercase, no `font-display` override — so a single field's label reads as a
+  plain form label rather than another eyebrow the same weight as the group title above it.
+  Applied to all five forms: join/apply, ContactForm, DonateForm, the class-signup form, and
+  my-account.
 
 ## Benchmark provenance
 
