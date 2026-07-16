@@ -68,3 +68,50 @@ style; low-false-positive or it doesn't ship.
 - Portal dark-mode captures and audit (next round; no dark portal renders exist).
 - Brief correction at settle: its "known-open" section is stale on `::selection` and
   `text-wrap` (both landed since the 2026-07-08 ledger).
+
+## Register round (Geoff-opened mid-pass; recovered after the 2026-07-15 session crash)
+
+Geoff's live education notes: itinerary day descriptions, plain disc-bullet lists, and the
+Class Dates schedule rows all render at page-prose register and don't differentiate. The
+ruling, "component register": component body text one step below page prose, row hierarchy
+by weight and ink rather than size, en-dash list markers sitewide. Probed on dev via CSS
+injection; the probe page and captures died with the crashed session's scratchpad, so the
+page is being regenerated from this spec for Geoff's verdict. The round is NOT landed.
+
+The five probe regions, all against `https://dev.aksailingclub.org` (Access service-token
+headers), before/after at 1440 and 390:
+
+1. **Itinerary read layer** (`/education/`, course weekend):
+   `.prose .course-day p:not(.course-day-label) { font-size: var(--text-step--1); }`
+2. **En-dash list markers** (`/education/`, What to Expect): replicate the home fleet
+   dash-list idiom (`+page.svelte` `::before` en-dash rule) onto `.prose ul:not([class])`.
+3. **Schedule rows** (`/education/`, Class Dates & Openings): row title `--text-step--1`
+   weight 600; date muted, tabular-nums, step--1; row vertical padding one spacing step
+   down; status chip untouched.
+4. **Same anatomy: `/events/` listing rows** (after-only, 1440): titles 600 at the smaller
+   step, muted tabular dates.
+5. **Same anatomy: event-detail facts slab** (after-only, 1440): same compaction.
+
+Prior conductor read (pre-crash) endorsed all five. On Geoff's verdict the round lands as
+ONE commit (education regions + events + event-detail anatomy, baselines regenerated
+in-change); a region that reads wrong iterates while the others land.
+
+## Settle list (carried through the crash)
+
+State at recovery: batches A (cbbaee/aef22f9), B (4b757af), C (d3e73e7) plus the CTA
+grammar (e6145a7) are committed, pushed, and live on dev. Remaining, in order:
+
+1. Clean-bootstrap e2e re-run to clear the Batch B KNOWN-FAILING flag (warm-replica state
+   pollution, unrelated to the diff).
+2. Geoff's register-round verdict, then the one-commit landing above.
+3. The expert coherence read (Geoff's mandate, the pass's closing gate): a fresh-context
+   expert-designer lens, no builder context, reads the FINISHED pages whole at 390/1440
+   with one charge — would an expert see tells this was assembled rather than designed?
+   Findings get one final fix round before the gallery.
+4. Settle artifacts: fold the audit verdicts into `docs/design-benchmark/ledger.md`
+   (source ledgers died with the scratchpad; recover from the crashed session's subagent
+   transcripts under `~/.claude/projects/.../9ebebc97-*/subagents/`), correct the brief's
+   stale known-open section, STATUS entry plus archive trim.
+5. Fix the stale `docs/content-guide.md` pointer in CLAUDE.md (file does not exist; found
+   by the Batch B agent).
+6. Geoff's final before/after gallery.
