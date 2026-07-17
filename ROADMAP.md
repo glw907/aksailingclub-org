@@ -214,6 +214,13 @@ produce four separate ways, its fixtures reproduced the fiction so the baseline 
 nothing enforces, a way to hold the concept wrong without being told, an include that silently
 resolves to nothing. Fix the site contract's own failures here; file cairn's against cairn.
 
+PLANNED 2026-07-17 (the Fable planning session; Geoff approved the design interactively): spec
+`docs/2026-07-17-fragments-migration-design.md` (ratified decisions: probe matrix + diary,
+blocks-only conversion bar with the content-agreement test, Claude drives the editor seat) + plan
+`docs/plans/2026-07-17-fragments-migration.md` (conductor runbook) + the stage-runner workflow
+script beside it. Execution Opus-conducted in a fresh session per Geoff's downshift ruling; the
+resume prompt is docs/STATUS.md's top entry.
+
 ### Member waivers & digital signing `member-waivers`
 Every member signs a liability release; a mooring holder signs a separate mooring release; and
 anyone storing property on unsecured club grounds (RVs, boats, trailers) should sign a storage

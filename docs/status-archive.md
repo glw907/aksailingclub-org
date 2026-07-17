@@ -4,6 +4,43 @@
 > STATUS.md's preamble). History only: nothing here is a live instruction, and entries
 > reflect what was true when written. The live rolling status is docs/STATUS.md.
 
+**ROUNDS 2-3 LANDED + THE PROCESS SHIFT TO PROBE ITERATION (2026-07-16 day, same session
+continuing the arc below on Geoff's live notes). ROUND 2 (Geoff's five gallery notes, ruled
+whole): the CARD FAMILY REDESIGNED (239b995/820fa64 — hanging icon column, count-aware
+lattices asc-cards-1..6 with one shared row height, single cards as full-measure row-cards,
+the members/two-up patch devices retired; then e80f73b moved the lattices to CONTAINER
+QUERIES after a verify lens caught the viewport-breakpoint root cause squeezing the NMG
+panel); the FORM LABEL REGISTER split two-level (uppercase tracked eyebrows for group/section
+titles, sentence-case 600 dark for field labels — Geoff overruled the one-idiom call;
+decisions.md updated); HEADING RHYTHM fixed at the real root cause (a Svelte scope-hash
+specificity loss, NMG 56px→13.44px measured, education pixel-identical). ROUND 3 (the
+five-template first pass Geoff ordered before receiving exemplars; adjudicated from a
+7-agent workflow wf_2dd7fd6d-362 incl. the PORTAL'S FIRST-EVER SIGNED-IN AUDIT via a seeded
+local session): 3A component contracts (e80f73b — also scoped down Batch 1's over-broad
+table nowrap that clipped racing's gear table, and fixed the availability note's invalid
+nested-<p> hoisting); 3B+3C combined (5917d99 — class-door recomposed: eyebrow title, facts
+meta, availability chip, outcome panels off daisyUI tints, :has(iframe) Turnstile collapse;
+utility-leaf converged: multi-row facts, related closers; news-post head/tail designed:
+News back-link, lede, LINKED tag chips, prev/next via the engine's own site.adjacent(),
+More-news; racing: page-cta closer, nested-h3 TOC via NESTED_TOC_SLUGS, caption echo → new
+gated ariaLabel table attribute); 3D portal (ba39fc3 — shared .portal-field-label, one
+assets-row grammar with chips + tabular fees, one date formatter in member-auth/lib/format.ts,
+.portal-quiet-action on row actions, deliberate card-vs-flat grouping). Every batch
+CI-baseline-regenerated and VERIFY GREEN. PROCESS RULED BY GEOFF (banked in memory
+feedback_probe_iteration_process + the design-refinement skill, dotfiles 21d9129, verified by
+scenario test): design iteration now runs ASYNC PROBE PAGES he verdicts (the cairn-admin
+process) — "we're only running the deep and expensive full rebuild a minimum number of
+times"; the batch pipeline is for ratified mechanical rollout only. FOR GEOFF: probes-index
+.html (opened in your browser; session scratchpad probes/) — five template probe pages, each
+first-pass before/after + captioned candidates awaiting verdicts: racing's three season-event
+passage treatments (A eyebrow / B navy rule / C gold tick / none), the post-hero width A/B,
+the waitlists spec-sheet-vs-status-index fork (B is a real token-built mock), class-door and
+portal whole-template verdicts. DEFERRED to the interactive rounds: racing's lower-two-thirds
+pacing beats, the northern-lights PDF asset (never migrated from legacy — needs re-locating
+before a download slot is worth building). BUDGET rounds 2-3: ~2.3M subagent tokens (2
+implementer rounds + 1 workflow of 7 + 3A/3BC/3D + probe builder + skill verify); 0 questions
+asked (6 unprompted steers executed). The overnight arc entry is below.**
+
 **BASIC-POLISH ARC EXECUTED, VERIFIED, AND LIVE ON DEV (2026-07-16 overnight, the
 crash-recovery session; Fable conducted at art-director altitude per Geoff's explicit economy
 ruling, all volume work dispatched). The session RECOVERED the crashed 2026-07-15
