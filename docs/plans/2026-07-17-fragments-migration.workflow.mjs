@@ -371,7 +371,14 @@ if (input.stage === 'extract') {
           f.id +
           '"}. A class-a consumer must be a byte-identical extraction: the fragment body must be exactly the block the ' +
           'consumer carried, so rendering cannot change. A class-b consumer takes the convergence edit the verdict ' +
-          'describes. Run npm run cairn:manifest, then the full gate (npm run check 0/0, npm test, npm run build), ' +
+          'describes. ' +
+          'PROVE the class-a claim rather than asserting it, because probe E8 (directive parity inside a consumer) ' +
+          'was deferred and this fragment carries a container directive with a nested one: before your edit, run ' +
+          'npm run build and save each class-a consumer\'s prerendered HTML from .svelte-kit/cloudflare/; after your ' +
+          'edit, rebuild and diff the same files. They MUST be byte-identical. If the spliced fragment renders as ' +
+          'literal "::include{...}" text, or the directive loses its nesting, STOP and report it: that is a blocking ' +
+          'render-parity defect, not something to work around. Report the diff command and its output in notes. ' +
+          'Run npm run cairn:manifest, then the full gate (npm run check 0/0, npm test, npm run build), ' +
           'then commit ONLY the files this fragment touched, imperative mood, ' +
           'Co-Authored-By: Claude <noreply@anthropic.com>.',
         {
@@ -391,7 +398,11 @@ if (input.stage === 'extract') {
       JSON.stringify(input.agreements) +
       ' For each canonical fact string, assert it appears in each named content file (read the files from disk in the ' +
       'test, vitest style, matching the existing src/tests/ conventions). Prove the test is meaningful: temporarily ' +
-      'break one fact in one file, watch it fail, restore it. Then delete docs/fragment-candidates.md (its header ' +
+      'break one fact in one file, watch it fail, restore it. ' +
+      'The conductor verified every fact below currently agrees. If one does NOT, that is live content drift: do not ' +
+      'quietly weaken the assertion or drop the fact to make the suite green. Pin what genuinely agrees, and report ' +
+      'each disagreement in notes with the exact strings and files so the conductor can raise it. ' +
+      'Then delete docs/fragment-candidates.md (its header ' +
       'names this pass as the deletion trigger; rationale survives in the spec verdict table). Full gate, then commit ' +
       'the test and the deletion together, imperative mood, Co-Authored-By: Claude <noreply@anthropic.com>.',
     {
@@ -402,7 +413,37 @@ if (input.stage === 'extract') {
       schema: EXTRACT_RESULT,
     },
   )
-  return { fragments: results.filter(Boolean), agreementTest }
+  // The site-contract arm of the harvest. Probes P2, P3, and P4 each proved a way to be green and
+  // wrong once real includes exist, and all three are invisible to check/test/build. P4 is the
+  // live one: this repo's prerender.handleHttpError: 'warn' swallows a dangling include's 500, so
+  // a typo'd id would ship a broken page to members with CI green.
+  const guards = await agent(
+    PREAMBLE +
+      ' Write src/tests/fragment-integrity.test.ts, test-first, matching the existing src/tests/ vitest conventions. ' +
+      'It closes three gaps this pass proved real, each of which passes check/test/build today while being wrong:\n' +
+      '1. DANGLING INCLUDE (probe P4): every ::include{fragment="<id>"} across src/content/**/*.md must name a ' +
+      'fragment that exists in src/content/fragments/ and is not a draft. cairn promises the build fails on a ' +
+      'dangling include, but svelte.config.js sets prerender.handleHttpError: "warn" (to tolerate pre-existing dead ' +
+      'links), which downgrades the 500 to a warning: the page would 500 for real visitors with CI green.\n' +
+      '2. UNSPLICED INCLUDE (probe P2): prove the render wrapper actually resolves. Render a body containing a real ' +
+      '::include through the site\'s own configured render path and assert the fragment\'s content appears AND the ' +
+      'literal string "::include{" does NOT. Dropping the one-line resolveFragment forward from cairn.config.ts ' +
+      'currently renders raw directive text to the public page with every gate green.\n' +
+      '3. MANIFEST BLINDNESS (probe P3): every fragment file on disk must appear in the committed ' +
+      'src/content/.cairn/index.json. Dropping the fragments glob from vite.config.ts\'s manifest plugin leaves the ' +
+      'admin picker and the rename/delete guards blind while the public build serves the fragment happily.\n' +
+      'Each assertion must FAIL when its defect is introduced: prove all three by temporarily introducing the defect, ' +
+      'watching the specific test fail, then reverting. Report the evidence per gap in notes. Full gate, then commit, ' +
+      'imperative mood, Co-Authored-By: Claude <noreply@anthropic.com>.',
+    {
+      agentType: 'site-implementer',
+      model: 'sonnet',
+      label: 'fragment-integrity-guards',
+      phase: 'Extract',
+      schema: EXTRACT_RESULT,
+    },
+  )
+  return { fragments: results.filter(Boolean), agreementTest, guards }
 }
 
 throw new Error('Unknown stage: ' + input.stage)
