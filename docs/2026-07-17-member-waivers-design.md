@@ -128,12 +128,22 @@ cover, for the attorney's review:
   ball; the member owns everything beyond it** (pendant, lines, shackles, and the boat
   itself). The draft encodes the split: the member is responsible for the adequacy,
   condition, and maintenance of their own gear beyond the ball and for their boat's
-  suitability for the mooring; the club makes no warranty or safety representation
-  about its ground tackle (per the Donahue no-representations factor) while stating
-  its maintenance practice honestly. The member-side gear is the usual failure point
-  in a break-away, which the indemnification language leans on. The no-bailment,
-  no-custody disclaimer applies regardless: the member attaches and detaches their own
-  boat, and the club never handles it
+  suitability for the mooring. The no-bailment, no-custody disclaimer applies
+  regardless: the member attaches and detaches their own boat, and the club never
+  handles it
+- **club-owned ground tackle can still fail in severe conditions, and the documents
+  assume it will** (Geoff, 2026-07-17: inspection does not make it perfect). The
+  member assumes the risk of failure of any part of the mooring system, expressly
+  including the club-owned ground tackle, and the exculpation covers the club's
+  ordinary negligence in inspecting and maintaining it, named specifically per
+  Donahue. The document itself makes no mention of inspection practice: describing an
+  inspection regime in a release reads as a safety representation, the exact thing
+  Donahue's sixth factor voids releases for. Inspection is club practice, not a
+  documented promise
+- because a waiver binds only the member who signs it, a break-away that damages a
+  third party's property is reached by the indemnification and the member's own
+  insurance, not by the release; that is why the insurance question above carries
+  real weight rather than being ceremony
 - the stored-property research (Appendix B) concludes the mooring document should
   carry full property-storage substance, not just an injury-style release: a boat on a
   club mooring is stored property, and the no-bailment disclaimer, specifically named
