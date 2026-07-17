@@ -242,11 +242,14 @@ const SWEEP_PROMPT =
   'repeated fee or rule statements, repeated closers. The nine known candidates are out of scope. Apply the ' +
   'blocks-only bar from the spec before proposing anything; an empty result is a fine result.'
 
-if (!args || !args.stage) {
+// Some callers deliver args JSON-encoded rather than as a value; accept both.
+const input = typeof args === 'string' ? JSON.parse(args) : args
+
+if (!input || !input.stage) {
   throw new Error("Pass args {stage: 'adopt' | 'probes' | 'survey' | 'extract'} per the plan doc.")
 }
 
-if (args.stage === 'adopt') {
+if (input.stage === 'adopt') {
   phase('Adopt')
   const result = await agent(
     PREAMBLE +
@@ -267,9 +270,18 @@ if (args.stage === 'adopt') {
   return result
 }
 
-if (args.stage === 'probes') {
+// The editor seat probes admin UI that cairn has already rebuilt on an unreleased branch (the
+// include chip, the fold pill, the preview boundary, the publish blast radius). Probing 0.87.0
+// would harvest friction that 0.88.0 already fixes, so E1-E8 defer until it ships
+// (Geoff, 2026-07-17). Pass {editor: true} once ASC is on ^0.88.0.
+if (input.stage === 'probes') {
   phase('Probes')
-  log('P1-P7 fan out in worktrees; editor agents run serially beside them')
+  const withEditor = input.editor === true
+  log(
+    withEditor
+      ? 'P1-P7 fan out in worktrees; editor agents run serially beside them'
+      : 'P1-P7 fan out in worktrees; editor seat E1-E8 DEFERRED to cairn 0.88.0',
+  )
   const [dev, editor] = await parallel([
     () =>
       parallel(
@@ -285,6 +297,7 @@ if (args.stage === 'probes') {
         ),
       ),
     async () => {
+      if (!withEditor) return []
       const happy = await agent(EDITOR_HAPPY, {
         agentType: 'general-purpose',
         model: 'sonnet',
@@ -308,10 +321,11 @@ if (args.stage === 'probes') {
     developer: (dev || []).filter(Boolean),
     editor: (editor || []).flatMap((r) => r.findings),
     screenshots: (editor || []).flatMap((r) => r.screenshots),
+    editorDeferred: !withEditor,
   }
 }
 
-if (args.stage === 'survey') {
+if (input.stage === 'survey') {
   phase('Survey')
   const [verdicts, sweep] = await parallel([
     () =>
@@ -338,13 +352,13 @@ if (args.stage === 'survey') {
   return { verdicts: (verdicts || []).filter(Boolean), sweep }
 }
 
-if (args.stage === 'extract') {
+if (input.stage === 'extract') {
   phase('Extract')
-  if (!Array.isArray(args.fragments) || !Array.isArray(args.agreements)) {
-    throw new Error('extract needs args.fragments and args.agreements, resolved by the conductor at plan step 3.')
+  if (!Array.isArray(input.fragments) || !Array.isArray(input.agreements)) {
+    throw new Error('extract needs input.fragments and input.agreements, resolved by the conductor at plan step 3.')
   }
   const results = []
-  for (const f of args.fragments) {
+  for (const f of input.fragments) {
     results.push(
       await agent(
         PREAMBLE +
@@ -357,7 +371,14 @@ if (args.stage === 'extract') {
           f.id +
           '"}. A class-a consumer must be a byte-identical extraction: the fragment body must be exactly the block the ' +
           'consumer carried, so rendering cannot change. A class-b consumer takes the convergence edit the verdict ' +
-          'describes. Run npm run cairn:manifest, then the full gate (npm run check 0/0, npm test, npm run build), ' +
+          'describes. ' +
+          'PROVE the class-a claim rather than asserting it, because probe E8 (directive parity inside a consumer) ' +
+          'was deferred and this fragment carries a container directive with a nested one: before your edit, run ' +
+          'npm run build and save each class-a consumer\'s prerendered HTML from .svelte-kit/cloudflare/; after your ' +
+          'edit, rebuild and diff the same files. They MUST be byte-identical. If the spliced fragment renders as ' +
+          'literal "::include{...}" text, or the directive loses its nesting, STOP and report it: that is a blocking ' +
+          'render-parity defect, not something to work around. Report the diff command and its output in notes. ' +
+          'Run npm run cairn:manifest, then the full gate (npm run check 0/0, npm test, npm run build), ' +
           'then commit ONLY the files this fragment touched, imperative mood, ' +
           'Co-Authored-By: Claude <noreply@anthropic.com>.',
         {
@@ -374,10 +395,14 @@ if (args.stage === 'extract') {
     PREAMBLE +
       ' Write src/tests/content-agreement.test.ts per the spec section "The agreement test", test-first, from this ' +
       'conductor-resolved agreements list: ' +
-      JSON.stringify(args.agreements) +
+      JSON.stringify(input.agreements) +
       ' For each canonical fact string, assert it appears in each named content file (read the files from disk in the ' +
       'test, vitest style, matching the existing src/tests/ conventions). Prove the test is meaningful: temporarily ' +
-      'break one fact in one file, watch it fail, restore it. Then delete docs/fragment-candidates.md (its header ' +
+      'break one fact in one file, watch it fail, restore it. ' +
+      'The conductor verified every fact below currently agrees. If one does NOT, that is live content drift: do not ' +
+      'quietly weaken the assertion or drop the fact to make the suite green. Pin what genuinely agrees, and report ' +
+      'each disagreement in notes with the exact strings and files so the conductor can raise it. ' +
+      'Then delete docs/fragment-candidates.md (its header ' +
       'names this pass as the deletion trigger; rationale survives in the spec verdict table). Full gate, then commit ' +
       'the test and the deletion together, imperative mood, Co-Authored-By: Claude <noreply@anthropic.com>.',
     {
@@ -388,7 +413,37 @@ if (args.stage === 'extract') {
       schema: EXTRACT_RESULT,
     },
   )
-  return { fragments: results.filter(Boolean), agreementTest }
+  // The site-contract arm of the harvest. Probes P2, P3, and P4 each proved a way to be green and
+  // wrong once real includes exist, and all three are invisible to check/test/build. P4 is the
+  // live one: this repo's prerender.handleHttpError: 'warn' swallows a dangling include's 500, so
+  // a typo'd id would ship a broken page to members with CI green.
+  const guards = await agent(
+    PREAMBLE +
+      ' Write src/tests/fragment-integrity.test.ts, test-first, matching the existing src/tests/ vitest conventions. ' +
+      'It closes three gaps this pass proved real, each of which passes check/test/build today while being wrong:\n' +
+      '1. DANGLING INCLUDE (probe P4): every ::include{fragment="<id>"} across src/content/**/*.md must name a ' +
+      'fragment that exists in src/content/fragments/ and is not a draft. cairn promises the build fails on a ' +
+      'dangling include, but svelte.config.js sets prerender.handleHttpError: "warn" (to tolerate pre-existing dead ' +
+      'links), which downgrades the 500 to a warning: the page would 500 for real visitors with CI green.\n' +
+      '2. UNSPLICED INCLUDE (probe P2): prove the render wrapper actually resolves. Render a body containing a real ' +
+      '::include through the site\'s own configured render path and assert the fragment\'s content appears AND the ' +
+      'literal string "::include{" does NOT. Dropping the one-line resolveFragment forward from cairn.config.ts ' +
+      'currently renders raw directive text to the public page with every gate green.\n' +
+      '3. MANIFEST BLINDNESS (probe P3): every fragment file on disk must appear in the committed ' +
+      'src/content/.cairn/index.json. Dropping the fragments glob from vite.config.ts\'s manifest plugin leaves the ' +
+      'admin picker and the rename/delete guards blind while the public build serves the fragment happily.\n' +
+      'Each assertion must FAIL when its defect is introduced: prove all three by temporarily introducing the defect, ' +
+      'watching the specific test fail, then reverting. Report the evidence per gap in notes. Full gate, then commit, ' +
+      'imperative mood, Co-Authored-By: Claude <noreply@anthropic.com>.',
+    {
+      agentType: 'site-implementer',
+      model: 'sonnet',
+      label: 'fragment-integrity-guards',
+      phase: 'Extract',
+      schema: EXTRACT_RESULT,
+    },
+  )
+  return { fragments: results.filter(Boolean), agreementTest, guards }
 }
 
-throw new Error('Unknown stage: ' + args.stage)
+throw new Error('Unknown stage: ' + input.stage)

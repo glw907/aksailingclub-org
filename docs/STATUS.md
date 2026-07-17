@@ -8,33 +8,49 @@
 > entries beyond the top two or three to the archive — this file is @-imported into every
 > session's context, so its length is a per-session token tax.
 
-**FRAGMENTS MIGRATION & DX/CONTRACT HARVEST: PLANNED, READY TO EXECUTE (2026-07-17; the
-Fable planning session brainstormed the design interactively with Geoff and he approved it).
-EXECUTION IS THE IMMEDIATE NEXT ACTION, OPUS-CONDUCTED IN A FRESH SESSION (Geoff's downshift
-ruling). Resume prompt: "Execute the fragments migration plan: read
-docs/plans/2026-07-17-fragments-migration.md and the spec it names, then start at conductor
-step 0." Launch from ~/Projects/aksailingclub-org.** The plan is the conductor runbook (steps
-0-6, review gates, close ritual); fan-out stages run via
-docs/plans/2026-07-17-fragments-migration.workflow.mjs (one Workflow invocation per stage,
-`args {stage: 'adopt'|'probes'|'survey'|'extract'}`, conductor judgment between); the spec
-docs/2026-07-17-fragments-migration-design.md carries every judgment — the ratified
-decisions, the probe matrix (P1-P7 developer, E1-E8 editor), and the provisional verdict
-table — so the conductor executes rather than re-derives. RATIFIED AT THE BRAINSTORM (Geoff,
-2026-07-17): (1) PROBE MATRIX + DIARY — deliberate hold-it-wrong probes in throwaway
-worktrees (that's where green-and-wrong lives; P2, an include silently splicing to nothing
-with the gate green, is the prime candidate) plus a log-as-you-go diary from the first bump
-command; (2) BLOCKS-ONLY CONVERSION BAR — a candidate converts only where every consumer
-wants the SAME rendered block; voice-adapted restatements stay as prose that agrees, and a
-new src/tests/content-agreement.test.ts pins dropped-but-must-agree facts (the sharpening
-that produced it: AN INCLUDE IS A BLOCK SPLICE, SO A TABLE ROW IS NOT A CONSUMER — that
-moved mooring-cost and storage-fees from convert to likely-drop; provisional: 2 converts, 2
-partials, 5 likely-drops, Discord's inline-include gap filed as a cairn finding); (3) CLAUDE
-DRIVES THE EDITOR SEAT via seeded local admin (e2e/helpers/admin-session.ts precedent).
-Verified at planning: the navLayout ride-along is ONE LINE ({ screen: 'fragments' } in the
-EXISTING tree, cairn.config.ts:44 — initiative 5 already declared it); sidebar arrangement
-stays with admin-nav-reorg, no sequencing knot. Harvest findings go to
-~/Projects/cairn-cms/docs/internal/docs-friction-log.md, perspective-tagged, its first
-post-0.87.0 entries; the conductor phrases them from the agents' structured findings.
+**FRAGMENTS MIGRATION & DX/CONTRACT HARVEST: SHIPPED TO DEV 2026-07-17 (PR #2, Opus-conducted).
+The site runs cairn ^0.87.0 with the fragments concept live. TWO THINGS ARE OPEN AND NEITHER IS
+BLOCKING: Geoff's before/after on the one class-b page (/members), and the harvest is DRAFTED BUT
+UNFILED.** Spec docs/2026-07-17-fragments-migration-design.md (its "Resolved verdicts" section is
+canonical; the provisional table above it is kept only to show what verification overturned) +
+plan docs/plans/2026-07-17-fragments-migration.md + the stage-runner workflow script beside it.
+
+THE HUNT PAID, AND ITS FINDINGS ARE NOW PINNED IN CODE. Three of seven developer probes found a
+green-and-wrong state, two of them blockers, all invisible to check/test/build: (P2) omit the
+one-line `resolveFragment` forward and every `::include` renders its own raw source text to the
+public page, because the unresolved directive falls through to the same code path that restores
+an accidental prose colon ("4:00") to literal text; (P4) the changelog's promised build failure
+on a dangling include DOES NOT HOLD HERE — svelte.config.js's `prerender.handleHttpError: 'warn'`
+(set to tolerate pre-existing dead links) downgrades the 500 to a warning, so a typo'd fragment
+id would 500 for real members with CI green; (P3) drop the manifest glob and the admin picker and
+rename/delete guards go blind to a fragment the public build serves happily. All three are now
+guarded by src/tests/fragment-integrity.test.ts, each assertion proven to FAIL when its defect is
+reintroduced. P6 confirmed the permalink 404s and stays out of sitemap/feeds as promised.
+
+THE BLOCKS-ONLY BAR REJECTED ALMOST EVERYTHING, WHICH IS THE BAR WORKING: 1 convert of 9, 8
+drops, their facts pinned by src/tests/content-agreement.test.ts (7 assertions, proven meaningful
+by breaking one and watching it fail). `who-to-ask` extracted with two class-a consumers
+(visiting-the-club, club-boat-use-and-qualification) PROVEN BYTE-IDENTICAL in prerendered HTML,
+plus one class-b (members.md, which also fixes a live "Something broken" drift). Club address
+FLIPPED convert→drop: the two blocks differ in label, body, and shape, and Visiting's body says
+"See Contact for a map link", nonsense rendered on Contact. NOTE FOR ANY FUTURE PASS: THE
+SURVEY'S CONSUMER LIST WAS WRONG IN BOTH DIRECTIONS — two of the three pages the spec named for
+who-to-ask do not carry the block, and two it never named do. Trust the files, never the survey.
+
+CARRY-FORWARDS. **The editor seat (E1-E8) is UNPROBED, NOT CLEAN** — read its silence as "not yet
+looked". cairn's unreleased invisible-craft branch rebuilds exactly those surfaces (include chip,
+fold pill, preview boundary, blast radius), so probing 0.87.0 would harvest friction 0.88.0
+already fixed; it runs when ASC moves to ^0.88.0, gated behind `{stage:'probes', editor:true}`.
+**The harvest is staged in docs/2026-07-17-fragments-harvest-findings.md, NOT filed**: cairn-cms
+sat on a live session's branch at close. Paste it into that repo's friction log once that branch
+merges, then delete the staging file. Also: 0.87.0 silently re-derives every excerpt (it strips
+directive markers), so the bump makes any 0.86.x manifest stale and fails the build unannounced —
+on the way past it fixed a live defect, since /contact and /directory carry no explicit
+description and had been shipping raw `:::contact-form` markup as their meta descriptions.
+FOUND WHILE SURVEYING, NOT FIXED (member-facing, Geoff's call, detail in the spec):
+seasonal-storage.md drops a qualifying clause from the Active Participating Member definition;
+education.md hardcodes membership prices that join.md sources live from a directive; the racing
+boilerplate across regatta posts is the one genuinely new fragment candidate.
 
 **PORTAL REDESIGN PASS: SHIPPED TO DEV 2026-07-17 (merge 510b266, PR #1). AWAITING GEOFF'S
 BEFORE/AFTER against mock D — that gate is the apex's, not dev's; dev is live now.** Spec

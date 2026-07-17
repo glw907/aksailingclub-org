@@ -202,9 +202,10 @@ both seats at once, which is exactly what the feature has not had:
 
 WHERE FINDINGS GO: `~/Projects/cairn-cms/docs/internal/docs-friction-log.md`, which takes a
 perspective tag per finding (`developer` | `editor` | `maintainer` | `operator`) and triages into
-that repo's ROADMAP/STATUS. The log was CLEARED at the 0.87.0 cut, so it starts empty and this
-pass's findings are its first entries; that repo keeps no separate backlog file. This also
-discharges the standing [[feedback_dx_harvest_mandate]] for this surface.
+that repo's ROADMAP/STATUS; that repo keeps no separate backlog file. This also discharges the
+standing [[feedback_dx_harvest_mandate]] for this surface. (The log was cleared at the 0.87.0
+cut, but it is NOT empty: cairn's invisible-craft pass filed its own entries on 2026-07-17, so
+this pass's findings append rather than open it. Verified at execution.)
 
 WHAT TO HUNT, earned from the portal pass (2026-07-16/17): not "does the API work" but **where a
 consumer can be GREEN AND WRONG**. That pass's ratified probe depicted data the system could not
@@ -220,6 +221,29 @@ blocks-only conversion bar with the content-agreement test, Claude drives the ed
 `docs/plans/2026-07-17-fragments-migration.md` (conductor runbook) + the stage-runner workflow
 script beside it. Execution Opus-conducted in a fresh session per Geoff's downshift ruling; the
 resume prompt is docs/STATUS.md's top entry.
+
+EXECUTED 2026-07-17, developer seat only. The site runs `^0.87.0` with the fragments concept
+live. The hunt paid: three of seven developer probes found a green-and-wrong state, two of them
+blockers. Omit the one-line `resolveFragment` forward and every include renders its own raw
+source text to the public page with the whole gate green (P2). The changelog's promised build
+failure on a dangling include does not survive `prerender.handleHttpError: 'warn'`, which this
+repo sets, so a typo'd id would 500 for members while CI passes (P4). Drop the manifest glob and
+the admin goes blind to a fragment the public build serves happily (P3). All three are now
+pinned by `src/tests/fragment-integrity.test.ts`, each assertion proven to fail when its defect
+is introduced: the site-contract arm of the harvest.
+
+The blocks-only bar rejected almost everything, which is the bar working. One candidate of nine
+converts (`who-to-ask`, two class-a consumers plus one class-b), eight drop, and their facts are
+pinned by `src/tests/content-agreement.test.ts`. The survey's own consumer list was wrong in both
+directions: two of the three pages it named do not carry the block, and two it never named do.
+
+TWO CARRY-FORWARDS. **The editor seat (E1-E8) never ran** and is unprobed, not clean: cairn's
+unreleased invisible-craft branch rebuilds exactly those surfaces, so probing 0.87.0 would have
+harvested friction the next release already fixed. It runs when ASC moves to `^0.88.0`; the
+workflow script gates it behind `{ stage: 'probes', editor: true }`. **The harvest is drafted but
+NOT FILED**: `docs/2026-07-17-fragments-harvest-findings.md` holds the entries, blocked because
+cairn-cms sits on a live session's branch. Paste them into that repo's friction log once it
+merges, then delete the staging file.
 
 ### Member waivers & digital signing `member-waivers`
 Every member signs a liability release; a mooring holder signs a separate mooring release; and

@@ -32,6 +32,15 @@ the portal pass: not "does the API work" but **where can a consumer be green and
    session and Playwright (the portal signed-in-audit precedent), screenshots read by the
    conductor. Moments that genuinely need a human hand get flagged for an optional look, never
    a gating walkthrough.
+
+   **DEFERRED at execution (Geoff, 2026-07-17).** E1 to E8 do not run in this pass. cairn's
+   settled-but-unreleased `design/invisible-craft-polish` branch rebuilds exactly the surfaces
+   they probe: the `::include` atomic chip, the fold pill's absorbed opener, the preview's
+   spliced-content boundary, and the publish blast radius. Probing 0.87.0's editor seat would
+   harvest friction that the next release already fixes, sending cairn's maintainers at solved
+   problems. The editor probes run once ASC is on `^0.88.0`; the workflow script gates them
+   behind `{ stage: 'probes', editor: true }`. This pass's harvest is developer-seat only, and
+   the friction log says so rather than letting the silence read as "no editor findings".
 4. From the approved design: probes run in a **worktree** so deliberate wrongness never touches
    `main`, and the who-to-ask fragment carries the `:::page-cta` body while each page keeps its
    own heading around it.
@@ -40,6 +49,22 @@ the portal pass: not "does the API work" but **where can a consumer be green and
 
 - The site pins `^0.86.0`; a 0.x caret excludes higher minors, so the bump to `^0.87.0` is the
   deliberate act that makes anything arrive. Latest published is 0.87.0.
+- **0.87.0 is the newest published cairn, but not the newest fragments work** (verified at
+  execution, 2026-07-17). cairn's `design/invisible-craft-polish` carries eight unmerged commits
+  of fragments editor UI, and a live session was still working that branch, so this pass does not
+  merge or release it: two conductors never both run a close ritual on one branch, and its own
+  review had just confirmed an unfixed include-chip defect. ASC stays on `^0.87.0`; the editor
+  probes defer (ratified decision 3). Nothing in the unreleased window changes the adoption
+  contract, which the 0.87.0 changelog states as "Consumers must: nothing at runtime".
+- **0.87.0 silently re-derives every entry's excerpt, which the changelog does not tell a
+  consumer** (found at Stage 0, filed as a developer finding). `10619010` taught `toPlainText` to
+  strip directive markers, so a manifest generated under 0.86.x is stale the moment the bump
+  lands and the build fails until `npm run cairn:manifest` runs. The failure reads as unrelated
+  content drift; the adopting implementer misdiagnosed it as pre-existing and "proved" it with a
+  `git stash` that could not have shown that, since a stash reverts source but never
+  `node_modules`. On ASC the regeneration is a live fix: `pages/contact` and `pages/directory`
+  carry no explicit `description`, so their meta descriptions had been shipping raw
+  `:::contact-form` and `:::callout[...]` markup to search engines.
 - The 0.87.0 changelog names the four adoption seams: declare the reserved `fragments` concept
   key (requires `routing: 'embedded'`), glob its directory into `createSiteIndexes`
   (`src/chassis/content.ts`, where the four existing concepts glob) and the manifest plugin,
@@ -142,6 +167,45 @@ likely-drop, and motivated the agreement test below.
 | 9 | Discord channel vocabulary | Drop | Wants an inline include, which cairn does not have. The gap files as a developer-tagged finding; forcing a block would be worse than the duplication. |
 
 A convert whose verification leaves it with one real consumer gets dropped, not converted.
+
+### Resolved verdicts (conductor, 2026-07-17)
+
+Nine read-only agents verified each row against the content as it stands today. **One candidate
+converts; eight drop.** The bar did its job: it is meant to reject, and a survey written before
+the rule existed proposed more than the rule allows.
+
+| # | Candidate | Final | What verification found |
+|---|-----------|-------|-------------------------|
+| 1 | Mooring cost | Drop | Confirmed. One block consumer. |
+| 2 | Club address | **Drop (flipped)** | The provisional rested on two false premises. Visiting's "Getting there" and Contact's "Physical address" are not the same block: different label, different body, different shape (Contact carries a mailing address and the live Maps link), and Visiting's body says "See Contact for a map link", which is nonsense rendered on Contact. Home restates no address at all. |
+| 3 | Storage fees | Drop | Confirmed. Fee table rows, not blocks. |
+| 4 | Club-boat ground rules | **Drop (was partial)** | Verification answered the row's own question with "no": Qualification does not host Visiting's block. Visiting has three steps, Qualification two, and the two overlapping steps are not byte-identical. Neither is canonical, so converting means rewriting both pages' prose to match. That flattens contextual writing, and splicing an include inside a `::::steps` container is a mechanic no probe has proven. |
+| 5 | Life-jacket rule | Drop | Confirmed. Three contextual mentions. |
+| 6 | Camping and RV facts | **Drop (was partial)** | Education is prose that links out, not a block. The real second block (`transient-rv-parking.md`, which the spec missed) holds a six-fact superset in a different order; no single fragment is both subset and superset. |
+| 7 | Who-to-ask | **Convert** | Survives, with the consumer list corrected in both directions. Join and NMG, two of the three consumers this spec named, do not carry the block at all. `club-boat-use-and-qualification.md` carries a byte-identical copy nobody listed, and `members.md` a drifted near-copy. Final: two class-a consumers plus one class-b. |
+| 8 | Class registration path | Drop | Confirmed. `steps` versus `cards`, different segmentation, different subject. |
+| 9 | Discord vocabulary | Drop | Confirmed. Wants an inline include; filed against cairn. |
+
+The fragment carries the whole `::::page-cta[Questions?]` block, not the body alone as ratified
+decision 4 assumed. That decision anticipated consumers with differing headings; both class-a
+consumers use the identical heading, so carrying the whole block is byte-identical and
+render-neutral, where splitting it would need an include nested inside a container directive.
+
+The class-b edit (`members.md`) costs one TOC anchor: its `## Questions?` was an h2, and a
+`page-cta` lead renders as a paragraph, so the page drops from five TOC entries to four. This is
+sitewide behavior, not a defect, and it makes `members.md` consistent with the two sibling pages
+that already close this way. It is Geoff's call at the before/after gate.
+
+**Found while surveying, not fixed here** (member-facing, and none is this pass's to decide):
+`seasonal-storage.md` restates the Active Participating Member definition but drops one of the
+three qualifying clauses that `member-expectations.md` carries, so the club's own policy reads
+two ways. `education.md` hardcodes membership prices that `join.md` sources live from the
+`:::membership-pricing` directive, so the next price change silently makes Education wrong. The
+guest policy is stated three times across `member-expectations.md`, `new-member-guide.md`, and
+`visiting-the-club.md`, one of them dropping the "guests cannot invite guests" clause. The
+Racing Rules boilerplate (scoring, starting sequence) recurs near-verbatim across regatta posts
+and is the one genuinely new fragment candidate the sweep found; it passes the blocks-only bar
+and belongs to a later pass, since converting published posts is its own risk.
 
 ## The agreement test (the site-contract arm)
 
