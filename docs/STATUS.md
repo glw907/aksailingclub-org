@@ -8,6 +8,19 @@
 > entries beyond the top two or three to the archive — this file is @-imported into every
 > session's context, so its length is a per-session token tax.
 
+**IMMEDIATE NEXT ACTION (Geoff, 2026-07-17): OPEN THE `member-directory` PASS, FABLE-CONDUCTED,
+IN A FRESH SESSION.** Geoff ruled the remaining pre-cutover initiatives a queued series (order in
+ROADMAP's "Pre-cutover pass sequence"): directory → waivers → events-redesign → admin-nav+roles,
+then converge on the apex cutover. The directory is first and is high-impact Fable design work.
+It opens with a functional brainstorm, interactive with Geoff: what members want from it (find
+people, boats, moorings; contact; opt-in privacy model), then design against the portal
+redesign's rulings (occasional-user recognition, mobile co-primary, the portal component
+license). The existing /my-account/directory screen and MW's directory function (one of the four
+absorbed MW functions) are evidence of requirements, not a blueprint. Resume prompt: "Open the
+member-directory pass: read the ROADMAP `member-directory` entry and the pre-cutover pass
+sequence, then start the functional brainstorm with Geoff." Launch from ~/Projects/aksailingclub-org,
+`/model fable` first.
+
 **FRAGMENTS MIGRATION & DX/CONTRACT HARVEST: SHIPPED TO DEV 2026-07-17 (PR #2, Opus-conducted).
 The site runs cairn ^0.87.0 with the fragments concept live. TWO THINGS ARE OPEN AND NEITHER IS
 BLOCKING: Geoff's before/after on the one class-b page (/members), and the harvest is DRAFTED BUT

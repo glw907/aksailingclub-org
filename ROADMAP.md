@@ -9,6 +9,35 @@ signup, renewal, and admin are live on this site, and MW cancels right after. Or
 matters: the ledger is the foundation every money flow writes into, the signup
 lifecycle is the centerpiece, and everything else hangs off those two.
 
+## Pre-cutover pass sequence (Geoff, 2026-07-17)
+
+Geoff ruled the remaining pre-cutover build initiatives a queued series, waivers
+included. The order below balances member value, the pre-cutover review load each
+member-facing pass adds, and the fact that admin work never touches the apex gate. Each
+pass is its own fresh session, brainstorm-first where the entry says so; Fable conducts
+the design.
+
+1. **`member-directory`** — the #1 member request, and it rides the just-shipped portal
+   design language while it is fresh. Highest member value, so first among the builds.
+2. **`member-waivers`** — the legal foundation (liability, plus the mooring and storage
+   variants, annual re-sign cadence, not a one-time checkbox). It must land before the
+   apex cutover, since live signups need current waivers, but there is no live exposure
+   before cutover (dev is behind Access), so it follows the directory rather than
+   preceding it. Hooks into the built signup/renewal flows and into `season-rollover`.
+3. **`events-redesign`** — self-contained, its own template, the special-focus page.
+   Independent of the first two.
+4. **`admin-nav-reorg` + `admin-roles`** — the one apex-independent pass, so it is the
+   natural break from member-facing review cycles and it improves the admin the
+   volunteers use on dev today. Can move earlier if that experience is painful.
+
+Then converge: once directory, waivers, and events have shipped to dev with Geoff's
+before/afters, the pre-cutover member surface is complete. Clear the accumulated review
+queue (portal, payments, and these), run the `mw-cutover` apex cutover, and phase-2
+absorption follows, with directory and waivers already down-payments on the MW
+retirement. Batching note: the directory and waivers brainstorms share the
+membership/portal surface and can run in one sitting; events and nav/roles are their
+own. Three of Geoff's sittings for five passes.
+
 ## Active
 
 ### The money ledger `money-ledger` — DONE 2026-07-13
