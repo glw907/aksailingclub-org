@@ -168,6 +168,45 @@ likely-drop, and motivated the agreement test below.
 
 A convert whose verification leaves it with one real consumer gets dropped, not converted.
 
+### Resolved verdicts (conductor, 2026-07-17)
+
+Nine read-only agents verified each row against the content as it stands today. **One candidate
+converts; eight drop.** The bar did its job: it is meant to reject, and a survey written before
+the rule existed proposed more than the rule allows.
+
+| # | Candidate | Final | What verification found |
+|---|-----------|-------|-------------------------|
+| 1 | Mooring cost | Drop | Confirmed. One block consumer. |
+| 2 | Club address | **Drop (flipped)** | The provisional rested on two false premises. Visiting's "Getting there" and Contact's "Physical address" are not the same block: different label, different body, different shape (Contact carries a mailing address and the live Maps link), and Visiting's body says "See Contact for a map link", which is nonsense rendered on Contact. Home restates no address at all. |
+| 3 | Storage fees | Drop | Confirmed. Fee table rows, not blocks. |
+| 4 | Club-boat ground rules | **Drop (was partial)** | Verification answered the row's own question with "no": Qualification does not host Visiting's block. Visiting has three steps, Qualification two, and the two overlapping steps are not byte-identical. Neither is canonical, so converting means rewriting both pages' prose to match. That flattens contextual writing, and splicing an include inside a `::::steps` container is a mechanic no probe has proven. |
+| 5 | Life-jacket rule | Drop | Confirmed. Three contextual mentions. |
+| 6 | Camping and RV facts | **Drop (was partial)** | Education is prose that links out, not a block. The real second block (`transient-rv-parking.md`, which the spec missed) holds a six-fact superset in a different order; no single fragment is both subset and superset. |
+| 7 | Who-to-ask | **Convert** | Survives, with the consumer list corrected in both directions. Join and NMG, two of the three consumers this spec named, do not carry the block at all. `club-boat-use-and-qualification.md` carries a byte-identical copy nobody listed, and `members.md` a drifted near-copy. Final: two class-a consumers plus one class-b. |
+| 8 | Class registration path | Drop | Confirmed. `steps` versus `cards`, different segmentation, different subject. |
+| 9 | Discord vocabulary | Drop | Confirmed. Wants an inline include; filed against cairn. |
+
+The fragment carries the whole `::::page-cta[Questions?]` block, not the body alone as ratified
+decision 4 assumed. That decision anticipated consumers with differing headings; both class-a
+consumers use the identical heading, so carrying the whole block is byte-identical and
+render-neutral, where splitting it would need an include nested inside a container directive.
+
+The class-b edit (`members.md`) costs one TOC anchor: its `## Questions?` was an h2, and a
+`page-cta` lead renders as a paragraph, so the page drops from five TOC entries to four. This is
+sitewide behavior, not a defect, and it makes `members.md` consistent with the two sibling pages
+that already close this way. It is Geoff's call at the before/after gate.
+
+**Found while surveying, not fixed here** (member-facing, and none is this pass's to decide):
+`seasonal-storage.md` restates the Active Participating Member definition but drops one of the
+three qualifying clauses that `member-expectations.md` carries, so the club's own policy reads
+two ways. `education.md` hardcodes membership prices that `join.md` sources live from the
+`:::membership-pricing` directive, so the next price change silently makes Education wrong. The
+guest policy is stated three times across `member-expectations.md`, `new-member-guide.md`, and
+`visiting-the-club.md`, one of them dropping the "guests cannot invite guests" clause. The
+Racing Rules boilerplate (scoring, starting sequence) recurs near-verbatim across regatta posts
+and is the one genuinely new fragment candidate the sweep found; it passes the blocks-only bar
+and belongs to a later pass, since converting published posts is its own risk.
+
 ## The agreement test (the site-contract arm)
 
 Dropped candidates whose facts must still agree get a new `src/tests/content-agreement.test.ts`:
