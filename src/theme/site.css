@@ -54,7 +54,7 @@ html {
    (docs/design-benchmark/decisions.md's "Bands and full-bleed composition" entry is the authority
    and carries the full reasoning plus every worked example). Two pages earn it today, each with
    its own marker below: HOME (the north star's alternating bands ARE the page's whole
-   composition) and the MEMBER PORTAL landing (an app surface, not a content page — the full-bleed
+   composition) and the MEMBER PORTAL landing (an app surface, not a content page: the full-bleed
    masthead is the standing surface a member reads first, ratified in
    docs/2026-07-16-portal-redesign-design.md). EDUCATION did NOT earn it: a pass gave it its own
    pitch-section bands and Geoff ruled them out on dev the same day, since a long-form content

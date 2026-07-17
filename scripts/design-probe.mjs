@@ -44,7 +44,7 @@ const REPO_ROOT = new URL('..', import.meta.url).pathname;
 // Home is the only page checked here today. The member portal landing (`.portal-shell`) also
 // earns full-bleed composition now, but it is deliberately NOT added to this list: every check
 // below renders each path SIGNED OUT (this script carries no session-seeding of its own), and
-// `/my-account` signed out shows the plain sign-in form, not the full-bleed masthead — adding it
+// `/my-account` signed out shows the plain sign-in form, not the full-bleed masthead: adding it
 // here would check nothing real and could pass green while the actual band-composed render goes
 // unchecked. The portal's own band gets its render-level checks from the seeded-session e2e specs
 // instead (e2e/portal-session.spec.ts and its visual-baseline siblings). A future band-composed
