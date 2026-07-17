@@ -2,14 +2,22 @@
 
 Executes docs/2026-07-17-member-waivers-design.md (read it first; its Ratified
 decisions, mooring exposure, and Borough flow-down sections govern every task; the
-appendices carry the research the drafting leans on). Runs as its own pass in a fresh
-session, second in the pre-cutover queue, after the directory pass ships. FABLE
-CONDUCTS (Geoff, 2026-07-17): the document drafting is legal-adjacent judgment work;
-past the included-access window it runs as a deliberate Fable sitting per the
-post-cutoff rules, never a silent default. Sonnet implementers for the build tasks;
-the conductor reviews each diff and verifies the full gate between dispatches. Nothing
-in this pass is legal advice; every document ships as a DRAFT for the club's attorney,
-who is the gate before any document publishes for real signing.
+appendices carry the research the drafting leans on). TWO UNITS (Geoff's three-unit
+ruling, 2026-07-17; the directory pass is the third):
+
+- **The Fable sitting — T7 plus the T4 signing-experience design.** Legal-adjacent
+  drafting and the lightness-bar UI/UX are the two Fable-tier pieces (Geoff: ensure
+  Fable input into the waivers UX "so it's as clean and light as it can be"). Depends
+  only on the spec and research, not the build; schedulable any time, and it MUST land
+  before the build session reaches T4. Past the included-access window it runs as a
+  deliberate Fable sitting per the post-cutoff rules, never a silent default.
+- **The Opus build session — T1 through T6 and T8**, after the directory pass ships.
+  Straightforward development executing the spec plus the Fable sitting's ratified
+  signing composition and framing copy. Sonnet implementers per task; the conductor
+  reviews each diff and verifies the full gate between dispatches.
+
+Nothing in this pass is legal advice; every document ships as a DRAFT for the club's
+attorney, who is the gate before any document publishes for real signing.
 
 ## T1 — The document model
 
@@ -43,18 +51,19 @@ documents appearing only for holders, a mid-season newly published version makin
 prior signature stale for the new season only (fresh-per-season, never retroactive
 within one), and a minor needing a parent signature.
 
-## T4 — The signing flow
+## T4 — The signing flow (builds the Fable sitting's ratified design)
 
 Outcome: the one continuous signing moment per the spec's governing principle
-("as light as it can be while still being legally sound and protecting the club"):
+("as light as it can be while still being legally sound and protecting the club"),
+executing the composition, anatomy, and framing copy the Fable sitting ratified with
+Geoff — the build implements that reference, it does not re-design it. The moment:
 welcome line with count and time expectation, each document in sequence with its
 plain-language framing line, full text scrolled in place, typed legal name, one
 distinct affirmative act per document, visible progress. Records write everything T2
 defines, snapshot taken from the exact text served. The minors path: parent signs per
 child, attesting relationship, minor identity from the household roster. For storage
 and mooring holders the moment ends with the prefilled contact-info confirm step
-(Borough flow-down; glance-and-confirm, never a form). Framing copy drafted for the
-attorney's review beside the documents, never paraphrasing legal effect.
+(Borough flow-down; glance-and-confirm, never a form).
 
 ## T5 — Gates and portal integration
 
@@ -75,7 +84,16 @@ signature history, the frozen signed text retrievable, and the on-demand
 certificate-of-completion view (snapshot, hash, timestamps, auth metadata in one
 human-readable artifact).
 
-## T7 — Document drafts and the board packet
+## T7 — The Fable sitting: document drafts, signing-experience design, board packet
+
+Two deliverables in one sitting: the attorney-ready draft packet (below) and the
+ratified signing-experience design for T4 — HTML probes of the signing moment (the
+welcome line, one document's full anatomy, the progress treatment, the contact-confirm
+step) at 390 and 1440 in both themes, grounded in the real draft documents so text
+length and legal register are the real thing, verdicted by Geoff per the
+probe-iteration process. The framing copy is drafted here too (it must never
+paraphrase legal effect; the attorney reviews it beside the documents), so the build
+session receives finished words, not placeholders.
 
 Outcome: attorney-ready DRAFTS, written from the club's existing legacy-site documents
 (never a blank page) against the spec's drafting bar: the Donahue six-factor checklist
