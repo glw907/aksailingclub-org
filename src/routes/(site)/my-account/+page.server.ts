@@ -1,19 +1,24 @@
 // /my-account: the member landing (signed in) and the sign-in form (signed out), one route for
-// both per the design doc's own IA ("the landing" doubles as sign-in when no session exists) and
-// mockup frames 01/02. The signed-in state composes every module this portal-capstone pass built:
-// standing (member-auth), the task list, the household card, a receipts stub, and the assets
-// summary (current assignments + waitlist positions + any pending requests). Renewal (Task 6,
-// `docs/2026-07-13-unified-signup-design.md`'s "Renew and welcome-back") and the asset-fee pay
-// door (`payments.ts`'s own deferred-consumer note) both mint or reuse a real row and hand it to a
-// real Stripe Checkout Session; a checkout-unavailable submission degrades to the same stub
-// message every other payment form on this site shows, never a broken button.
+// both per the design doc's own IA ("the landing" doubles as sign-in when no session exists).
+// The signed-in state is the portal redesign pass's rebuilt member home
+// (docs/2026-07-16-portal-redesign-design.md): the standing/renewal masthead, the value mirror,
+// weighted action rows, recent receipts, the subordinate rail (household / gear & moorings /
+// classes), and the doors row. Renewal and the asset-fee pay door (`payments.ts`'s own
+// deferred-consumer note) both mint or reuse a real row and hand it to a real Stripe Checkout
+// Session; a checkout-unavailable submission degrades to the same stub message every other
+// payment form on this site shows, never a broken button.
+//
+// The three asset VERBS (release, request, cancel a request) keep their server actions here
+// unchanged: T2b of the redesign plan relocates them to a new `/my-account/gear` page next (the
+// design doc's own "gear door" ruling, docs/design-benchmark/decisions.md), which does not exist
+// yet on this branch. This file's own template no longer renders their forms.
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { requestMemberLink, destroyMemberSession, issueMemberCsrfToken, validateMemberCsrfToken } from '$member-auth/lib/auth';
 import { memberSessionCookieName } from '$member-auth/lib/crypto';
 import { resolveMemberDb } from '$member-auth/lib/db';
 import { getMemberStanding, MEMBERSHIP_TIER_LABEL, type MembershipTier } from '$member-auth/lib/standing';
-import { getCurrentSeason, getTierPrices } from '$admin-club/lib/club-settings';
+import { getClassRegistrationOpens, getCurrentSeason, getTierPrices } from '$admin-club/lib/club-settings';
 import { getHouseholdInfo, listHouseholdMembers } from '$member-portal/lib/household';
 import { getCreditBalance } from '$member-portal/lib/credits';
 import {
@@ -23,15 +28,17 @@ import {
   listHouseholdAssignments,
   listHouseholdWaitlistEntries,
   listHouseholdRequests,
-  listRequestableAssetTypes,
   payForApprovedRequest,
   releaseHouseholdAssignment,
 } from '$member-portal/lib/assets';
+import { listMyClasses, listMyWaitlistEntries } from '$member-portal/lib/classes';
 import { listReceipts } from '$member-portal/lib/receipts';
-import { buildTaskList } from '$member-portal/lib/tasks';
+import { buildActionRows } from '$member-portal/lib/action-rows';
+import { portalState, valueMirror } from '$member-portal/lib/portal-state';
 import { mintOrReuseRenewalMembership } from '$member-portal/lib/renewal';
 import { portalAction, type PortalActionContext, type PortalActionEvent } from '$member-portal/lib/portal-action';
 import { createCheckout, CheckoutUnavailableError, type CreateCheckoutEnv } from '$admin-club/lib/payments';
+import { loadSeasonHasLiveEvents } from '$theme/season-data';
 import { siteConfig } from '$theme/cairn.config';
 import { verifyTurnstile } from '$theme/turnstile';
 import { checkRateLimitKeys, RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
@@ -60,7 +67,20 @@ export const load: PageServerLoad = async (event) => {
   const db = resolveMemberDb(event.platform?.env);
   if (!db) return { member, csrf, standing: null };
 
-  const [standing, householdInfo, householdMembers, creditBalance, currentSeason, waitlistEntries, requests, receipts, assetTypes, tierPrices] = await Promise.all([
+  const [
+    standing,
+    householdInfo,
+    householdMembers,
+    creditBalance,
+    currentSeason,
+    waitlistEntries,
+    requests,
+    receipts,
+    myClasses,
+    myWaitlist,
+    seasonHasLiveEvents,
+    classRegistrationOpens,
+  ] = await Promise.all([
     getMemberStanding(db, member.id),
     getHouseholdInfo(db, member.householdId),
     listHouseholdMembers(db, member.householdId),
@@ -69,12 +89,15 @@ export const load: PageServerLoad = async (event) => {
     listHouseholdWaitlistEntries(db, member.householdId),
     listHouseholdRequests(db, member.householdId),
     listReceipts(db, member.householdId),
-    listRequestableAssetTypes(db),
-    getTierPrices(db),
+    listMyClasses(db, member.householdId),
+    listMyWaitlistEntries(db, member.householdId),
+    loadSeasonHasLiveEvents(db),
+    getClassRegistrationOpens(db),
   ]);
   const assignments = await listHouseholdAssignments(db, member.householdId, currentSeason);
-  const isPrimary = householdInfo?.primaryMemberId === member.id;
-  const tasks = buildTaskList({ standing, creditBalance, assetRequests: requests });
+  const actionRows = buildActionRows({ assignments, requests, waitlistEntries: myWaitlist });
+  const state = portalState({ standing, seasonHasLiveEvents, classRegistrationOpens, hasWeightedActionRows: actionRows.length > 0 });
+  const mirrorSegments = valueMirror({ householdMembers, assets: assignments, creditBalance });
 
   return {
     member,
@@ -82,15 +105,15 @@ export const load: PageServerLoad = async (event) => {
     standing,
     householdInfo,
     householdMembers,
-    isPrimary,
     creditBalance,
+    currentSeason,
     assignments,
     waitlistEntries,
-    requests,
     receipts,
-    tasks,
-    assetTypes,
-    tierPrices,
+    myClasses,
+    actionRows,
+    state,
+    mirrorSegments,
   };
 };
 

@@ -301,3 +301,40 @@ export async function loadSeasonMonths(db: D1Database, currentYear = new Date().
     return [];
   }
 }
+
+/**
+ * Whether the season calendar carries at least one event or class on or after `today`: the
+ * member portal landing's own off-season/in-season boundary (`portalState`'s `seasonHasLiveEvents`
+ * argument, `docs/2026-07-16-portal-redesign-design.md`'s "States"). Reads the RAW rows, never
+ * `SeasonMonth`'s own display-formatted `dateRange` strings, which carry no parseable date at all.
+ * A row's `end_date` is preferred over `start_date` when both are set (a multi-day event is still
+ * "live" through its last day); a row with neither date (a genuinely undated TBD entry) carries no
+ * evidence the season still has anything ahead, so it never counts as live. Plain ISO string
+ * comparison is safe here since every stored date is `YYYY-MM-DD`, which sorts lexicographically
+ * the same as chronologically.
+ */
+export function seasonHasLiveEvents(rows: EventRow[], today: Date): boolean {
+  const todayIso = today.toISOString().slice(0, 10);
+  return rows.some((row) => {
+    const relevantDate = row.end_date ?? row.start_date;
+    return relevantDate !== null && relevantDate.slice(0, 10) >= todayIso;
+  });
+}
+
+/** The thin db wrapper `seasonHasLiveEvents` needs: the identical events-plus-current-season-
+ *  classes read `loadSeasonMonths` performs, asked a yes/no question instead of grouped for
+ *  display. Same safe-failure posture as `loadSeasonMonths`: a D1 failure degrades to `false`
+ *  (reads as off-season, the reassure-and-anticipate state) rather than throwing. */
+export async function loadSeasonHasLiveEvents(db: D1Database, today = new Date()): Promise<boolean> {
+  try {
+    const season = await readCurrentSeason(db);
+    const [events, classes] = await Promise.all([
+      db.prepare(EVENTS_QUERY).all<EventRow>(),
+      season === null ? Promise.resolve({ results: [] as EventRow[] }) : db.prepare(CLASSES_QUERY).bind(season).all<EventRow>(),
+    ]);
+    return seasonHasLiveEvents([...(events.results ?? []), ...(classes.results ?? [])], today);
+  } catch (err) {
+    console.error('season-data: CLUB_DB read failed', err);
+    return false;
+  }
+}
