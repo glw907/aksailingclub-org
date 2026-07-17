@@ -66,7 +66,7 @@ per the design doc's own binding precedence. Portal-scoped and licensed one-time
   .portal-all-clear-text {
     margin: 0;
     font-size: var(--text-step-0);
-    color: var(--color-harbor-ink);
+    color: var(--color-base-content);
   }
   .portal-all-clear-link {
     margin: var(--spacing-3xs) 0 0;

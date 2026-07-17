@@ -302,6 +302,24 @@ describe('seasonHasLiveEvents', () => {
   it('is false for an empty calendar', () => {
     expect(seasonHasLiveEvents([], TODAY)).toBe(false);
   });
+
+  it('with no currentSeason bound, counts a future-year row live (the pre-fix, unscoped behavior)', () => {
+    expect(seasonHasLiveEvents([row({ start_date: '2027-05-01' })], TODAY)).toBe(true);
+  });
+
+  it('excludes a row dated a LATER season than currentSeason: next season entered early during off-season admin prep is not evidence the current season still has anything live', () => {
+    expect(seasonHasLiveEvents([row({ start_date: '2027-05-01' })], TODAY, 2026)).toBe(false);
+  });
+
+  it('still counts a currentSeason-year row live when a later-season row is also present', () => {
+    expect(
+      seasonHasLiveEvents(
+        [row({ start_date: '2027-05-01' }), row({ start_date: '2026-09-05' })],
+        TODAY,
+        2026,
+      ),
+    ).toBe(true);
+  });
 });
 
 describe('loadSeasonHasLiveEvents', () => {
@@ -333,5 +351,19 @@ describe('loadSeasonHasLiveEvents', () => {
       },
     });
     expect(await loadSeasonHasLiveEvents(db, new Date('2026-07-07T00:00:00Z'))).toBe(false);
+  });
+
+  it('the season-rollover boundary: a next-year event entered during off-season admin prep does not pin the portal off the off-season state', async () => {
+    // Reproduces the finding this scoping fixes: an admin enters next year's regatta in
+    // December, well before `settings.current_season` itself rolls over. Without the
+    // `currentSeason` bound, that one row would read as "live" year-round and the off-season
+    // state (the reassure-and-anticipate window this exact scenario needs) would never be
+    // reachable again until the season setting advances.
+    const NEXT_SEASON_ROW = [{ id: 'frostbite-2027', title: 'Frostbite Regatta', slug: 'frostbite-2027', event_type: 'racing', start_date: '2027-05-01', end_date: null, date_history: null }];
+    const { db } = fakeD1({
+      firstResults: { "FROM settings WHERE key = 'current_season'": { value: '2026' } },
+      allResults: { 'FROM events WHERE': NEXT_SEASON_ROW, 'FROM classes WHERE': [] },
+    });
+    expect(await loadSeasonHasLiveEvents(db, new Date('2026-12-15T00:00:00Z'))).toBe(false);
   });
 });

@@ -7,11 +7,12 @@ criterion). Portal-scoped and licensed one-time.
 The gear & moorings tile is reference-only (docs/design-benchmark/decisions.md's "the gear door"
 ruling): it lists the household's current assignments and waitlist positions with no forms at all,
 and always carries a "Manage gear & moorings" foot link to `/my-account/gear` (T2b's own page,
-which does not exist yet on this branch -- expected). -->
+which holds the release/request/cancel forms this tile deliberately omits). -->
 <script lang="ts">
   import { formatMemberDate } from '$member-auth/lib/format';
   import type { HouseholdAssignmentRow, HouseholdWaitlistRow } from '$member-portal/lib/assets';
   import type { MyClassRow } from '$member-portal/lib/classes';
+  import { deriveAssetRows } from '$member-portal/lib/rail-rows';
 
   let {
     householdName,
@@ -27,29 +28,7 @@ which does not exist yet on this branch -- expected). -->
     myClasses: MyClassRow[];
   } = $props();
 
-  /** One stacked two-line rail row: a name and an optional detail/chip line below it (mock D's own
-   *  fix for the cramped mid-phrase wrap a single flex row produced at rail width). */
-  interface RailAssetRow {
-    id: string;
-    name: string;
-    detail: string | null;
-    chip: string | null;
-  }
-
-  const assetRows = $derived<RailAssetRow[]>([
-    ...assignments.map((a) => ({
-      id: a.id,
-      name: a.assetTypeName,
-      detail: a.description,
-      chip: a.paymentStanding === 'outstanding' ? 'Payment due' : null,
-    })),
-    ...waitlistEntries.map((w) => ({
-      id: w.id,
-      name: w.assetTypeName,
-      detail: `Position ${w.position} of ${w.queueLength}`,
-      chip: 'Waitlist',
-    })),
-  ]);
+  const assetRows = $derived(deriveAssetRows(assignments, waitlistEntries));
 
   const classRows = $derived(
     myClasses.map((c) => ({
@@ -134,7 +113,7 @@ which does not exist yet on this branch -- expected). -->
   .portal-rail-empty {
     margin: 0;
     font-size: var(--text-step--1);
-    color: var(--color-harbor-ink);
+    color: var(--color-base-content);
   }
   .portal-rail-empty {
     color: var(--color-muted);
@@ -161,7 +140,7 @@ which does not exist yet on this branch -- expected). -->
     display: block;
     font-size: var(--text-step--1);
     font-weight: 600;
-    color: var(--color-harbor-ink);
+    color: var(--color-base-content);
   }
   .portal-rail-item-meta {
     display: flex;
