@@ -129,6 +129,41 @@ cover, for the attorney's review:
   that is one mooring agreement or a release plus a property rider is the attorney's
   drafting choice; the substance is equivalent
 
+## The Mat-Su Borough flow-down
+
+Trailer Row, the tenting area, and trailered boat parking sit on Borough-owned land
+under Management Agreement MSB006789 (2022 to 2047, published on the site at
+/mat-su-borough-land-management-agreement/). The storage documents must flow the
+club's obligations under that agreement down to the members whose property creates
+them (verified 2026-07-17 against the published agreement and RV rules):
+
+- **The 72-hour relocation covenant.** The Borough can require RVs moved within 72
+  hours of notice for work in the easement. The published long-term RV rules already
+  carry this ("removed within 72 hours if requested... towing at the member's
+  expense"); the storage agreement makes it a signed covenant: the member acknowledges
+  the obligation, affirms they are prepared to move on notice, and accepts the towing
+  consequence. The annual signing moment also has the member confirm their contact
+  info is current, since a 72-hour clock is only survivable if the club can reach them
+  (Geoff, 2026-07-17).
+- **Indemnification is a chain, not decoration.** Section 21 of MSB006789 has the club
+  indemnifying the Borough against claims arising from members' and guests' acts, and
+  Section 20 makes the club responsible for the safety of everyone on the property.
+  The member-to-club indemnification in the storage and mooring documents is what
+  keeps that exposure from resting on the club alone.
+- **Fuel and condition rules flow down too.** The agreement prohibits petroleum
+  storage on the property, with spills remediated at the club's expense; the RV rules'
+  fuel, sanitation, and livable-condition requirements are the flow-down, and the
+  storage acknowledgement is where the member's signature meets them.
+- **The Trailer Row Use Guidelines already exist as an annually signed document** (the
+  RV eligibility rules require a signed copy each season). The storage agreement and
+  acknowledgement absorb this existing paper practice into the signing system rather
+  than inventing a new obligation.
+- **Drafting verification task:** the 72-hour clause traces to the Borough land-use
+  permit conditions rather than the management agreement's own text, so drafting
+  locates the underlying permit document and verifies the club's RV rules and the new
+  storage agreement against both instruments. Discrepancies go to the board with the
+  drafts.
+
 ## Document drafting bar
 
 The pass delivers high-quality drafts of every v1 document for the attorney's review,
@@ -163,6 +198,10 @@ affirmative act, because bundling several releases under one signature is exactl
 pattern courts distrust. Framing copy is drafted carefully so it never paraphrases or
 softens the release's legal effect (a summary that misstates the text is worse than no
 summary; the attorney reviews the framing lines with the documents).
+
+The annual signing moment for storage and mooring holders also confirms the member's
+contact info in the same breath (the Borough flow-down's 72-hour clock depends on
+reachability); one glance-and-confirm step, prefilled from the profile, never a form.
 
 Outside the gated flows, the portal's "Needs your attention" row links to one signing
 page that clears everything outstanding in a single sitting. One row and the renewal
