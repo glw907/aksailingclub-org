@@ -280,6 +280,14 @@ cairn-cms sits on a live session's branch. Paste them into that repo's friction 
 merges, then delete the staging file.
 
 ### Member waivers & digital signing `member-waivers`
+**BRAINSTORMED 2026-07-17** (combined sitting with member-directory): spec
+`docs/2026-07-17-member-waivers-design.md` (nine ratified decisions, three research
+reports in the appendices, the board-facing document inventory in Appendix C), plan
+`docs/plans/2026-07-17-member-waivers.md`. Execution is TWO UNITS (Geoff's three-unit
+ruling): a FABLE sitting (T7 legal drafts + the T4 signing-UX design, schedulable any
+time, must precede the build's T4) and an OPUS build session (T1-T6, T8, after the
+directory pass). The entry below stands as background; the spec supersedes it where
+they differ.
 Every member signs a liability release; a mooring holder signs a separate mooring release; and
 anyone storing property on unsecured club grounds (RVs, boats, trailers) should sign a storage
 release too. Waivers change year to year, so each season needs fresh signatures and
@@ -324,6 +332,14 @@ events page's timeline/chips/season machinery is evidence of requirements, not a
 design to preserve.
 
 ### Member directory brainstorm & pass `member-directory`
+**BRAINSTORMED 2026-07-17** (combined sitting with member-waivers): spec
+`docs/2026-07-17-member-directory-design.md` (eight ratified decisions: person-first,
+one smart search, household boats with kept-on, admin roles, one-dial privacy,
+current-plus-grace listing), plan `docs/plans/2026-07-17-member-directory.md`.
+OPUS-CONDUCTED per Geoff's ruling (straightforward development; the probe arc composes
+inside the portal-derived design language and gates on his verdicts; genuinely novel
+design proposes a Fable sitting instead of absorbing). Next in the pre-cutover queue.
+The entry below stands as background; the spec supersedes it where they differ.
 Full brainstorm and build pass on the member directory, the NUMBER-ONE member-requested
 feature (Geoff, 2026-07-16). Opens interactive with Geoff: what members want from it
 (find people, boats, moorings? contact? opt-in privacy model?), then designs and builds

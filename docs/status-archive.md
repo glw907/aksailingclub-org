@@ -4,6 +4,60 @@
 > STATUS.md's preamble). History only: nothing here is a live instruction, and entries
 > reflect what was true when written. The live rolling status is docs/STATUS.md.
 
+**PORTAL REDESIGN PASS: SHIPPED TO DEV 2026-07-17 (merge 510b266, PR #1). AWAITING GEOFF'S
+BEFORE/AFTER against mock D — that gate is the apex's, not dev's; dev is live now.** Spec
+docs/2026-07-16-portal-redesign-design.md + plan docs/plans/2026-07-16-portal-redesign.md,
+visual reference docs/design-benchmark/portal-mock-d/. The landing rebuilt to mock D across all
+four states (needs-you / all-clear / off-season / renewal), mobile composed as its own screen
+(the action row's stacked anatomy fixes the mid-phrase wrap Geoff named on the probe), plus TWO
+NEW DOORS the ratified mock left no home for and RECEIPTS REPOINTED AT THE LEDGER. Four Geoff
+rulings taken live mid-pass, all logged with their grounding in docs/design-benchmark/decisions.md
+(read those, never this summary): the gear door, the renewal door, Release's two-step confirm, and
+the full-bleed rule reframed from "HOME-ONLY, no exception" to "considered and justified" (with
+worked examples both ways, since a bright line carries information a bare standard loses).
+
+ELEVEN DEFECTS FIXED ON THE WAY PAST, every one green on check/test/build. The adversarial review
+gate (16 findings survived refutation) caught three BLOCKERS: the Pay button silently dead (the
+landing never destructured `form`), portal body ink at 1.07:1 in dark mode, and the all-clear
+moment rendering under the renewal CTA. The conductor's own render read caught three more: the
+masthead band ignoring the dark theme (it reached for fixed --color-sage where the site bands with
+--color-base-200 — identical in light, broken in dark), Sign out stranded at left=283 against
+everything else's left=80, and money dropping a trailing zero ("$247.5"). One member-facing money
+formatter now serves the whole portal.
+
+THE PATTERN WORTH CARRYING FORWARD (four instances, one root): THE RATIFIED MOCK DEPICTED DATA THE
+SYSTEM CANNOT PRODUCE, because a probe agent built the reference without querying the database or
+the dark theme. Mock D showed a class-fee receipt the schema could not express, slot identifiers
+("B-Dock slip 12") that do not exist (all 40 live assignments carry free text about the member's
+BOAT: "Sailboat", "BUCC", 'Purple Buccaneer 18 "Dionysus"'), a "Gear locker" asset type the club
+does not have, and a light-only palette. THE FIXTURES THEN REPRODUCED THE FICTION, so the baseline
+looked right while production would have rendered gibberish — verification concealing the defect it
+exists to catch. BINDING ON THE EVENTS-REDESIGN AND MEMBER-DIRECTORY PROBE ARCS: ground a probe
+against real rows and both themes BEFORE ratifying it, or the ratification bakes in fiction.
+
+ALSO FIXED, INFRASTRUCTURE: ci.yml's update_snapshots dispatch hardcoded e2e/site-visual.spec.ts
+and its snapshot dir, so it SILENTLY DID NOTHING for the portal's new spec and reported success
+(1912cf8 + the commit before it; both steps are now spec-agnostic, and the staging glob must be
+shell-expanded — git's own pathspec globbing does not match UNTRACKED dirs, which is exactly what a
+new spec's baselines are). Note for any future visual spec: PLAYWRIGHT WRITES MISSING SNAPSHOTS ON
+FIRST RUN BY DEFAULT, no --update-snapshots needed — a local run mints workstation baselines that
+break CI if committed. The repo rule ("never a local --update-snapshots run") is true but
+incomplete. Baselines for the portal are CI-minted (a2f3198); site-visual's came back UNCHANGED,
+proving the rebuild shifted no other page.
+
+LIVE DEFECT THIS FIXES FOR REAL MEMBERS: receipts read the money ledger (migration 0021) instead of
+a stale two-table union whose premise went out of date the day 0021 landed. 143 class-fee payments
+and 5 donations were invisible to the members who made them. NOT a schema change; the canonical
+store already existed and every write path already fed it.
+
+OPEN / CARRY-FORWARD: Geoff's before/after against mock D (four states rendered light+dark at
+390/1440 available on request). Backlog-worthy, none blocking: the portal's 44px touch-target floor
+is unmet sitewide (row actions ship at .btn-sm/32px, "Manage gear & moorings" at 17px) — a
+PRE-EXISTING gap this pass did not introduce and deliberately did not widen; the desktop landing
+shows a tall whitespace void when the main column is short and the rail is not; the landing renders
+two h1s (one display:none, benign for AT) as the cost of the not-a-collapse dual composition.
+
+
 **ROUNDS 2-3 LANDED + THE PROCESS SHIFT TO PROBE ITERATION (2026-07-16 day, same session
 continuing the arc below on Geoff's live notes). ROUND 2 (Geoff's five gallery notes, ruled
 whole): the CARD FAMILY REDESIGNED (239b995/820fa64 — hanging icon column, count-aware

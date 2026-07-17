@@ -8,24 +8,43 @@
 > entries beyond the top two or three to the archive — this file is @-imported into every
 > session's context, so its length is a per-session token tax.
 
-**IMMEDIATE NEXT ACTION (Geoff, 2026-07-17): OPEN A COMBINED `member-directory` + `member-waivers`
-FUNCTIONAL-BRAINSTORM SITTING, FABLE-CONDUCTED, IN A FRESH SESSION.** Geoff ruled the remaining
-pre-cutover initiatives a queued series (order in ROADMAP's "Pre-cutover pass sequence"):
-directory → waivers → events-redesign → admin-nav+roles, then converge on the apex cutover. He
-confirmed the directory and waivers BRAINSTORMS batch into one sitting (shared membership/portal
-surface, shared member-record data seam), while their design and build passes stay separate and
-in order. Run them as two delineated topics: DIRECTORY FIRST (the #1 member ask, higher value,
-sets the membership-surface context), then WAIVERS. Do not blur a browse/privacy problem into a
-legal-signing problem. Directory brainstorm: what members want (find people, boats, moorings;
-contact; opt-in privacy model), designed against the portal redesign's rulings (occasional-user
-recognition, mobile co-primary, the portal component license); the existing /my-account/directory
-screen and MW's directory function are evidence of requirements, not a blueprint. Waivers
-brainstorm: the liability release plus the mooring and storage variants, the annual re-sign
-cadence (not a one-time checkbox), the e-signature capture, and the hooks into the built
-signup/renewal flows and season-rollover. Resume prompt: "Open the combined member-directory +
-member-waivers brainstorm sitting: read the ROADMAP `member-directory` and `member-waivers`
-entries and the pre-cutover pass sequence, then start the directory functional brainstorm with
-Geoff, waivers second." Launch from ~/Projects/aksailingclub-org, `/model fable` first.
+**IMMEDIATE NEXT ACTION (Geoff, 2026-07-17): OPEN THE `member-directory` PASS, OPUS-CONDUCTED,
+IN A FRESH SESSION.** Execute docs/plans/2026-07-17-member-directory.md against spec
+docs/2026-07-17-member-directory-design.md: T0 design probes (grounded in real rows, both
+themes, Geoff-verdicted) then the build tasks through the deploy gate. Resume prompt: "Open the
+member-directory pass: read docs/plans/2026-07-17-member-directory.md and its spec, then start
+T0." Launch from ~/Projects/aksailingclub-org, `/model opus`. INDEPENDENTLY SCHEDULABLE, any
+time Geoff's review availability suits: the FABLE waivers sitting (waivers plan T7 + the T4
+signing-UX design — attorney draft packet, board packet, and the ratified signing-moment
+probes; it must land before the waivers BUILD session reaches T4, and it depends only on the
+spec, not the directory pass or the build).
+
+**DIRECTORY + WAIVERS BRAINSTORM SITTING: DONE 2026-07-17 (this sitting, Fable-conducted).
+Both specs and both plans are committed and Geoff-approved; the queue's next two passes are
+fully specified.** Directory: docs/2026-07-17-member-directory-design.md + its plan (8 ratified
+decisions: person-first entries, one smart search + chips, household-owned boats with a
+kept_on trailer/mooring field replacing any holdings display since moorings are unlabeled,
+admin-maintained many-per-member roles with specific titles, the one privacy dial extended
+so partial shows everything but contact, current+grace listing; fleet view and photos
+deliberately deferred). Waivers: docs/2026-07-17-member-waivers-design.md + its plan (9
+ratified decisions; governing principle verbatim: "as light as it can be while still being
+legally sound and protecting the club"). THREE research reports are distilled into that
+spec's appendices — e-signature validity (typed-name + magic-link + snapshot/hash EXCEEDS
+Alaska UETA floors; the risk lives in document TEXT, hence the Donahue six-factor pre-publish
+gate, cold-water immersion named explicitly), stored-property liability (a dedicated BILATERAL
+STORAGE AGREEMENT is warranted — Alaska is the last state with no self-storage lien law, so
+lien/abandonment authority must be contractual; no-bailment posture keeps the burden of proof
+on the claimant), and the peer-club document inventory (Appendix C, 14 documents mapped to
+signing moments — the board-packet artifact the attorney verifies for completeness).
+EXECUTION SHAPE (Geoff's three-unit ruling): Opus directory pass → Fable waivers sitting
+(drafts + signing UX) → Opus waivers build. LOAD-BEARING FACTS RATIFIED IN-SITTING: the club
+owns mooring tackle UP TO THE BALL, member owns beyond it, and the documents ASSUME club gear
+can fail (no inspection language in any release — that is a Donahue safety representation);
+the Mat-Su Borough 72-hour RV relocation covenant + annual contact-info confirm flow down
+from MSB006789 (published on the site) and the already-signed Trailer Row Use Guidelines
+absorb into the system; class participation rides the general release (decision 9), so class
+signup gets LIGHTER than today; race entries stay separate BY RULE (RRS 82). Attorney remains
+the gate before any document publishes for real signing.
 
 **FRAGMENTS MIGRATION & DX/CONTRACT HARVEST: SHIPPED TO DEV 2026-07-17 (PR #2, Opus-conducted).
 The site runs cairn ^0.87.0 with the fragments concept live. TWO THINGS ARE OPEN AND NEITHER IS
@@ -71,58 +90,9 @@ seasonal-storage.md drops a qualifying clause from the Active Participating Memb
 education.md hardcodes membership prices that join.md sources live from a directive; the racing
 boilerplate across regatta posts is the one genuinely new fragment candidate.
 
-**PORTAL REDESIGN PASS: SHIPPED TO DEV 2026-07-17 (merge 510b266, PR #1). AWAITING GEOFF'S
-BEFORE/AFTER against mock D — that gate is the apex's, not dev's; dev is live now.** Spec
-docs/2026-07-16-portal-redesign-design.md + plan docs/plans/2026-07-16-portal-redesign.md,
-visual reference docs/design-benchmark/portal-mock-d/. The landing rebuilt to mock D across all
-four states (needs-you / all-clear / off-season / renewal), mobile composed as its own screen
-(the action row's stacked anatomy fixes the mid-phrase wrap Geoff named on the probe), plus TWO
-NEW DOORS the ratified mock left no home for and RECEIPTS REPOINTED AT THE LEDGER. Four Geoff
-rulings taken live mid-pass, all logged with their grounding in docs/design-benchmark/decisions.md
-(read those, never this summary): the gear door, the renewal door, Release's two-step confirm, and
-the full-bleed rule reframed from "HOME-ONLY, no exception" to "considered and justified" (with
-worked examples both ways, since a bright line carries information a bare standard loses).
-
-ELEVEN DEFECTS FIXED ON THE WAY PAST, every one green on check/test/build. The adversarial review
-gate (16 findings survived refutation) caught three BLOCKERS: the Pay button silently dead (the
-landing never destructured `form`), portal body ink at 1.07:1 in dark mode, and the all-clear
-moment rendering under the renewal CTA. The conductor's own render read caught three more: the
-masthead band ignoring the dark theme (it reached for fixed --color-sage where the site bands with
---color-base-200 — identical in light, broken in dark), Sign out stranded at left=283 against
-everything else's left=80, and money dropping a trailing zero ("$247.5"). One member-facing money
-formatter now serves the whole portal.
-
-THE PATTERN WORTH CARRYING FORWARD (four instances, one root): THE RATIFIED MOCK DEPICTED DATA THE
-SYSTEM CANNOT PRODUCE, because a probe agent built the reference without querying the database or
-the dark theme. Mock D showed a class-fee receipt the schema could not express, slot identifiers
-("B-Dock slip 12") that do not exist (all 40 live assignments carry free text about the member's
-BOAT: "Sailboat", "BUCC", 'Purple Buccaneer 18 "Dionysus"'), a "Gear locker" asset type the club
-does not have, and a light-only palette. THE FIXTURES THEN REPRODUCED THE FICTION, so the baseline
-looked right while production would have rendered gibberish — verification concealing the defect it
-exists to catch. BINDING ON THE EVENTS-REDESIGN AND MEMBER-DIRECTORY PROBE ARCS: ground a probe
-against real rows and both themes BEFORE ratifying it, or the ratification bakes in fiction.
-
-ALSO FIXED, INFRASTRUCTURE: ci.yml's update_snapshots dispatch hardcoded e2e/site-visual.spec.ts
-and its snapshot dir, so it SILENTLY DID NOTHING for the portal's new spec and reported success
-(1912cf8 + the commit before it; both steps are now spec-agnostic, and the staging glob must be
-shell-expanded — git's own pathspec globbing does not match UNTRACKED dirs, which is exactly what a
-new spec's baselines are). Note for any future visual spec: PLAYWRIGHT WRITES MISSING SNAPSHOTS ON
-FIRST RUN BY DEFAULT, no --update-snapshots needed — a local run mints workstation baselines that
-break CI if committed. The repo rule ("never a local --update-snapshots run") is true but
-incomplete. Baselines for the portal are CI-minted (a2f3198); site-visual's came back UNCHANGED,
-proving the rebuild shifted no other page.
-
-LIVE DEFECT THIS FIXES FOR REAL MEMBERS: receipts read the money ledger (migration 0021) instead of
-a stale two-table union whose premise went out of date the day 0021 landed. 143 class-fee payments
-and 5 donations were invisible to the members who made them. NOT a schema change; the canonical
-store already existed and every write path already fed it.
-
-OPEN / CARRY-FORWARD: Geoff's before/after against mock D (four states rendered light+dark at
-390/1440 available on request). Backlog-worthy, none blocking: the portal's 44px touch-target floor
-is unmet sitewide (row actions ship at .btn-sm/32px, "Manage gear & moorings" at 17px) — a
-PRE-EXISTING gap this pass did not introduce and deliberately did not widen; the desktop landing
-shows a tall whitespace void when the main column is short and the rail is not; the landing renders
-two h1s (one display:none, benign for AT) as the cost of the not-a-collapse dual composition.
+**PORTAL REDESIGN PASS: SHIPPED TO DEV 2026-07-17 (merge 510b266, PR #1); full entry in
+docs/status-archive.md. STILL OPEN: Geoff's before/after against mock D (four states,
+light+dark, 390/1440 available on request) — that gate is the apex's, not dev's.**
 
 **PAYMENTS SMOKE — STILL WAITING ON GEOFF (unchanged since 2026-07-15; full entry
 in docs/status-archive.md, canonical steps in docs/plans/2026-07-15-payments-live-smoke.md +
