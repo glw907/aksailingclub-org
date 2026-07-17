@@ -336,18 +336,19 @@ const related = defineComponent({
 // line (the engine's `[Label]` bracket grammar, labeled "Lead" for the form), a markdown `body`
 // slot for the reassurance copy, and any number of nested `:::cta-action` buttons filtered out of
 // that same `body` slot by the `cta-link` marker class its build() renders (the actions row's own
-// wrapper, never a slot of its own, matching `cards`/`card`'s one-slot nesting). A secondary
-// action reuses the chassis's own `.cta-link`/`.cta-secondary` prose classes. A primary action
-// carries `.asc-cta-btn` instead of the chassis `.cta-primary`: the club-grounds fireweed budget
-// ("the single pop, at most twice a page") is spent only through that class, and a page-cta's one
-// allowed primary action is exactly such a spend. `.cta-link` stays on both kinds because it is
-// the marker class buildPageCta() filters on; asc-components.css loads after prose.css in the
-// same layer, so `.asc-cta-btn`'s dress wins the collision.
+// wrapper, never a slot of its own, matching `cards`/`card`'s one-slot nesting). Both kinds carry
+// `.asc-cta-btn` (never the chassis `.cta-primary`/`.cta-secondary`): the matched-pair verdict
+// (template-round-1-arc.md; racing's "Ready to try it?" and the membership-open bulletin's
+// Join/Renew pair both measured as two unrelated button families under the chassis skins) puts
+// primary and secondary on one shared geometry, `asc-cta-btn-secondary` swapping only the skin.
+// A primary action's fireweed fill is the club-grounds budget's spend ("the single pop, at most
+// twice a page"), so it stays the plain `.asc-cta-btn`. `.cta-link` stays on both kinds because
+// it is the marker class buildPageCta() filters on.
 function buildCtaAction(ctx: ComponentContext): Element {
   const href = strAttr(ctx, 'href') ?? '#';
   const kind = strAttr(ctx, 'kind') ?? 'secondary';
-  const dress = kind === 'primary' ? 'asc-cta-btn' : 'cta-secondary';
-  return h('a', { className: ['cta-link', dress], href }, ctx.slot('title'));
+  const dress = kind === 'primary' ? ['asc-cta-btn'] : ['asc-cta-btn', 'asc-cta-btn-secondary'];
+  return h('a', { className: ['cta-link', ...dress], href }, ctx.slot('title'));
 }
 
 const ctaAction = defineComponent({

@@ -163,7 +163,7 @@ Laylines. Tactical positioning at mark roundings. The rules as a tool, not just 
 The club's teaching culture doesn't stop at the end of the beginner class. Experienced sailors debrief after races and share what they saw on the course. [Skills & Drills Weekend](/education/) each June is specifically designed to sharpen racing skills before the season hits full stride. Ask questions on `#racing`. People will answer.
 
 ::::page-cta[Ready to try it?]
-Wet Wednesdays are the easiest way to start: arrive around 6:00 p.m. and we'll find you a spot on a boat. Dates are on the [Events page](/events/).
+Wet Wednesdays are the easiest way to start: arrive around 6:00 p.m. and we'll find you a spot on a boat.
 
 :::cta-action[See race dates]{href="/events/" kind="primary"}
 :::

@@ -21,7 +21,7 @@ describe(':::page-cta closer', () => {
     expect(html).toContain('class="page-cta-body"');
     expect(html).toContain("We're real people, happy to talk sailing.");
     expect(html).toContain('class="page-cta-actions"');
-    expect(html).toContain('class="cta-link cta-secondary"');
+    expect(html).toContain('class="cta-link asc-cta-btn asc-cta-btn-secondary"');
     expect(html).toContain('href="/contact/"');
     expect(html).toContain('Email us');
   });

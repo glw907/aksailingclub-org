@@ -548,10 +548,10 @@
   });
 </script>
 
-{#snippet tocList(items: TocItem[], activeItemId: string | null)}
+{#snippet tocList(items: TocItem[], activeItemId: string | null, nestedClass: string = 'ml-m')}
   <ul class="m-0 list-none p-0">
     {#each items as item (item.id)}
-      <li class={item.level === 3 ? 'ml-m' : ''}>
+      <li class={item.level === 3 ? nestedClass : ''}>
         <a href={`#${item.id}`} class={item.id === activeItemId ? 'toc-active' : ''}>{item.text}</a>
       </li>
     {/each}
@@ -672,13 +672,13 @@
     <details class="jump-links not-prose not-prose-links">
       <summary class="jump-links-label">On this page</summary>
       <nav aria-label="Jump to section">
-        {@render tocList(jumpLinks, null)}
+        {@render tocList(jumpLinks, null, 'toc-nested')}
       </nav>
     </details>
     <aside class="page-toc-rail not-prose not-prose-links">
       <p class="page-toc-heading">On this page</p>
       <nav aria-label="On this page">
-        {@render tocList(jumpLinks, highlightedId)}
+        {@render tocList(jumpLinks, highlightedId, 'toc-nested')}
       </nav>
     </aside>
     <!-- The page's own named groups (axis B, 2026-07-08): a hairline-and-label divider announces
@@ -1020,6 +1020,17 @@
     flex-wrap: wrap;
     gap: var(--spacing-2xs) var(--spacing-m);
   }
+  /* A plain vertical stack instead, gated on the same `:has(.toc-nested)` condition as the
+     group-separation rhythm below: a flex-wrap row lands sibling items of different sizes on the
+     SAME visual line at mismatched baselines the instant one carries more top margin than its
+     neighbor (measured on racing's own 15-item list, template round 1), so the nested tier needs
+     real block flow (matching the boxed-panel template's own always-vertical `.toc` disclosure
+     below) to read as group separation. Every other primary page's flat jump-list (education's
+     included) has no nested tier to misalign, so it keeps the original wrapping-pill layout,
+     pixel-unaffected. */
+  .jump-links:has(.toc-nested) :global(ul) {
+    display: block;
+  }
   @media (prefers-reduced-motion: reduce) {
     .jump-links-label::before {
       transition: none;
@@ -1105,6 +1116,49 @@
     color: var(--color-primary);
     font-weight: 650;
     box-shadow: 0 2px 0 var(--color-star-gold);
+  }
+
+  /* Nested tier (template round 1, VERDICT KEEP "much better",
+     docs/design-benchmark/template-round-1-arc.md): racing's own h3 subsections
+     (`NESTED_TOC_SLUGS` above) previously differed from their h2 siblings by indent alone (both
+     tiers measured 13.1px/500 at the probe). `tocList`'s `toc-nested` marker is stamped only for
+     this long-form rail/jump-list pair (the boxed-panel `.toc`/`.page-toc-sticky` system below
+     keeps the plain `ml-m` deep tab unchanged; only this pair was probed and ratified). A nested
+     link drops one step below its OWN container's top-level size via `calc(... * 0.85)`, not a
+     bare `0.85em`: both containers carry `not-prose`, so a literal `0.85em` would resolve against
+     the shared root ambient size rather than each container's own top-level size, rendering the
+     rail's nested tier LARGER than its own top-level instead of smaller. The rail's own weight
+     stays unstated here (its base rule already leaves every link at the browser default, and this
+     selector's own specificity would otherwise outrank `.toc-active` above and mute an active
+     nested item, so the tier's font-weight distinction rides on the jump-list only, where no
+     active state exists). Top-level items get their own `margin-top` for group separation between
+     h2 sections; nested items sit close underneath their own h2 instead, and the whole tier
+     indents 0.85rem rather than `ml-m`'s deeper 1.5rem tab. `:has(.toc-nested)` gates the whole
+     group-separation rhythm on the list actually carrying a nested tier: education's flat TOC
+     (and every other primary page's, since `NESTED_TOC_SLUGS` holds only racing today) has no
+     `.toc-nested` sibling to trigger it, so it stays pixel-unaffected, exactly as ratified. */
+  .jump-links:has(.toc-nested) li,
+  .page-toc-rail:has(.toc-nested) li {
+    margin-top: 0.45rem;
+  }
+  .jump-links:has(.toc-nested) li:first-child,
+  .page-toc-rail:has(.toc-nested) li:first-child {
+    margin-top: 0;
+  }
+  .jump-links li.toc-nested,
+  .page-toc-rail li.toc-nested {
+    margin-top: 0.1rem;
+    margin-left: 0.85rem;
+  }
+  :global(.site-main) .prose .jump-links li.toc-nested a {
+    font-size: calc(1em * 0.85);
+    font-weight: 400;
+    line-height: 1.35;
+    color: var(--color-muted);
+  }
+  :global(.site-main) .prose .page-toc-rail li.toc-nested a {
+    font-size: calc(var(--text-step--2) * 0.85);
+    line-height: 1.35;
   }
 
   /* The long-form page's own wide-breakout device (the Registration Path card row, and, since

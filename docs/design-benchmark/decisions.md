@@ -189,6 +189,43 @@ Dates are 2026-07-07/08 (the home convergence arc) unless noted.
   Applied to all five forms: join/apply, ContactForm, DonateForm, the class-signup form, and
   my-account.
 
+- **Post hero width: A, the reading measure (template round 1, ratified 2026-07-16, Geoff
+  live)**: a post's header image renders at the article's own reading measure, not a wider
+  breakout. Rider ruling: a post almost always carries one, so the template designs around the
+  photo as a structural constant at that measure (placement, aspect ratio, spacing against the
+  title block), not as an optional extra.
+
+- **Waitlists: the conformed spec-sheet skeleton, not a status-index mock (template round 1,
+  ratified 2026-07-16, Geoff live)**: the structural fork probed between the conformed spec-sheet
+  (round 3's own device) and a status-index mock settles on the spec-sheet, the shape round 3
+  already landed.
+
+- **CTA matched pair: one geometry, two skins (template round 1, ratified 2026-07-16, Geoff
+  live)**: a page-cta's primary and secondary actions share the same `.asc-cta-btn` geometry
+  (display, size, weight, padding, radius, transition) instead of two unrelated button families
+  (racing's own "Ready to try it?" pair measured inverted, a 62px/18px chassis secondary beside a
+  44px/15.2px fireweed primary; the membership-open bulletin's Join/Renew pair carried the same
+  defect). Secondary rides an `asc-cta-btn-secondary` modifier: a quiet ghost skin (transparent
+  ground, a primary-tinted border, primary ink, no shadow), a one-step hover/active deepening on
+  the same axis, the site's one focus recipe. `:::cta-action`'s `kind="secondary"` maps to this
+  pair sitewide, not only where a matched pair appears, so every closer with a single secondary
+  action (join, new-member-guide, visiting-the-club, it-request, club-boat-use-and-qualification,
+  confirmation) inherits the same quieter geometry too.
+
+- **TOC nested tier: a real sub-register, not indent alone (template round 1, ratified
+  2026-07-16, Geoff live: "much better")**: a long-form page's own h3 subsections (racing today,
+  via `NESTED_TOC_SLUGS`) render one step down from their h2 siblings in the jump-list/gutter-rail
+  pair: 0.85x the tier's own top-level size, weight 400, muted ink, a tighter line-height, indented
+  0.85rem rather than the deep `ml-m` tab, and grouped close beneath their own h2 with real
+  separation between h2 groups. The boxed-panel `.toc`/`.page-toc-sticky` system (bylaws and the
+  rest of the long secondary catalog) keeps its own plain indent-only treatment unchanged; only the
+  long-form rail/jump-list pair was probed and ratified.
+
+- **Em dashes: banned from UI copy sitewide (Geoff, 2026-07-16, from the portal round's own copy
+  ruling)**: the round-3 asset-row "name — detail" delimiter retires for structural label/value or
+  middot separation. The ruling originated on the portal but binds every future UI copy decision,
+  not the portal alone.
+
 ## Benchmark provenance
 
 Pinned by the owner 2026-07-08 ("that's our new design benchmark"): the home page at commit

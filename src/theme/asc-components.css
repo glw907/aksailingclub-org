@@ -446,6 +446,43 @@
     cursor: not-allowed;
   }
 
+  /* ─── Action button, secondary: the matched-pair ghost (template round 1, 2026-07-16) ──── */
+  /* Racing's "Ready to try it?" pair measured inverted (a 62px/18px chassis `.cta-secondary`
+     beside a 44px/15.2px `.asc-cta-btn` primary, two unrelated button families); the
+     membership-open bulletin's Join/Renew pair had the same defect. VERDICT A (matched pair,
+     docs/design-benchmark/template-round-1-arc.md): one geometry, two skins, the same grammar
+     home's own two-tier CTA pair already uses. This modifier rides alongside `.asc-cta-btn`
+     (never alone), so it inherits that class's geometry (display, size, weight, padding,
+     radius, transition) exactly, and only overrides the skin: transparent ground, a quiet
+     primary-tinted border in place of the solid fireweed fill, ink instead of white text, no
+     shadow. `.prose .page-cta .asc-cta-btn`'s top-margin rule above still reaches a lone
+     secondary action the same as a lone primary one, since it targets `.asc-cta-btn` alone. */
+  .prose .asc-cta-btn.asc-cta-btn-secondary,
+  button.asc-cta-btn.asc-cta-btn-secondary {
+    background: transparent;
+    color: var(--color-primary);
+    border: 1px solid color-mix(in oklab, var(--color-primary) 45%, transparent);
+    box-shadow: none;
+  }
+  .prose .asc-cta-btn.asc-cta-btn-secondary:hover,
+  button.asc-cta-btn.asc-cta-btn-secondary:hover {
+    background: transparent;
+    border-color: color-mix(in oklab, var(--color-primary) 65%, transparent);
+    color: color-mix(in oklab, var(--color-primary), black 8%);
+  }
+  /* The press-state one-step rule (same axis as hover, one step further, instant): matches the
+     primary skin's own `:active` above. */
+  .prose .asc-cta-btn.asc-cta-btn-secondary:active,
+  button.asc-cta-btn.asc-cta-btn-secondary:active {
+    background: transparent;
+    border-color: color-mix(in oklab, var(--color-primary) 85%, transparent);
+    color: color-mix(in oklab, var(--color-primary), black 12%);
+    transition: none;
+  }
+  /* Focus-visible needs no restatement: the base `.asc-cta-btn:focus-visible` rule above already
+     draws the site's one focus recipe (2px solid primary, 2px offset), and this modifier changes
+     no property that rule touches. */
+
   /* ─── Page CTA: the sitewide closing panel (generalized 2026-07-15) ────── */
   /* Ends a content page's "Questions?"-style section (education, join, members, visiting,
      renewing, new-member-guide; home is the ratified exception and keeps its own close). The
