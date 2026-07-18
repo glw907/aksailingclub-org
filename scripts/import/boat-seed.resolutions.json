@@ -1,5 +1,36 @@
 {
-  "owners": {},
-  "drop": [],
-  "model": {}
+  "owners": {
+    "ops-assignment-15": "1e8cabe3-53c8-4da2-a551-47340f665d79",
+    "ops-assignment-28": "a3879add-a25b-40a6-8f76-a12da8264a14",
+    "ops-assignment-29": "d176c5d1-6352-4ce5-a732-698495289532",
+    "ops-assignment-33": "53818edd-46b2-4a1e-b8ba-15394fe3990b",
+    "ops-assignment-47": "be784189-e32b-4633-9466-60e4e7de5dd1",
+    "ops-assignment-52": "00c95eec-cb7f-4e31-a393-2119c0f0fa16",
+    "ops-assignment-53": "1e8cabe3-53c8-4da2-a551-47340f665d79",
+    "ops-assignment-66": "27f7a46b-68cc-45f6-bc6f-1ac1e0617c0f",
+    "ops-assignment-67": "dd671ce4-6fce-4642-8cf7-1daee4b3c05c",
+    "ops-assignment-69": "428fe55c-bafd-4366-af9d-9332911e64c0",
+    "ops-assignment-79": "69f8bc70-0ec1-492d-a6f3-9d466d8325b1",
+    "ops-assignment-80": "97b25c62-1e2b-4e99-9454-df4ecab82923",
+    "ops-assignment-81": "97b25c62-1e2b-4e99-9454-df4ecab82923",
+    "ops-assignment-82": "d70aa59d-2991-44b2-9d48-4b63ea910018",
+    "ops-assignment-90": "892d5445-527b-4460-9e0a-aa7b9736d8a3",
+    "ops-assignment-91": "cc6bb1df-5b84-4c4a-a3bc-16a3030d0b11",
+    "ops-assignment-92": "fda02e45-a42e-4e05-8418-37fdd66347d6",
+    "ops-assignment-105": "88b281b6-53f3-4251-a54c-7f6a7daab6a7"
+  },
+  "drop": ["ops-assignment-104"],
+  "model": {
+    "ops-assignment-29": "Demon 16",
+    "ops-assignment-53": "Powerboat",
+    "ops-assignment-81": "Laser II",
+    "ops-assignment-85": "Megabyte"
+  },
+  "names": {
+    "ops-assignment-15": "Dionysus",
+    "ops-assignment-53": "Bat Boat",
+    "ops-assignment-87": "Spirit of 76",
+    "ops-assignment-90": "Black, Nancy",
+    "ops-assignment-91": "Daydream Believer"
+  }
 }
