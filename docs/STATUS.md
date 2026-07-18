@@ -41,7 +41,11 @@ verified-import, misses audited; Geoff supplies plain-director rows at import re
 deltas: T1 grows to four tables, NEW T2b (committees+people seeder), T5 = boats + extended
 preview only, T6 = whole-model admin CRUD, NEW T6b (portal committees page + delegation +
 public directive; server-side predicate tests including denial cases), T7 adds
-web-auth-security-reviewer on the new authz surface (the pass's riskiest).
+web-auth-security-reviewer on the new authz surface (the pass's riskiest). SITTING SCORE: 4
+interaction points (committee list; bylaws redirect; one batched 4-question round; join-gate
+correction + the board-powers addition folded into the same exchange) — the bylaws redirect
+saved a question round that grounded three decisions. Tokens: not self-measurable; log from
+/cost before clearing if the number should join the trend ledger.
 
 **FRAGMENTS MIGRATION & DX/CONTRACT HARVEST: SHIPPED TO DEV 2026-07-17 (PR #2, Opus-conducted).
 The site runs cairn ^0.87.0 with the fragments concept live. TWO THINGS ARE OPEN AND NEITHER IS
