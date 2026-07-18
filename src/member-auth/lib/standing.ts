@@ -120,22 +120,36 @@ function plusDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
-interface StandingWindow {
+export interface StandingWindow {
   status: 'current' | 'grace' | 'lapsed';
   expiry: Date;
   graceEnd: Date;
 }
 
-/** The current/grace/lapsed transition, computed once off a grounding row's `paid_at` and the
- *  Club's `renewal_grace_days` setting: shared by {@link getHouseholdStanding} (status only) and
- *  {@link getMemberStanding} (status plus the display-shaped `expiresOn`/`graceEndsOn`/`statusLine`)
- *  so the boundary math lives in exactly one place. */
-async function standingWindowFor(db: D1Database, paidAt: string, now: Date): Promise<StandingWindow> {
-  const graceDays = await getRenewalGraceDays(db);
+/**
+ * The current/grace/lapsed transition off a raw `paid_at` value and an already-known grace-window
+ * length -- no database access, so a batch reader (the directory's own listing rule,
+ * `member-portal/lib/directory.ts`'s `listDirectory`) can derive every household's standing from
+ * ONE `getRenewalGraceDays` read plus a set-based grounding query, rather than paying this
+ * module's own per-row `standingWindowFor` round trip once per member. This is the module's one
+ * definition of the rolling-renewal boundary (this file's own header); a caller reuses this
+ * function rather than re-deriving the math against its own SQL.
+ */
+export function standingWindowFromPaidAt(paidAt: string, graceDays: number, now: Date): StandingWindow {
   const expiry = plusOneYear(parseMemberDate(paidAt));
   const graceEnd = plusDays(expiry, graceDays);
   const status: 'current' | 'grace' | 'lapsed' = now <= expiry ? 'current' : now <= graceEnd ? 'grace' : 'lapsed';
   return { status, expiry, graceEnd };
+}
+
+/** The current/grace/lapsed transition, computed once off a grounding row's `paid_at` and the
+ *  Club's `renewal_grace_days` setting: shared by {@link getHouseholdStanding} (status only) and
+ *  {@link getMemberStanding} (status plus the display-shaped `expiresOn`/`graceEndsOn`/`statusLine`)
+ *  so the boundary math lives in exactly one place. A thin async wrapper over
+ *  {@link standingWindowFromPaidAt}, which carries the actual math. */
+async function standingWindowFor(db: D1Database, paidAt: string, now: Date): Promise<StandingWindow> {
+  const graceDays = await getRenewalGraceDays(db);
+  return standingWindowFromPaidAt(paidAt, graceDays, now);
 }
 
 /**

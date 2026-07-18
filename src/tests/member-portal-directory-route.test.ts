@@ -1,6 +1,6 @@
 // /my-account/directory's own `load`: the member-session gate (redirects a signed-out visitor
 // the same way every other /my-account/** page does) and the degraded-vs-empty distinction
-// (`households` is `null` only when CLUB_DB itself is unavailable).
+// (`entries` is `null` only when CLUB_DB itself is unavailable).
 import { describe, expect, it } from 'vitest';
 import { isRedirect } from '@sveltejs/kit';
 import type { Redirect } from '@sveltejs/kit';
@@ -35,15 +35,15 @@ describe('/my-account/directory load', () => {
     expect((caught as Redirect).location).toBe('/my-account');
   });
 
-  it('returns households: null when CLUB_DB is not bound (the degraded state)', async () => {
+  it('returns entries: null when CLUB_DB is not bound (the degraded state)', async () => {
     const result = (await load(eventFor(MEMBER, undefined))) as LoadResult;
-    expect(result.households).toBeNull();
+    expect(result.entries).toBeNull();
   });
 
   it('returns an empty list when no member is currently listed (the empty state)', async () => {
     const { db } = fakeD1({ allResults: { 'FROM members m': [] } });
     const result = (await load(eventFor(MEMBER, db))) as LoadResult;
-    expect(result.households).toEqual([]);
+    expect(result.entries).toEqual([]);
   });
 
   it('returns the directory for a signed-in member', async () => {
@@ -51,20 +51,26 @@ describe('/my-account/directory load', () => {
       allResults: {
         'FROM members m': [
           {
-            household_id: 'hh-1',
-            household_name: 'The Scratches',
-            household_city: 'Anchorage',
             member_id: 'mem-1',
             member_name: 'Vera Visible',
             email: 'vera@example.com',
             phone: '+19075550100',
             directory_visibility: 'visible',
+            household_id: 'hh-1',
+            household_name: 'The Scratches',
+            household_city: 'Anchorage',
+            address_line1: null,
+            address_line2: null,
+            state: null,
+            postal_code: null,
+            paid_at: new Date().toISOString().slice(0, 10),
           },
         ],
       },
+      firstResults: { "'renewal_grace_days'": { value: '30' } },
     });
     const result = (await load(eventFor(MEMBER, db))) as LoadResult;
-    expect(result.households).toHaveLength(1);
-    expect(result.households![0].members[0].name).toBe('Vera Visible');
+    expect(result.entries).toHaveLength(1);
+    expect(result.entries![0].name).toBe('Vera Visible');
   });
 });

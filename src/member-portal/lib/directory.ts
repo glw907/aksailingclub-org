@@ -1,12 +1,21 @@
 // The member directory (design doc's own "member directory" benefit, MembershipWorks absorption
-// item 4): reads `members.directory_visibility` directly off 0005_member_domain's own schema, the
-// same three-state column `household.ts`'s `setDirectoryVisibility` writes. `hidden` and archived
-// members never leave this module: an archived member is excluded from the directory by default,
-// the same as every other list. `partial`
-// members appear by name only; `visible` members carry their one email and one phone too. There
-// is no per-field suppression column, so a `partial` row's contact fields are simply `null` here
-// rather than the caller having to know which state means what.
+// item 4; reshaped for the roles-and-committees model, docs/2026-07-17-roles-committees-design.md,
+// and the directory plan's T3): one row per LISTED member (the Compact A composition ratified at
+// T0 renders a row per member, not a household card), joining `households`, `boats` (by
+// `boats.member_id` -- a boat shows on its OWNER only, never a household-mate), `member_positions`,
+// and active `committee_members` (with their committee's name, excluding an archived committee and
+// any pending request). `hidden` and archived members never leave this module, the same as before;
+// LISTING NOW ALSO REQUIRES current-or-grace standing (directory spec decision 8), sourced from
+// `$member-auth/lib/standing`'s own `standingWindowFromPaidAt` -- the unified-signup machinery's one
+// definition of the rolling paid_at-plus-one-year-plus-grace boundary -- rather than a
+// directory-local clock. Every household's standing derives from ONE set-based grounding query (a
+// correlated subquery per household picks its own most recently paid, non-refunded `memberships`
+// row, mirroring `admin-club/lib/households-store.ts`'s own `HOUSEHOLD_GROUNDING_SQL`) plus one
+// `getRenewalGraceDays` read, never a per-member standing lookup: the directory's read stays four
+// queries regardless of club size.
 import type { D1Database } from '@cloudflare/workers-types';
+import { getRenewalGraceDays } from '$admin-club/lib/club-settings';
+import { standingWindowFromPaidAt } from '$member-auth/lib/standing';
 import type { DirectoryVisibility } from './household';
 
 /** A stored E.164 `+1` number (10 digits after the country code), the shape `profile.ts`'s own
@@ -26,69 +35,240 @@ export function formatPhone(phone: string): string {
   return `+1 (${area}) ${prefix}-${line}`;
 }
 
-/** One listed member, as the directory renders it. `email`/`phone` are `null` for a `partial`
- *  listing (name only) as well as for a member who genuinely has neither on file; the caller does
- *  not need to distinguish the two, since both render the same way (no contact line). */
-export interface DirectoryMember {
-  id: string;
-  name: string;
+/** `member_positions.kind`: authorization hangs off this column (roles spec decision 3), never a
+ *  title-string match; the directory only ever displays it alongside `title`. */
+export type PositionKind = 'officer' | 'director' | 'appointed';
+
+/** `committee_members.role`. */
+export type CommitteeRole = 'chair' | 'co-chair' | 'member';
+
+/** `boats.kept_on`. */
+export type BoatKeptOn = 'trailer' | 'mooring';
+
+/** One `member_positions` row, as the directory renders it (T4's filled title chip). */
+export interface DirectoryPosition {
+  kind: PositionKind;
+  title: string;
+  sortOrder: number;
+}
+
+/** One active committee membership. `title` DERIVES here from `role` and the committee's own
+ *  `name` ("{committee.name} Chair" / "Co-Chair") and is never stored (roles spec decision 2); it
+ *  is `null` for a plain `'member'` row, which T4 renders as the quieter outline marker instead of
+ *  a filled chip. */
+export interface DirectoryCommitteeMembership {
+  committeeName: string;
+  role: CommitteeRole;
+  title: string | null;
+}
+
+/** One boat, attributed to its owning member (never a household-mate). */
+export interface DirectoryBoat {
+  name: string | null;
+  model: string;
+  keptOn: BoatKeptOn;
+}
+
+/** A listed member's household-level address, gated the same way as `email`/`phone`: `null` for a
+ *  `partial` listing, populated only at `visible` (directory spec's "Revisions" block). `city`
+ *  travels here too even though it is not itself gated (see {@link DirectoryEntry.household}),
+ *  since the visible tier's full postal address reads as one block. */
+export interface DirectoryAddress {
+  line1: string | null;
+  line2: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+}
+
+/** A listed member's contact facts, all three gated together by `directory_visibility`: `null`
+ *  for a `partial` listing (name-only, per decision 7) as well as for a `visible` member who
+ *  genuinely has nothing on file; the caller does not need to distinguish the two. */
+export interface DirectoryContact {
   email: string | null;
   phone: string | null;
+  address: DirectoryAddress | null;
 }
 
-/** One household's listed members, grouped for the directory's card-per-household layout. A
- *  household with zero listed members (everyone hidden or archived) never appears at all. */
-export interface DirectoryHousehold {
+/** One listed member, the directory's per-row unit under the ratified Compact A composition.
+ *  `household.city` and `household.name` are shown for every listed member regardless of
+ *  visibility (only the sensitive fields in {@link DirectoryContact} are gated); `secondary` is
+ *  the row's one derived at-rest datum -- a summary of the member's own boats when they own any,
+ *  else the household's city -- that the compact resting row renders directly. */
+export interface DirectoryEntry {
   id: string;
   name: string;
-  city: string | null;
-  members: DirectoryMember[];
+  household: { name: string; city: string | null };
+  secondary: string | null;
+  positions: DirectoryPosition[];
+  memberships: DirectoryCommitteeMembership[];
+  boats: DirectoryBoat[];
+  contact: DirectoryContact;
 }
 
-interface DirectoryRow {
-  household_id: string;
-  household_name: string;
-  household_city: string | null;
+interface DirectoryGroundingRow {
   member_id: string;
   member_name: string;
   email: string | null;
   phone: string | null;
   directory_visibility: DirectoryVisibility;
+  household_id: string;
+  household_name: string;
+  household_city: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  state: string | null;
+  postal_code: string | null;
+  /** The household's own grounding `memberships` row's `paid_at` (most recently paid,
+   *  non-refunded), or `null` when it has never had one -- the same "grounding row" concept
+   *  `$member-auth/lib/standing.ts` and `$admin-club/lib/households-store.ts` each read, here via
+   *  a matching correlated subquery so this stays one set-based query. */
+  paid_at: string | null;
+}
+
+/** Every listed member, plus each household's own grounding row in one query: mirrors
+ *  `households-store.ts`'s own `HOUSEHOLD_GROUNDING_SQL` subquery shape so the "most recently
+ *  paid, non-refunded row" concept reads identically in both places. */
+const DIRECTORY_GROUNDING_SQL = `
+  SELECT m.id AS member_id, m.name AS member_name, m.email, m.phone, m.directory_visibility,
+         h.id AS household_id, h.name AS household_name, h.city AS household_city,
+         h.address_line1, h.address_line2, h.state, h.postal_code,
+         gm.paid_at
+  FROM members m
+  JOIN households h ON h.id = m.household_id
+  LEFT JOIN memberships gm ON gm.id = (
+    SELECT id FROM memberships mm
+    WHERE mm.household_id = h.id AND mm.paid_at IS NOT NULL AND mm.refunded_at IS NULL
+    ORDER BY mm.paid_at DESC LIMIT 1
+  )
+  WHERE m.archived_at IS NULL AND m.directory_visibility != 'hidden'
+  ORDER BY m.name
+`;
+
+interface BoatRawRow {
+  member_id: string;
+  name: string | null;
+  model: string;
+  kept_on: BoatKeptOn;
+}
+
+interface PositionRawRow {
+  member_id: string;
+  kind: PositionKind;
+  title: string;
+  sort_order: number;
+}
+
+interface CommitteeMembershipRawRow {
+  member_id: string;
+  role: CommitteeRole;
+  committee_name: string;
+}
+
+/** Group `rows` by `keyOf(row)`, preserving each group's own relative order. */
+function groupBy<T>(rows: T[], keyOf: (row: T) => string): Map<string, T[]> {
+  const byKey = new Map<string, T[]>();
+  for (const row of rows) {
+    const key = keyOf(row);
+    const group = byKey.get(key);
+    if (group) group.push(row);
+    else byKey.set(key, [row]);
+  }
+  return byKey;
+}
+
+/** Chair titles derive here ("{committeeName} Chair" / "Co-Chair"), never stored (roles spec
+ *  decision 2); a plain `'member'` role carries no derived title. */
+function derivedCommitteeTitle(role: CommitteeRole, committeeName: string): string | null {
+  if (role === 'chair') return `${committeeName} Chair`;
+  if (role === 'co-chair') return `${committeeName} Co-Chair`;
+  return null;
 }
 
 /**
- * Every listed member, grouped by household, households and members both in the query's own
- * name order (no client-side re-sort needed). Excludes `hidden` and archived members at the SQL
- * level, so a caller can render the result directly with no further filtering for visibility.
+ * Every listed member: non-archived, non-hidden (`directory_visibility != 'hidden'`), and
+ * current-or-grace standing (directory spec decision 8), in member-name order. Standing is
+ * derived from each household's own grounding `memberships` row via
+ * {@link standingWindowFromPaidAt} -- `$member-auth/lib/standing`'s shared boundary math -- off a
+ * SINGLE `getRenewalGraceDays` read, never a per-member standing lookup. A household that has
+ * never had a paid row reads the same as a lapsed one for listing purposes (folding into
+ * `getMemberStanding`'s own "no membership on file" convention) and is excluded.
+ *
+ * Boats, positions, and active committee memberships (chair titles derived, pending rows and
+ * archived committees excluded) each read from one set-based query and are grouped in JS by
+ * `member_id`, so the whole read costs four queries regardless of club size. A boat attributes to
+ * its own owning member (`boats.member_id`) only, never a household-mate.
  */
-export async function listDirectory(db: D1Database): Promise<DirectoryHousehold[]> {
-  const { results } = await db
-    .prepare(
-      `SELECT h.id AS household_id, h.name AS household_name, h.city AS household_city,
-              m.id AS member_id, m.name AS member_name, m.email, m.phone, m.directory_visibility
-       FROM members m
-       JOIN households h ON h.id = m.household_id
-       WHERE m.archived_at IS NULL AND m.directory_visibility != 'hidden'
-       ORDER BY h.name, m.name`,
-    )
-    .all<DirectoryRow>();
+export async function listDirectory(db: D1Database): Promise<DirectoryEntry[]> {
+  const now = new Date();
+  const [groundingResult, boatsResult, positionsResult, membershipsResult, graceDays] = await Promise.all([
+    db.prepare(DIRECTORY_GROUNDING_SQL).all<DirectoryGroundingRow>(),
+    db.prepare('SELECT member_id, name, model, kept_on FROM boats ORDER BY name').all<BoatRawRow>(),
+    db
+      .prepare('SELECT member_id, kind, title, sort_order FROM member_positions ORDER BY sort_order, title')
+      .all<PositionRawRow>(),
+    db
+      .prepare(
+        `SELECT cm.member_id, cm.role, c.name AS committee_name
+         FROM committee_members cm
+         JOIN committees c ON c.id = cm.committee_id
+         WHERE cm.status = 'active' AND c.archived_at IS NULL
+         ORDER BY c.name`,
+      )
+      .all<CommitteeMembershipRawRow>(),
+    getRenewalGraceDays(db),
+  ]);
 
-  const households: DirectoryHousehold[] = [];
-  const byId = new Map<string, DirectoryHousehold>();
-  for (const row of results) {
-    let household = byId.get(row.household_id);
-    if (!household) {
-      household = { id: row.household_id, name: row.household_name, city: row.household_city, members: [] };
-      byId.set(row.household_id, household);
-      households.push(household);
-    }
+  const boatsByMember = groupBy(boatsResult.results, (row) => row.member_id);
+  const positionsByMember = groupBy(positionsResult.results, (row) => row.member_id);
+  const membershipsByMember = groupBy(membershipsResult.results, (row) => row.member_id);
+
+  const entries: DirectoryEntry[] = [];
+  for (const row of groundingResult.results) {
+    const status = row.paid_at ? standingWindowFromPaidAt(row.paid_at, graceDays, now).status : 'lapsed';
+    if (status !== 'current' && status !== 'grace') continue;
+
     const exposesContact = row.directory_visibility === 'visible';
-    household.members.push({
+    const boats: DirectoryBoat[] = (boatsByMember.get(row.member_id) ?? []).map((boat) => ({
+      name: boat.name,
+      model: boat.model,
+      keptOn: boat.kept_on,
+    }));
+    const positions: DirectoryPosition[] = (positionsByMember.get(row.member_id) ?? []).map((position) => ({
+      kind: position.kind,
+      title: position.title,
+      sortOrder: position.sort_order,
+    }));
+    const memberships: DirectoryCommitteeMembership[] = (membershipsByMember.get(row.member_id) ?? []).map((membership) => ({
+      committeeName: membership.committee_name,
+      role: membership.role,
+      title: derivedCommitteeTitle(membership.role, membership.committee_name),
+    }));
+
+    const secondary = boats.length > 0 ? boats.map((boat) => boat.name ?? boat.model).join(', ') : row.household_city;
+
+    entries.push({
       id: row.member_id,
       name: row.member_name,
-      email: exposesContact ? row.email : null,
-      phone: exposesContact ? row.phone : null,
+      household: { name: row.household_name, city: row.household_city },
+      secondary,
+      positions,
+      memberships,
+      boats,
+      contact: {
+        email: exposesContact ? row.email : null,
+        phone: exposesContact ? row.phone : null,
+        address: exposesContact
+          ? {
+              line1: row.address_line1,
+              line2: row.address_line2,
+              city: row.household_city,
+              state: row.state,
+              postalCode: row.postal_code,
+            }
+          : null,
+      },
     });
   }
-  return households;
+  return entries;
 }
