@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeAddressCell, planAddressSeed } from '../../scripts/import/household-address-seed.mjs';
+import { normalizeAddressCell, planAddressSeed, toTitleCase } from '../../scripts/import/household-address-seed.mjs';
+
+describe('toTitleCase', () => {
+  it('title-cases an ALL CAPS street', () => {
+    expect(toTitleCase('3008 BROOKSIDE DR')).toBe('3008 Brookside Dr');
+  });
+
+  it('keeps PO capitalized in a PO Box address', () => {
+    expect(toTitleCase('PO BOX 672445')).toBe('PO Box 672445');
+  });
+
+  it('keeps a directional exception capitalized mid-string', () => {
+    expect(toTitleCase('1234 NE OAK ST')).toBe('1234 NE Oak St');
+  });
+
+  it('is idempotent on already-good input', () => {
+    expect(toTitleCase('5685 N. Tahoe Dr')).toBe('5685 N. Tahoe Dr');
+  });
+});
 
 describe('normalizeAddressCell', () => {
   it('trims surrounding whitespace', () => {
@@ -60,6 +78,15 @@ describe('planAddressSeed', () => {
         'Address (Postal Code)': '',
       },
     ],
+    [
+      'acc-caps',
+      {
+        'Account ID': 'acc-caps',
+        'Address (Street)': '3008 BROOKSIDE DR',
+        'Address (State/Province)': 'AK',
+        'Address (Postal Code)': '99801',
+      },
+    ],
   ]);
 
   it('plans a full-address update for a household with all three columns null', () => {
@@ -85,6 +112,30 @@ describe('planAddressSeed', () => {
       },
     ]);
     expect(plan.skipped).toEqual([]);
+  });
+
+  it('title-cases an ALL CAPS export street when planning address_line1, leaving state verbatim', () => {
+    const households = [
+      {
+        id: 'h-8',
+        name: 'The Caps',
+        primary_member_id: 'm-8',
+        address_line1: null,
+        state: null,
+        postal_code: null,
+        mw_account_id: 'acc-caps',
+      },
+    ];
+    const plan = planAddressSeed(households, exportByAccountId);
+    expect(plan.updates).toEqual([
+      {
+        householdId: 'h-8',
+        householdName: 'The Caps',
+        address_line1: '3008 Brookside Dr',
+        state: 'AK',
+        postal_code: '99801',
+      },
+    ]);
   });
 
   it('plans a partial update touching only the one column that is still null', () => {

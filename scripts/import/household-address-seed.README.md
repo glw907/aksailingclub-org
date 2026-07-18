@@ -26,8 +26,10 @@ households SET address_line1 = ? WHERE id = ? AND address_line1 IS NULL` (and li
 - A household that already has a street but is missing, say, only `postal_code` gets an update
   touching just that one column.
 
-Address text is stored **verbatim** from the export. Some rows are ALL CAPS; re-casing free-typed
-street text is error-prone and is left to a later polish pass, not this importer.
+`address_line1` is stored **Title Case** (some export rows are ALL CAPS, e.g. `3008 BROOKSIDE
+DR` becomes `3008 Brookside Dr`; a small exceptions list keeps `PO`/`NE`/`NW`/`SE`/`SW`
+capitalized). `state` and `postal_code` are stored **verbatim** from the export, never re-cased
+(`state` must stay e.g. `AK`, never `Ak`).
 
 ## Skip reasons
 

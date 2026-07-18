@@ -26,10 +26,11 @@
  * either the picker value or the free-typed "Other" text). This is an honest "we do not
  * know", never a guess dressed as data.
  *
- * NAME NEVER BACKFILLS FROM FREE TEXT: every seeded boat's `name` is NULL, even where a name
- * is visible in the raw description (e.g. "Dionysus"). Name capture is required going
- * forward, not retroactively; the raw description survives in the audit `detail` so Geoff can
- * hand-add a name later.
+ * NAME NEVER BACKFILLS FROM FREE TEXT AUTOMATICALLY: a seeded boat's `name` is NULL unless
+ * `resolutions.names` names one for that assignment id, even where a name is visible in the raw
+ * description (e.g. "Dionysus"). Name capture is otherwise required going forward, not
+ * retroactively; the raw description survives in the audit `detail` so Geoff can hand-add a
+ * name later through the resolutions file or a real member edit.
  *
  * INSERT-IF-ABSENT ONLY, NEVER UPDATE: unlike `ops-assets.mjs`'s natural-key upsert, boats
  * will receive real member edits once T5 ships an edit surface, so a re-run of this seeder
@@ -39,9 +40,11 @@
  * RESOLUTIONS FILE (`boat-seed.resolutions.json`, committed, git-reviewable): `owners` maps an
  * ambiguous assignment id to the member id Geoff picked; `drop` lists an assignment id that is
  * not a real boat (or a duplicate) and should never seed; `model` overrides a parsed model
- * call with a plain string. Member ids are opaque UUIDs with no PII, so this file is safe to
- * commit. The dry-run reads it fresh every run, so the loop is: dry-run, Geoff fills the file
- * from the report, dry-run again, apply.
+ * call with a plain string; `names` maps an assignment id to the boat's name, where Geoff
+ * supplied one at review -- everything else seeds with `name` left `NULL` for members to name
+ * their own boats going forward. Member ids are opaque UUIDs with no PII, so this file is safe
+ * to commit. The dry-run reads it fresh every run, so the loop is: dry-run, Geoff fills the
+ * file from the report, dry-run again, apply.
  *
  * Usage:
  *   node scripts/import/boat-seed.mjs --dry-run [--club-db-name NAME]
@@ -186,7 +189,7 @@ export function resolveOwner(assignmentId, householdId, membersByHousehold, reso
  * @typedef {object} BoatSeedRow
  * @property {string} id `boat-<assignmentId>`, the idempotency key
  * @property {string} member_id
- * @property {null} name always null; see the module header
+ * @property {string | null} name `resolutions.names[assignmentId]` when present, else null
  * @property {string} model
  * @property {null} sail_number
  * @property {'mooring' | 'trailer'} kept_on
@@ -231,7 +234,7 @@ export function resolveOwner(assignmentId, householdId, membersByHousehold, reso
  * @param {{
  *   membersByHousehold: Map<string, { id: string, name: string }[]>,
  *   primaryByHousehold?: Map<string, string>,
- *   resolutions: { owners?: Record<string, string>, drop?: string[], model?: Record<string, string> },
+ *   resolutions: { owners?: Record<string, string>, drop?: string[], model?: Record<string, string>, names?: Record<string, string> },
  * }} context
  * @returns {{ seed: BoatSeedRow[], held: HeldRow[], dropped: DroppedRow[], skipped: SkippedRow[] }}
  */
@@ -277,7 +280,7 @@ export function planBoatSeed(assignments, { membersByHousehold, primaryByHouseho
     seed.push({
       id: `boat-${src.id}`,
       member_id: owner.memberId,
-      name: null,
+      name: resolutions.names?.[src.id] ?? null,
       model: modelValue,
       sail_number: null,
       kept_on: keptOnFor(src.asset_type),
@@ -314,7 +317,7 @@ function query(dbName, sql) {
 }
 
 /** Reads the committed resolutions file fresh every run.
- * @returns {{ owners: Record<string, string>, drop: string[], model: Record<string, string> }} */
+ * @returns {{ owners: Record<string, string>, drop: string[], model: Record<string, string>, names: Record<string, string> }} */
 function readResolutions() {
   const raw = readFileSync(RESOLUTIONS_PATH, 'utf8');
   return JSON.parse(raw);
@@ -345,7 +348,8 @@ function renderWorksheet(plan, memberNameById, householdNameById, releasedExclud
   for (const row of plan.seed) {
     lines.push(
       `- ${row.sourceAssignmentId}: "${row.rawDescription ?? ''}" -> ${row.model}, ` +
-        `kept_on=${row.kept_on}, owner=${memberNameById.get(row.member_id) ?? row.member_id} (${row.ownerBasis})`,
+        `kept_on=${row.kept_on}, owner=${memberNameById.get(row.member_id) ?? row.member_id} (${row.ownerBasis})` +
+        (row.name != null ? `, name="${row.name}"` : ''),
     );
   }
   if (plan.seed.length === 0) lines.push('(none)');
@@ -463,6 +467,7 @@ async function main() {
       ownerBasis: row.ownerBasis,
       model: row.model,
       keptOn: row.kept_on,
+      name: row.name,
     });
     statements.push(
       `INSERT INTO audit_log (actor, action, entity, entity_id, detail) VALUES ('import:boat-seed', 'import.insert', 'boat', ${sqlLiteral(row.id)}, ${sqlLiteral(detail)});`,

@@ -12,9 +12,9 @@
  *
  * UPDATE-IF-NULL ONLY: this seeder only ever fills a column that is currently `NULL` on the
  * household. It never overwrites a value a member has since edited by hand, so a re-run (or a
- * run after a real edit) converges to a no-op on every column it has already filled. Values are
- * stored VERBATIM from the export -- some rows are ALL CAPS -- re-casing free-typed street text
- * is error-prone and left to a later polish pass.
+ * run after a real edit) converges to a no-op on every column it has already filled.
+ * `address_line1` is stored Title Case (some export rows are ALL CAPS, e.g. `3008 BROOKSIDE
+ * DR`); `state` and `postal_code` are stored verbatim from the export, never re-cased.
  *
  * Usage:
  *   node scripts/import/household-address-seed.mjs --dry-run [--source PATH]
@@ -62,6 +62,29 @@ export function normalizeAddressCell(value) {
   if (value == null) return null;
   const trimmed = value.trim();
   return trimmed === '' ? null : trimmed;
+}
+
+/** Address tokens that stay upper-case rather than following the plain title-case rule. */
+const TITLE_CASE_EXCEPTIONS = new Set(['PO', 'NE', 'NW', 'SE', 'SW']);
+
+/**
+ * Title-cases a street address for storage (some export rows are ALL CAPS, e.g. `3008
+ * BROOKSIDE DR`). Splits on whitespace, upper-cases each word's first character and
+ * lower-cases the rest, then re-upper-cases a small set of address tokens
+ * ({@link TITLE_CASE_EXCEPTIONS}) so they stay capitalized. Idempotent on already-good input;
+ * preserves the original single-space joining.
+ * @param {string} value
+ * @returns {string}
+ */
+export function toTitleCase(value) {
+  return value
+    .split(' ')
+    .map((word) => {
+      if (word === '') return word;
+      if (TITLE_CASE_EXCEPTIONS.has(word.toUpperCase())) return word.toUpperCase();
+      return word[0].toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
 }
 
 /**
@@ -130,7 +153,7 @@ export function planAddressSeed(households, exportByAccountId) {
 
     /** @type {AddressUpdate} */
     const update = { householdId: household.id, householdName: household.name };
-    if (household.address_line1 == null) update.address_line1 = street;
+    if (household.address_line1 == null) update.address_line1 = toTitleCase(street);
     if (household.state == null && state) update.state = state;
     if (household.postal_code == null && postalCode) update.postal_code = postalCode;
 

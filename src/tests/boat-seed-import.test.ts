@@ -203,4 +203,13 @@ describe('planBoatSeed (synthetic fixture)', () => {
     const solo = plan.seed.find((r) => r.sourceAssignmentId === 'ops-assignment-1');
     expect(solo).toMatchObject({ member_id: 'm-solo', ownerBasis: 'solo' });
   });
+
+  it('sets a seed row name from resolutions.names, leaving every other row null', () => {
+    const namedResolutions = { ...resolutions, names: { 'ops-assignment-1': 'Dionysus' } };
+    const plan = planBoatSeed(assignments, { membersByHousehold, resolutions: namedResolutions });
+    const named = plan.seed.find((r) => r.sourceAssignmentId === 'ops-assignment-1');
+    expect(named?.name).toBe('Dionysus');
+    const unnamed = plan.seed.find((r) => r.sourceAssignmentId === 'ops-assignment-3');
+    expect(unnamed?.name).toBeNull();
+  });
 });

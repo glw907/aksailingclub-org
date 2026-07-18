@@ -37,10 +37,11 @@ call.
 `kept_on` follows the source asset type: `'mooring'` for a mooring assignment, `'trailer'` for
 everything else (`boat_parking`, `small_boat`).
 
-**Every seeded boat's `name` is `NULL`**, even where a name is visible in the raw text (for
-example `Purple Buccaneer 18 "Dionysus"`). Name capture starts going forward, not
-retroactively; the raw description survives in the audit `detail` so a name can be hand-added
-later. `sail_number` is always `NULL`; there is no reliable way to extract one from free text.
+**A seeded boat's `name` is `NULL` unless `resolutions.names` supplies one**, even where a name
+is visible in the raw text (for example `Purple Buccaneer 18 "Dionysus"`). Name capture starts
+going forward otherwise, not retroactively; the raw description survives in the audit `detail`
+so a name can be hand-added later. `sail_number` is always `NULL`; there is no reliable way to
+extract one from free text.
 
 ## Owner resolution and the resolutions file
 
@@ -60,13 +61,16 @@ Every active row resolves one of four ways:
 `scripts/import/boat-seed.resolutions.json` (committed, git-reviewable) starts empty:
 
 ```json
-{ "owners": {}, "drop": [], "model": {} }
+{ "owners": {}, "drop": [], "model": {}, "names": {} }
 ```
 
 - `owners`: `{ "<assignment id>": "<member id>" }`, resolves an ambiguous household.
 - `drop`: `["<assignment id>", ...]`, rows to exclude entirely.
 - `model`: `{ "<assignment id>": "<model string>" }`, overrides a parsed model call for one
   row with a plain string.
+- `names`: `{ "<assignment id>": "<boat name>" }`, sets a seeded boat's `name` where Geoff
+  supplied one at review. Every other row still seeds with `name` left `NULL`; members name
+  their own boats going forward.
 
 Member ids are opaque UUIDs carrying no name or email, so this file is safe to commit. The
 workflow is: run `--dry-run`, read the worksheet, add entries to the resolutions file, run
@@ -88,7 +92,7 @@ exists) that `owners` gets filled from.
 
 Each inserted boat gets an `audit_log` row: `actor = 'import:boat-seed'`, `action =
 'import.insert'`, `entity = 'boat'`, `entity_id` the boat id, `detail` a JSON object
-`{ batchId, sourceAssignmentId, rawDescription, ownerBasis, model, keptOn }`. Every run, even a
+`{ batchId, sourceAssignmentId, rawDescription, ownerBasis, model, keptOn, name }`. Every run, even a
 complete no-op, also writes one `action = 'import.batch'` summary row (`entity = 'boat'`,
 `entity_id = NULL`), `detail` a JSON object `{ inserted, held, dropped, skipped,
 releasedExcluded, sourceActive }`.
