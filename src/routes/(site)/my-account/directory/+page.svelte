@@ -18,6 +18,7 @@ partial member's contact. The pure row derivations live in ./directory-view.ts. 
     boatLines,
     boatSummary,
     hasExpansion,
+    isRowOpen,
     matchesChip,
     matchesQuery,
     resolveTitles,
@@ -39,6 +40,10 @@ partial member's contact. The pure row derivations live in ./directory-view.ts. 
   /** Rows the reader has expanded by hand. Auto-expand (a narrow result set) forces a row open on
    *  top of this set; it never writes to it, so clearing the search returns to the hand-set state. */
   let expandedIds = $state(new Set<string>());
+  /** Rows the reader has toggled closed while auto-expand was forcing them open. Only consulted
+   *  during auto-expand (see {@link isRowOpen}); it never touches `expandedIds`, so clearing the
+   *  search still returns to the hand-set state above. */
+  let autoExpandOverrides = $state(new Set<string>());
   /** Tracks the mobile handoff so the boat summary can abbreviate its model on a narrow screen.
    *  Defaults to the desktop reading on the server; the effect below corrects it once mounted. */
   let narrow = $state(false);
@@ -62,6 +67,13 @@ partial member's contact. The pure row derivations live in ./directory-view.ts. 
 
   const autoExpand = $derived(shouldAutoExpand(filteredEntries.length, isFiltering));
 
+  // A finished auto-expand session's overrides are session-scoped: once auto-expand stops
+  // forcing rows open, a later narrow search starts every match open again rather than replaying
+  // a stale close from an unrelated result set.
+  $effect(() => {
+    if (!autoExpand) autoExpandOverrides = new Set();
+  });
+
   function toggleChip(chip: DirectoryChip) {
     const next = new Set(activeChips);
     if (next.has(chip)) next.delete(chip);
@@ -69,7 +81,17 @@ partial member's contact. The pure row derivations live in ./directory-view.ts. 
     activeChips = next;
   }
 
+  /** While auto-expand is forcing the row open, toggling records an override instead of writing
+   *  `expandedIds` (a click here must never leak into the hand-set state a cleared search returns
+   *  to). Otherwise it toggles the hand-set state directly, as before. */
   function toggleRow(id: string) {
+    if (autoExpand) {
+      const next = new Set(autoExpandOverrides);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      autoExpandOverrides = next;
+      return;
+    }
     const next = new Set(expandedIds);
     if (next.has(id)) next.delete(id);
     else next.add(id);
@@ -77,7 +99,7 @@ partial member's contact. The pure row derivations live in ./directory-view.ts. 
   }
 
   function isOpen(entry: DirectoryEntry): boolean {
-    return hasExpansion(entry) && (autoExpand || expandedIds.has(entry.id));
+    return isRowOpen(entry, { autoExpand, expandedIds, autoExpandOverrides });
   }
 
   /** The compact row's secondary datum: the boat summary when the member owns boats (width-aware),
@@ -448,10 +470,14 @@ partial member's contact. The pure row derivations live in ./directory-view.ts. 
     outline-offset: 2px;
     border-radius: var(--radius-selector);
   }
+  /* WCAG 2.2 AA 2.5.8: a 20px icon glyph is not itself a valid target, so the link box floors at
+     24px at every width (email has no larger desktop alternative -- it is the sole affordance). */
   .dir-icon-link {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    min-width: 1.5rem;
+    min-height: 1.5rem;
     color: var(--color-muted);
   }
   .dir-icon-link:hover {
@@ -569,6 +595,11 @@ partial member's contact. The pure row derivations live in ./directory-view.ts. 
       min-height: 2.75rem;
     }
     .dir-contact-link {
+      min-height: 2.75rem;
+      display: inline-flex;
+      align-items: center;
+    }
+    .dir-chip-btn {
       min-height: 2.75rem;
       display: inline-flex;
       align-items: center;

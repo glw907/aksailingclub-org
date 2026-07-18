@@ -83,6 +83,26 @@ it stays intentionally small.
     editDialog?.showModal();
   }
 
+  /** Members matching a search query (name, email, or household), or every member on an empty
+   *  query -- the shared predicate behind each view's own "search member" box. */
+  function filterMembers(members: PageData['memberOptions'], query: string): PageData['memberOptions'] {
+    const q = query.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter(
+      (m) => m.name.toLowerCase().includes(q) || (m.email ?? '').toLowerCase().includes(q) || m.householdName.toLowerCase().includes(q),
+    );
+  }
+
+  // Same already-picked-stays-selectable fix `assets/+page.svelte`'s own member picker documents,
+  // generalized so the Add-member and New-position views each get their own options built from
+  // their own picked id -- otherwise narrowing one view's search can silently filter the other
+  // view's already-picked member out of its own `<select>`.
+  function memberSelectOptionsFor(members: PageData['memberOptions'], pickedId: string): { value: string; label: string }[] {
+    const picked = data.memberOptions.find((m) => m.memberId === pickedId);
+    const list = picked && !members.includes(picked) ? [picked, ...members] : members;
+    return list.map((m) => ({ value: m.memberId, label: `${m.name} (${m.householdName})` }));
+  }
+
   // -- add committee member form --
   const activeCommitteeOptions = $derived(data.committees.filter((c: CommitteeRow) => !c.archived).map((c) => ({ value: c.id, label: c.name })));
   let addCommitteeId = $state(untrack(() => data.committees.find((c: CommitteeRow) => !c.archived)?.id ?? ''));
@@ -90,26 +110,16 @@ it stays intentionally small.
   let addMemberId = $state('');
   let addRole = $state<CommitteeRole>('member');
   const roleOptions = COMMITTEE_ROLES.map((r) => ({ value: r, label: r }));
-  const filteredMembers = $derived(
-    data.memberOptions.filter((m) => {
-      const q = memberQuery.trim().toLowerCase();
-      if (!q) return true;
-      return m.name.toLowerCase().includes(q) || (m.email ?? '').toLowerCase().includes(q) || m.householdName.toLowerCase().includes(q);
-    }),
-  );
-  // Same already-picked-stays-selectable fix `assets/+page.svelte`'s own member picker documents.
-  const memberSelectOptions = $derived.by(() => {
-    const base = filteredMembers;
-    const picked = data.memberOptions.find((m) => m.memberId === addMemberId);
-    const list = picked && !base.includes(picked) ? [picked, ...base] : base;
-    return list.map((m) => ({ value: m.memberId, label: `${m.name} (${m.householdName})` }));
-  });
+  const memberSelectOptions = $derived(memberSelectOptionsFor(filterMembers(data.memberOptions, memberQuery), addMemberId));
 
-  // -- new position form --
+  // -- new position form -- its own query and picked-member state, never shared with the
+  // Add-member form above (see `memberSelectOptionsFor`'s own comment).
   const positionKindOptions = POSITION_KINDS.map((k) => ({ value: k, label: POSITION_KIND_LABEL[k] }));
+  let positionMemberQuery = $state('');
   let newPositionMemberId = $state('');
   let newPositionKind = $state<PositionKind>('appointed');
   let newPositionTitle = $state('');
+  const positionMemberSelectOptions = $derived(memberSelectOptionsFor(filterMembers(data.memberOptions, positionMemberQuery), newPositionMemberId));
 
   // -- edit position dialog --
   let editPositionDialog: HTMLDialogElement | undefined = $state();
@@ -132,12 +142,11 @@ it stays intentionally small.
 
 <OfficeList eyebrow="Club" title="Committees" {subtitle}>
   {#snippet action()}
-    <div class="join" role="tablist" aria-label="Committees view">
+    <div class="join" role="group" aria-label="Committees view">
       {#each VIEW_TABS as tab (tab.id)}
         <button
           type="button"
-          role="tab"
-          aria-selected={view === tab.id}
+          aria-pressed={view === tab.id}
           class="join-item btn btn-sm {view === tab.id ? 'btn-primary' : ''}"
           onclick={() => (view = tab.id)}
         >
@@ -190,17 +199,13 @@ it stays intentionally small.
                 <td class="text-sm font-medium">{row.memberName}</td>
                 <td>
                   {#if row.status === 'active'}
-                    <form method="post" action="?/setMemberRole">
+                    <form method="post" action="?/setMemberRole" class="flex items-center gap-1">
                       <CsrfField />
                       <input type="hidden" name="committeeMemberId" value={row.id} />
-                      <select
-                        name="role"
-                        class="select select-xs"
-                        value={row.role}
-                        onchange={(event) => event.currentTarget.form?.requestSubmit()}
-                      >
+                      <select name="role" class="select select-xs" value={row.role}>
                         {#each roleOptions as opt (opt.value)}<option value={opt.value}>{opt.label}</option>{/each}
                       </select>
+                      <button type="submit" class="btn btn-ghost btn-xs">Save</button>
                     </form>
                   {:else}
                     <span class="badge badge-ghost badge-sm font-medium">{row.role}</span>
@@ -350,8 +355,8 @@ it stays intentionally small.
     <form method="post" action="?/createPosition" class="p-6">
       <h2 class="mb-3 text-sm font-semibold">New position</h2>
       <div class="grid gap-3 sm:grid-cols-2">
-        <TextField label="Search member" name="memberQuery" type="search" placeholder="Name, email, or household" bind:value={memberQuery} />
-        <SelectField label="Member" name="memberId" bind:value={newPositionMemberId} options={memberSelectOptions} />
+        <TextField label="Search member" name="memberQuery" type="search" placeholder="Name, email, or household" bind:value={positionMemberQuery} />
+        <SelectField label="Member" name="memberId" bind:value={newPositionMemberId} options={positionMemberSelectOptions} />
         <SelectField label="Kind" name="kind" bind:value={newPositionKind} options={positionKindOptions} />
         <TextField label="Title" name="title" placeholder="Commodore" bind:value={newPositionTitle} />
       </div>
@@ -363,9 +368,9 @@ it stays intentionally small.
   {/if}
 </OfficeList>
 
-<dialog bind:this={editDialog} class="modal">
+<dialog bind:this={editDialog} class="modal" aria-labelledby="edit-committee-heading">
   <div class="modal-box">
-    <h2 class="text-lg font-bold">Edit committee</h2>
+    <h2 id="edit-committee-heading" class="text-lg font-bold">Edit committee</h2>
     <form method="post" action="?/updateCommittee" class="flex flex-col gap-3 py-2">
       <CsrfField />
       <input type="hidden" name="committeeId" value={editId} />
@@ -385,9 +390,9 @@ it stays intentionally small.
   </div>
 </dialog>
 
-<dialog bind:this={editPositionDialog} class="modal">
+<dialog bind:this={editPositionDialog} class="modal" aria-labelledby="edit-position-heading">
   <div class="modal-box">
-    <h2 class="text-lg font-bold">Edit position</h2>
+    <h2 id="edit-position-heading" class="text-lg font-bold">Edit position</h2>
     <form method="post" action="?/updatePosition" class="flex flex-col gap-3 py-2">
       <CsrfField />
       <input type="hidden" name="positionId" value={editPositionId} />

@@ -9,6 +9,7 @@ import {
   boatLines,
   boatSummary,
   hasExpansion,
+  isRowOpen,
   matchesChip,
   matchesQuery,
   resolveTitles,
@@ -213,5 +214,32 @@ describe('shouldAutoExpand', () => {
     expect(shouldAutoExpand(AUTO_EXPAND_THRESHOLD + 1, true)).toBe(false);
     expect(shouldAutoExpand(2, false)).toBe(false);
     expect(shouldAutoExpand(0, true)).toBe(false);
+  });
+});
+
+describe('isRowOpen', () => {
+  const expandable = entry({ positions: [{ kind: 'officer', title: 'Commodore', sortOrder: 0 }] });
+
+  it('never opens a row with nothing to expand, even during auto-expand', () => {
+    expect(isRowOpen(entry(), { autoExpand: true, expandedIds: new Set(), autoExpandOverrides: new Set() })).toBe(false);
+  });
+
+  it('auto-expand forces an expandable row open with no override', () => {
+    expect(isRowOpen(expandable, { autoExpand: true, expandedIds: new Set(), autoExpandOverrides: new Set() })).toBe(true);
+  });
+
+  it('a per-row override closes a row auto-expand would otherwise force open (the toggle is never inert)', () => {
+    expect(
+      isRowOpen(expandable, { autoExpand: true, expandedIds: new Set(), autoExpandOverrides: new Set([expandable.id]) }),
+    ).toBe(false);
+  });
+
+  it('outside auto-expand, only the hand-set expandedIds decide, ignoring any override', () => {
+    expect(isRowOpen(expandable, { autoExpand: false, expandedIds: new Set(), autoExpandOverrides: new Set([expandable.id]) })).toBe(
+      false,
+    );
+    expect(
+      isRowOpen(expandable, { autoExpand: false, expandedIds: new Set([expandable.id]), autoExpandOverrides: new Set() }),
+    ).toBe(true);
   });
 });

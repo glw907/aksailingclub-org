@@ -109,19 +109,19 @@ primary sets any household member's), and the lean leave-the-club action (design
     <input type="hidden" name="csrf" value={data.csrf} />
     <fieldset class="fieldset">
       <legend class="fieldset-legend portal-field-label">Address line 1</legend>
-      <input class="input w-full" type="text" name="addressLine1" value={data.address?.addressLine1 ?? ''} />
+      <input class="input w-full" type="text" name="addressLine1" value={data.address?.addressLine1 ?? ''} aria-label="Address line 1" />
     </fieldset>
     <fieldset class="fieldset">
       <legend class="fieldset-legend portal-field-label">Address line 2 (optional)</legend>
-      <input class="input w-full" type="text" name="addressLine2" value={data.address?.addressLine2 ?? ''} />
+      <input class="input w-full" type="text" name="addressLine2" value={data.address?.addressLine2 ?? ''} aria-label="Address line 2 (optional)" />
     </fieldset>
     <fieldset class="fieldset">
       <legend class="fieldset-legend portal-field-label">State</legend>
-      <input class="input w-full" type="text" name="state" value={data.address?.state ?? ''} />
+      <input class="input w-full" type="text" name="state" value={data.address?.state ?? ''} aria-label="State" />
     </fieldset>
     <fieldset class="fieldset">
       <legend class="fieldset-legend portal-field-label">ZIP code</legend>
-      <input class="input w-full" type="text" name="postalCode" value={data.address?.postalCode ?? ''} />
+      <input class="input w-full" type="text" name="postalCode" value={data.address?.postalCode ?? ''} aria-label="ZIP code" />
     </fieldset>
     <button type="submit" class="btn btn-primary self-start">Save address</button>
   </form>

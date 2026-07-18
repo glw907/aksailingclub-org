@@ -55,7 +55,7 @@ own "3. Profile"). -->
   <h2 class="m-0 text-step-0 font-semibold text-base-content">Directory listing</h2>
   <p class="mt-2xs mb-0 text-step--1 text-muted">How others see you:</p>
   <ul class="mt-2xs mb-0 flex flex-col gap-3xs text-step--1 text-base-content">
-    {#each previewLines as line (line)}
+    {#each previewLines as line, i (i)}
       <li>{line}</li>
     {/each}
   </ul>
@@ -84,11 +84,11 @@ own "3. Profile"). -->
             <input type="hidden" name="boatId" value={boat.id} />
             <fieldset class="fieldset">
               <legend class="fieldset-legend portal-field-label">Boat name</legend>
-              <input class="input input-sm w-full" type="text" name="name" value={boat.name ?? ''} required />
+              <input class="input input-sm w-full" type="text" name="name" value={boat.name ?? ''} aria-label="Boat name" required />
             </fieldset>
             <fieldset class="fieldset">
               <legend class="fieldset-legend portal-field-label">Model</legend>
-              <select class="select select-sm w-full" name="modelPicker">
+              <select class="select select-sm w-full" name="modelPicker" aria-label="Model">
                 <option value="Buccaneer 18" selected={boat.model === 'Buccaneer 18'}>Buccaneer 18</option>
                 <option value="Laser" selected={boat.model === 'Laser'}>Laser</option>
                 <option value="Other" selected={boat.model !== 'Buccaneer 18' && boat.model !== 'Laser'}>Other</option>
@@ -101,15 +101,16 @@ own "3. Profile"). -->
                 type="text"
                 name="otherModel"
                 value={boat.model !== 'Buccaneer 18' && boat.model !== 'Laser' ? boat.model : ''}
+                aria-label="If Other, type the model"
               />
             </fieldset>
             <fieldset class="fieldset">
               <legend class="fieldset-legend portal-field-label">Sail number (optional)</legend>
-              <input class="input input-sm w-full" type="text" name="sailNumber" value={boat.sailNumber ?? ''} />
+              <input class="input input-sm w-full" type="text" name="sailNumber" value={boat.sailNumber ?? ''} aria-label="Sail number (optional)" />
             </fieldset>
             <fieldset class="fieldset">
               <legend class="fieldset-legend portal-field-label">Kept on</legend>
-              <select class="select select-sm w-full" name="keptOn">
+              <select class="select select-sm w-full" name="keptOn" aria-label="Kept on">
                 <option value="trailer" selected={boat.keptOn === 'trailer'}>Trailer</option>
                 <option value="mooring" selected={boat.keptOn === 'mooring'}>Mooring</option>
               </select>
@@ -130,11 +131,11 @@ own "3. Profile"). -->
     <input type="hidden" name="csrf" value={data.csrf} />
     <fieldset class="fieldset">
       <legend class="fieldset-legend portal-field-label">Boat name</legend>
-      <input class="input w-full" type="text" name="name" required />
+      <input class="input w-full" type="text" name="name" aria-label="Boat name" required />
     </fieldset>
     <fieldset class="fieldset">
       <legend class="fieldset-legend portal-field-label">Model</legend>
-      <select class="select w-full" name="modelPicker">
+      <select class="select w-full" name="modelPicker" aria-label="Model">
         <option value="Buccaneer 18">Buccaneer 18</option>
         <option value="Laser">Laser</option>
         <option value="Other">Other</option>
@@ -142,15 +143,15 @@ own "3. Profile"). -->
     </fieldset>
     <fieldset class="fieldset">
       <legend class="fieldset-legend portal-field-label">If Other, type the model</legend>
-      <input class="input w-full" type="text" name="otherModel" />
+      <input class="input w-full" type="text" name="otherModel" aria-label="If Other, type the model" />
     </fieldset>
     <fieldset class="fieldset">
       <legend class="fieldset-legend portal-field-label">Sail number (optional)</legend>
-      <input class="input w-full" type="text" name="sailNumber" />
+      <input class="input w-full" type="text" name="sailNumber" aria-label="Sail number (optional)" />
     </fieldset>
     <fieldset class="fieldset">
       <legend class="fieldset-legend portal-field-label">Kept on</legend>
-      <select class="select w-full" name="keptOn">
+      <select class="select w-full" name="keptOn" aria-label="Kept on">
         <option value="trailer">Trailer</option>
         <option value="mooring">Mooring</option>
       </select>
