@@ -140,10 +140,11 @@ rollback):
 
 ## Seams and sequencing
 
-- The directory plan's T1 grows to three tables, T5 gains request/leave and the
+- The directory plan's T1 grows to carry the three roles tables, T5 gains the
   extended preview, T6 becomes admin CRUD for committees, memberships, and
-  positions, and a new task carries the portal committees page and the public
-  directive. The plan file is updated in place; this spec governs.
+  positions, and new tasks carry the committees-and-people seed and the portal
+  committees page (request/leave lives there) with the public directive. The plan
+  file is updated in place; this spec governs.
 - The `admin-nav-reorg` + `admin-roles` pass absorbs the admin screens later
   (unchanged seam).
 - cairn's editor roles (migration 0026's collapse) stay untouched: site authorship
