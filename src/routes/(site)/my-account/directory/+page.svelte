@@ -127,7 +127,7 @@ partial member's contact. The pure row derivations live in ./directory-view.ts. 
 
 <h1 class="portal-page-title">Member directory</h1>
 <p class="mt-s max-w-measure-wide text-step-0 text-muted">
-  Fellow members who've chosen to be listed. Change your own listing, or your household's, from
+  Fellow members who&#8217;ve chosen to be listed. Change your own listing, or your household&#8217;s, from
   <a href="/my-account/profile" class="text-primary underline-offset-2 hover:underline">Profile</a>.
 </p>
 

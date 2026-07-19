@@ -26,10 +26,10 @@
  * NAME MATCHING IS EXACT AND CASE-INSENSITIVE, NEVER GUESSED: {@link matchMemberByName} compares
  * against the (non-archived) `members.name` column only. A name matching nobody, or matching more
  * than one member, lands in the audit as a miss or an ambiguity. Nothing here invents a match.
- * Where the published page uses a nickname, the seed carries the member's STORED name instead
- * ("David Johnson" for the page's "Dave Johnson", "Matthew Flickinger" for "Matt Flickinger") --
- * the seed name is a lookup key, not display text. The one word-reversed member row ("Stanbro
- * TL") was fixed live to "TL Stanbro" (audit actor 'admin:member-name-fix', 2026-07-18).
+ * The dry-run's three real-data misses all resolved by fixing the MEMBER rows to the club's own
+ * used names (Geoff's ruling, 2026-07-18, audit actor 'admin:member-name-fix'): "Stanbro TL" was
+ * word-reversed to "TL Stanbro", and the MW-formal "David Johnson"/"Matthew Flickinger" became
+ * "Dave Johnson"/"Matt Flickinger", so the seed data reads exactly as the published page does.
  *
  * CHAIR TITLES ARE NEVER STORED: `committee_members.role` (`'chair'`/`'co-chair'`/`'member'`) is
  * all this script writes; "Site Committee Chair" derives at render (T3), per the roles spec's
@@ -175,9 +175,9 @@ export const SEED_COMMITTEES = RAW_SEED_COMMITTEES.map((c) => ({ ...c, slug: slu
 /** @type {OfficerSeed[]} */
 export const SEED_OFFICERS = [
   { name: 'Nancy Black', title: 'Commodore', sort_order: 1 },
-  { name: 'David Johnson', title: 'Vice Commodore', sort_order: 2 },
+  { name: 'Dave Johnson', title: 'Vice Commodore', sort_order: 2 },
   { name: 'Angie Oberlitner', title: 'Secretary', sort_order: 3 },
-  { name: 'Matthew Flickinger', title: 'Treasurer', sort_order: 4 },
+  { name: 'Matt Flickinger', title: 'Treasurer', sort_order: 4 },
 ];
 
 /**
@@ -189,7 +189,7 @@ export const SEED_OFFICERS = [
 
 /** @type {ChairSeed[]} */
 export const SEED_CHAIRS = [
-  { committeeName: 'Finance Committee', memberName: 'Matthew Flickinger', role: 'chair' },
+  { committeeName: 'Finance Committee', memberName: 'Matt Flickinger', role: 'chair' },
   { committeeName: 'Board Development Committee', memberName: 'Geoff Wright', role: 'chair' },
   { committeeName: 'Program Committee', memberName: 'Christopher Cryan', role: 'chair' },
   { committeeName: MEMBERSHIP_EVENTS_NAME, memberName: 'Jonathan Ramirez', role: 'chair' },

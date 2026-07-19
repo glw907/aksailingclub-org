@@ -41,7 +41,7 @@ on its own. -->
 
 <h1 class="portal-page-title">Committees</h1>
 <p class="mt-s max-w-measure-wide text-step-0 text-muted">
-  The club's committees. See who serves, ask to join, or manage the ones you lead.
+  The club&#8217;s committees. See who serves, ask to join, or manage the ones you lead.
 </p>
 
 {#if form && 'error' in form && form.error}
@@ -80,6 +80,9 @@ on its own. -->
 {/if}
 
 <div class="portal-committees">
+  {#if data.view.committees.length === 0}
+    <p class="portal-committees-empty">No committees are set up yet. Check back soon.</p>
+  {/if}
   {#each data.view.committees as committee (committee.id)}
     <section class="portal-committee">
       <div class="portal-committee-headings">

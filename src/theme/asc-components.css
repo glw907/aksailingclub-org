@@ -943,6 +943,11 @@
   .portal-committee-roster-empty {
     color: var(--color-muted);
   }
+  .portal-committees-empty {
+    margin: var(--spacing-l) 0 0;
+    font-size: var(--text-step--1);
+    color: var(--color-muted);
+  }
 
   /* Managed roster: stacked lines so each name carries a Remove target. */
   .portal-committee-roster-manage {

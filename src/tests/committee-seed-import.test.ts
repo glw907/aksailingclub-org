@@ -72,9 +72,9 @@ describe('SEED_OFFICERS and SEED_CHAIRS', () => {
   it('lists the four officers in Commodore/Vice Commodore/Secretary/Treasurer order', () => {
     expect(SEED_OFFICERS.map((o) => `${o.title}: ${o.name}`)).toEqual([
       'Commodore: Nancy Black',
-      'Vice Commodore: David Johnson',
+      'Vice Commodore: Dave Johnson',
       'Secretary: Angie Oberlitner',
-      'Treasurer: Matthew Flickinger',
+      'Treasurer: Matt Flickinger',
     ]);
   });
 

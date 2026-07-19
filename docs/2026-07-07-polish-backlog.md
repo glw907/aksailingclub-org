@@ -114,6 +114,13 @@ not done today Geoff tackles on Opus tomorrow; hand this file to that session.
   hierarchy.
 - Already handled separately: the double-Settings relabel (shipped), the sidebar scroll-bleed
   and auto-collapse-on-navigate (engine fixes in flight).
+- **Dark-mode header logo near-invisible** (coherence read, 2026-07-18): the dark navy mark
+  sits on near-black in site chrome, both widths — pre-existing (visible in home-dark
+  baselines), re-enshrined by every dark baseline; wants a dark-variant mark or a lightness
+  step.
+- **Directory mail-icon optical alignment** (coherence read, 2026-07-18): the at-rest mail
+  icon may sit 1-2px high against the caret/name midline on icon-bearing rows; settle with a
+  computed getBoundingClientRect midline check, not by eye.
 - **Members AND Memberships in the sidebar** (Geoff): the club nav needs a Memberships entry
   alongside Members. This is a screen build, not a relabel — a memberships view (household/tier/
   paid-through/standing, the dues records the payments webhook reconciles) distinct from the

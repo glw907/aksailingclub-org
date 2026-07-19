@@ -62,10 +62,11 @@ none of them bugs:
 - `TL Stanbro` -> no exact match (`Stanbro TL` exists; the words are in the other order)
 
 These were correct audit misses, not something this script should paper over. Resolved at the
-2026-07-18 import review: the two nicknames became stored-name lookup keys in the seed data
-(`David Johnson`, `Matthew Flickinger` -- the seed name is a lookup key, not display text), and
-the word-reversed `Stanbro TL` member row was corrected live to `TL Stanbro` (audit actor
-`admin:member-name-fix`), so the published-page spelling matches.
+2026-07-18 import review by fixing the MEMBER rows to the club's own used names (Geoff's
+ruling; audit actor `admin:member-name-fix`): the word-reversed `Stanbro TL` became
+`TL Stanbro`, and the MW-formal `David Johnson`/`Matthew Flickinger` became `Dave Johnson`/
+`Matt Flickinger`. The seed data reads exactly as the published page does, and stored names
+are what the club actually calls people (members can adjust their own names any time).
 
 ## Idempotent, convergent
 
