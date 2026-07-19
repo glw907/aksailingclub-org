@@ -9,19 +9,8 @@ The board establishes committees to handle specific areas of club operations. Tw
 
 ## At a Glance
 
-| Role | Who |
-|---|---|
-| Commodore | Nancy Black |
-| Vice Commodore | Dave Johnson |
-| Secretary | Angie Oberlitner |
-| Treasurer | Matt Flickinger |
-| Finance Committee | Matt Flickinger |
-| Board Development Committee | Geoff Wright |
-| Program Committee | Christopher Cryan |
-| Membership Committee | Jonathan Ramirez, Emily Ramirez (co-chair) |
-| Site Committee | Geoff Wright |
-| Harbor Committee | TL Stanbro |
-| Fleet Committee | Steve Ryan |
+:::committees-at-a-glance
+:::
 
 ## Officers
 

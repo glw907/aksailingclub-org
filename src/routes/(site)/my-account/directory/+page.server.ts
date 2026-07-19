@@ -19,5 +19,10 @@ export const load: PageServerLoad = async (event) => {
   const db = resolveMemberDb(event.platform?.env);
   const entries: DirectoryEntry[] | null = db ? await listDirectory(db) : null;
 
-  return { entries };
+  // `?q=` prefills the search box: the committees page links a chair's name here so a member can
+  // land straight on that person's entry (a small, honest addition -- the screen already filters
+  // client-side on exactly this needle).
+  const initialQuery = event.url.searchParams.get('q') ?? '';
+
+  return { entries, initialQuery };
 };

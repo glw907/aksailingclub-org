@@ -13,10 +13,11 @@ type LoadResult = Exclude<Awaited<ReturnType<typeof load>>, void>;
 
 const MEMBER: MemberRow = { id: 'mem-1', householdId: 'hh-1', name: 'Vera Visible', email: 'vera@example.com', archivedAt: null };
 
-function eventFor(member: MemberRow | null, db: unknown): LoadEvent {
+function eventFor(member: MemberRow | null, db: unknown, url = 'http://localhost/my-account/directory'): LoadEvent {
   return {
     parent: async () => ({ member }),
     platform: { env: db === undefined ? {} : { CLUB_DB: db } },
+    url: new URL(url),
   } as unknown as LoadEvent;
 }
 
@@ -72,5 +73,17 @@ describe('/my-account/directory load', () => {
     const result = (await load(eventFor(MEMBER, db))) as LoadResult;
     expect(result.entries).toHaveLength(1);
     expect(result.entries![0].name).toBe('Vera Visible');
+  });
+
+  it('passes the ?q= search param through as initialQuery (the committees-page chair link)', async () => {
+    const { db } = fakeD1({ allResults: { 'FROM members m': [] } });
+    const result = (await load(eventFor(MEMBER, db, 'http://localhost/my-account/directory?q=Steve%20Ryan'))) as LoadResult;
+    expect(result.initialQuery).toBe('Steve Ryan');
+  });
+
+  it('defaults initialQuery to an empty string with no search param', async () => {
+    const { db } = fakeD1({ allResults: { 'FROM members m': [] } });
+    const result = (await load(eventFor(MEMBER, db))) as LoadResult;
+    expect(result.initialQuery).toBe('');
   });
 });

@@ -143,6 +143,7 @@ them (T2b). -->
       <a href="/my-account/gear">Gear</a>
       <a href="/my-account/classes">Classes</a>
       <a href="/my-account/directory">Directory</a>
+      <a href="/my-account/committees">Committees</a>
       <a href="/discord-server">Discord</a>
       <a href="/events">Events</a>
     </footer>

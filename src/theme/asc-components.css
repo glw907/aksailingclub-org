@@ -841,4 +841,335 @@
   .portal-touch-btn {
     min-height: 2.75rem;
   }
+
+  /* ─── Portal committees page (member-directory pass T6b, the Round 3 ratified composition) ─── */
+  /* Every value here maps back to the theme's own tokens (theme.css), the same set the ratified
+     probe drew from hex-for-hex; nothing is hardcoded. Quiet hairline sections in the portal
+     register (no card chrome, contained reading width), zero fireweed, zero gold. */
+  .portal-committees {
+    margin: var(--spacing-l) 0 0;
+    max-width: var(--container);
+  }
+
+  /* One committee: a two-column grid (headings + description + roster on the left, the member
+     affordance top-right) separated by hairlines. */
+  .portal-committee {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: var(--spacing-l);
+    align-items: start;
+    padding-block: var(--spacing-l);
+    border-top: 1px solid var(--color-card-border);
+  }
+  .portal-committee:first-child {
+    border-top: none;
+    padding-top: var(--spacing-2xs);
+  }
+
+  .portal-committee-headings {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .portal-committee-name {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--text-step-2);
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-tight);
+    color: var(--color-base-content);
+  }
+  .portal-committee-standing {
+    margin: var(--spacing-3xs) 0 0;
+    font-size: var(--text-step--2);
+    color: var(--color-muted);
+  }
+
+  .portal-committee-desc {
+    grid-column: 1;
+    margin: var(--spacing-xs) 0 0;
+    max-width: var(--measure);
+    font-size: var(--text-step--1);
+    line-height: var(--leading-body);
+    color: var(--color-muted);
+  }
+
+  /* Chair lines: "Chair — Name" where the name links to the directory. */
+  .portal-committee-chairs {
+    grid-column: 1;
+    margin: var(--spacing-s) 0 0;
+    font-size: var(--text-step--1);
+  }
+  .portal-committee-chairs .row {
+    display: block;
+  }
+  .portal-committee-chairs .role {
+    color: var(--color-muted);
+  }
+  .portal-committee-chairs .dash {
+    color: var(--color-muted);
+    padding: 0 0.35em;
+  }
+  .portal-committee-chairs a {
+    color: var(--color-primary);
+    font-weight: 500;
+    text-decoration: none;
+    text-underline-offset: 2px;
+  }
+  .portal-committee-chairs a:hover {
+    text-decoration: underline;
+  }
+  .portal-committee-chairs-empty {
+    margin: 0;
+    color: var(--color-muted);
+  }
+
+  /* Read roster: comma-flow run + a quiet uppercase count. */
+  .portal-committee-roster {
+    grid-column: 1;
+    margin: var(--spacing-2xs) 0 0;
+    max-width: var(--measure);
+    font-size: var(--text-step--1);
+    line-height: var(--leading-body);
+    color: var(--color-base-content);
+  }
+  .portal-committee-roster .count {
+    color: var(--color-muted);
+    font-size: var(--text-step--2);
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    margin-right: 0.55em;
+  }
+  .portal-committee-roster-empty {
+    color: var(--color-muted);
+  }
+
+  /* Managed roster: stacked lines so each name carries a Remove target. */
+  .portal-committee-roster-manage {
+    grid-column: 1;
+    margin: var(--spacing-s) 0 0;
+    max-width: var(--measure);
+  }
+  .portal-committee-roster-manage .count {
+    display: block;
+    margin-bottom: var(--spacing-3xs);
+    color: var(--color-muted);
+    font-size: var(--text-step--2);
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+  }
+  .portal-committee-roster-manage ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .portal-committee-roster-manage li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--spacing-s);
+    padding: var(--spacing-3xs) 0;
+    border-top: 1px solid color-mix(in oklab, var(--color-card-border) 60%, transparent);
+    font-size: var(--text-step--1);
+  }
+  .portal-committee-roster-manage li:first-of-type {
+    border-top: none;
+  }
+
+  /* Pending-request queue (managers only): a quiet panel above the managed roster. */
+  .portal-committee-queue {
+    grid-column: 1;
+    margin: var(--spacing-s) 0 0;
+    max-width: var(--measure);
+    padding: var(--spacing-xs) var(--spacing-s);
+    background: var(--color-base-200);
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-box);
+  }
+  .portal-committee-queue-label {
+    margin: 0 0 var(--spacing-2xs);
+    font-size: var(--text-step--2);
+    font-weight: 600;
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .portal-committee-queue ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .portal-committee-queue li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--spacing-s);
+    padding: var(--spacing-2xs) 0;
+    border-top: 1px solid color-mix(in oklab, var(--color-card-border) 70%, transparent);
+    font-size: var(--text-step--1);
+  }
+  .portal-committee-queue li:first-of-type {
+    border-top: none;
+  }
+  .portal-committee-queue-empty {
+    margin: 0;
+    font-size: var(--text-step--1);
+    color: var(--color-muted);
+  }
+  .portal-committee-queue .qactions {
+    display: inline-flex;
+    gap: var(--spacing-xs);
+    flex-shrink: 0;
+  }
+  .portal-committee-queue .qactions form {
+    display: inline;
+  }
+
+  /* The chromeless text-action register (Approve / Decline / Remove / Leave / Cancel / Edit /
+     Archive / New committee / Add member): a quiet member page chairs also use, never an admin
+     screen. Added as the ONE named class the probe's hand-rolled `.tact` asked to become. */
+  .portal-text-action {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    font-size: inherit;
+    cursor: pointer;
+    color: var(--color-muted);
+    text-decoration: none;
+    text-underline-offset: 2px;
+    list-style: none;
+  }
+  .portal-text-action::-webkit-details-marker {
+    display: none;
+  }
+  .portal-text-action:hover {
+    text-decoration: underline;
+  }
+  .portal-text-action-primary {
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+  .portal-text-action:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* The board's per-committee management row (Change chair / Edit / Archive). */
+  .portal-committee-board {
+    grid-column: 1;
+    margin: var(--spacing-s) 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-s);
+    align-items: baseline;
+    font-size: var(--text-step--2);
+  }
+  .portal-committee-board details,
+  .portal-committee-add,
+  .portal-committee-page-manage {
+    font-size: var(--text-step--1);
+  }
+  .portal-committee-page-manage {
+    margin: var(--spacing-s) 0 0;
+    max-width: var(--measure);
+  }
+  .portal-committee-archive {
+    display: inline;
+  }
+
+  /* An inline management form disclosed under its text-action summary. */
+  .portal-committee-form {
+    margin: var(--spacing-xs) 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2xs);
+    max-width: var(--measure);
+  }
+  .portal-committee-add {
+    margin-top: var(--spacing-2xs);
+  }
+
+  /* The member affordance slot (top-right desktop / full-width mobile). */
+  .portal-committee-action {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    text-align: right;
+    max-width: 15rem;
+  }
+  .portal-committee-state {
+    margin: 0;
+    font-size: var(--text-step--1);
+    color: var(--color-muted);
+  }
+  .portal-committee-state .em {
+    color: var(--color-base-content);
+    font-weight: 500;
+  }
+  .portal-committee-state-sub {
+    margin: var(--spacing-3xs) 0 0;
+    font-size: var(--text-step--2);
+  }
+
+  /* Request to join: a QUIET navy OUTLINE button (never fireweed), 44px on mobile. */
+  .portal-committee-join {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.5rem;
+    padding: 0.4rem 0.95rem;
+    font-family: var(--font-body);
+    font-size: var(--text-step--1);
+    font-weight: 600;
+    line-height: 1;
+    color: var(--color-primary);
+    background: transparent;
+    border: 1px solid color-mix(in oklab, var(--color-primary) 55%, transparent);
+    border-radius: var(--radius-field);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+  }
+  .portal-committee-join:hover {
+    background: color-mix(in oklab, var(--color-primary) 8%, transparent);
+    border-color: var(--color-primary);
+  }
+  .portal-committee-join:active {
+    background: color-mix(in oklab, var(--color-primary) 14%, transparent);
+  }
+  .portal-committee-join:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* Mobile is its own composition: the committee section stacks, and the member affordance drops
+     to a full-width row with a 44px request button (this pass's binding touch-target floor). */
+  @media (max-width: 40rem) {
+    .portal-committee {
+      display: block;
+      padding-block: var(--spacing-m);
+    }
+    .portal-committee-action {
+      display: block;
+      width: 100%;
+      max-width: none;
+      justify-self: stretch;
+      text-align: left;
+      margin-top: var(--spacing-m);
+    }
+    .portal-committee-join {
+      width: 100%;
+      min-height: 2.75rem;
+    }
+    .portal-committee-queue,
+    .portal-committee-roster-manage,
+    .portal-committee-roster,
+    .portal-committee-desc,
+    .portal-committee-form,
+    .portal-committee-page-manage {
+      max-width: none;
+    }
+  }
 }

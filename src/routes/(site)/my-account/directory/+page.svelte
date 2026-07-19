@@ -11,6 +11,7 @@ a search or chip that narrows the list to three or fewer results auto-expands th
 $member-portal/lib/directory.ts already excludes a hidden, archived, or lapsed member and nulls a
 partial member's contact. The pure row derivations live in ./directory-view.ts. -->
 <script lang="ts">
+  import { untrack } from 'svelte';
   import type { PageData } from './$types';
   import { siteConfig } from '$theme/cairn.config';
   import { formatPhone, type DirectoryEntry } from '$member-portal/lib/directory';
@@ -35,7 +36,10 @@ partial member's contact. The pure row derivations live in ./directory-view.ts. 
     { id: 'mooring', label: 'On a mooring' },
   ];
 
-  let query = $state('');
+  // Prefilled from the `?q=` search param (a committees-page chair link lands the reader on that
+  // person's entry); empty for a plain visit. `untrack` reads only the initial value here (the box
+  // is user-owned after mount), which is also what silences svelte-check's state_referenced_locally.
+  let query = $state(untrack(() => data.initialQuery ?? ''));
   let activeChips = $state(new Set<DirectoryChip>());
   /** Rows the reader has expanded by hand. Auto-expand (a narrow result set) forces a row open on
    *  top of this set; it never writes to it, so clearing the search returns to the hand-set state. */

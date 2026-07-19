@@ -485,6 +485,30 @@ const membershipPricing = defineComponent({
   preview: { attributes: { tier: 'individual' } },
 });
 
+// ─── Committees at a glance: the live officers/chairs table, a hydrated island (T6b) ─────────
+// Same island shape as class-schedule/membership-pricing above: build() emits only the
+// no-JavaScript fallback (a pointer to the member portal, since no name is safe to hard-code
+// here), and CommitteesAtAGlance.svelte replaces it with the live officers and derived committee
+// chairs once mounted (committees-at-a-glance.remote.ts). Authored on its OWN line
+// (`:::committees-at-a-glance` fenced), never mid-sentence, the same container-only constraint
+// every hydrated directive carries.
+const committeesAtAGlance = defineComponent({
+  name: 'committees-at-a-glance',
+  label: 'Committees at a glance',
+  description: 'The live officers-and-committee-chairs table, read from the club database.',
+  use: 'Show the current officers and committee chairs by name, straight from live data.',
+  insertTemplate: ':::committees-at-a-glance\n:::',
+  hydrate: true,
+  build: () =>
+    h('p', { className: ['committees-at-a-glance-fallback'] }, [
+      'See current committee chairs and officers in the ',
+      h('a', { href: '/my-account/committees' }, ['member portal']),
+      '.',
+    ]),
+  group: 'Page structure',
+  icon: 'list-checks',
+});
+
 // ─── Steps / step: a numbered sequence, no card chrome (site-declared) ──────
 // A `:::steps` sequence walks the reader through an ordered procedure (before you sail, at the
 // dock, when you're done; how to apply): a left number rail whose numerals come from a CSS
@@ -716,5 +740,6 @@ export const ascRegistry = defineRegistry({
     donateForm,
     classSchedule,
     membershipPricing,
+    committeesAtAGlance,
   ],
 });

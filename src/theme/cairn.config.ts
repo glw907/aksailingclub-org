@@ -12,6 +12,7 @@ import ContactForm from './components/ContactForm.svelte';
 import DonateForm from './components/DonateForm.svelte';
 import ClassSchedule from './components/ClassSchedule.svelte';
 import MembershipPricing from './components/MembershipPricing.svelte';
+import CommitteesAtAGlance from './components/CommitteesAtAGlance.svelte';
 import siteYaml from './site.config.yaml?raw';
 // The ?url import resolves the compiled stylesheets to their served URLs (the hashed assets in a
 // build), so the editor's preview frame can link the same sheets the (site) layout loads. They
@@ -278,6 +279,7 @@ export const cairn = defineAdapter({
       'donate-form': DonateForm,
       'class-schedule': ClassSchedule,
       'membership-pricing': MembershipPricing,
+      'committees-at-a-glance': CommitteesAtAGlance,
     },
   },
   editor: {
