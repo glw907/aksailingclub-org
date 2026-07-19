@@ -46,7 +46,7 @@ import { verifyTurnstile } from '$theme/turnstile';
 import { checkRateLimitKeys, RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
 import { documents } from '$chassis/content';
 import { loadPublishedDocuments } from '$theme/documents';
-import { loadHouseholdRequirements, outstandingAssetDocuments, type AssetKind } from '$member-portal/lib/waiver-requirements';
+import { householdDocumentSigner, loadHouseholdRequirements, outstandingAssetDocuments, type AssetKind } from '$member-portal/lib/waiver-requirements';
 
 export const prerender = false;
 
@@ -222,7 +222,15 @@ function assetFeeContext(assetType: string): 'mooring-fee' | 'storage-fee' {
  *  rendered), hard-gates on the matching asset document(s) being signed (member-waivers T5b, spec
  *  rule 7; the flagged held-asset edge -- a household with no active primary -- is
  *  `deriveHouseholdRequirements`'s own fallback, not this route's concern), then hands the
- *  verified fee to {@link checkoutOrStub}. */
+ *  verified fee to {@link checkoutOrStub}.
+ *
+ *  Fix round (member-waivers T5b): a household-scoped asset document only ever appears on ONE
+ *  adult's own signing moment ({@link householdDocumentSigner}'s own header), so redirecting
+ *  whoever clicked "Pay now" to `/my-account/sign` strands every other adult in front of a moment
+ *  with nothing to sign in it -- the gate would keep firing forever with no way out. The redirect
+ *  is now restricted to that one adult; anyone else gets an actionable refusal naming them
+ *  instead, since asking that adult (in person, by phone, the household's own channel) is the only
+ *  way to reach the document from here. */
 async function payAssetFeeCheckout(event: PortalActionEvent, ctx: PortalActionContext, assignmentId: string) {
   const currentSeason = await getCurrentSeason(ctx.db);
   const payable = await getPayableAssignmentFee(ctx.db, assignmentId, ctx.member.householdId, currentSeason);
@@ -231,6 +239,10 @@ async function payAssetFeeCheckout(event: PortalActionEvent, ctx: PortalActionCo
   const publishedDocuments = loadPublishedDocuments(documents, currentSeason);
   const requirements = await loadHouseholdRequirements(ctx.db, publishedDocuments, ctx.member.householdId, currentSeason);
   if (requirements && outstandingAssetDocuments(requirements, payable.assetType as AssetKind).length > 0) {
+    const signer = householdDocumentSigner(requirements);
+    if (signer && signer.memberId !== ctx.member.id) {
+      return fail(400, { error: `${signer.memberName} needs to sign for this first. Ask them to sign in and visit their account.` });
+    }
     redirect(303, `/my-account/sign?context=${assetFeeContext(payable.assetType)}`);
   }
 

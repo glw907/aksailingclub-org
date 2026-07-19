@@ -9,6 +9,7 @@ import type { DocumentFrontmatter, SignableDocument } from '$theme/documents';
 import {
   deriveHouseholdRequirements,
   hasSignedCurrentRelease,
+  householdDocumentSigner,
   loadHouseholdRequirements,
   outstandingAssetDocuments,
   type DeriveHouseholdRequirementsInput,
@@ -251,6 +252,27 @@ describe('outstandingAssetDocuments', () => {
     );
     expect(outstandingAssetDocuments(requirements, 'rv-parking')).toEqual([]);
     expect(outstandingAssetDocuments(requirements, 'boat-parking')).toEqual([]);
+  });
+});
+
+describe('householdDocumentSigner (member-waivers T5b fix round)', () => {
+  it('names the primary member when the household holds an asset kind, regardless of who signed', () => {
+    const rv = doc({ id: 'rv-acknowledgement-v1', document: 'rv-acknowledgement', kind: 'acknowledgement', audience: 'rv-parking' });
+    const requirements = deriveHouseholdRequirements(baseInput({ assetKinds: ['rv-parking'], publishedDocuments: published(rv) }));
+    expect(householdDocumentSigner(requirements)).toEqual({ memberId: ADULT_A.id, memberName: ADULT_A.name });
+  });
+
+  it('names the fallback adult when the primary is no longer active (mirrors deriveHouseholdRequirements own fallback)', () => {
+    const rv = doc({ id: 'rv-acknowledgement-v1', document: 'rv-acknowledgement', kind: 'acknowledgement', audience: 'rv-parking' });
+    const requirements = deriveHouseholdRequirements(
+      baseInput({ primaryMemberId: 'mem-no-longer-active', assetKinds: ['rv-parking'], publishedDocuments: published(rv) }),
+    );
+    expect(householdDocumentSigner(requirements)).toEqual({ memberId: ADULT_A.id, memberName: ADULT_A.name });
+  });
+
+  it('is null when the household holds no asset that opens a household-scoped requirement', () => {
+    const requirements = deriveHouseholdRequirements(baseInput({ assetKinds: [] }));
+    expect(householdDocumentSigner(requirements)).toBeNull();
   });
 });
 

@@ -38,6 +38,12 @@ const { fakeD1 } = await import('./_fake-d1');
 const MEMBER_ROW = { id: 'mem-1', household_id: 'hh-1', name: 'Scratch Member', email: 'scratch@example.com', archived_at: null };
 const ACTIVE_ADULT_MEMBER = { id: 'mem-1', name: 'Scratch Member', email: 'scratch@example.com', phone: null, birthdate: '1980-01-01', directory_visibility: 'partial', archived_at: null };
 
+// The non-primary payer scenario (member-waivers T5b fix round): a household with a second adult
+// who is NOT the primary, so the household's own Mooring Agreement attaches only to mem-1's own
+// signing moment (`waiver-requirements.ts`'s own "only ever appear on the primary's own list").
+const NON_PRIMARY_MEMBER_ROW = { id: 'mem-2', household_id: 'hh-1', name: 'Other Adult', email: 'other@example.com', archived_at: null };
+const NON_PRIMARY_ACTIVE_ADULT_MEMBER = { id: 'mem-2', name: 'Other Adult', email: 'other@example.com', phone: null, birthdate: '1982-01-01', directory_visibility: 'partial', archived_at: null };
+
 function fakeEvent(form: Record<string, string>, db: unknown, stripeKey?: string) {
   const fd = new FormData();
   fd.append('csrf', 'token');
@@ -186,6 +192,28 @@ describe('?/payAssetFee', () => {
     const caught = await catchThrown(actions.payAssetFee(fakeEvent({ assignmentId: 'aa-1' }, db, 'sk_test_1') as never));
     expect(isRedirect(caught)).toBe(true);
     expect((caught as Redirect).location).toBe('/my-account/sign?context=mooring-fee');
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('refuses (never redirects) a non-primary household adult who cannot sign the outstanding household document themselves, naming the primary who can (member-waivers T5b fix round)', async () => {
+    const { db } = fakeD1({
+      firstResults: {
+        'FROM member_sessions': NON_PRIMARY_MEMBER_ROW,
+        'FROM households WHERE id': { primary_member_id: 'mem-1' },
+        "'current_season'": { value: '2026' },
+        'FROM asset_assignments aa': { asset_type: 'mooring', asset_type_name: 'Mooring', amount: 150 },
+      },
+      allResults: {
+        'FROM members WHERE household_id = ?1 ORDER BY name': [ACTIVE_ADULT_MEMBER, NON_PRIMARY_ACTIVE_ADULT_MEMBER],
+        'FROM asset_assignments aa': [{ asset_type: 'mooring' }],
+      },
+    });
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const result = await actions.payAssetFee(fakeEvent({ assignmentId: 'aa-1' }, db, 'sk_test_1') as never);
+    expect(result).toEqual(expect.objectContaining({ status: 400 }));
+    expect((result as { data: { error: string } }).data.error).toContain('Scratch Member');
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

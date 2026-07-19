@@ -239,6 +239,26 @@ export function outstandingAssetDocuments(requirements: HouseholdRequirements, a
 }
 
 /**
+ * The one adult who can actually satisfy a household-scoped document (member-waivers T5b fix
+ * round): {@link deriveHouseholdRequirements}'s own header states the household's asset-kind and
+ * dry-storage documents attach to, and can only ever be signed by, one adult -- the primary, or
+ * (its own flagged fallback) the first active adult when the primary is no longer one. By
+ * construction, at most one adult's own `requirements` list ever carries a `'household'`-scope
+ * entry, so the first hit is sound. `null` when the household holds no asset that opens a
+ * household-scoped requirement at all (nobody's list carries one).
+ *
+ * A caller with a real outstanding household document (e.g. the asset-fee gate) uses this to
+ * distinguish the one adult who can walk into `/my-account/sign` and clear it from every other
+ * adult, who cannot: the signing page's own load only ever builds a signer's items from their own
+ * `PersonRequirements`, so sending anyone else there would strand them in front of an empty
+ * moment.
+ */
+export function householdDocumentSigner(requirements: HouseholdRequirements): { memberId: string; memberName: string } | null {
+  const adult = requirements.adults.find((a) => a.requirements.some((r) => r.scope === 'household'));
+  return adult ? { memberId: adult.memberId, memberName: adult.memberName } : null;
+}
+
+/**
  * Whether `memberId`'s own current-season general release is on file (member-waivers T5b, spec
  * rule 7's amendment: class signup "gates on the current-season general release" for the
  * REGISTRANT specifically, on top of the household's own signature-complete standing the caller
