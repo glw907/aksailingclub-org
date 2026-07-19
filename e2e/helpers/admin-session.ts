@@ -65,7 +65,9 @@ export type MintAdminSessionOptions = {
   email?: string;
   displayName?: string;
   /** One of the site's declared role names (src/theme/cairn.config.ts's `roles`). Defaults to
-   * 'owner'. */
+   * 'Administrator', the granted owner-capability name since the roles-adoption pass renamed the
+   * live rows; the reserved phantom 'owner' resolves owner capability but no club nav groups, so
+   * a session minted with it would not match the admin-sidebar baselines. */
   role?: string;
 };
 
@@ -81,7 +83,7 @@ export async function mintAdminSession(
 ): Promise<{ email: string; sessionId: string }> {
   const email = opts.email ?? 'e2e-owner@aksailingclub.org';
   const displayName = opts.displayName ?? 'E2E Owner';
-  const role = opts.role ?? 'owner';
+  const role = opts.role ?? 'Administrator';
 
   if (!schemaAlreadyMigrated()) {
     d1Exec(['--file', path.join(repoRoot, 'migrations/0000_auth.sql')]);
