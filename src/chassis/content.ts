@@ -38,6 +38,13 @@ const fragmentsRaw = import.meta.glob('/src/content/fragments/*.md', {
   import: 'default',
   eager: true,
 }) as Record<string, string>;
+// Signable documents route 'embedded' too (member-waivers T1): no public page, reached only
+// through the signing flow (T4), which reads a resolved published version's full text.
+const documentsRaw = import.meta.glob('/src/content/documents/*.md', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
 
 const indexes = createSiteIndexes(cairn, siteConfig, {
   posts: postsRaw,
@@ -45,6 +52,7 @@ const indexes = createSiteIndexes(cairn, siteConfig, {
   bulletins: bulletinsRaw,
   notifications: notificationsRaw,
   fragments: fragmentsRaw,
+  documents: documentsRaw,
 });
 
 export const site = indexes.site;
@@ -53,6 +61,7 @@ export const pages = indexes.pages;
 export const bulletins = indexes.bulletins;
 export const notifications = indexes.notifications;
 export const fragments = indexes.fragments;
+export const documents = indexes.documents;
 
 export const ORIGIN = 'https://dev.aksailingclub.org';
 export const SITE_DESCRIPTION =

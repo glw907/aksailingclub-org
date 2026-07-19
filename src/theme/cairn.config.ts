@@ -97,6 +97,7 @@ export const navLayout: NavLayout = [
       { screen: 'pages' },
       { screen: 'fragments' },
       { screen: 'notifications' },
+      { screen: 'documents' },
     ],
   },
   {
@@ -236,6 +237,38 @@ export const cairn = defineAdapter({
       fields: fieldset({
         title: fields.text({ label: 'Title', required: true }),
         date: fields.date({ label: 'Date', required: true }),
+      }),
+    }),
+    // The member-waivers document model (member-waivers T1,
+    // docs/2026-07-17-member-waivers-design.md "Ratified decisions" 1/4/6): signable documents as
+    // season-versioned markdown, one file per version, edited through the admin like any other
+    // content. `routing: 'embedded'` (the same choice notifications and fragments make): a
+    // document has no public page of its own, and reaches a member only through the signing flow
+    // that reads its full text (T4). `document` is the stable id a document keeps across versions
+    // (e.g. "general-release"); `version`/`season`/`status` are what `$theme/documents.ts`'s
+    // loader resolves over, and the freeze guard (src/tests/document-freeze-guard.test.ts) holds
+    // a published version's body immutable once frozen. `audience` mirrors the asset-kind ids
+    // `asset_types` uses (migrations/asc-club/0007_assets_email/forward.sql) so the requirement
+    // engine (T3) can match a document to what a member actually holds, plus "all-members" and
+    // "dry-storage" (any of the three storage asset kinds) and "youth-class".
+    documents: defineConcept({
+      dir: 'src/content/documents',
+      label: 'Signable documents',
+      singular: 'Document',
+      routing: 'embedded',
+      summaryFields: ['document', 'version', 'kind', 'audience', 'season', 'status'],
+      fields: fieldset({
+        title: fields.text({ label: 'Title', required: true }),
+        document: fields.text({ label: 'Document id', required: true, help: 'Stable across versions, e.g. "general-release".' }),
+        version: fields.number({ label: 'Version', required: true, integer: true, min: 1 }),
+        kind: fields.select({ label: 'Kind', required: true, options: ['release', 'acknowledgement', 'agreement'] }),
+        audience: fields.select({
+          label: 'Audience',
+          required: true,
+          options: ['all-members', 'mooring', 'rv-parking', 'boat-parking', 'small-boat-rack', 'dry-storage', 'youth-class'],
+        }),
+        season: fields.number({ label: 'Season', required: true, integer: true }),
+        status: fields.select({ label: 'Status', required: true, options: ['draft', 'published'] }),
       }),
     }),
     // The site-declared notifications concept: a time-boxed announcement rendered as the home
