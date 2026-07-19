@@ -7,7 +7,10 @@ import { navLayout } from '$theme/cairn.config.js';
 
 /** The context resolveNavLayout needs beyond the tree itself, matching the site's real
  *  concepts and configured nav menu so the acceptance criteria (every engine screen
- *  referenced, no navMenu-gated `nav` throwing) hold the same way the real admin build does. */
+ *  referenced, no navMenu-gated `nav` throwing) hold the same way the real admin build does.
+ *  0.88 replaced the loose `capability`/`role` pair with a single `editor: Editor`, the same
+ *  shape `locals.editor` carries; this stub fills the two fields the resolver doesn't read
+ *  (`email`/`displayName`) with fixed placeholders. */
 function opts(role: 'owner' | 'club-admin' | 'instructor', capability: 'owner' | 'editor' | 'none') {
   return {
     layout: navLayout,
@@ -20,8 +23,12 @@ function opts(role: 'owner' | 'club-admin' | 'instructor', capability: 'owner' |
       { id: 'notifications', label: 'Notifications' },
     ],
     navMenuLabel: 'Navigation',
-    capability,
-    role,
+    editor: {
+      email: 'editor@example.com',
+      displayName: 'Test Editor',
+      role,
+      capability,
+    },
   };
 }
 
