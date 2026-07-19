@@ -8,15 +8,26 @@
 // the next one becomes current.
 //
 // The design is the RATIFIED probe (docs/design-benchmark/waivers-signing-round-1-arc.md); the
-// member-facing words are verbatim from docs/waivers/signing-framing-copy.md. This route does not
-// gate join/renewal/payment (that is T5's household-complete gate); it is the signing surface T5's
-// "Needs your attention" row and the gated flows link into, reachable standalone from the portal.
+// member-facing words are verbatim from docs/waivers/signing-framing-copy.md. This route is the
+// signing surface the portal's "Needs your attention" row and the gated flows (renew, asset fees,
+// class signup) link into, reachable standalone from the portal too.
+//
+// Member-waivers T5b adds the join/renewal household-complete loop's OWN half here: once the
+// signer's own moment is done, `load` also reports whether the whole household is complete
+// (`household.active`/`household.complete`/`household.rows`), the `sendNudge` action lets an
+// adult with nothing left of their own email another outstanding adult a sign-in link
+// (cooldown-guarded), and the `sign` action fires the one-time resumption email to the managing
+// adult once THEIR signature is the one that completes the household (never when the managing
+// adult is the one signing -- their own moment continues straight to payment). The money-moment
+// HARD GATE itself (redirecting a member here before they can pay) lives in each gated route's own
+// file (`/my-account/renew`, the landing's asset-fee actions, `/my-account/classes`'s own
+// register action), never here: this route only ever reports and records, it never refuses a visit.
 import { redirect, fail } from '@sveltejs/kit';
 import { version } from '$app/environment';
 import type { Actions, PageServerLoad } from './$types';
 import { issueMemberCsrfToken } from '$member-auth/lib/auth';
 import { resolveMemberDb } from '$member-auth/lib/db';
-import { portalAction } from '$member-portal/lib/portal-action';
+import { portalAction, type PortalActionContext, type PortalActionEvent } from '$member-portal/lib/portal-action';
 import { documents } from '$chassis/content';
 import { renderMarkdown } from '$theme/cairn.config';
 import { getCurrentSeason } from '$admin-club/lib/club-settings';
@@ -26,9 +37,11 @@ import { computeAge } from '$member-portal/lib/age-gate';
 import { loadPublishedDocuments } from '$theme/documents';
 import {
   deriveHouseholdRequirements,
+  loadHouseholdRequirements,
   type AssetKind,
   type SignatureRecord,
 } from '$member-portal/lib/waiver-requirements';
+import { householdSignatureGate } from '$member-portal/lib/household-signature-gate';
 import {
   applyContactUpdate,
   hasContactConfirmation,
@@ -40,7 +53,10 @@ import {
   resolveSessionAuthEvent,
   type SigningContext,
 } from '$member-portal/lib/signatures';
-import { buildSigningMoment, type SigningItem } from './sign-view';
+import { nudgeRecentlySent, resumptionAlreadySent, sendWaiverNudgeEmail, sendWaiverResumptionEmail } from '$member-portal/lib/waiver-notify';
+import type { EmailBindingEnv } from '$admin-club/lib/club-email';
+import { isSafeNextPath } from '$member-portal/lib/return-path';
+import { buildHouseholdSignatureRows, buildSigningMoment, waitingIntroLine, type SigningItem } from './sign-view';
 
 export const prerender = false;
 
@@ -60,13 +76,29 @@ function resolveContext(url: URL): SigningContext {
   return raw && isSigningContext(raw) ? raw : 'renewal';
 }
 
+/** The completion coda's own "return to what they were doing" target (member-waivers T5b), from
+ *  `?next=` -- `$member-portal/lib/return-path.ts`'s own closed allowlist, `null` for anything it
+ *  does not recognize. */
+function resolveNext(url: URL): string | null {
+  const raw = url.searchParams.get('next');
+  return isSafeNextPath(raw) ? raw : null;
+}
+
+/** The join/renewal household-complete loop's own money-moment paths (member-waivers T5b, spec
+ *  rule 7's amendment): where the resumption email deep-links once the household finishes.
+ *  `null` for `join`, whose own payment step is a later task's own wiring (this route's job stops
+ *  at making the loop mechanism real; T5c decides what a completed join deep-links to). */
+function paymentPathFor(context: SigningContext): string | null {
+  return context === 'renewal' ? '/my-account/renew' : null;
+}
+
 export const load: PageServerLoad = async (event) => {
   const csrf = issueMemberCsrfToken(event);
   const { member } = await event.parent();
   if (!member) redirect(303, '/my-account');
 
   const db = resolveMemberDb(event.platform?.env);
-  if (!db) return { csrf, degraded: true as const, context: resolveContext(event.url) };
+  if (!db) return { csrf, degraded: true as const, context: resolveContext(event.url), next: resolveNext(event.url) };
 
   const season = await getCurrentSeason(db);
   const context = resolveContext(event.url);
@@ -167,12 +199,32 @@ export const load: PageServerLoad = async (event) => {
     postalCode: address?.postalCode ?? '',
   };
 
+  // The join/renewal household-complete loop (member-waivers T5b, spec rule 7's amendment): once
+  // the signer's own moment is done, a household still waiting on another adult sees the waiting
+  // state instead of the plain completion coda. `active` only for a household that is actually a
+  // family in the relevant sense (another adult, or a minor) -- an individual-tier household of
+  // one adult with no minors has nothing to wait on and never renders this block at all.
+  const isLoopContext = context === 'join' || context === 'renewal';
+  const minorNames = [...new Set(requirements.minors.map((minor) => minor.minorName))];
+  const householdActive = isLoopContext && (requirements.adults.length > 1 || minorNames.length > 0);
+  const gate = householdSignatureGate(requirements);
+  const remainingOtherAdultNames = gate.remaining.filter((r) => r.role === 'adult' && r.memberId !== member.id).map((r) => r.name);
+
   return {
     csrf,
     degraded: false as const,
     context,
+    next: resolveNext(event.url),
     season,
     moment,
+    household: {
+      active: householdActive,
+      complete: gate.complete,
+      introLine: householdActive && remainingOtherAdultNames.length > 0 ? waitingIntroLine(remainingOtherAdultNames) : null,
+      rows: householdActive
+        ? buildHouseholdSignatureRows({ signerMemberId: member.id, signerSignedCount: moment.signedCount, signerTotal: moment.total, minorNames, requirements })
+        : [],
+    },
     contact: {
       applies: assetConfirmApplies,
       confirmed: contactConfirmed,
@@ -186,6 +238,48 @@ export const load: PageServerLoad = async (event) => {
 function resolvePublishedDocument(season: number, documentId: string) {
   const published = loadPublishedDocuments(documents, season);
   return published.get(documentId) ?? null;
+}
+
+/**
+ * The household-complete loop's own closing half (member-waivers T5b): after a fresh signature
+ * lands in a join/renewal context, re-check the household from a fresh read (never the `load`
+ * that rendered this page, which is now stale) and, if that signature was the last one the
+ * household owed, send the managing adult the resumption email -- unless the signer IS the
+ * managing adult (`ctx.isPrimary`), whose own moment continues straight to payment, exactly the
+ * spec's own "unless the signer IS the managing adult". Best-effort throughout (a notify failure
+ * never fails the signature that already committed), and a `join` context sends nothing yet (see
+ * {@link paymentPathFor}'s own header).
+ */
+async function maybeSendResumptionEmail(ctx: PortalActionContext, event: PortalActionEvent, context: SigningContext, season: number): Promise<void> {
+  if (ctx.isPrimary) return;
+  const paymentPath = paymentPathFor(context);
+  if (!paymentPath) return;
+
+  try {
+    const publishedDocuments = loadPublishedDocuments(documents, season);
+    const requirements = await loadHouseholdRequirements(ctx.db, publishedDocuments, ctx.member.householdId, season);
+    if (!requirements || !householdSignatureGate(requirements).complete) return;
+    if (await resumptionAlreadySent(ctx.db, ctx.member.householdId, season)) return;
+
+    const household = await getHouseholdInfo(ctx.db, ctx.member.householdId);
+    const primaryId = household?.primaryMemberId;
+    if (!primaryId) return;
+    const primaryRow = await ctx.db.prepare('SELECT name, email FROM members WHERE id = ?1').bind(primaryId).first<{ name: string; email: string | null }>();
+    if (!primaryRow) return;
+
+    const env = event.platform?.env as EmailBindingEnv | undefined;
+    if (!env) return;
+    await sendWaiverResumptionEmail(ctx.db, env, {
+      manager: { memberId: primaryId, name: primaryRow.name, email: primaryRow.email },
+      signerName: ctx.member.name,
+      householdId: ctx.member.householdId,
+      season,
+      paymentPath,
+      origin: event.url.origin,
+    });
+  } catch (err) {
+    console.error('member-portal: waiver resumption email failed after a committed signature', err);
+  }
 }
 
 export const actions: Actions = {
@@ -230,7 +324,55 @@ export const actions: Actions = {
       minor,
     });
     if (!result.ok) return fail(400, { error: result.error });
+    if (!result.noop && (context === 'join' || context === 'renewal')) {
+      await maybeSendResumptionEmail(ctx, event, context, season);
+    }
     return { saved: true as const };
+  }),
+
+  sendNudge: portalAction(async ({ form, ctx, event }) => {
+    const context = resolveContext(event.url as URL);
+    if (context !== 'join' && context !== 'renewal') {
+      return fail(400, { error: 'Not available for this signing context.' });
+    }
+    const targetMemberId = String(form.get('targetMemberId') ?? '');
+    if (!targetMemberId) return fail(400, { error: 'Missing member id.' });
+
+    const season = await getCurrentSeason(ctx.db);
+    const publishedDocuments = loadPublishedDocuments(documents, season);
+    const requirements = await loadHouseholdRequirements(ctx.db, publishedDocuments, ctx.member.householdId, season);
+    if (!requirements) return fail(400, { error: 'Household not found.' });
+
+    // The nudge target must be an OTHER adult of this SAME household with a real outstanding
+    // signature (server-side denial, member-waivers T5b rule 1's own "one adult never signs for
+    // another" -- this is the send-side mirror: a member never nudges someone outside their own
+    // household, and never spams an adult who has nothing left to sign).
+    const target = householdSignatureGate(requirements).remaining.find((r) => r.role === 'adult' && r.memberId === targetMemberId);
+    if (!target || targetMemberId === ctx.member.id) {
+      return fail(400, { error: 'That member has nothing of their own outstanding to sign.' });
+    }
+
+    if (await nudgeRecentlySent(ctx.db, targetMemberId, season)) {
+      return { nudgeSent: true as const };
+    }
+
+    const targetRow = await ctx.db
+      .prepare('SELECT email FROM members WHERE id = ?1 AND household_id = ?2 AND archived_at IS NULL')
+      .bind(targetMemberId, ctx.member.householdId)
+      .first<{ email: string | null }>();
+
+    const env = event.platform?.env as EmailBindingEnv | undefined;
+    if (env && targetRow) {
+      await sendWaiverNudgeEmail(ctx.db, env, {
+        managerName: ctx.member.name,
+        target: { memberId: targetMemberId, name: target.name, email: targetRow.email },
+        season,
+        context,
+        outstandingCount: target.outstandingCount,
+        origin: event.url.origin,
+      });
+    }
+    return { nudgeSent: true as const };
   }),
 
   confirmContact: portalAction(async ({ ctx, event }) => {

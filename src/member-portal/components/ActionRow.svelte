@@ -36,11 +36,15 @@ fill the second line (the design doc's own "full thumb width is acceptable"). --
     {#if row.amountCents !== null}
       <span class="portal-action-amount">{formatMemberCents(row.amountCents)}</span>
     {/if}
-    <form method="POST" action={row.formAction}>
-      <input type="hidden" name="csrf" value={csrf} />
-      <input type="hidden" name={row.fieldName} value={row.fieldValue} />
-      <button type="submit" class="btn btn-primary btn-sm">{row.actionLabel}</button>
-    </form>
+    {#if row.kind === 'link'}
+      <a href={row.href} class="btn btn-primary btn-sm">{row.actionLabel}</a>
+    {:else}
+      <form method="POST" action={row.formAction}>
+        <input type="hidden" name="csrf" value={csrf} />
+        <input type="hidden" name={row.fieldName} value={row.fieldValue} />
+        <button type="submit" class="btn btn-primary btn-sm">{row.actionLabel}</button>
+      </form>
+    {/if}
   </div>
 </div>
 

@@ -258,11 +258,11 @@ describe('getPayableAssignmentFee', () => {
     await expect(getPayableAssignmentFee(db, 'aa-1', 'hh-1', 2026)).resolves.toEqual({ error: expect.stringContaining('No outstanding fee') });
   });
 
-  it('answers the outstanding fee in cents, converted from the stored dollar amount', async () => {
+  it('answers the outstanding fee in cents, converted from the stored dollar amount, plus the asset type id', async () => {
     const { db, calls } = fakeD1({
-      firstResults: { 'FROM asset_assignments aa': { asset_type_name: 'Mooring', amount: 150 } },
+      firstResults: { 'FROM asset_assignments aa': { asset_type: 'mooring', asset_type_name: 'Mooring', amount: 150 } },
     });
-    await expect(getPayableAssignmentFee(db, 'aa-1', 'hh-1', 2026)).resolves.toEqual({ amountCents: 15000, assetTypeName: 'Mooring' });
+    await expect(getPayableAssignmentFee(db, 'aa-1', 'hh-1', 2026)).resolves.toEqual({ amountCents: 15000, assetType: 'mooring', assetTypeName: 'Mooring' });
     expect(calls[0].args).toEqual(['aa-1', 'hh-1', 2026]);
   });
 });

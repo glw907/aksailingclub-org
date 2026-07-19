@@ -109,6 +109,26 @@ describe('?/confirm (the Turnstile gate, 2026-07-15 hardening pass)', () => {
     expect(isRedirect(caught)).toBe(true);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
+
+  it("redirects to a `next` value from its own closed allowlist (member-waivers T5b's deep link)", async () => {
+    vi.stubGlobal('fetch', vi.fn());
+    const { db } = fakeD1({ firstResults: { 'FROM member_tokens t JOIN members m': MEMBER_ROW } });
+    const caught = await catchThrown(
+      actions.confirm(confirmEvent({ token: 'a-magic-link-token', next: '/my-account/renew' }, db) as never),
+    );
+    expect(isRedirect(caught)).toBe(true);
+    expect((caught as { location: string }).location).toBe('/my-account/renew');
+  });
+
+  it('falls back to /my-account for a `next` value outside the allowlist (never an open redirect)', async () => {
+    vi.stubGlobal('fetch', vi.fn());
+    const { db } = fakeD1({ firstResults: { 'FROM member_tokens t JOIN members m': MEMBER_ROW } });
+    const caught = await catchThrown(
+      actions.confirm(confirmEvent({ token: 'a-magic-link-token', next: 'https://evil.example/phish' }, db) as never),
+    );
+    expect(isRedirect(caught)).toBe(true);
+    expect((caught as { location: string }).location).toBe('/my-account');
+  });
 });
 
 describe('?/resend (the Turnstile gate, 2026-07-15 hardening pass)', () => {

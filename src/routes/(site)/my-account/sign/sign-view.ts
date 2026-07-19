@@ -13,6 +13,11 @@
 // apostrophes match that file byte-for-byte, deliberately -- the attorney reviews these lines
 // beside the documents, so they are reproduced exactly as written, not re-typeset.
 import type { DocumentKind } from '$theme/documents';
+import type { HouseholdRequirements } from '$member-portal/lib/waiver-requirements';
+import { householdSignatureGate } from '$member-portal/lib/household-signature-gate';
+import { firstNameOf, joinNames } from '$member-portal/lib/person-name';
+
+export { firstNameOf, joinNames };
 
 /** One signable act in the moment, before state is assigned. `kind` separates the signer's own
  *  documents from a per-child Part Two election under a release; `bodyHtml` is the rendered
@@ -242,4 +247,94 @@ export interface SigningMoment {
   signedCount: number;
   allSigned: boolean;
   welcome: WelcomeLine;
+}
+
+/** The household-complete loop (member-waivers T5b, docs/2026-07-17-member-waivers-design.md
+ * ratified decision 7 as amended 2026-07-18): once a signer's own moment above is done, a
+ * join/renewal context still checks whether the whole household has finished before payment can
+ * proceed. `signerOwnDone` is true once nothing remains for the person actually viewing the
+ * page, independent of anyone else -- `total === 0` (nothing ever applied to them) counts the same
+ * as `allSigned` (they cleared everything). */
+export function signerOwnDone(moment: Pick<SigningMoment, 'total' | 'allSigned'>): boolean {
+  return moment.total === 0 || moment.allSigned;
+}
+
+// `firstNameOf`/`joinNames` (`{first name}` throughout signing-framing-copy.md's own household-
+// loop copy, and the natural join for naming several remaining adults in one sentence) are
+// imported at this file's own top (from `person-name.ts`, shared with the portal landing's own
+// waiver rows) and re-exported below to keep this module's existing public surface unchanged.
+
+/** The waiting-state intro line (signing-framing-copy.md: replaces the welcome body once the
+ *  signer's own documents are done but the household is not complete): "Your signatures are done.
+ *  {name}'s are needed before payment.", `{name}` a natural-language join of every remaining
+ *  OTHER adult's first name. */
+export function waitingIntroLine(remainingAdultNames: string[]): string {
+  return `Your signatures are done. ${joinNames(remainingAdultNames.map(firstNameOf))}'s are needed before payment.`;
+}
+
+/** One row in the household-signatures block (signing-framing-copy.md's "The household-signatures
+ *  block"): "You" (the signer's own progress), the household's own minors once they are covered
+ *  (always true once {@link signerOwnDone}, since a minor's Part Two is always part of the
+ *  signer's own moment), and one row per OTHER adult still owing their own signatures, each with
+ *  its own nudge action. */
+export interface HouseholdSignatureRow {
+  key: string;
+  label: string;
+  statusText: string;
+  /** Present only on an outstanding OTHER adult's own row: the member id the nudge form's hidden
+   *  `targetMemberId` field submits. */
+  nudgeMemberId: string | null;
+  nudgeButtonLabel: string | null;
+  /** The waiting card's own title ("Waiting on {name}") and explanatory line, verbatim from
+   *  signing-framing-copy.md's "The waiting card" -- present only alongside a nudge action. */
+  waitingCardTitle: string | null;
+  waitingCardLine: string | null;
+}
+
+/**
+ * Build the household-signatures block. Only meaningful once the signer's own moment is done
+ * ({@link signerOwnDone}); the caller shows nothing before that point (there is no other adult's
+ * own status to report yet, and the signer's own accordion above already carries their own
+ * progress). `signerSignedCount`/`signerTotal` come straight from the built {@link SigningMoment}
+ * ("You · {signed count} of {total} signed"); `minorNames` lists the household's own minors, in
+ * `requirements.minors`'s own order.
+ */
+export function buildHouseholdSignatureRows(args: {
+  signerMemberId: string;
+  signerSignedCount: number;
+  signerTotal: number;
+  minorNames: string[];
+  requirements: HouseholdRequirements;
+}): HouseholdSignatureRow[] {
+  const rows: HouseholdSignatureRow[] = [
+    { key: 'you', label: 'You', statusText: `${args.signerSignedCount} of ${args.signerTotal} signed`, nudgeMemberId: null, nudgeButtonLabel: null, waitingCardTitle: null, waitingCardLine: null },
+  ];
+
+  if (args.minorNames.length > 0) {
+    rows.push({
+      key: 'children',
+      label: args.minorNames.join(', '),
+      statusText: 'covered by your Part Two signatures above',
+      nudgeMemberId: null,
+      nudgeButtonLabel: null,
+      waitingCardTitle: null,
+      waitingCardLine: null,
+    });
+  }
+
+  for (const remaining of householdSignatureGate(args.requirements).remaining) {
+    if (remaining.role !== 'adult' || remaining.memberId === args.signerMemberId) continue;
+    const firstName = firstNameOf(remaining.name);
+    rows.push({
+      key: remaining.memberId,
+      label: remaining.name,
+      statusText: `${remaining.outstandingCount} of their own to sign—payment and membership wait on these`,
+      nudgeMemberId: remaining.memberId,
+      nudgeButtonLabel: `Email ${firstName} a sign-in link`,
+      waitingCardTitle: `Waiting on ${firstName}`,
+      waitingCardLine: `${remaining.outstandingCount} documents need ${firstName}'s own signature—a signature is personal, so no one else can sign them. Payment and your family's ${args.requirements.season} membership unlock when everyone has signed.`,
+    });
+  }
+
+  return rows;
 }

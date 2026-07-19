@@ -1,6 +1,31 @@
-import { describe, expect, it } from 'vitest';
-import { fakeD1 } from './_fake-d1';
-import {
+import { describe, expect, it, vi } from 'vitest';
+
+// A single published all-members release (member-waivers T5b's own registerForClass gate test):
+// the real content corpus is all `status: 'draft'` today, so the "the unsigned edge pivots to the
+// signing moment" case needs a fixture. Every OTHER test in this file stubs no household members
+// for `loadHouseholdRequirements`'s own reads, so `hasSignedCurrentRelease` reads its pass-through
+// 'true' (the registrant matches neither the adult nor the minor list) regardless of this
+// fixture -- harmless to them.
+const PUBLISHED_RELEASE = {
+  concept: 'documents',
+  id: 'general-release-v1',
+  slug: 'general-release-v1',
+  permalink: '',
+  title: 'Release of Liability',
+  tags: [],
+  excerpt: '',
+  wordCount: 0,
+  draft: false,
+  fields: {},
+  frontmatter: { title: 'Release of Liability', document: 'general-release', version: 1, kind: 'release', audience: 'all-members', season: 2026, status: 'published' },
+  body: 'The signable text.',
+};
+vi.mock('$chassis/content', () => ({
+  documents: { all: () => [{ id: PUBLISHED_RELEASE.id }], byId: () => PUBLISHED_RELEASE },
+}));
+
+const { fakeD1 } = await import('./_fake-d1');
+const {
   adminDropEnrollment,
   claimOfferFromPortal,
   joinWaitlist,
@@ -11,7 +36,7 @@ import {
   passOfferFromPortal,
   registerForClass,
   withdrawFromClass,
-} from '$member-portal/lib/classes';
+} = await import('$member-portal/lib/classes');
 
 const CLASS_ROW = {
   id: 'youth-basics',
@@ -51,6 +76,17 @@ describe('listEnrolleeOptions', () => {
   });
 });
 
+// member-waivers T5b's own registerForClass gate: an active standing for the acting member
+// (`getMemberStanding`'s own reads, a recent enough `paid_at` to read 'current' regardless of
+// wall-clock time) plus no published documents for the season (`$chassis/content`'s real corpus
+// is all `status: 'draft'` today, so `hasSignedCurrentRelease` reads the pass-through 'true'
+// unassisted) -- every test below that reaches past the freed-spot check needs this so the new
+// gate never blocks it.
+const ACTIVE_STANDING_FIXTURES = {
+  'FROM members WHERE id = ?1 LIMIT 1': { id: 'mem-primary', household_id: 'hh-1', name: 'Primary Member' },
+  'FROM memberships WHERE household_id': { tier: 'individual', season: 2026, paid_at: '2026-07-01 00:00:00', price_paid: 250 },
+};
+
 describe('registerForClass (the freed-spot rule applied to a signed-in member)', () => {
   it('enrolls and auto-applies a positive credit balance', async () => {
     const { db, calls } = fakeD1({
@@ -59,6 +95,7 @@ describe('registerForClass (the freed-spot rule applied to a signed-in member)',
         'FROM class_enrollments WHERE class_id': (args: unknown[]) => (args.length === 2 ? null : { n: 5 }),
         'FROM class_waitlist WHERE class_id': { n: 0 },
         'AS balance': { balance: 1 },
+        ...ACTIVE_STANDING_FIXTURES,
       },
     });
     const result = await registerForClass(db, { classId: CLASS_ROW.id, memberId: 'mem-kid', householdId: 'hh-1', actorMemberId: 'mem-primary' });
@@ -75,6 +112,7 @@ describe('registerForClass (the freed-spot rule applied to a signed-in member)',
         'FROM class_enrollments WHERE class_id': (args: unknown[]) => (args.length === 2 ? null : { n: 5 }),
         'FROM class_waitlist WHERE class_id': { n: 0 },
         'AS balance': { balance: 0 },
+        ...ACTIVE_STANDING_FIXTURES,
       },
     });
     const result = await registerForClass(db, { classId: CLASS_ROW.id, memberId: 'mem-kid', householdId: 'hh-1', actorMemberId: 'mem-primary' });
@@ -100,10 +138,61 @@ describe('registerForClass (the freed-spot rule applied to a signed-in member)',
         'FROM classes WHERE id': CLASS_ROW,
         'FROM class_enrollments WHERE class_id': (args: unknown[]) => (args.length === 2 ? { n: 1 } : { n: 5 }),
         'FROM class_waitlist WHERE class_id': { n: 0 },
+        ...ACTIVE_STANDING_FIXTURES,
       },
     });
     const result = await registerForClass(db, { classId: CLASS_ROW.id, memberId: 'mem-kid', householdId: 'hh-1', actorMemberId: 'mem-primary' });
     expect(result).toEqual({ error: expect.stringContaining('Already enrolled') });
+  });
+
+  it('refuses when the acting household has no active standing', async () => {
+    const { db } = fakeD1({
+      firstResults: {
+        'FROM classes WHERE id': CLASS_ROW,
+        'FROM class_enrollments WHERE class_id': (args: unknown[]) => (args.length === 2 ? null : { n: 5 }),
+        'FROM class_waitlist WHERE class_id': { n: 0 },
+      },
+    });
+    const result = await registerForClass(db, { classId: CLASS_ROW.id, memberId: 'mem-kid', householdId: 'hh-1', actorMemberId: 'mem-primary' });
+    expect(result).toEqual({ error: expect.stringContaining('current') });
+  });
+
+  it("pivots to the signing moment (never enrolling) when the registrant's own current-season general release is not on file", async () => {
+    const { db, calls } = fakeD1({
+      firstResults: {
+        'FROM classes WHERE id': CLASS_ROW,
+        'FROM class_enrollments WHERE class_id': (args: unknown[]) => (args.length === 2 ? null : { n: 5 }),
+        'FROM class_waitlist WHERE class_id': { n: 0 },
+        ...ACTIVE_STANDING_FIXTURES,
+        'FROM households WHERE id': { id: 'hh-1', name: 'The Scratches', primary_member_id: 'mem-kid', left_at: null },
+      },
+      allResults: {
+        'FROM members WHERE household_id = ?1 ORDER BY name': [{ id: 'mem-kid', name: 'Kid Member', email: null, phone: null, birthdate: '1990-01-01', directory_visibility: 'partial', archived_at: null }],
+      },
+    });
+    const result = await registerForClass(db, { classId: CLASS_ROW.id, memberId: 'mem-kid', householdId: 'hh-1', actorMemberId: 'mem-primary' });
+    expect(result).toEqual({ pivot: 'sign' });
+    expect(calls.some((c) => c.sql.startsWith('INSERT INTO class_enrollments'))).toBe(false);
+  });
+
+  it("proceeds straight to enrollment with no framing (decision 9) once the registrant's own release is already on file", async () => {
+    const { db, calls } = fakeD1({
+      firstResults: {
+        'FROM classes WHERE id': CLASS_ROW,
+        'FROM class_enrollments WHERE class_id': (args: unknown[]) => (args.length === 2 ? null : { n: 5 }),
+        'FROM class_waitlist WHERE class_id': { n: 0 },
+        'AS balance': { balance: 0 },
+        ...ACTIVE_STANDING_FIXTURES,
+        'FROM households WHERE id': { id: 'hh-1', name: 'The Scratches', primary_member_id: 'mem-kid', left_at: null },
+      },
+      allResults: {
+        'FROM members WHERE household_id = ?1 ORDER BY name': [{ id: 'mem-kid', name: 'Kid Member', email: null, phone: null, birthdate: '1990-01-01', directory_visibility: 'partial', archived_at: null }],
+        'FROM waiver_acceptances': [{ id: 'sig-1', document_id: 'general-release', season: 2026, member_id: 'mem-kid', minor_member_id: null, signed_at: '2026-06-01 00:00:00' }],
+      },
+    });
+    const result = await registerForClass(db, { classId: CLASS_ROW.id, memberId: 'mem-kid', householdId: 'hh-1', actorMemberId: 'mem-primary' });
+    expect(result).toEqual({ enrollmentId: expect.any(String), creditApplied: false, feeDue: 100 });
+    expect(calls.some((c) => c.sql.startsWith('INSERT INTO class_enrollments'))).toBe(true);
   });
 });
 

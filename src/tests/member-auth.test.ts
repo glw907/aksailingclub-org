@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fakeD1 } from './_fake-d1';
 import {
   requestMemberLink,
+  mintMemberSignInLink,
   confirmMemberToken,
   getMemberSession,
   destroyMemberSession,
@@ -145,6 +146,26 @@ describe('requestMemberLink: the enumeration-safety transition table', () => {
     expect(errorSpy).not.toHaveBeenCalledWith(expect.stringContaining(plaintextToken));
     logSpy.mockRestore();
     errorSpy.mockRestore();
+  });
+});
+
+describe('mintMemberSignInLink', () => {
+  it('inserts a fresh token for the given member id and returns a confirm link carrying it', async () => {
+    const { db, calls } = fakeD1();
+    const link = await mintMemberSignInLink(db, ACTIVE_MEMBER.id, 'https://dev.aksailingclub.org');
+
+    const insert = calls.find((c) => c.sql.startsWith('INSERT INTO member_tokens'));
+    expect(insert).toBeDefined();
+    expect(insert?.args[1]).toBe(ACTIVE_MEMBER.id);
+
+    expect(link.startsWith('https://dev.aksailingclub.org/my-account/confirm?token=')).toBe(true);
+    expect(link).not.toContain('next=');
+  });
+
+  it('rides a given `next` on the link, URL-encoded', async () => {
+    const { db } = fakeD1();
+    const link = await mintMemberSignInLink(db, ACTIVE_MEMBER.id, 'https://dev.aksailingclub.org', '/my-account/sign?context=renewal');
+    expect(link).toContain('&next=%2Fmy-account%2Fsign%3Fcontext%3Drenewal');
   });
 });
 

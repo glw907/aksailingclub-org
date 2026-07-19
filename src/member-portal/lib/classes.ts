@@ -9,8 +9,22 @@ import type { D1Database } from '@cloudflare/workers-types';
 import { getClassWithCounts, isPubliclyOpen, type ClassTrack } from '$admin-club/lib/classes-store';
 import { hasActiveOfferForClass, offerSpot } from '$admin-club/lib/offers';
 import { sendClubEmail, type EmailBindingEnv } from '$admin-club/lib/club-email';
+import { getCurrentSeason } from '$admin-club/lib/club-settings';
+import { getMemberStanding } from '$member-auth/lib/standing';
+import { documents } from '$chassis/content';
+import { loadPublishedDocuments } from '$theme/documents';
+import { hasSignedCurrentRelease, loadHouseholdRequirements } from './waiver-requirements';
 import { eligibilityForTrack } from './age-gate';
 import { findRedemptionForEnrollment, getCreditBalance, redeemCreditForEnrollment, reverseCreditForWithdrawal } from './credits';
+
+/** Class signup's own signing-moment pivot (member-waivers T5b, spec rule 7's amendment): the
+ *  registrant's own current-season general release is not on file, so registration routes through
+ *  the signing moment (context `class-signup`) instead of enrolling. The caller's own route
+ *  redirects; this module never does (matching every other portal-lib module's plain-return
+ *  convention, `portal-action.ts`'s own "the route layer redirects" precedent). */
+export interface ClassSigningPivot {
+  pivot: 'sign';
+}
 
 /** A user-facing refusal, matching every other portal module's `{ error }` shape. */
 export interface ClassActionError {
@@ -142,16 +156,39 @@ export async function listMyWaitlistEntries(db: D1Database, householdId: string)
  * with a "join the waitlist instead" message (the caller's own `?/joinWaitlist` action is the
  * follow-up, not this function). A positive household credit balance is auto-applied and reported
  * back (`creditApplied`), matching the design doc's own "credit auto-applied and visible."
+ *
+ * Member-waivers T5b gate (spec rule 7's amendment, "on top of the registrant's own documents"):
+ * two checks, both against the SIGNED-IN actor's own household (`args.actorMemberId`, since
+ * standing is a household property regardless of which member is being registered). First, the
+ * household's own standing must be active (`'current'` or `'grace'`, matching the public class
+ * door's own `resolveClassEligibility`) — a lapsed household reaching this far (the portal itself
+ * gates nothing on standing today) still refuses cleanly rather than silently enrolling. Second,
+ * the REGISTRANT's own current-season general release (their own signature for an adult, their
+ * own Part Two for a minor) must be on file; when it is, decision 9 applies and nothing further
+ * happens here (no framing, no reassurance — the caller's own route just proceeds). When it is
+ * not, this returns the {@link ClassSigningPivot} rather than enrolling, so the caller's route can
+ * redirect into the signing moment (context `class-signup`) instead.
  */
 export async function registerForClass(
   db: D1Database,
   args: { classId: string; memberId: string; householdId: string; actorMemberId: string },
-): Promise<{ enrollmentId: string; creditApplied: boolean; feeDue: number } | ClassActionError> {
+): Promise<{ enrollmentId: string; creditApplied: boolean; feeDue: number } | ClassActionError | ClassSigningPivot> {
   const cls = await getClassWithCounts(db, args.classId);
   if (!cls || !cls.visible) return { error: 'This class is not open for signup.' };
   const hasActiveOffer = await hasActiveOfferForClass(db, args.classId);
   if (!isPubliclyOpen(cls, hasActiveOffer)) {
     return { error: 'This class is full. Join the waitlist and we\'ll email you if a spot opens.' };
+  }
+
+  const standing = await getMemberStanding(db, args.actorMemberId);
+  if (!standing || (standing.status !== 'current' && standing.status !== 'grace')) {
+    return { error: 'Your membership needs to be current before signing up for classes.' };
+  }
+  const season = await getCurrentSeason(db);
+  const publishedDocuments = loadPublishedDocuments(documents, season);
+  const requirements = await loadHouseholdRequirements(db, publishedDocuments, args.householdId, season);
+  if (requirements && !hasSignedCurrentRelease(requirements, args.memberId)) {
+    return { pivot: 'sign' };
   }
 
   const already = await db

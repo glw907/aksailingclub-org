@@ -10,7 +10,16 @@ For a mooring or storage holder the moment ends with the contact-confirm glance 
 completion coda. Every member-facing word is verbatim from docs/waivers/signing-framing-copy.md.
 
 Each sign uses `use:enhance` so a signed entry collapses in place and focus advances to the next
-outstanding document, rather than a full reload that would reset focus to the top. -->
+outstanding document, rather than a full reload that would reset focus to the top.
+
+Member-waivers T5b's own join/renewal household-complete loop: once the signer's own moment is
+done, a still-incomplete household sees the waiting card(s) plus the household-signatures block
+(each remaining adult's own cooldown-guarded nudge) in place of the plain completion coda; a
+complete household sees the ordinary coda, whose own return link now names where it goes ("Back to
+renewal," "Back to class signup") from `?next=`. Every form on this page re-appends `context`/
+`next` to its own action string (SvelteKit's `?/name` convention replaces the whole query string on
+submit, never merges into it), so a real household-loop context survives every sign in one sitting,
+not just the first. -->
 <script lang="ts">
   import { tick } from 'svelte';
   import { enhance } from '$app/forms';
@@ -18,6 +27,7 @@ outstanding document, rather than a full reload that would reset focus to the to
   import { siteConfig } from '$theme/cairn.config';
   import { MINOR_ATTESTATION_PROMPT } from './sign-view';
   import { SIGNER_RELATIONSHIPS } from '$member-portal/lib/signatures';
+  import { nextPathLabel, DEFAULT_NEXT_PATH } from '$member-portal/lib/return-path';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -65,12 +75,31 @@ outstanding document, rather than a full reload that would reset focus to the to
   };
 
   const moment = $derived(data.degraded ? null : data.moment);
-  const showCompletion = $derived(
+  /** Nothing left for the person actually viewing the page, independent of the household loop
+   *  below -- mirrors `sign-view.ts`'s own `signerOwnDone`, restated here as a component-local
+   *  derivation of already-loaded data (the same idiom `showCompletion`/`showContactCard`
+   *  already used before this task). */
+  const signerFullyDone = $derived(
     !data.degraded && moment !== null && (moment.total === 0 || (moment.allSigned && !(data.contact.applies && !data.contact.confirmed))),
   );
   const showContactCard = $derived(
     !data.degraded && moment !== null && moment.total > 0 && moment.allSigned && data.contact.applies && !data.contact.confirmed,
   );
+  /** The join/renewal household-complete loop (member-waivers T5b): the signer's own part is done,
+   *  but another household adult still owes their own signatures, so payment stays locked and the
+   *  household-signatures block replaces the plain completion coda. */
+  const showWaiting = $derived(!data.degraded && signerFullyDone && data.household.active && !data.household.complete);
+  const showCompletion = $derived(signerFullyDone && !showWaiting);
+
+  /** `context`/`next` re-appended to every form's own action string: SvelteKit's own `?/name`
+   *  convention REPLACES the current URL's whole query string on submit rather than merging into
+   *  it, so a bare `action="?/sign"` on a page loaded as `?context=join` would silently record
+   *  every second-and-later signature in this visit under the DEFAULT `renewal` context instead --
+   *  a real household-loop context (join, class-signup, mooring-fee, storage-fee) must survive
+   *  every submit in the same sitting, not just the first. */
+  const contextQuery = $derived(!data.degraded ? `context=${encodeURIComponent(data.context)}${data.next ? `&next=${encodeURIComponent(data.next)}` : ''}` : '');
+  const returnHref = $derived(!data.degraded ? (data.next ?? DEFAULT_NEXT_PATH) : DEFAULT_NEXT_PATH);
+  const returnLabel = $derived(!data.degraded ? nextPathLabel(data.next) : nextPathLabel(null));
 </script>
 
 <svelte:head>
@@ -92,7 +121,18 @@ outstanding document, rather than a full reload that would reset focus to the to
   {#if moment && moment.total > 0}
     <header class="signing-welcome">
       <h1 class="portal-page-title">{moment.welcome.heading}</h1>
-      <p class="signing-welcome-body">{moment.welcome.body}</p>
+      <!-- The household-complete loop's own waiting-state intro (signing-framing-copy.md) replaces
+           the ordinary welcome body once the signer's own documents are done but another household
+           adult is not; before that point the ordinary welcome body renders unchanged. -->
+      <p class="signing-welcome-body">{showWaiting && data.household.introLine ? data.household.introLine : moment.welcome.body}</p>
+    </header>
+  {:else if moment && showWaiting}
+    <!-- The signer had nothing of their own to sign this visit (they finished earlier, or nothing
+         ever applied to them), but the household is still waiting -- there is no ordinary welcome
+         to override, so this renders the same heading register on its own. -->
+    <header class="signing-welcome">
+      <h1 class="portal-page-title">Signatures for the {data.season} season.</h1>
+      {#if data.household.introLine}<p class="signing-welcome-body">{data.household.introLine}</p>{/if}
     </header>
   {/if}
 
@@ -123,7 +163,7 @@ outstanding document, rather than a full reload that would reset focus to the to
               <div class="signing-sheet">
                 <div class="signing-sheet-text prose">{@html entry.bodyHtml}</div>
 
-                <form method="POST" action="?/sign" class="signing-strip" use:enhance={submitEnhance}>
+                <form method="POST" action="?/sign&{contextQuery}" class="signing-strip" use:enhance={submitEnhance}>
                   <input type="hidden" name="csrf" value={data.csrf} />
                   <input type="hidden" name="documentId" value={entry.documentId} />
                   <input type="hidden" name="version" value={entry.version} />
@@ -182,7 +222,7 @@ outstanding document, rather than a full reload that would reset focus to the to
       </p>
 
       {#if editingContact}
-        <form method="POST" action="?/updateContact" class="signing-contact-form" use:enhance={confirmEnhance}>
+        <form method="POST" action="?/updateContact&{contextQuery}" class="signing-contact-form" use:enhance={confirmEnhance}>
           <input type="hidden" name="csrf" value={data.csrf} />
           <div class="signing-contact-fields">
             <label class="signing-field">
@@ -241,7 +281,7 @@ outstanding document, rather than a full reload that would reset focus to the to
           </div>
         </dl>
         <div class="signing-contact-actions">
-          <form method="POST" action="?/confirmContact" use:enhance={confirmEnhance}>
+          <form method="POST" action="?/confirmContact&{contextQuery}" use:enhance={confirmEnhance}>
             <input type="hidden" name="csrf" value={data.csrf} />
             <button type="submit" class="btn signing-sign-btn" disabled={submitting}>{submitting ? 'Saving…' : 'This is current'}</button>
           </form>
@@ -249,11 +289,48 @@ outstanding document, rather than a full reload that would reset focus to the to
         </div>
       {/if}
     </section>
+  {:else if showWaiting}
+    <section class="signing-household" bind:this={afterEl} tabindex="-1" data-focus-target aria-labelledby="signing-household-title">
+      <!-- The waiting card(s) (signing-framing-copy.md's "The waiting card"): one per outstanding
+           OTHER adult, since the copy is written per-person. -->
+      {#each data.household.rows.filter((row) => row.waitingCardTitle) as row (`card-${row.key}`)}
+        <div class="signing-waiting-card">
+          <h2 class="signing-done-title">{row.waitingCardTitle}</h2>
+          <p class="signing-done-line">{row.waitingCardLine}</p>
+        </div>
+      {/each}
+
+      <!-- The household-signatures block: "You" (already covered by the welcome line's own intro
+           above), the household's minors once covered, and one row per other adult still owing
+           their own signatures, each with its own cooldown-guarded nudge action. -->
+      <h3 id="signing-household-title" class="signing-household-subhead">Household signatures</h3>
+      <ul class="signing-household-rows">
+        {#each data.household.rows as row (row.key)}
+          <li class="signing-household-row">
+            <span class="signing-household-label">{row.label}</span>
+            <span class="signing-household-status">{row.statusText}</span>
+            {#if row.nudgeMemberId}
+              <form method="POST" action="?/sendNudge&{contextQuery}" use:enhance={submitEnhance}>
+                <input type="hidden" name="csrf" value={data.csrf} />
+                <input type="hidden" name="targetMemberId" value={row.nudgeMemberId} />
+                <button type="submit" class="portal-quiet-action portal-touch-btn btn btn-sm" disabled={submitting}>
+                  {submitting ? 'Sending…' : row.nudgeButtonLabel}
+                </button>
+              </form>
+            {/if}
+          </li>
+        {/each}
+      </ul>
+      {#if form && 'nudgeSent' in form && form.nudgeSent}
+        <p class="signing-done-line" role="status">Sent.</p>
+      {/if}
+      <a href="/my-account" class="portal-quiet-action portal-touch-btn btn btn-sm">I&#8217;ll come back later</a>
+    </section>
   {:else if showCompletion}
     <section class="signing-done" bind:this={afterEl} tabindex="-1" data-focus-target aria-labelledby="signing-done-title">
       <h2 id="signing-done-title" class="signing-done-title">That&#8217;s everything for {data.season}.</h2>
       <p class="signing-done-line">Nothing else needs your signature until next season.</p>
-      <a href="/my-account" class="portal-quiet-action portal-touch-btn btn btn-sm">Back to your account</a>
+      <a href={returnHref} class="portal-quiet-action portal-touch-btn btn btn-sm">{returnLabel}</a>
     </section>
   {/if}
 {/if}

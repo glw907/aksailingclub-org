@@ -61,6 +61,10 @@ export const actions: Actions = {
     const memberId = String(form.get('memberId') ?? '');
     if (!classId || !memberId) return { error: 'Please choose who is taking this class.' };
     const result = await registerForClass(ctx.db, { classId, memberId, householdId: ctx.member.householdId, actorMemberId: ctx.member.id });
+    // The unsigned edge (member-waivers T5b, spec rule 7's amendment, decision 9): the registrant's
+    // own current-season general release is not on file, so this routes through the signing moment
+    // instead of enrolling; `next` brings the member back here afterward ("Back to class signup").
+    if ('pivot' in result) redirect(303, '/my-account/sign?context=class-signup&next=%2Fmy-account%2Fclasses');
     if ('error' in result) return { error: result.error };
     return { registered: true as const };
   }),

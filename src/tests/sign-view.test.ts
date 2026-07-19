@@ -5,15 +5,22 @@
 // no database).
 import { describe, expect, it } from 'vitest';
 import {
+  buildHouseholdSignatureRows,
   buildSigningMoment,
   buildWelcome,
+  firstNameOf,
   formatSignedDate,
   framingLine,
+  joinNames,
   minorFramingLine,
   orderSigningItems,
+  signerOwnDone,
   timeEstimateMinutes,
+  waitingIntroLine,
   type SigningItem,
 } from '../routes/(site)/my-account/sign/sign-view';
+import { deriveHouseholdRequirements, type DeriveHouseholdRequirementsInput } from '$member-portal/lib/waiver-requirements';
+import type { DocumentFrontmatter, SignableDocument } from '$theme/documents';
 
 function personal(overrides: Partial<SigningItem> & Pick<SigningItem, 'documentId' | 'documentKind' | 'title'>): SigningItem {
   return {
@@ -177,5 +184,141 @@ describe('buildSigningMoment', () => {
     const moment = buildSigningMoment([kid], { season: 2027 });
     expect(moment.entries[0].framingLine).toContain('signing this part for Alex');
     expect(moment.entries[0].minor).toEqual({ memberId: 'kid-a', name: 'Alex', birthYear: 2016 });
+  });
+});
+
+describe('signerOwnDone', () => {
+  it('is true when there was nothing to sign at all, or when everything is signed', () => {
+    expect(signerOwnDone({ total: 0, allSigned: false })).toBe(true);
+    expect(signerOwnDone({ total: 2, allSigned: true })).toBe(true);
+  });
+
+  it('is false while anything remains', () => {
+    expect(signerOwnDone({ total: 2, allSigned: false })).toBe(false);
+  });
+});
+
+describe('firstNameOf', () => {
+  it('takes the first token of a full name', () => {
+    expect(firstNameOf('Blair Adult')).toBe('Blair');
+  });
+
+  it('falls back to the whole (trimmed) name for a single token', () => {
+    expect(firstNameOf('  Cher  ')).toBe('Cher');
+  });
+});
+
+describe('joinNames', () => {
+  it('joins one, two, and three-or-more names naturally', () => {
+    expect(joinNames(['Blair'])).toBe('Blair');
+    expect(joinNames(['Blair', 'Casey'])).toBe('Blair and Casey');
+    expect(joinNames(['Blair', 'Casey', 'Devon'])).toBe('Blair, Casey, and Devon');
+  });
+
+  it('is empty for no names', () => {
+    expect(joinNames([])).toBe('');
+  });
+});
+
+describe('waitingIntroLine', () => {
+  it("names the remaining adult(s) and reads verbatim from signing-framing-copy.md", () => {
+    expect(waitingIntroLine(['Blair Adult'])).toBe("Your signatures are done. Blair's are needed before payment.");
+    expect(waitingIntroLine(['Blair Adult', 'Casey Adult'])).toBe("Your signatures are done. Blair and Casey's are needed before payment.");
+  });
+});
+
+describe('buildHouseholdSignatureRows', () => {
+  const SEASON = 2027;
+  const ADULT_A = { id: 'mem-adult-a', name: 'Alex Adult', birthdate: '1985-03-01' };
+  const ADULT_B = { id: 'mem-adult-b', name: 'Blair Adult', birthdate: '1987-09-01' };
+
+  function doc(overrides: Partial<DocumentFrontmatter> & { id: string }): SignableDocument {
+    const { id, ...frontmatterOverrides } = overrides;
+    const frontmatter: DocumentFrontmatter = {
+      title: 'A Document',
+      document: 'general-release',
+      version: 1,
+      kind: 'release',
+      audience: 'all-members',
+      season: SEASON,
+      status: 'published',
+      ...frontmatterOverrides,
+    };
+    return {
+      concept: 'documents',
+      id,
+      slug: id,
+      permalink: '',
+      title: frontmatter.title,
+      tags: [],
+      excerpt: '',
+      wordCount: 0,
+      draft: false,
+      fields: {},
+      frontmatter,
+      body: 'The signable text.',
+    };
+  }
+
+  function requirementsWith(overrides: Partial<DeriveHouseholdRequirementsInput> = {}) {
+    const release = doc({ id: 'general-release-v1', document: 'general-release', kind: 'release' });
+    return deriveHouseholdRequirements({
+      season: SEASON,
+      primaryMemberId: ADULT_A.id,
+      members: [ADULT_A, ADULT_B],
+      assetKinds: [],
+      publishedDocuments: new Map([[release.frontmatter.document, release]]),
+      signatures: [],
+      ...overrides,
+    });
+  }
+
+  it('always leads with the "You" row, from the signer\'s own signed/total', () => {
+    const requirements = requirementsWith();
+    const rows = buildHouseholdSignatureRows({ signerMemberId: ADULT_A.id, signerSignedCount: 2, signerTotal: 2, minorNames: [], requirements });
+    expect(rows[0]).toEqual({ key: 'you', label: 'You', statusText: '2 of 2 signed', nudgeMemberId: null, nudgeButtonLabel: null, waitingCardTitle: null, waitingCardLine: null });
+  });
+
+  it('lists the household\'s minors as covered once present', () => {
+    const requirements = requirementsWith();
+    const rows = buildHouseholdSignatureRows({ signerMemberId: ADULT_A.id, signerSignedCount: 1, signerTotal: 1, minorNames: ['Casey Child'], requirements });
+    expect(rows.find((r) => r.key === 'children')).toEqual({
+      key: 'children',
+      label: 'Casey Child',
+      statusText: 'covered by your Part Two signatures above',
+      nudgeMemberId: null,
+      nudgeButtonLabel: null,
+      waitingCardTitle: null,
+      waitingCardLine: null,
+    });
+  });
+
+  it("adds one row per OTHER outstanding adult, with its own nudge target, button label, and waiting-card copy, and never a row for the signer themself", () => {
+    const requirements = requirementsWith();
+    const rows = buildHouseholdSignatureRows({ signerMemberId: ADULT_A.id, signerSignedCount: 1, signerTotal: 1, minorNames: [], requirements });
+    const blairRow = rows.find((r) => r.key === ADULT_B.id);
+    expect(blairRow).toEqual({
+      key: ADULT_B.id,
+      label: 'Blair Adult',
+      statusText: "1 of their own to sign—payment and membership wait on these",
+      nudgeMemberId: ADULT_B.id,
+      nudgeButtonLabel: 'Email Blair a sign-in link',
+      waitingCardTitle: 'Waiting on Blair',
+      waitingCardLine:
+        "1 documents need Blair's own signature—a signature is personal, so no one else can sign them. Payment and your family's 2027 membership unlock when everyone has signed.",
+    });
+    expect(rows.some((r) => r.key === ADULT_A.id)).toBe(false);
+  });
+
+  it('carries no other-adult row once every adult has signed', () => {
+    const requirements = requirementsWith({
+      signatures: [
+        { id: 's1', documentId: 'general-release', season: SEASON, memberId: ADULT_A.id, minorMemberId: null, signedAt: '2027-06-01 12:00:00' },
+        { id: 's2', documentId: 'general-release', season: SEASON, memberId: ADULT_B.id, minorMemberId: null, signedAt: '2027-06-01 12:00:00' },
+      ],
+    });
+    const rows = buildHouseholdSignatureRows({ signerMemberId: ADULT_A.id, signerSignedCount: 1, signerTotal: 1, minorNames: [], requirements });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].key).toBe('you');
   });
 });

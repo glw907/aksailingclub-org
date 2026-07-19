@@ -1467,6 +1467,71 @@
     margin-top: var(--spacing-s);
   }
 
+  /* The household-signatures block (member-waivers T5b, the join/renewal household-complete
+     loop): the same quiet tinted panel as the contact/completion cards above, one row per
+     household member with an optional nudge action. */
+  .signing-household {
+    margin-top: var(--spacing-m);
+    max-width: 46rem;
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-box);
+    background: var(--color-base-200);
+    padding: var(--spacing-m);
+  }
+  .signing-household:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  /* The waiting card(s), signing-framing-copy.md's own "Waiting on {name}": sit inside the same
+     panel as the household-signatures block below, separated by a hairline rather than a second
+     nested panel (the copy calls these two things out separately, but they read the same visit). */
+  .signing-waiting-card {
+    padding-bottom: var(--spacing-s);
+    margin-bottom: var(--spacing-s);
+    border-bottom: 1px solid var(--color-card-border);
+  }
+  .signing-waiting-card .signing-done-title {
+    font-size: var(--text-step-1);
+  }
+  .signing-household-subhead {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-step--1);
+    font-weight: 700;
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .signing-household-rows {
+    margin-top: var(--spacing-s);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-s);
+    list-style: none;
+    padding: 0;
+  }
+  .signing-household-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-2xs) var(--spacing-s);
+    padding-top: var(--spacing-2xs);
+    border-top: 1px solid var(--color-card-border);
+  }
+  .signing-household-row:first-child {
+    padding-top: 0;
+    border-top: none;
+  }
+  .signing-household-label {
+    font-weight: 600;
+    color: var(--color-base-content);
+  }
+  .signing-household-status {
+    font-size: var(--text-step--1);
+    color: var(--color-muted);
+  }
+
   /* Dark mode: a plain `.btn`'s border and fill collapse into the page ground in asc-dark (agent
      memory: daisyui-plain-btn-dark-contrast), so the quiet secondary buttons in these sections get
      a visible `--color-card-border`. The filled navy Sign button already stands on its own. */
@@ -1474,7 +1539,8 @@
     background: var(--color-base-200);
   }
   [data-theme='asc-dark'] .signing-contact-actions .btn:not(.signing-sign-btn),
-  [data-theme='asc-dark'] .signing-done a.btn {
+  [data-theme='asc-dark'] .signing-done a.btn,
+  [data-theme='asc-dark'] .signing-household .btn {
     border-color: var(--color-card-border);
   }
 

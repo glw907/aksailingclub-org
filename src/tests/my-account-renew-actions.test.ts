@@ -7,10 +7,36 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isRedirect } from '@sveltejs/kit';
 import type { Redirect } from '@sveltejs/kit';
-import { actions } from '../routes/(site)/my-account/renew/+page.server';
-import { fakeD1 } from './_fake-d1';
+
+// A single published all-members document (member-waivers T5b's own household-gate tests): the
+// real content corpus is all `status: 'draft'` today (the shipped state, see this route's own
+// header), so the "gate blocks the household" path needs a fixture, mirroring
+// `household-signature-gate.test.ts`'s own synthetic `doc()` shape. Every OTHER test in this file
+// stubs no household members at all, so `deriveHouseholdRequirements` sees an empty adult list and
+// reports complete regardless of this fixture -- this mock is harmless to them.
+const PUBLISHED_RELEASE = {
+  concept: 'documents',
+  id: 'general-release-v1',
+  slug: 'general-release-v1',
+  permalink: '',
+  title: 'Release of Liability',
+  tags: [],
+  excerpt: '',
+  wordCount: 0,
+  draft: false,
+  fields: {},
+  frontmatter: { title: 'Release of Liability', document: 'general-release', version: 1, kind: 'release', audience: 'all-members', season: 2026, status: 'published' },
+  body: 'The signable text.',
+};
+vi.mock('$chassis/content', () => ({
+  documents: { all: () => [{ id: PUBLISHED_RELEASE.id }], byId: () => PUBLISHED_RELEASE },
+}));
+
+const { actions } = await import('../routes/(site)/my-account/renew/+page.server');
+const { fakeD1 } = await import('./_fake-d1');
 
 const MEMBER_ROW = { id: 'mem-1', household_id: 'hh-1', name: 'Scratch Member', email: 'scratch@example.com', archived_at: null };
+const ACTIVE_ADULT_MEMBER = { id: 'mem-1', name: 'Scratch Member', email: 'scratch@example.com', phone: null, birthdate: '1980-01-01', directory_visibility: 'partial', archived_at: null };
 
 const TIER_PRICE_ROWS = [
   { key: 'tier_price_individual', value: '250' },
@@ -150,5 +176,23 @@ describe('?/renew', () => {
     const result = await actions.renew(fakeEvent({ tier: 'platinum' }, db) as never);
     expect(result).toEqual(expect.objectContaining({ status: 400 }));
     expect(calls.some((c) => c.sql.startsWith('INSERT') || c.sql.startsWith('UPDATE'))).toBe(false);
+  });
+
+  it("hard-gates on the household-complete signature check (member-waivers T5b): redirects to the signing moment and mints nothing when an adult's own document is outstanding", async () => {
+    const { db, calls } = fakeD1({
+      firstResults: {
+        'FROM member_sessions': MEMBER_ROW,
+        'FROM households WHERE id': { primary_member_id: 'mem-1' },
+        "'current_season'": { value: '2026' },
+      },
+      allResults: {
+        tier_price_individual: TIER_PRICE_ROWS,
+        'FROM members WHERE household_id = ?1 ORDER BY name': [ACTIVE_ADULT_MEMBER],
+      },
+    });
+    const caught = await catchThrown(actions.renew(fakeEvent({ tier: 'individual' }, db) as never));
+    expect(isRedirect(caught)).toBe(true);
+    expect((caught as Redirect).location).toBe('/my-account/sign?context=renewal&next=%2Fmy-account%2Frenew');
+    expect(calls.some((c) => c.sql.startsWith('INSERT INTO memberships') || c.sql.startsWith('UPDATE memberships'))).toBe(false);
   });
 });

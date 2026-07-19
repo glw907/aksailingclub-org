@@ -74,11 +74,24 @@ function daysBetweenUtcDates(from: Date, to: Date): number {
 /** Rule 1's own `'current'` arm: whether `today` sits on or before `standing.expiresOn`, within
  *  {@link RENEWAL_WINDOW_DAYS} days (inclusive both ends). `false` for anything else, including a
  *  `'current'` standing with no `expiresOn` (the schema shape {@link MemberStanding} allows but
- *  {@link portalState}'s real callers never produce for a genuinely `'current'` household). */
-function isWithinRenewalWindow(standing: MemberStanding, today: Date): boolean {
+ *  {@link portalState}'s real callers never produce for a genuinely `'current'` household).
+ *  Exported (member-waivers T5b) for the portal landing's own waiver rows, which need the SAME
+ *  "is this household in the renewal window" question `portalState` answers internally, without
+ *  computing the state twice or duplicating this rule. */
+export function isWithinRenewalWindow(standing: MemberStanding, today: Date): boolean {
   if (standing.status !== 'current' || standing.expiresOn === null) return false;
   const daysUntilExpiry = daysBetweenUtcDates(today, parseMemberDate(standing.expiresOn));
   return daysUntilExpiry >= 0 && daysUntilExpiry <= RENEWAL_WINDOW_DAYS;
+}
+
+/** Rule 1's own full condition, standalone (member-waivers T5b): no resolvable standing at all, a
+ *  `'grace'` or `'lapsed'` household, or a `'current'` one within {@link RENEWAL_WINDOW_DAYS} days
+ *  of expiry. `portalState` itself is this plus the rest of the state machine; a caller that only
+ *  needs THIS one yes/no (the portal landing's own waiver-loop row, which must never read a
+ *  fully-active household as "waiting" -- see `waiver-action-rows.ts`'s own header) calls this
+ *  directly rather than computing the whole state twice. */
+export function isRenewalWindowStanding(standing: MemberStanding | null, today: Date): boolean {
+  return !standing || standing.status === 'grace' || standing.status === 'lapsed' || isWithinRenewalWindow(standing, today);
 }
 
 /** {@link portalState}'s own inputs, each already loaded by the caller (a route's `load`, per
@@ -131,7 +144,7 @@ export function portalState(args: PortalStateArgs): PortalState {
   const today = args.today ?? new Date();
   const { standing } = args;
 
-  if (!standing || standing.status === 'grace' || standing.status === 'lapsed' || isWithinRenewalWindow(standing, today)) {
+  if (isRenewalWindowStanding(standing, today)) {
     return { kind: 'renewal-window', standingStatus: standing?.status ?? null };
   }
   if (!args.seasonHasLiveEvents) {

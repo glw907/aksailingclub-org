@@ -12,6 +12,7 @@
 // `checkoutOrStub` degrade-to-stub path, same CSRF handling via `portalAction`. No payment logic
 // changed.
 import { fail, redirect } from '@sveltejs/kit';
+import type { D1Database } from '@cloudflare/workers-types';
 import type { Actions, PageServerLoad } from './$types';
 import { issueMemberCsrfToken } from '$member-auth/lib/auth';
 import { resolveMemberDb } from '$member-auth/lib/db';
@@ -20,6 +21,27 @@ import { getCurrentSeason, getTierPrices } from '$admin-club/lib/club-settings';
 import { mintOrReuseRenewalMembership, nextUnclaimedRenewalSeason } from '$member-portal/lib/renewal';
 import { portalAction } from '$member-portal/lib/portal-action';
 import { checkoutOrStub } from '$member-portal/lib/checkout';
+import { documents } from '$chassis/content';
+import { loadPublishedDocuments } from '$theme/documents';
+import { loadHouseholdRequirements } from '$member-portal/lib/waiver-requirements';
+import { householdSignatureGate } from '$member-portal/lib/household-signature-gate';
+
+/** The signing moment for the renewal household-complete gate: the SAME redirect target, whether
+ *  the gate refuses at `load` (a member visiting the page directly) or at `?/renew` (a stale tab
+ *  submitting past a page that already redirected everyone else) -- member-waivers T5b, spec rule
+ *  7's amendment: "the managing adult's renewal start routes through the signing moment". */
+const SIGN_REDIRECT = '/my-account/sign?context=renewal&next=%2Fmy-account%2Frenew';
+
+/** Whether the household's own signatures are complete for `season` (the money-moment hard gate):
+ *  `true` when the season carries no published documents at all ({@link householdSignatureGate}'s
+ *  own no-op pass-through, the shipped state today), so this never blocks a real renewal until the
+ *  attorney actually publishes a document. */
+async function householdSignaturesComplete(db: D1Database, householdId: string, season: number): Promise<boolean> {
+  const publishedDocuments = loadPublishedDocuments(documents, season);
+  const requirements = await loadHouseholdRequirements(db, publishedDocuments, householdId, season);
+  if (!requirements) return true;
+  return householdSignatureGate(requirements).complete;
+}
 
 export const prerender = false;
 
@@ -49,6 +71,18 @@ export const load: PageServerLoad = async (event) => {
   if (!db) return { csrf, standing: null, currentSeason: null, renewalSeason: null, tiers: null };
 
   const [standing, currentSeason, prices] = await Promise.all([getMemberStanding(db, member.id), getCurrentSeason(db), getTierPrices(db)]);
+
+  // The household-complete gate (member-waivers T5b, spec rule 7's amendment): a renewal start
+  // routes through the signing moment first, whether it is the signer's own outstanding documents
+  // or the household is only waiting on someone else -- the sign page itself decides which of
+  // those two states to show (T5b's own "Waiting on {name}" vs the ordinary moment). Documents key
+  // to `getCurrentSeason` throughout this pass (T4's own convention, matched here rather than the
+  // renewal-specific `renewalSeason` below), so an early renewer for next season still signs
+  // against whatever is published for the season now in effect.
+  if (!(await householdSignaturesComplete(db, member.householdId, currentSeason))) {
+    redirect(303, SIGN_REDIRECT);
+  }
+
   // The season this submit will actually buy (decisions.md's "the renewal door": "the member
   // sees exactly what they are buying before they click"), not just `currentSeason` -- a
   // household that already paid for `currentSeason` renews straight into the NEXT unclaimed one
@@ -70,9 +104,16 @@ export const actions: Actions = {
     const tierRaw = String(form.get('tier') ?? '');
     if (!isMembershipTier(tierRaw)) return fail(400, { error: 'Please choose a membership tier.' });
 
+    const currentSeason = await getCurrentSeason(ctx.db);
+    // The hard gate, re-checked here (never trusting that the page that rendered this form is the
+    // one still open in the browser): no payment proceeds until the household's own signatures
+    // are complete, member-waivers T5b's own defense-in-depth mirror of `load`'s redirect above.
+    if (!(await householdSignaturesComplete(ctx.db, ctx.member.householdId, currentSeason))) {
+      redirect(303, SIGN_REDIRECT);
+    }
+
     const prices = await getTierPrices(ctx.db);
     const priceDollars = prices[tierRaw];
-    const currentSeason = await getCurrentSeason(ctx.db);
     const { membershipId } = await mintOrReuseRenewalMembership(ctx.db, ctx.member.householdId, ctx.member.id, tierRaw, priceDollars, currentSeason);
 
     return checkoutOrStub(event, ctx, 'renewStubbed', {

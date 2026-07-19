@@ -12,18 +12,33 @@
 import type { HouseholdAssignmentRow, HouseholdRequestRow } from './assets';
 import type { MyWaitlistRow } from './classes';
 
-/** One weighted action row: `formAction` is a route-relative SvelteKit action path. A row with no
- *  outstanding dollar amount (a live class-waitlist offer) carries `amountCents: null`, so the
- *  template omits the amount slot rather than rendering `$0`. */
-export interface ActionRow {
+/** One weighted action row's own common fields: a row with no outstanding dollar amount (a live
+ *  class-waitlist offer) carries `amountCents: null`, so the template omits the amount slot
+ *  rather than rendering `$0`. */
+interface ActionRowBase {
   id: string;
   title: string;
   amountCents: number | null;
   actionLabel: string;
+}
+
+/** A pure navigation row (member-waivers T5b: "Read and sign" reads and signs, it never mutates
+ *  anything itself) -- a plain link-styled button, never a form. */
+export interface LinkActionRow extends ActionRowBase {
+  kind: 'link';
+  href: string;
+}
+
+/** A mutating row: `formAction` is a route-relative (or, per `ActionRow.svelte`'s own header,
+ *  cross-route) SvelteKit action path. */
+export interface FormActionRow extends ActionRowBase {
+  kind: 'form';
   formAction: string;
-  fieldName: 'assignmentId' | 'requestId' | 'waitlistId';
+  fieldName: 'assignmentId' | 'requestId' | 'waitlistId' | 'targetMemberId';
   fieldValue: string;
 }
+
+export type ActionRow = LinkActionRow | FormActionRow;
 
 /** {@link buildActionRows}'s own inputs, each already loaded by the caller. */
 export interface ActionRowsArgs {
@@ -55,6 +70,7 @@ export function buildActionRows(args: ActionRowsArgs): ActionRow[] {
       title: `${entry.className}: a spot opened up`,
       amountCents: null,
       actionLabel: 'Claim spot',
+      kind: 'form',
       formAction: '/my-account/classes?/claimOffer',
       fieldName: 'waitlistId',
       fieldValue: entry.waitlistId,
@@ -68,6 +84,7 @@ export function buildActionRows(args: ActionRowsArgs): ActionRow[] {
       title: `${assignment.assetTypeName} fee outstanding`,
       amountCents: assignment.feeCents,
       actionLabel: 'Pay now',
+      kind: 'form',
       formAction: '?/payAssetFee',
       fieldName: 'assignmentId',
       fieldValue: assignment.id,
@@ -81,6 +98,7 @@ export function buildActionRows(args: ActionRowsArgs): ActionRow[] {
       title: `${request.assetTypeName} request approved`,
       amountCents: Math.round(request.fee * 100),
       actionLabel: 'Pay now',
+      kind: 'form',
       formAction: '?/payRequest',
       fieldName: 'requestId',
       fieldValue: request.id,

@@ -39,6 +39,7 @@ could be traced back to a member. -->
   <form method="POST" action="?/confirm" class="mt-l flex flex-col items-start gap-s">
     <input type="hidden" name="csrf" value={data.csrf} />
     <input type="hidden" name="token" value={data.token} />
+    <input type="hidden" name="next" value={data.next ?? ''} />
     <div class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY}></div>
     <button type="submit" class="btn btn-primary">Sign in</button>
   </form>

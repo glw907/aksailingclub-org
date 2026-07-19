@@ -155,10 +155,26 @@ function findSignature(signatures: SignatureRecord[], documentId: string, season
  */
 export function deriveHouseholdRequirements(input: DeriveHouseholdRequirementsInput): HouseholdRequirements {
   const asOf = input.asOf ?? new Date();
-  const { season, publishedDocuments, signatures, primaryMemberId } = input;
+  const { season, publishedDocuments, signatures } = input;
 
   const adultMembers = input.members.filter((member) => !isMinor(member, asOf));
   const minorMembers = input.members.filter((member) => isMinor(member, asOf));
+
+  // The flagged edge (member-waivers T5b): `primaryMemberId` can point at a member this household
+  // no longer counts as an active adult (an admin archived the household's own primary, rather
+  // than the self-serve `removeHouseholdMember` path this module's own header already documents as
+  // refusing that). Falling through to `input.primaryMemberId` unmodified would attach every
+  // household-wide document (an asset-kind acknowledgement, the Dry Storage Agreement) to nobody's
+  // own list at all -- a held asset's own requirement would simply vanish rather than surface, the
+  // exact defect a held asset "still surfaces its requirement rather than vanishing" exists to
+  // prevent. The fallback is deterministic (the first active adult, in `input.members`'s own
+  // order -- `listHouseholdMembers`'s `ORDER BY name`), so which adult owes the household's
+  // documents never depends on iteration order or which adult happens to load the signing page
+  // first.
+  const primaryMemberId =
+    input.primaryMemberId && adultMembers.some((member) => member.id === input.primaryMemberId)
+      ? input.primaryMemberId
+      : (adultMembers[0]?.id ?? null);
 
   const allMembersDocuments = documentsForAudience(publishedDocuments, 'all-members');
 
@@ -202,6 +218,47 @@ export function deriveHouseholdRequirements(input: DeriveHouseholdRequirementsIn
   );
 
   return { season, adults, minors };
+}
+
+/**
+ * Every unsigned household-scoped document that gates `assetKind`'s own money moment
+ * (member-waivers T5b, spec rule 7's asset-fee gate): the asset kind's own per-asset
+ * acknowledgement (`document.frontmatter.audience === assetKind`), plus, for a dry-storage kind,
+ * the Dry Storage Agreement (`audience === 'dry-storage'`) alongside it. Scans every adult's own
+ * `'household'`-scope requirements rather than trusting a single primary id, since
+ * {@link deriveHouseholdRequirements}'s own fallback can already have attached them to whichever
+ * adult qualified; an empty result gates nothing (either every applicable document is signed, or
+ * none is published for the season -- the shipped pass-through).
+ */
+export function outstandingAssetDocuments(requirements: HouseholdRequirements, assetKind: AssetKind): DocumentRequirement[] {
+  const audiences = new Set<DocumentAudience>([assetKind]);
+  if (DRY_STORAGE_KINDS.has(assetKind)) audiences.add('dry-storage');
+  return requirements.adults.flatMap((adult) =>
+    adult.requirements.filter((r) => r.scope === 'household' && !r.signed && audiences.has(r.document.frontmatter.audience)),
+  );
+}
+
+/**
+ * Whether `memberId`'s own current-season general release is on file (member-waivers T5b, spec
+ * rule 7's amendment: class signup "gates on the current-season general release" for the
+ * REGISTRANT specifically, on top of the household's own signature-complete standing the caller
+ * checks separately). `memberId` may be an adult (checked against every one of their own
+ * `'personal'`-scope `'release'`-kind requirements -- in practice just the one general release,
+ * but this holds even if a future season ever published a second) or a minor (checked against
+ * their own Part Two). Reads `true` when nothing applies (no release published for the season --
+ * the shipped pass-through -- or `memberId` matches neither list, which this engine's own callers
+ * never produce for a real active household member), so a missing release document never blocks a
+ * legitimate registrant.
+ */
+export function hasSignedCurrentRelease(requirements: HouseholdRequirements, memberId: string): boolean {
+  const adult = requirements.adults.find((a) => a.memberId === memberId);
+  if (adult) {
+    const releaseRequirements = adult.requirements.filter((r) => r.scope === 'personal' && r.document.frontmatter.kind === 'release');
+    return releaseRequirements.every((r) => r.signed);
+  }
+  const minor = requirements.minors.find((m) => m.minorMemberId === memberId);
+  if (minor) return minor.signed;
+  return true;
 }
 
 interface SignatureRawRow {

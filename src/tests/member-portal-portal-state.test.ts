@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { portalState, valueMirror, RENEWAL_WINDOW_DAYS } from '$member-portal/lib/portal-state';
+import { isRenewalWindowStanding, portalState, valueMirror, RENEWAL_WINDOW_DAYS } from '$member-portal/lib/portal-state';
 import type { MemberStanding } from '$member-auth/lib/standing';
 import type { HouseholdMemberRow } from '$member-portal/lib/household';
 import type { HouseholdAssignmentRow } from '$member-portal/lib/assets';
@@ -19,6 +19,21 @@ function standing(overrides: Partial<MemberStanding>): MemberStanding {
     ...overrides,
   };
 }
+
+describe('isRenewalWindowStanding', () => {
+  const today = new Date('2027-05-01T00:00:00Z');
+
+  it('mirrors portalState\'s own rule 1: no standing, grace, lapsed, or current-within-window all read true', () => {
+    expect(isRenewalWindowStanding(null, today)).toBe(true);
+    expect(isRenewalWindowStanding(standing({ status: 'grace' }), today)).toBe(true);
+    expect(isRenewalWindowStanding(standing({ status: 'lapsed' }), today)).toBe(true);
+    expect(isRenewalWindowStanding(standing({ status: 'current', expiresOn: '2027-05-20 00:00:00' }), today)).toBe(true);
+  });
+
+  it('is false for a current standing well outside the window', () => {
+    expect(isRenewalWindowStanding(standing({ status: 'current', expiresOn: '2028-01-01 00:00:00' }), today)).toBe(false);
+  });
+});
 
 describe('portalState', () => {
   const TODAY = new Date('2026-07-07T00:00:00Z');

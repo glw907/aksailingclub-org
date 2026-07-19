@@ -152,6 +152,26 @@ export async function requestMemberLink(
   return { status: 'sent' };
 }
 
+/**
+ * Mint a fresh magic-link token for an ALREADY-RESOLVED member and return the confirm link alone,
+ * never sending anything itself. Unlike {@link requestMemberLink} (which resolves an email from a
+ * public, unauthenticated form and so must stay enumeration-safe), the member-waivers household
+ * loop's nudge and resumption emails (`$member-portal/lib/waiver-notify.ts`) already know exactly
+ * which household member they are emailing — a signed-in member acting on their own household,
+ * never a stranger's input — and carry their own bespoke subject/body from
+ * `signing-framing-copy.md` rather than the generic "Sign in to {siteName}" message
+ * {@link buildMemberLinkMessage} builds, so the send itself belongs to that caller. `next`, when
+ * given, rides the link as `?next=`; `/my-account/confirm` only ever honors one it recognizes from
+ * its own closed allowlist (`$member-portal/lib/return-path.ts`), so a value from here is never
+ * trusted blindly at the far end either.
+ */
+export async function mintMemberSignInLink(db: D1Database, memberId: string, origin: string, next?: string): Promise<string> {
+  const token = generateMemberToken();
+  await issueMemberToken(db, crypto.randomUUID(), memberId, await hashMemberToken(token), sqliteDatetimeAfter(MEMBER_TOKEN_TTL_MS, new Date()));
+  const nextParam = next ? `&next=${encodeURIComponent(next)}` : '';
+  return `${origin}/my-account/confirm?token=${encodeURIComponent(token)}${nextParam}`;
+}
+
 /** `confirmMemberToken`'s result: success carries the freshly created session id and the member's
  *  own row; failure carries the email to pre-fill the "send me a fresh link" form with, when the
  *  token row could still be traced back to a member (even an expired or already-consumed row) —

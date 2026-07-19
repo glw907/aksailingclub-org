@@ -403,12 +403,14 @@ export async function payForApprovedRequest(db: D1Database, requestId: string, h
   return { ok: true, assignmentId };
 }
 
-/** The fee due on an outstanding `asset_payments` row, plus the asset type's own display name:
- *  {@link payAssetFeeCheckout}'s (route layer) one read before it ever builds a Checkout Session,
- *  the real amount server-side rather than trusting whatever `listHouseholdAssignments` last
- *  rendered to the browser. */
+/** The fee due on an outstanding `asset_payments` row, plus the asset type's own id and display
+ *  name: {@link payAssetFeeCheckout}'s (route layer) one read before it ever builds a Checkout
+ *  Session, the real amount server-side rather than trusting whatever `listHouseholdAssignments`
+ *  last rendered to the browser. `assetType` (member-waivers T5b) is the asset-types.id the
+ *  route's own waiver gate maps to a signing context (`mooring` vs. one of the three dry kinds). */
 export interface PayableAssignmentFee {
   amountCents: number;
+  assetType: string;
   assetTypeName: string;
 }
 
@@ -422,7 +424,7 @@ export interface PayableAssignmentFee {
 export async function getPayableAssignmentFee(db: D1Database, assignmentId: string, householdId: string, currentSeason: number): Promise<PayableAssignmentFee | AssetActionError> {
   const row = await db
     .prepare(
-      `SELECT at.name AS asset_type_name, ap.amount
+      `SELECT aa.asset_type, at.name AS asset_type_name, ap.amount
        FROM asset_assignments aa
        JOIN asset_types at ON at.id = aa.asset_type
        JOIN memberships m ON m.id = aa.membership_id
@@ -430,7 +432,7 @@ export async function getPayableAssignmentFee(db: D1Database, assignmentId: stri
        WHERE aa.id = ?1 AND m.household_id = ?2 AND aa.status = 'active' AND ap.paid_at IS NULL`,
     )
     .bind(assignmentId, householdId, currentSeason)
-    .first<{ asset_type_name: string; amount: number }>();
+    .first<{ asset_type: string; asset_type_name: string; amount: number }>();
   if (!row) return { error: 'No outstanding fee to pay for this asset.' };
-  return { amountCents: Math.round(row.amount * 100), assetTypeName: row.asset_type_name };
+  return { amountCents: Math.round(row.amount * 100), assetType: row.asset_type, assetTypeName: row.asset_type_name };
 }

@@ -12,6 +12,7 @@ import { resolveMemberDb } from '$member-auth/lib/db';
 import { siteConfig } from '$theme/cairn.config';
 import { verifyTurnstile } from '$theme/turnstile';
 import { checkRateLimit, checkRateLimitKeys } from '$theme/rate-limit';
+import { isSafeNextPath, DEFAULT_NEXT_PATH } from '$member-portal/lib/return-path';
 
 export const prerender = false;
 
@@ -28,8 +29,14 @@ export const load: PageServerLoad = async (event) => {
   // Referrer-Policy: no-referrer keeps it out of any onward Referer header (mirrors cairn's own
   // confirmLoad).
   event.setHeaders({ 'Referrer-Policy': 'no-referrer' });
+  // The member-waivers nudge/resumption emails (`$member-portal/lib/waiver-notify.ts`) deep-link
+  // through this route's own `?next=`; only a value this closed allowlist recognizes ever rides
+  // into the hidden field below, so an unrecognized or crafted one is silently dropped here
+  // rather than at the redirect (never an error the member sees over a stray query param).
+  const rawNext = event.url.searchParams.get('next');
   return {
     token: event.url.searchParams.get('token') ?? '',
+    next: isSafeNextPath(rawNext) ? rawNext : null,
     csrf: issueMemberCsrfToken(event),
   };
 };
@@ -79,7 +86,11 @@ export const actions: Actions = {
       sameSite: 'lax',
       maxAge: Math.floor(MEMBER_SESSION_TTL_MS / 1000),
     });
-    redirect(303, '/my-account');
+    // The waivers loop's own deep link (`?next=`, carried on the hidden field the load above
+    // already validated): re-validated here too, since a submitted form field is never trusted
+    // merely because `load` once approved it.
+    const rawNext = String(form.get('next') ?? '');
+    redirect(303, isSafeNextPath(rawNext) ? rawNext : DEFAULT_NEXT_PATH);
   },
 
   // `resend` is the higher-value Turnstile target of the two (spec section 2a): it sends a

@@ -35,7 +35,8 @@ import {
 import { listMyClasses, listMyWaitlistEntries } from '$member-portal/lib/classes';
 import { listReceipts } from '$member-portal/lib/receipts';
 import { buildActionRows } from '$member-portal/lib/action-rows';
-import { portalState, valueMirror } from '$member-portal/lib/portal-state';
+import { buildWaiverActionRows } from '$member-portal/lib/waiver-action-rows';
+import { isRenewalWindowStanding, portalState, valueMirror } from '$member-portal/lib/portal-state';
 import { portalAction, type PortalActionContext, type PortalActionEvent } from '$member-portal/lib/portal-action';
 import { checkoutOrStub } from '$member-portal/lib/checkout';
 import { nextUnclaimedRenewalSeason } from '$member-portal/lib/renewal';
@@ -43,6 +44,9 @@ import { loadSeasonHasLiveEvents } from '$theme/season-data';
 import { siteConfig } from '$theme/cairn.config';
 import { verifyTurnstile } from '$theme/turnstile';
 import { checkRateLimitKeys, RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
+import { documents } from '$chassis/content';
+import { loadPublishedDocuments } from '$theme/documents';
+import { loadHouseholdRequirements, outstandingAssetDocuments, type AssetKind } from '$member-portal/lib/waiver-requirements';
 
 export const prerender = false;
 
@@ -87,7 +91,24 @@ export const load: PageServerLoad = async (event) => {
     getClassRegistrationOpens(db),
   ]);
   const assignments = await listHouseholdAssignments(db, member.householdId, currentSeason);
-  const actionRows = buildActionRows({ assignments, requests, waitlistEntries: myWaitlist });
+
+  // The portal "Needs your attention" waiver rows (member-waivers T5b, spec rule 7): the signer's
+  // own outstanding documents between money moments, or -- once their own part is done and the
+  // household sits in the renewal window -- the loop's own "waiting on {name}" row per other
+  // adult. `loadHouseholdRequirements` returns `null` only for an unresolvable household, never
+  // for the shipped no-published-documents state (that reads as every list empty, so the row
+  // builder below produces nothing either way).
+  const publishedDocuments = loadPublishedDocuments(documents, currentSeason);
+  const householdRequirements = await loadHouseholdRequirements(db, publishedDocuments, member.householdId, currentSeason);
+  const waiverRows = householdRequirements
+    ? buildWaiverActionRows({
+        requirements: householdRequirements,
+        signerMemberId: member.id,
+        inWaitingLoop: isRenewalWindowStanding(standing, new Date()),
+      })
+    : [];
+
+  const actionRows = [...buildActionRows({ assignments, requests, waitlistEntries: myWaitlist }), ...waiverRows];
   const state = portalState({ standing, seasonHasLiveEvents, classRegistrationOpens, hasWeightedActionRows: actionRows.length > 0 });
   const mirrorSegments = valueMirror({ householdMembers, assets: assignments, creditBalance });
   // The masthead's renewal CTA names the season this click will actually buy (decisions.md's
@@ -188,13 +209,30 @@ export const actions: Actions = {
   }),
 };
 
+/** The signing context an asset kind's own fee gates on (member-waivers T5b, spec rule 7:
+ *  "Mooring and other asset documents also gate the asset fee payment"): the Mooring Agreement
+ *  gates at `mooring-fee`; every dry kind (rv-parking/boat-parking/small-boat-rack) shares the one
+ *  Dry Storage Agreement plus its own per-asset acknowledgement, both gating at `storage-fee`. */
+function assetFeeContext(assetType: string): 'mooring-fee' | 'storage-fee' {
+  return assetType === 'mooring' ? 'mooring-fee' : 'storage-fee';
+}
+
 /** Shared by both asset-fee pay doors above: re-verifies the outstanding fee server-side
  *  ({@link getPayableAssignmentFee}, never trusting whatever `listHouseholdAssignments` last
- *  rendered) and hands it to {@link checkoutOrStub}. */
+ *  rendered), hard-gates on the matching asset document(s) being signed (member-waivers T5b, spec
+ *  rule 7; the flagged held-asset edge -- a household with no active primary -- is
+ *  `deriveHouseholdRequirements`'s own fallback, not this route's concern), then hands the
+ *  verified fee to {@link checkoutOrStub}. */
 async function payAssetFeeCheckout(event: PortalActionEvent, ctx: PortalActionContext, assignmentId: string) {
   const currentSeason = await getCurrentSeason(ctx.db);
   const payable = await getPayableAssignmentFee(ctx.db, assignmentId, ctx.member.householdId, currentSeason);
   if ('error' in payable) return fail(400, { error: payable.error });
+
+  const publishedDocuments = loadPublishedDocuments(documents, currentSeason);
+  const requirements = await loadHouseholdRequirements(ctx.db, publishedDocuments, ctx.member.householdId, currentSeason);
+  if (requirements && outstandingAssetDocuments(requirements, payable.assetType as AssetKind).length > 0) {
+    redirect(303, `/my-account/sign?context=${assetFeeContext(payable.assetType)}`);
+  }
 
   return checkoutOrStub(event, ctx, 'assetPayStubbed', {
     kind: 'asset-fee',

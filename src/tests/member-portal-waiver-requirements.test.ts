@@ -8,7 +8,9 @@ import { describe, expect, it } from 'vitest';
 import type { DocumentFrontmatter, SignableDocument } from '$theme/documents';
 import {
   deriveHouseholdRequirements,
+  hasSignedCurrentRelease,
   loadHouseholdRequirements,
+  outstandingAssetDocuments,
   type DeriveHouseholdRequirementsInput,
   type SignatureRecord,
 } from '$member-portal/lib/waiver-requirements';
@@ -197,10 +199,86 @@ describe('deriveHouseholdRequirements', () => {
     expect(result.minors).toEqual([]);
   });
 
+  it("falls back to the first active adult for household documents when the primary member is no longer active (the flagged held-asset edge)", () => {
+    const mooring = doc({ id: 'mooring-agreement-v1', document: 'mooring-agreement', kind: 'agreement', audience: 'mooring' });
+    const result = deriveHouseholdRequirements(
+      baseInput({
+        // ADULT_A is `primaryMemberId` but is no longer in `members` (an admin archived them
+        // without reassigning the household's own primary).
+        primaryMemberId: ADULT_A.id,
+        members: [ADULT_B],
+        assetKinds: ['mooring'],
+        publishedDocuments: published(mooring),
+      }),
+    );
+    expect(result.adults).toHaveLength(1);
+    expect(result.adults[0].memberId).toBe(ADULT_B.id);
+    expect(result.adults[0].requirements.map((r) => r.document.frontmatter.document)).toEqual(['mooring-agreement']);
+  });
+
   it('produces every empty list when no document is published for the season', () => {
     const result = deriveHouseholdRequirements(baseInput({ members: [ADULT_A, MINOR_C], assetKinds: ['mooring'] }));
     expect(result.adults.every((a) => a.requirements.length === 0)).toBe(true);
     expect(result.minors).toEqual([]);
+  });
+});
+
+describe('outstandingAssetDocuments', () => {
+  it('names the unsigned per-asset acknowledgement and, for a dry kind, the storage agreement alongside it', () => {
+    const rv = doc({ id: 'rv-acknowledgement-v1', document: 'rv-acknowledgement', kind: 'acknowledgement', audience: 'rv-parking' });
+    const storage = doc({ id: 'storage-agreement-v1', document: 'storage-agreement', kind: 'agreement', audience: 'dry-storage' });
+    const mooring = doc({ id: 'mooring-agreement-v1', document: 'mooring-agreement', kind: 'agreement', audience: 'mooring' });
+    const requirements = deriveHouseholdRequirements(
+      baseInput({ assetKinds: ['rv-parking', 'mooring'], publishedDocuments: published(rv, storage, mooring) }),
+    );
+
+    expect(outstandingAssetDocuments(requirements, 'rv-parking').map((r) => r.document.frontmatter.document).sort()).toEqual([
+      'rv-acknowledgement',
+      'storage-agreement',
+    ]);
+    expect(outstandingAssetDocuments(requirements, 'mooring').map((r) => r.document.frontmatter.document)).toEqual(['mooring-agreement']);
+  });
+
+  it('is empty once the matching documents are signed, and never counts an unrelated asset kind', () => {
+    const rv = doc({ id: 'rv-acknowledgement-v1', document: 'rv-acknowledgement', kind: 'acknowledgement', audience: 'rv-parking' });
+    const storage = doc({ id: 'storage-agreement-v1', document: 'storage-agreement', kind: 'agreement', audience: 'dry-storage' });
+    const requirements = deriveHouseholdRequirements(
+      baseInput({
+        assetKinds: ['rv-parking'],
+        publishedDocuments: published(rv, storage),
+        signatures: [signature({ documentId: 'rv-acknowledgement', memberId: ADULT_A.id }), signature({ documentId: 'storage-agreement', memberId: ADULT_A.id })],
+      }),
+    );
+    expect(outstandingAssetDocuments(requirements, 'rv-parking')).toEqual([]);
+    expect(outstandingAssetDocuments(requirements, 'boat-parking')).toEqual([]);
+  });
+});
+
+describe('hasSignedCurrentRelease', () => {
+  it("is true for an adult once their own release is signed, false while it is outstanding", () => {
+    const release = doc({ id: 'general-release-v1', document: 'general-release', kind: 'release' });
+    const signed = deriveHouseholdRequirements(baseInput({ members: [ADULT_A], publishedDocuments: published(release), signatures: [signature({ memberId: ADULT_A.id })] }));
+    expect(hasSignedCurrentRelease(signed, ADULT_A.id)).toBe(true);
+
+    const unsigned = deriveHouseholdRequirements(baseInput({ members: [ADULT_A], publishedDocuments: published(release) }));
+    expect(hasSignedCurrentRelease(unsigned, ADULT_A.id)).toBe(false);
+  });
+
+  it("is true for a minor once any adult's Part Two names them, false while it is outstanding", () => {
+    const release = doc({ id: 'general-release-v1', document: 'general-release', kind: 'release' });
+    const signed = deriveHouseholdRequirements(
+      baseInput({ members: [ADULT_A, MINOR_C], publishedDocuments: published(release), signatures: [signature({ minorMemberId: MINOR_C.id })] }),
+    );
+    expect(hasSignedCurrentRelease(signed, MINOR_C.id)).toBe(true);
+
+    const unsigned = deriveHouseholdRequirements(baseInput({ members: [ADULT_A, MINOR_C], publishedDocuments: published(release) }));
+    expect(hasSignedCurrentRelease(unsigned, MINOR_C.id)).toBe(false);
+  });
+
+  it('is true (the pass-through) when no release is published for the season, and for a member matching neither list', () => {
+    const requirements = deriveHouseholdRequirements(baseInput());
+    expect(hasSignedCurrentRelease(requirements, ADULT_A.id)).toBe(true);
+    expect(hasSignedCurrentRelease(requirements, 'mem-unknown')).toBe(true);
   });
 });
 

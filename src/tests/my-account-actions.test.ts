@@ -8,10 +8,35 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isRedirect } from '@sveltejs/kit';
 import type { Redirect } from '@sveltejs/kit';
-import { actions } from '../routes/(site)/my-account/+page.server';
-import { fakeD1 } from './_fake-d1';
+
+// A single published Mooring Agreement (member-waivers T5b's own asset-fee gate test): the real
+// content corpus is all `status: 'draft'` today (this route's own header), so the "the gate blocks
+// payment" path needs a fixture. Every OTHER test in this file stubs no household members, so
+// `deriveHouseholdRequirements` sees an empty adult list and reports nothing outstanding regardless
+// of this fixture -- harmless to them.
+const PUBLISHED_MOORING = {
+  concept: 'documents',
+  id: 'mooring-agreement-v1',
+  slug: 'mooring-agreement-v1',
+  permalink: '',
+  title: 'Mooring Agreement',
+  tags: [],
+  excerpt: '',
+  wordCount: 0,
+  draft: false,
+  fields: {},
+  frontmatter: { title: 'Mooring Agreement', document: 'mooring-agreement', version: 1, kind: 'agreement', audience: 'mooring', season: 2026, status: 'published' },
+  body: 'The signable text.',
+};
+vi.mock('$chassis/content', () => ({
+  documents: { all: () => [{ id: PUBLISHED_MOORING.id }], byId: () => PUBLISHED_MOORING },
+}));
+
+const { actions } = await import('../routes/(site)/my-account/+page.server');
+const { fakeD1 } = await import('./_fake-d1');
 
 const MEMBER_ROW = { id: 'mem-1', household_id: 'hh-1', name: 'Scratch Member', email: 'scratch@example.com', archived_at: null };
+const ACTIVE_ADULT_MEMBER = { id: 'mem-1', name: 'Scratch Member', email: 'scratch@example.com', phone: null, birthdate: '1980-01-01', directory_visibility: 'partial', archived_at: null };
 
 function fakeEvent(form: Record<string, string>, db: unknown, stripeKey?: string) {
   const fd = new FormData();
@@ -140,6 +165,28 @@ describe('?/payAssetFee', () => {
     expect(params.get('metadata[kind]')).toBe('asset-fee');
     expect(params.get('metadata[refId]')).toBe('aa-1');
     expect(params.get('line_items[0][price_data][unit_amount]')).toBe('15000');
+  });
+
+  it("hard-gates on the matching asset document (member-waivers T5b): redirects to the mooring-fee signing moment and mints no checkout when the household's own Mooring Agreement is outstanding", async () => {
+    const { db } = fakeD1({
+      firstResults: {
+        'FROM member_sessions': MEMBER_ROW,
+        'FROM households WHERE id': { primary_member_id: 'mem-1' },
+        "'current_season'": { value: '2026' },
+        'FROM asset_assignments aa': { asset_type: 'mooring', asset_type_name: 'Mooring', amount: 150 },
+      },
+      allResults: {
+        'FROM members WHERE household_id = ?1 ORDER BY name': [ACTIVE_ADULT_MEMBER],
+        'FROM asset_assignments aa': [{ asset_type: 'mooring' }],
+      },
+    });
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const caught = await catchThrown(actions.payAssetFee(fakeEvent({ assignmentId: 'aa-1' }, db, 'sk_test_1') as never));
+    expect(isRedirect(caught)).toBe(true);
+    expect((caught as Redirect).location).toBe('/my-account/sign?context=mooring-fee');
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 
