@@ -63,6 +63,27 @@ UPDATE households SET primary_member_id = 'e2e-current-member' WHERE id = 'e2e-c
 INSERT INTO memberships (id, household_id, season, tier, price_paid, paid_at)
   VALUES ('e2e-current-ms', 'e2e-current-hh', 2026, 'individual', 250, datetime('now', '-60 days'));
 
+-- Signature rows for both real season-2026 documents (general-release, rules-acknowledgement;
+-- both `audience: all-members`), following portal-seed.sql's own identical fix (e985a72): T1
+-- published real season-2026 all-members documents, so this solo household's one adult member
+-- now owes both -- the class-signup form's own signature gate (`class-signup-form.ts`'s
+-- `handleClassSignup`) checks `hasSignedCurrentRelease` for the registrant and pivots to `sign`
+-- (never reaching `signUpForClass`) the moment a general-release document is published and
+-- unsigned. This household holds no asset, so no household-scope (asset-kind) document applies.
+INSERT INTO waiver_acceptances
+  (id, document_id, version, season, kind, content_hash, content_snapshot, person_name, person_email, context, signed_at, member_id, minor_member_id)
+VALUES
+  ('e2e-current-wa-release', 'general-release', 1, 2026, 'release',
+   '0000000000000000000000000000000000000000000000000000000000000000',
+   '(fixture) the season-2026 general-release text.',
+   'E2E Current Member', 'e2e-current-member@example.com', 'renewal', '2026-06-01 00:00:00',
+   'e2e-current-member', NULL),
+  ('e2e-current-wa-rules', 'rules-acknowledgement', 1, 2026, 'acknowledgement',
+   '0000000000000000000000000000000000000000000000000000000000000000',
+   '(fixture) the season-2026 rules-acknowledgement text.',
+   'E2E Current Member', 'e2e-current-member@example.com', 'renewal', '2026-06-01 00:00:00',
+   'e2e-current-member', NULL);
+
 INSERT INTO households (id, name, primary_member_id) VALUES ('e2e-lapsed-hh', 'E2E Lapsed Household', NULL);
 INSERT INTO members (id, household_id, name, email) VALUES ('e2e-lapsed-member', 'e2e-lapsed-hh', 'E2E Lapsed Member', 'e2e-lapsed-member@example.com');
 UPDATE households SET primary_member_id = 'e2e-lapsed-member' WHERE id = 'e2e-lapsed-hh';
