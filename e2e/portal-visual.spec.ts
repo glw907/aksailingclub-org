@@ -51,3 +51,47 @@ for (const width of WIDTHS) {
     await expect(page).toHaveScreenshot(`my-account-all-clear-light-${width}.png`, { fullPage: true });
   });
 }
+
+// T7-prep (member-directory pass): the two new member-only surfaces T3/T6b built, at this suite's
+// established two-width minimum (390/1440, the five-viewport bar's own extremes; the family's
+// full five-width sweep is `site-visual.spec.ts`'s job for a public page, this suite's own
+// `my-account` precedent above already narrows to the pass's two required-designed widths) and, per
+// this task's own instruction, BOTH themes (unlike the landing baselines above, which stayed
+// light-only per T5's minimum) -- `page.emulateMedia({ colorScheme })` follows `theme.css`'s own
+// `prefers-color-scheme` block exactly as `site-visual.spec.ts`'s `home — dark` test already
+// exercises, since neither page here sets an explicit `data-theme` cookie.
+//
+// Directory: signed in as the Wright household's own primary member (the suite's default
+// `mintMemberSession()` id), which lists every currently-VISIBLE-standing member across
+// `portal-seed.sql`'s two households -- Geoff Wright and Sam Wright (`visible`/`partial`, same
+// household) plus Alex Sterling (`visible`, the Sterling household) -- so the rendered list is
+// never empty.
+//
+// Committees: `portal-seed.sql` seeds no `committees`/`committee_members` rows (that data is a
+// separate task, T2b, not yet landed as of this spec), so this page's signed-in baseline is
+// necessarily the committees EMPTY state (the h1 and intro copy, no committee sections). That is
+// still real, honest coverage of what a member currently sees at this URL; a richer
+// chair/roster/manage-affordance baseline is future work once committee fixture rows exist.
+for (const width of WIDTHS) {
+  for (const colorScheme of ['light', 'dark'] as const) {
+    test(`my-account directory signed in — ${colorScheme} — ${width}px`, async ({ page, context }) => {
+      await mintMemberSession(context);
+      await page.setViewportSize({ width, height: 900 });
+      await page.emulateMedia({ colorScheme });
+      await page.goto('/my-account/directory');
+      await expect(page.getByRole('heading', { level: 1, name: 'Member directory' })).toBeVisible();
+      await expect(page.getByText('Geoff Wright', { exact: false }).first()).toBeVisible();
+      await expect(page.getByText('Alex Sterling', { exact: false }).first()).toBeVisible();
+      await expect(page).toHaveScreenshot(`my-account-directory-${colorScheme}-${width}.png`, { fullPage: true });
+    });
+
+    test(`my-account committees signed in — ${colorScheme} — ${width}px`, async ({ page, context }) => {
+      await mintMemberSession(context);
+      await page.setViewportSize({ width, height: 900 });
+      await page.emulateMedia({ colorScheme });
+      await page.goto('/my-account/committees');
+      await expect(page.getByRole('heading', { level: 1, name: 'Committees' })).toBeVisible();
+      await expect(page).toHaveScreenshot(`my-account-committees-${colorScheme}-${width}.png`, { fullPage: true });
+    });
+  }
+}
