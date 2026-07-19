@@ -1,0 +1,34 @@
+-- asc-club migration 0032: signature uniqueness (a fix from the member-waivers pass close
+-- reviewer fan-out).
+--
+-- `signatures.ts`'s `recordSignature` guards a double submit with a check-then-insert
+-- (`signatureExists`, a plain SELECT, then a separate INSERT), and until this migration nothing
+-- backed that with a real constraint. Two concurrent requests for the same signing act (a
+-- double-clicked Sign button, the same resumption deep-link opened in two tabs, an `enhance`
+-- retry) could both pass the SELECT before either INSERT landed, leaving two `waiver_acceptances`
+-- rows for what should be one signature -- permanent duplicate legal evidence, and
+-- `listMemberSignatureHistory`'s admin desk read would surface both.
+--
+-- Two PARTIAL unique indexes, one per `signatureExists`'s own two lookup shapes:
+--
+-- `uq_waiver_acceptances_personal`, `(document_id, season, member_id) WHERE minor_member_id IS
+-- NULL`: a personal signature is unique per document/season/signer. Scoped to
+-- `minor_member_id IS NULL` (rather than a plain `UNIQUE(document_id, season, member_id)`) because
+-- a Part Two row also carries the signing adult's own `member_id`
+-- (`recordSignature`'s own `input.member.id`, bound at column 11 regardless of `minor`), and an
+-- adult who signs Part Two for two different children in the same season must be allowed two rows
+-- sharing that same `(document_id, season, member_id)` triple -- only the NULL-minor (personal)
+-- rows need to be unique against each other.
+--
+-- `uq_waiver_acceptances_minor`, `(document_id, season, minor_member_id) WHERE minor_member_id IS
+-- NOT NULL`: a minor's Part Two is unique per document/season/child, matching
+-- `signatureExists`'s own minor lookup ("any adult's election satisfies the child's requirement" --
+-- the match is on the minor alone, never the signing adult), so this index never includes
+-- `member_id`.
+--
+-- SQLite's partial-index WHERE clause makes both indexes safe together on the same table: a
+-- personal row (`minor_member_id IS NULL`) is invisible to the minor index and vice versa, so
+-- there is no cross-shape collision, and the existing plain `idx_waiver_acceptances_email` index
+-- (0029) is untouched.
+CREATE UNIQUE INDEX uq_waiver_acceptances_personal ON waiver_acceptances(document_id, season, member_id) WHERE minor_member_id IS NULL;
+CREATE UNIQUE INDEX uq_waiver_acceptances_minor ON waiver_acceptances(document_id, season, minor_member_id) WHERE minor_member_id IS NOT NULL;

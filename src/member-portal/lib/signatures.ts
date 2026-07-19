@@ -184,6 +184,15 @@ async function signatureExists(db: D1Database, documentId: string, season: numbe
  * relationship. The snapshot is `document.body` verbatim -- the same canonical text the freeze
  * guard hashes -- so the stored `content_hash` matches the frozen version and reproduces the
  * signed record independent of the repo.
+ *
+ * The {@link signatureExists} pre-check is a cheap fast path (it skips hashing the document body
+ * for the common already-signed case), never the sole guard against a duplicate row: two
+ * concurrent requests for the same signing act (a double-clicked Sign button, the same resumption
+ * link opened in two tabs, an `enhance` retry) can both pass that SELECT before either INSERT
+ * lands. The INSERT itself closes that race (fix round, migration 0032's own partial unique
+ * indexes): `ON CONFLICT DO NOTHING` turns a lost race into a clean zero-`changes` result, read
+ * back here as the same `noop: true` the pre-check already returns for an ordinary double submit,
+ * so a caller never has to distinguish the two.
  */
 export async function recordSignature(db: D1Database, input: RecordSignatureInput): Promise<RecordSignatureResult> {
   const typedName = input.typedName.trim();
@@ -200,13 +209,14 @@ export async function recordSignature(db: D1Database, input: RecordSignatureInpu
   const contentHash = await sha256Hex(snapshot);
   const kind: DocumentKind = input.document.frontmatter.kind;
 
-  await db
+  const result = await db
     .prepare(
       `INSERT INTO waiver_acceptances
          (id, document_id, version, season, kind, content_hash, content_snapshot, person_name, person_email,
           context, ip_address, member_id, auth_token_id, auth_issued_at, auth_consumed_at, build_hash,
           signer_relationship, minor_member_id)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)`,
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)
+       ON CONFLICT DO NOTHING`,
     )
     .bind(
       crypto.randomUUID(),
@@ -230,7 +240,7 @@ export async function recordSignature(db: D1Database, input: RecordSignatureInpu
     )
     .run();
 
-  return { ok: true, noop: false };
+  return { ok: true, noop: (result.meta.changes ?? 0) === 0 };
 }
 
 /** The contact values a confirmation snapshots, already normalized. */
@@ -278,23 +288,56 @@ export function normalizeContact(input: ContactUpdateInput): ContactValues {
   };
 }
 
+/** Input to {@link applyContactUpdateAndConfirm}: the raw "Update it" contact fields plus the
+ *  confirmation row's own identity. */
+export interface ApplyContactUpdateInput {
+  memberId: string;
+  householdId: string;
+  season: number;
+  context: SigningContext;
+  contact: ContactUpdateInput;
+}
+
 /**
- * Apply an updated contact set to the live records (member-waivers T4 rule 4): normalizes the
- * input, writes the member's own email and phone and the household's mailing address (so the club
- * can actually reach the member, the whole point of the Borough 72-hour clock), and returns the
- * normalized values for the confirmation snapshot. The member row and household row are updated
- * separately, matching how the profile and household screens each own their own write.
+ * Apply an updated contact set to the live records (member-waivers T4 rule 4) and record the
+ * confirmation snapshotting exactly what was written, as ONE atomic write (fix round): the
+ * member's own email/phone, the household's mailing address (so the club can actually reach the
+ * member, the whole point of the Borough 72-hour clock), and the `contact_confirmations` evidence
+ * row all land in a single `db.batch([...])`, which D1 runs as one transaction and rolls back on
+ * any failure. Three sequential independent `.run()` calls previously left a real window for a
+ * mid-sequence throw (or isolate eviction) to leave the member's email changed with no matching
+ * address update and no confirmation row -- the same atomic-write idiom `households-store.ts`'s
+ * `createHousehold` and `classes.ts`'s waitlist-claim batch already use for this shape of
+ * multi-table write.
  */
-export async function applyContactUpdate(db: D1Database, memberId: string, householdId: string, input: ContactUpdateInput): Promise<ContactValues> {
-  const values = normalizeContact(input);
-  await db
-    .prepare("UPDATE members SET email = ?1, phone = ?2 WHERE id = ?3")
-    .bind(values.email, values.phone, memberId)
-    .run();
-  await db
-    .prepare("UPDATE households SET address_line1 = ?1, address_line2 = ?2, city = ?3, state = ?4, postal_code = ?5, updated_at = datetime('now') WHERE id = ?6")
-    .bind(values.addressLine1, values.addressLine2, values.city, values.state, values.postalCode, householdId)
-    .run();
+export async function applyContactUpdateAndConfirm(db: D1Database, input: ApplyContactUpdateInput): Promise<ContactValues> {
+  const values = normalizeContact(input.contact);
+  await db.batch([
+    db.prepare('UPDATE members SET email = ?1, phone = ?2 WHERE id = ?3').bind(values.email, values.phone, input.memberId),
+    db
+      .prepare("UPDATE households SET address_line1 = ?1, address_line2 = ?2, city = ?3, state = ?4, postal_code = ?5, updated_at = datetime('now') WHERE id = ?6")
+      .bind(values.addressLine1, values.addressLine2, values.city, values.state, values.postalCode, input.householdId),
+    db
+      .prepare(
+        `INSERT INTO contact_confirmations
+           (id, member_id, household_id, season, context, email, phone, address_line1, address_line2, city, state, postal_code)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`,
+      )
+      .bind(
+        crypto.randomUUID(),
+        input.memberId,
+        input.householdId,
+        input.season,
+        input.context,
+        values.email,
+        values.phone,
+        values.addressLine1,
+        values.addressLine2,
+        values.city,
+        values.state,
+        values.postalCode,
+      ),
+  ]);
   return values;
 }
 

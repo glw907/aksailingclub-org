@@ -12,7 +12,14 @@ carried over as query params. A `lapsed` household gets `{ pivot: 'renew' }` ins
 2026-07-14): joining fresh would duplicate that household, so the page offers a button that emails
 the member's own sign-in link (`requestRenewLink`) rather than the join carry-over. With JS
 available, an email-blur probe (`checkKnownEmail` then `checkClassEligibility`) offers the same
-pivot before the visitor fills out the rest of the form. -->
+pivot before the visitor fills out the rest of the form.
+
+The class-door signature gate (fix round): a standing-eligible member whose current-season general
+release isn't on file gets `{ pivot: 'sign' }` instead of enrolling, mirroring the portal's own
+`registerForClass` gate. The public door has no session to redirect into `/my-account/sign`
+directly, so it reuses the same `requestRenewLink` "email a sign-in link" mechanism as the `renew`
+pivot; the link lands the member in the portal, where `/my-account/classes`'s own `register`
+action completes the same gate before enrolling. -->
 <script lang="ts">
   import type { PageData } from './$types';
   import { siteConfig } from '$theme/cairn.config';
@@ -33,8 +40,14 @@ pivot before the visitor fills out the rest of the form. -->
   /** The class-door standing gate's own pivot shape: the join invitation carries the entered
    *  fields, the renewal handoff carries just the email the "email me a sign-in link" button
    *  needs. Set once the email-blur probe (or a full submit) finds the visitor ineligible, so the
-   *  page can show the right pivot before a full submit; `null` until then. */
-  type Pivot = { mode: 'join'; name: string; email: string; phone: string } | { mode: 'renew'; email: string };
+   *  page can show the right pivot before a full submit; `null` until then. `sign` (fix round) is
+   *  submit-time only -- the standing-only email-blur probe never detects it -- and reuses the same
+   *  "email me a sign-in link" mechanism as `renew`, since a standing-eligible-but-unsigned member
+   *  is still a known member the enumeration-safe link works for. */
+  type Pivot =
+    | { mode: 'join'; name: string; email: string; phone: string }
+    | { mode: 'renew'; email: string }
+    | { mode: 'sign'; email: string };
 
   let blurPivot = $state<Pivot | null>(null);
 
@@ -62,9 +75,9 @@ pivot before the visitor fills out the rest of the form. -->
   const resultPivot = $derived.by<Pivot | null>(() => {
     const result = joinClass.result;
     if (!result || !('pivot' in result)) return null;
-    return result.pivot === 'join'
-      ? { mode: 'join', name: result.name, email: result.email, phone: result.phone ?? '' }
-      : { mode: 'renew', email: result.email };
+    if (result.pivot === 'join') return { mode: 'join', name: result.name, email: result.email, phone: result.phone ?? '' };
+    if (result.pivot === 'renew') return { mode: 'renew', email: result.email };
+    return { mode: 'sign', email: result.email };
   });
 
   const pivot = $derived(resultPivot ?? blurPivot);
@@ -225,6 +238,25 @@ pivot before the visitor fills out the rest of the form. -->
     <p class="mt-xs mb-0 text-step--1 text-base-content">
       Your membership has lapsed. We'll email you a sign-in link; you can renew and register for
       classes from your account.
+    </p>
+    {#if requestRenewLink.result?.sent}
+      <p class="mt-xs mb-0 text-step--1 text-base-content">Check your inbox. The link expires in 15 minutes.</p>
+    {:else}
+      <form {...requestRenewLink} class="mt-s flex flex-col items-start gap-s">
+        <input type="hidden" name="email" value={pivot.email} />
+        <div use:turnstileExplicit></div>
+        <button type="submit" class="btn btn-primary btn-sm" disabled={!!requestRenewLink.pending}>
+          {requestRenewLink.pending ? 'Sending…' : 'Email me a sign-in link'}
+        </button>
+      </form>
+    {/if}
+  </div>
+{:else if pivot && pivot.mode === 'sign'}
+  <div class="outcome-panel mt-l max-w-measure-wide rounded-box p-m">
+    <p class="outcome-panel-title m-0 font-semibold">Sign your annual release to sign up for {data.cls.name}.</p>
+    <p class="mt-xs mb-0 text-step--1 text-base-content">
+      Your membership is current, but this season's release isn't on file yet. We'll email you a
+      sign-in link; you can sign it and register for the class from your account.
     </p>
     {#if requestRenewLink.result?.sent}
       <p class="mt-xs mb-0 text-step--1 text-base-content">Check your inbox. The link expires in 15 minutes.</p>

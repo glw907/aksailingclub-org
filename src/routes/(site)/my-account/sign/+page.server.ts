@@ -43,7 +43,7 @@ import {
 } from '$member-portal/lib/waiver-requirements';
 import { householdSignatureGate } from '$member-portal/lib/household-signature-gate';
 import {
-  applyContactUpdate,
+  applyContactUpdateAndConfirm,
   hasContactConfirmation,
   isSignerRelationship,
   isSigningContext,
@@ -387,6 +387,13 @@ export const actions: Actions = {
   }),
 
   confirmContact: portalAction(async ({ ctx, event }) => {
+    // The contact-confirm step only ever renders for the household's responsible adult
+    // (`load`'s own `assetConfirmApplies = isResponsibleAdult && ...`, `isResponsibleAdult =
+    // member.id === household.primaryMemberId`); this mirrors that same primary-only gate
+    // server-side, matching `/my-account/household`'s own `updateAddress` action, since a
+    // non-primary member holds a valid session and CSRF token but has nothing of their own to
+    // confirm here.
+    if (!ctx.isPrimary) return fail(403, { error: 'Only the primary member can confirm the household contact info.' });
     const season = await getCurrentSeason(ctx.db);
     const context = resolveContext(event.url as URL);
     // "This is current": record the confirmation snapshotting the values already on file, no edit.
@@ -413,25 +420,34 @@ export const actions: Actions = {
   }),
 
   updateContact: portalAction(async ({ form, ctx, event }) => {
+    // The household mailing address is a primary-only write, matching
+    // `/my-account/household`'s own `updateAddress` action on the identical `households` table
+    // (fix round): the CSRF token this action checks is issued to any signed-in member on
+    // `load` regardless of `isPrimary`, so a non-primary adult who legitimately visits this page
+    // to sign their own documents could otherwise overwrite the shared household address the
+    // Borough 72-hour reachability clock depends on. The `email`/`phone` half is self-scoped
+    // (`ctx.member.id`) and would be fine either way; gating the whole action is the simpler,
+    // safer boundary (and matches the contact-confirm step, which never renders for a
+    // non-primary member in the first place).
+    if (!ctx.isPrimary) return fail(403, { error: 'Only the primary member can update the household address.' });
     const season = await getCurrentSeason(ctx.db);
     const context = resolveContext(event.url as URL);
-    // "Update it": write the new values to the live records (so the club can reach the member),
-    // then record the confirmation snapshotting exactly what was written.
-    const values = await applyContactUpdate(ctx.db, ctx.member.id, ctx.member.householdId, {
-      email: String(form.get('email') ?? ''),
-      phone: String(form.get('phone') ?? ''),
-      addressLine1: String(form.get('addressLine1') ?? ''),
-      addressLine2: String(form.get('addressLine2') ?? ''),
-      city: String(form.get('city') ?? ''),
-      state: String(form.get('state') ?? ''),
-      postalCode: String(form.get('postalCode') ?? ''),
-    });
-    await recordContactConfirmation(ctx.db, {
+    // "Update it": write the new values to the live records (so the club can reach the member)
+    // and record the confirmation snapshotting exactly what was written, as one atomic write.
+    await applyContactUpdateAndConfirm(ctx.db, {
       memberId: ctx.member.id,
       householdId: ctx.member.householdId,
       season,
       context,
-      values,
+      contact: {
+        email: String(form.get('email') ?? ''),
+        phone: String(form.get('phone') ?? ''),
+        addressLine1: String(form.get('addressLine1') ?? ''),
+        addressLine2: String(form.get('addressLine2') ?? ''),
+        city: String(form.get('city') ?? ''),
+        state: String(form.get('state') ?? ''),
+        postalCode: String(form.get('postalCode') ?? ''),
+      },
     });
     return { saved: true as const };
   }),

@@ -4,10 +4,10 @@
 // _fake-d1.ts): it records every prepared-statement call and its bound args, so a test drives the
 // module's real SQL and asserts exactly what it sent to the database.
 import { createHash } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { fakeD1, type FakeD1Call } from './_fake-d1';
 import {
-  applyContactUpdate,
+  applyContactUpdateAndConfirm,
   normalizeContact,
   recordContactConfirmation,
   recordSignature,
@@ -137,6 +137,21 @@ describe('recordSignature', () => {
     await recordSignature(db, baseInput({ member: { id: 'm-2', email: null } }));
     expect(insertCall(calls).args[8]).toBe('');
   });
+
+  // Fix round: migration 0032's partial unique indexes back the INSERT with `ON CONFLICT DO
+  // NOTHING`, closing the window between the pre-check SELECT and the INSERT (a double-clicked
+  // Sign button, the same resumption link opened in two tabs). A lost race reads `changes: 0`
+  // (the same shape `offers.test.ts`'s own claim-race test simulates for `class_offers`); the
+  // still-committed row from the winning concurrent request is why this is a clean no-op, not an
+  // error.
+  it('reads a lost race against a concurrent identical signature as a clean no-op, never an error', async () => {
+    const { db, calls } = fakeD1({
+      runResults: { 'INSERT INTO waiver_acceptances': { changes: 0 } },
+    });
+    const result = await recordSignature(db, baseInput());
+    expect(result).toEqual({ ok: true, noop: true });
+    expect(calls.some((c) => c.sql.includes('INSERT INTO waiver_acceptances'))).toBe(true);
+  });
 });
 
 describe('resolveSessionAuthEvent', () => {
@@ -184,17 +199,23 @@ describe('normalizeContact', () => {
   });
 });
 
-describe('applyContactUpdate', () => {
-  it('writes the normalized email and phone to the member and the address to the household, then returns the snapshot', async () => {
+describe('applyContactUpdateAndConfirm', () => {
+  it('writes the normalized email and phone to the member, the address to the household, and the confirmation, then returns the snapshot', async () => {
     const { db, calls } = fakeD1();
-    const values = await applyContactUpdate(db, 'm-1', 'h-1', {
-      email: 'DANA@example.com',
-      phone: '9075551234',
-      addressLine1: '1 Dock Rd',
-      addressLine2: '',
-      city: 'Anchorage',
-      state: 'AK',
-      postalCode: '99501',
+    const values = await applyContactUpdateAndConfirm(db, {
+      memberId: 'm-1',
+      householdId: 'h-1',
+      season: 2027,
+      context: 'renewal',
+      contact: {
+        email: 'DANA@example.com',
+        phone: '9075551234',
+        addressLine1: '1 Dock Rd',
+        addressLine2: '',
+        city: 'Anchorage',
+        state: 'AK',
+        postalCode: '99501',
+      },
     });
     expect(values.email).toBe('dana@example.com');
 
@@ -202,6 +223,35 @@ describe('applyContactUpdate', () => {
     expect(memberUpdate?.args).toEqual(['dana@example.com', '+19075551234', 'm-1']);
     const householdUpdate = calls.find((c) => c.sql.includes('UPDATE households SET address_line1'));
     expect(householdUpdate?.args).toEqual(['1 Dock Rd', null, 'Anchorage', 'AK', '99501', 'h-1']);
+    const confirmationInsert = calls.find((c) => c.sql.includes('INSERT INTO contact_confirmations'));
+    expect(confirmationInsert?.args).toEqual([
+      expect.any(String),
+      'm-1',
+      'h-1',
+      2027,
+      'renewal',
+      'dana@example.com',
+      '+19075551234',
+      '1 Dock Rd',
+      null,
+      'Anchorage',
+      'AK',
+      '99501',
+    ]);
+  });
+
+  it('submits all three statements through a single db.batch call, never three independent .run() calls (fix round)', async () => {
+    const { db } = fakeD1();
+    const batchSpy = vi.spyOn(db, 'batch');
+    await applyContactUpdateAndConfirm(db, {
+      memberId: 'm-1',
+      householdId: 'h-1',
+      season: 2027,
+      context: 'renewal',
+      contact: { email: '', phone: '', addressLine1: '', addressLine2: '', city: '', state: '', postalCode: '' },
+    });
+    expect(batchSpy).toHaveBeenCalledTimes(1);
+    expect(batchSpy.mock.calls[0][0]).toHaveLength(3);
   });
 });
 

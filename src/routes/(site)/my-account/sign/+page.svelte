@@ -36,9 +36,27 @@ not just the first. -->
   let submitting = $state(false);
   /** The contact-confirm card's edit mode ("Update it" opens the same fields editable). */
   let editingContact = $state(false);
+  /** The edit form's first field (Email) and the "Update it" button that opens it: entering and
+   *  leaving edit mode swaps the whole branch (fix round, WCAG 2.4.3), so plain `onclick` handlers
+   *  alone would drop keyboard/SR focus to `document.body` on both the "Update it" -> edit and the
+   *  Cancel -> read-only transitions; {@link openEditingContact}/{@link cancelEditingContact} move
+   *  it explicitly instead. */
+  let contactEmailInputEl: HTMLInputElement | undefined = $state();
+  let updateItButtonEl: HTMLButtonElement | undefined = $state();
 
   let listEl: HTMLElement | undefined = $state();
   let afterEl: HTMLElement | undefined = $state();
+
+  /** The screen-reader confirmation live region's own text (fix round, WCAG 4.1.3): a polite
+   *  `aria-live` region only re-announces when its text content actually CHANGES, but every
+   *  `sign`/`confirmContact`/`updateContact` action previously returned the same static
+   *  `{ saved: true }`, so a member clearing several documents in one sitting got an announcement
+   *  for the first signature and silence for every one after it (the node's text was already
+   *  "Signed.", so setting it to "Signed." again mutated nothing). Each handler below sets this to
+   *  a fresh, specific string -- the just-signed title plus a running count for a `sign`, a fixed
+   *  but distinct line for the contact-confirm step -- so consecutive signatures are always a real
+   *  content change. */
+  let announcement = $state('');
 
   function reducedMotion(): boolean {
     return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -55,12 +73,16 @@ not just the first. -->
     target.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'center' });
   }
 
-  const submitEnhance = () => {
+  /** `title` is the entry being signed, captured at the click that opened this submit (never read
+   *  off `moment` after the fact, since a signed entry's own item may already be gone from the
+   *  outstanding list by the time this runs). */
+  const submitEnhance = (title: string) => {
     submitting = true;
     return async ({ update }: { update: (opts?: { reset?: boolean }) => Promise<void> }) => {
       await update({ reset: false });
       submitting = false;
       await advanceFocus();
+      announcement = moment ? `Signed ${title}. ${moment.signedCount} of ${moment.total} done.` : `Signed ${title}.`;
     };
   };
 
@@ -71,8 +93,37 @@ not just the first. -->
       submitting = false;
       editingContact = false;
       await advanceFocus();
+      announcement = 'Contact info confirmed.';
     };
   };
+
+  /** `?/sendNudge`'s own submit handler: shares `submitEnhance`'s submitting/advanceFocus shape,
+   *  but never touches `announcement` -- the nudge's own confirmation ("Sent.", below) is a plain
+   *  visible status line, not part of the signing moment's own running commentary. */
+  const nudgeEnhance = () => {
+    submitting = true;
+    return async ({ update }: { update: (opts?: { reset?: boolean }) => Promise<void> }) => {
+      await update({ reset: false });
+      submitting = false;
+      await advanceFocus();
+    };
+  };
+
+  /** "Update it": opens the edit form and moves focus to its first field (WCAG 2.4.3), rather
+   *  than leaving it to fall to `document.body` once the clicked button's own branch unmounts. */
+  async function openEditingContact() {
+    editingContact = true;
+    await tick();
+    contactEmailInputEl?.focus();
+  }
+
+  /** "Cancel": closes the edit form and returns focus to the "Update it" button that opened it
+   *  (WCAG 2.4.3) -- the save path already has its own focus handling via `advanceFocus`. */
+  async function cancelEditingContact() {
+    editingContact = false;
+    await tick();
+    updateItButtonEl?.focus();
+  }
 
   const moment = $derived(data.degraded ? null : data.moment);
   /** Nothing left for the person actually viewing the page, independent of the household loop
@@ -113,10 +164,9 @@ not just the first. -->
   <p class="mt-s max-w-measure text-step-0 text-muted">This isn&#8217;t available right now. Please try again in a moment.</p>
 {:else}
   <!-- Screen-reader confirmation of a just-recorded signature; the visible receipt below is the
-       sighted equivalent. -->
-  <p class="sr-only" role="status" aria-live="polite">
-    {#if form && 'saved' in form && form.saved}Signed.{/if}
-  </p>
+       sighted equivalent. `announcement` (fix round) is set fresh by each handler so consecutive
+       signatures are always a real text change, not the same static "Signed." twice running. -->
+  <p class="sr-only" role="status" aria-live="polite">{announcement}</p>
 
   {#if moment && moment.total > 0}
     <header class="signing-welcome">
@@ -163,7 +213,7 @@ not just the first. -->
               <div class="signing-sheet">
                 <div class="signing-sheet-text prose">{@html entry.bodyHtml}</div>
 
-                <form method="POST" action="?/sign&{contextQuery}" class="signing-strip" use:enhance={submitEnhance}>
+                <form method="POST" action="?/sign&{contextQuery}" class="signing-strip" use:enhance={() => submitEnhance(entry.title)}>
                   <input type="hidden" name="csrf" value={data.csrf} />
                   <input type="hidden" name="documentId" value={entry.documentId} />
                   <input type="hidden" name="version" value={entry.version} />
@@ -227,7 +277,7 @@ not just the first. -->
           <div class="signing-contact-fields">
             <label class="signing-field">
               <span class="signing-field-label">Email</span>
-              <input class="input" type="email" name="email" autocomplete="email" value={data.contact.prefill.email} />
+              <input bind:this={contactEmailInputEl} class="input" type="email" name="email" autocomplete="email" value={data.contact.prefill.email} />
             </label>
             <label class="signing-field">
               <span class="signing-field-label">Phone</span>
@@ -256,7 +306,7 @@ not just the first. -->
           </div>
           <div class="signing-contact-actions">
             <button type="submit" class="btn signing-sign-btn" disabled={submitting}>{submitting ? 'Saving…' : 'Save and confirm'}</button>
-            <button type="button" class="portal-quiet-action portal-touch-btn btn btn-sm" onclick={() => (editingContact = false)}>Cancel</button>
+            <button type="button" class="portal-quiet-action portal-touch-btn btn btn-sm" onclick={cancelEditingContact}>Cancel</button>
           </div>
         </form>
       {:else}
@@ -285,7 +335,7 @@ not just the first. -->
             <input type="hidden" name="csrf" value={data.csrf} />
             <button type="submit" class="btn signing-sign-btn" disabled={submitting}>{submitting ? 'Saving…' : 'This is current'}</button>
           </form>
-          <button type="button" class="portal-quiet-action portal-touch-btn btn btn-sm" onclick={() => (editingContact = true)}>Update it</button>
+          <button bind:this={updateItButtonEl} type="button" class="portal-quiet-action portal-touch-btn btn btn-sm" onclick={openEditingContact}>Update it</button>
         </div>
       {/if}
     </section>
@@ -310,7 +360,7 @@ not just the first. -->
             <span class="signing-household-label">{row.label}</span>
             <span class="signing-household-status">{row.statusText}</span>
             {#if row.nudgeMemberId}
-              <form method="POST" action="?/sendNudge&{contextQuery}" use:enhance={submitEnhance}>
+              <form method="POST" action="?/sendNudge&{contextQuery}" use:enhance={nudgeEnhance}>
                 <input type="hidden" name="csrf" value={data.csrf} />
                 <input type="hidden" name="targetMemberId" value={row.nudgeMemberId} />
                 <button type="submit" class="portal-quiet-action portal-touch-btn btn btn-sm" disabled={submitting}>

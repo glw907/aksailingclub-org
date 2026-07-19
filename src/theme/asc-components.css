@@ -1209,7 +1209,12 @@
     border-radius: var(--radius-field);
     padding: var(--spacing-xs) var(--spacing-s);
     font-size: var(--text-step--1);
-    color: var(--color-error);
+    /* Fix round: --color-error text on this 10% tint read ~4.09:1 against the page's real
+       base-100 ground, under the 4.5:1 floor for small text -- and this is the block that shows
+       real sign failures. --cairn-error-ink (theme.css, `.prose .alert`'s own established idiom
+       for text sitting on a tinted error/warning/success/info background) is the darker ink
+       variant meant for exactly this, computing to ~5.65:1 here. */
+    color: var(--cairn-error-ink);
   }
 
   .signing-list {

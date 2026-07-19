@@ -59,11 +59,19 @@ per-document member-list drill-through. A plain GET season picker, matching Mone
               </td>
               <td class="text-sm text-muted">{KIND_LABEL[summary.kind] ?? summary.kind}</td>
               <td>
-                <span class="badge badge-sm border-transparent bg-success/10 font-medium text-success">{summary.signed.length}</span>
+                <!-- Fix round: the tinted bg-success/10 text-success pairing read at ~4.2:1 in the
+                     light theme, under the 4.5:1 WCAG floor for this normal-size count -- the
+                     exact number the rollup exists to convey. --color-success-content is designed
+                     for the SOLID background (near-white, meant to sit on the darker solid fill,
+                     not a light tint), so this uses the solid DaisyUI pairing rather than this
+                     section's own tint+content idiom (`bg-warning/15 text-warning-content`,
+                     `members`/`money`/`assets`), which only works because --color-warning-content
+                     is dark; the mirror wouldn't hold for success's own light content color. -->
+                <span class="badge badge-sm border-transparent bg-success font-medium text-success-content">{summary.signed.length}</span>
               </td>
               <td>
                 {#if summary.outstanding.length > 0}
-                  <span class="badge badge-sm border-transparent bg-warning/10 font-medium text-warning">{summary.outstanding.length}</span>
+                  <span class="badge badge-sm border-transparent bg-warning font-medium text-warning-content">{summary.outstanding.length}</span>
                 {:else}
                   <span class="badge badge-ghost badge-sm font-medium">0</span>
                 {/if}

@@ -19,8 +19,9 @@
 //
 // The gap-analysis rider's own `waiver_acceptances` write retired with the pre-T2 waiver
 // machinery (member-waivers T5a): the per-document signature model (T2/T4) is the one place a
-// real signature lands now, and this pass does not yet wire that gate into class signup (T5b/c's
-// own job), so a signup writes no waiver row of any shape.
+// real signature lands now, and this module writes no waiver row of any shape -- the signature
+// gate itself lives one layer up, in `class-signup-form.ts`'s own `handleClassSignup` (fix round),
+// which never reaches `signUpForClass` for a member whose current-season release is unsigned.
 import type { D1Database } from '@cloudflare/workers-types';
 import { getClassWithCounts, isPubliclyOpen } from './classes-store';
 import { hasActiveOfferForClass } from './offers';

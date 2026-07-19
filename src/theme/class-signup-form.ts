@@ -14,6 +14,10 @@ import { normalizeEmail } from '$admin-club/lib/member-normalize.js';
 import { getMemberStanding } from '$member-auth/lib/standing';
 import { requestMemberLink } from '$member-auth/lib/auth';
 import { siteConfig } from '$theme/cairn.config';
+import { getCurrentSeason } from '$admin-club/lib/club-settings';
+import { documents } from '$chassis/content';
+import { loadPublishedDocuments } from '$theme/documents';
+import { hasSignedCurrentRelease, loadHouseholdRequirements } from '$member-portal/lib/waiver-requirements';
 import { verifyTurnstile } from './turnstile';
 import { checkRateLimitKeys, RATE_LIMIT_MESSAGE } from './rate-limit';
 
@@ -58,9 +62,21 @@ export interface ClassSignupRenewPivot {
   email: string;
 }
 
+/** The class-door signature gate's own pivot (fix round, mirroring the portal's own
+ *  `registerForClass` gate, `$member-portal/lib/classes.ts`'s `ClassSigningPivot`): the submitted
+ *  email resolves to a standing-eligible member whose current-season general release is not on
+ *  file. The public door has no session to redirect into `/my-account/sign` directly, so it offers
+ *  the same enumeration-safe "email a sign-in link" mechanism the `renew` pivot already uses (see
+ *  `handleRequestClassRenewLink`); the link lands the member in the portal, where
+ *  `/my-account/classes`'s own `register` action completes the same gate before enrolling. */
+export interface ClassSignupSignPivot {
+  pivot: 'sign';
+  email: string;
+}
+
 /** `handleClassSignup`'s full result: today's enroll-or-waitlist outcome, or one of the standing
- *  gate's two pivots. */
-export type ClassSignupOutcome = SignUpResult | ClassSignupJoinPivot | ClassSignupRenewPivot;
+ *  gate's two pivots, or the signature gate's own pivot. */
+export type ClassSignupOutcome = SignUpResult | ClassSignupJoinPivot | ClassSignupRenewPivot | ClassSignupSignPivot;
 
 /** The class-door standing gate's own three-way answer: `'eligible'` proceeds through the
  *  ordinary enroll/waitlist path, `'no-match'` pivots into the join door, and `'lapsed'` pivots
@@ -108,8 +124,9 @@ interface ClassSignupEnv {
  *  gracefully when no secret is configured, matching `contact.remote.ts`/`donate.remote.ts`),
  *  gated on the class-door standing check ({@link resolveClassEligibility}; a no-match pivots into
  *  the join door and a `lapsed` household pivots into the renewal handoff, both never reaching the
- *  rest of this function), then hands off to `enrollments.ts`'s `signUpForClass` for the actual
- *  enroll-or-waitlist decision. */
+ *  rest of this function), then on the signature gate ({@link ClassSignupSignPivot}'s own header),
+ *  then hands off to `enrollments.ts`'s `signUpForClass` for the actual enroll-or-waitlist
+ *  decision. */
 export async function handleClassSignup(
   input: ClassSignupSubmission,
   env: unknown,
@@ -145,6 +162,26 @@ export async function handleClassSignup(
   }
   if (eligibility === 'lapsed') {
     return { pivot: 'renew', email: input.email };
+  }
+
+  // The signature gate (fix round; plan T5's own outcome line: "class signup requires an active
+  // (signature-complete) membership, gates on the current-season general release, and presents
+  // nothing when it is already on file"): a second lookup, re-resolving the member `resolveClassEligibility`
+  // already matched, since that helper answers only the standing status and this gate needs the
+  // household to load requirements against. Dormant while every document ships `draft`
+  // (`loadPublishedDocuments` then resolves empty for every member, so `requirements` carries no
+  // release requirement and this is a no-op); live the moment a release document publishes.
+  const eligibleMember = await db
+    .prepare('SELECT id, household_id FROM members WHERE email = ?1 LIMIT 1')
+    .bind(normalizeEmail(input.email))
+    .first<{ id: string; household_id: string }>();
+  if (eligibleMember) {
+    const season = await getCurrentSeason(db);
+    const publishedDocuments = loadPublishedDocuments(documents, season);
+    const requirements = await loadHouseholdRequirements(db, publishedDocuments, eligibleMember.household_id, season);
+    if (requirements && !hasSignedCurrentRelease(requirements, eligibleMember.id)) {
+      return { pivot: 'sign', email: input.email };
+    }
   }
 
   const signupInput: SignUpForClassInput = {
