@@ -4,6 +4,46 @@
 > STATUS.md's preamble). History only: nothing here is a live instruction, and entries
 > reflect what was true when written. The live rolling status is docs/STATUS.md.
 
+**[Trimmed 2026-07-19 at the pass-A close; the signing-moment before/after carries in
+STATUS's pointer block. THE WAIVERS BUILD IS LANDED AND RELEASED TO DEV (2026-07-19,
+Fable-conducted, workflow `wf_07d3ab70-09b`: 37 agents + a lows fix round, 0 errors,
+~5.1M subagent tokens; e1555f1..b21038d).]** What shipped: **T1 document model** (the
+`documents` concept, all 8 attorney drafts byte-verified, published-version loader,
+freeze guard; every document then status:DRAFT — the 2026 publish for the board demo
+came later, recorded in the board-demo entry). **T2/T4/T5a migrations 0029/0030/0031
+LIVE** (full evidence record with snapshot + SHA-256 + auth event + AS 09.65.292
+minors fields; contact confirmations; waiver_text_version retired). **T3 requirement
+engine** (pure, household-scoped, per-minor Part Two) + householdSignatureGate; old
+checkbox machinery retired. **T4 signing flow** at /my-account/sign per the ratified
+probe design (verdicts distilled into docs/design-benchmark/decisions.md). **T5b/T5c
+gates** (renewal/asset/class hard-gates; join signature-gated through ONE shared
+checkout builder, recompute-at-unlock; waiting state + cooldown nudge + resumption
+email; public class-signup sign-in pivot). **T6 admin rollup** at /admin/club/documents
+(counts, drill-throughs, history, frozen text, certificate view). **Review gate**: 4
+lenses → 22 findings; 8 mediums fixed (6a1a03e), 6 lows (b21038d), 2 refuted; accepted
+at club scale: check-then-send email de-dup, no hot-path signature index, archived-
+primary resumption edge. **T8**: 4 functional e2e on fixture documents; visual
+baselines CI-minted via the ci.yml dispatch. **The coherence gate EARNED ITS KEEP**:
+first read failed the member surfaces while every mechanical gate was green — (1)
+`@layer components` can never restyle a daisyUI `.btn` (fixed unlayered, proven in
+built CSS; banked as project memory layer-cascade-gotcha), (2) dark overrides keyed
+only on `[data-theme='asc-dark']` broke system-dark (dual-selector idiom). Fixes
+4a420f9 + 2450cff; 20 waivers baselines incl. family × 4; every surface verified by
+the conductor's own eyes at 390/1440 both themes. One verifier over-call corrected by
+eye (contact-confirm's button was always fine).
+
+**[Trimmed 2026-07-19 at the pass-A close; superseded by the shipped spec + pass A/B
+plans. ADMIN-SIDEBAR-2 (brainstormed 2026-07-18 live with Geoff; spec DRAFT
+docs/2026-07-18-admin-sidebar-2-design.md).]** Ratified: purpose-first 4-group tree;
+Signups retires fully; bulletins/notifications re-unified to the production bulletins
+model; relabel sweep; five plain-function roles; function-first security (one
+permission map, categories cosmetic); role-scoped pending-actions notifications.
+Probe verdicts owed (open/closed defaults, 25-icon assignment, within-group order) —
+they ride pass B's T1 probe round. The cairn engine pass ran first
+(docs/2026-07-18-cairn-sidebar-seams-consumer-brief.md → cairn 0.88.0, all four seams;
+Geoff's own cairn session), then ASC work split into pass A (`asc-roles-adoption`,
+shipped — see STATUS/archive) and pass B (`asc-sidebar-build`).
+
 **[Trimmed 2026-07-19; the packet-send follow-up carries in STATUS's pointer block.]
 THE FABLE WAIVERS SITTING IS DONE (2026-07-18): the T7 attorney-draft packet and the
 T4 signing-experience design both delivered.** The packet (docs/waivers/, all DRAFTs):

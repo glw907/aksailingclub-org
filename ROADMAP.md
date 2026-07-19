@@ -143,7 +143,9 @@ work now splits into TWO PASSES (Geoff, 2026-07-19): (A) `asc-roles-adoption` â€
 ^0.88.0 bump, the five plain-function roles with the grant-row rename migration, the
 defineAccess permission map per the spec's matrix, requireAccess on club routes,
 Publisher send-action widening, the Waiver text carve-out, denial tests, and the
-matrix tested from the map (plan: docs/plans/2026-07-19-asc-roles-adoption.md); then
+matrix tested from the map (plan: docs/plans/2026-07-19-asc-roles-adoption.md).
+**PASS A SHIPPED 2026-07-19** (commits 7a0f597..14c2964, deployed to dev, the live
+grant rows migrated to Administrator; full record in docs/STATUS.md). Then
 (B) `asc-sidebar-build` â€” the ratified tree/labels/collapse/icons/attention wiring,
 Signups retirement, bulletins re-unification, the class-waitlist screen and compose
 deep link, opening with the probe round for the still-owed verdicts (defaults, icons,
