@@ -24,11 +24,14 @@ the design.
    apex cutover, since live signups need current waivers, but there is no live exposure
    before cutover (dev is behind Access), so it follows the directory rather than
    preceding it. Hooks into the built signup/renewal flows and into `season-rollover`.
-3. **`events-redesign`** — self-contained, its own template, the special-focus page.
+3. **`admin-sidebar-2`** — moved ahead of events by Geoff 2026-07-18: the second
+   sidebar round (fewer groups, collapsed-by-default with one open, unique icons),
+   brainstorm-first. Apex-independent, so also the natural break from member-facing
+   review cycles.
+4. **`events-redesign`** — self-contained, its own template, the special-focus page.
    Independent of the first two.
-4. **`admin-nav-reorg` + `admin-roles`** — the one apex-independent pass, so it is the
-   natural break from member-facing review cycles and it improves the admin the
-   volunteers use on dev today. Can move earlier if that experience is painful.
+5. **`admin-nav-reorg` + `admin-roles`** — DONE 2026-07-15 (executed early as one
+   initiative once cairn 0.86.0 landed; see the initiative entries below).
 
 Then converge: once directory, waivers, and events have shipped to dev with Geoff's
 before/afters, the pre-cutover member surface is complete. Clear the accumulated review
@@ -93,7 +96,7 @@ the record: announce stays; add segment targeting and a compose-without-a-post p
 on the existing email-templates/log substrate. Scope ruled by Geoff 2026-07-13:
 segments, not a campaign product.
 
-### Custom admin roles `admin-roles`
+### Custom admin roles `admin-roles` — DONE 2026-07-15
 The staff-roles collapse onto cairn's editor-roles seam, ruled the NEXT initiative by
 Geoff 2026-07-14 now that cairn 0.85.0 ships the seam (one identity, site-declared
 role vocabulary; ASC is the named first consumer). SEQUENCING (Geoff, 2026-07-14, at
@@ -107,7 +110,7 @@ collapse `club_roles` onto the seam (retiring the table, the Settings grant/revo
 and the site-side last-owner guard), and keep member-scale auth separate per Geoff's
 ruling. The contract: `docs/2026-07-13-cairn-editor-roles-consumer-brief.md`.
 
-### Admin nav reorganization `admin-nav-reorg`
+### Admin nav reorganization `admin-nav-reorg` — DONE 2026-07-15
 Arrange this site's whole admin sidebar for its real people — board owner, club-admin
 volunteers, instructors — on cairn 0.86.0's `navLayout` seam (engine and club screens
 mixed, relabeled, role-gated sections, fallback semantics), replacing the provenance
@@ -120,7 +123,19 @@ arrangement in an inventory of what each ASC role actually does across the admin
 screens, with Geoff's walkthrough as the acceptance gate. Rides the same ^0.86.0 bump
 as `admin-roles` and needs its declared vocabulary for the role-gated sections; whether
 it executes as a phase of that initiative or as its own pass immediately after is the
-first question at the admin-roles brainstorm.
+first question at the admin-roles brainstorm. Executed with `admin-roles` as one
+initiative (workflow wf_77a5e053; the split-desk tree, live on dev; full record in
+docs/status-archive.md).
+
+### Admin sidebar round 2 `admin-sidebar-2` — NEXT PASS after the waivers build
+Second round on the admin sidebar, queued by Geoff 2026-07-18 as the next pass
+(supersedes the 2026-07-17 ordering that had events-redesign next). Direction notes for
+the brainstorm: the current split-desk tree likely has too many groups; the sidebar
+should open with every group collapsed except one, probably the common-operations
+group (which group stays open is a brainstorm question, not settled); and every item
+gets a unique icon. Brainstorm-first by mandate; Geoff's walkthrough remains the
+acceptance gate. Builds on the shipped navLayout seam; likely DX-harvest surface for
+cairn (collapsed-state defaults and per-item icons may need engine seams).
 
 ### Payments hardening & live smoke `payments-live-smoke`
 The deliberate live-Stripe smoke that has been queued since pass 2.1, plus Turnstile
