@@ -48,6 +48,16 @@ function schemaAlreadyMigrated(): boolean {
   return results.length > 0;
 }
 
+/** True once the local replica matches the LIVE editor-table shape: cairn's own 0001_roles.sql
+ *  dropped the `role IN ('owner','editor')` CHECK there, and the frozen seed
+ *  (migrations/0000_auth.sql) still carries it — a replica seeded only from the seed rejects the
+ *  post-rename role names ('Administrator'). */
+function editorRoleCheckDropped(): boolean {
+  const { results } = d1Query("SELECT sql FROM sqlite_master WHERE type='table' AND name='editor'");
+  const [row] = results as [{ sql: string }?];
+  return row !== undefined && !row.sql.includes('CHECK');
+}
+
 // Test fixture values only, never user input, but escape defensively rather than trust that stays true.
 function sqlString(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
@@ -87,6 +97,11 @@ export async function mintAdminSession(
 
   if (!schemaAlreadyMigrated()) {
     d1Exec(['--file', path.join(repoRoot, 'migrations/0000_auth.sql')]);
+  }
+  if (!editorRoleCheckDropped()) {
+    // Re-runnable create-copy-drop-rename rebuild; converges a cold CI replica and a warm
+    // workstation replica alike onto the live shape.
+    d1Exec(['--file', path.join(repoRoot, 'node_modules/@glw907/cairn-cms/migrations/0001_roles.sql')]);
   }
 
   const now = Date.now();
