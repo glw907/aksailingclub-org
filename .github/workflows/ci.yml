@@ -36,6 +36,16 @@ jobs:
       - name: Run the visual-fidelity suite
         if: ${{ !(github.event_name == 'workflow_dispatch' && github.event.inputs.update_snapshots == 'true') }}
         run: npm run test:e2e
+      # On a visual failure the actual/expected/diff PNGs are the only usable evidence, and they
+      # exist only on the runner; without this upload a pixel diff can be diagnosed only by
+      # guesswork from a workstation render, which differs from the CI-canonical one by design.
+      - name: Upload the visual failure evidence
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: test-results/
+          retention-days: 7
       # Manual regen mode: a dispatcher ticks `update_snapshots` after a deliberate rendering
       # change. Runs on the CI runner itself, since baselines are CI-canonical and a workstation
       # render is never an acceptable substitute. Commits the changed PNGs straight back to the
