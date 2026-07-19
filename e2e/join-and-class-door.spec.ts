@@ -29,7 +29,16 @@ test.beforeEach(async ({ page }) => {
 // repo's tests); per the task, that flow is skipped here rather than building auth machinery
 // from scratch.
 
-test('join happy path: individual tier submits and surfaces the stub checkout degradation', async ({ page }) => {
+// This test named "surfaces the stub checkout degradation" before member-waivers T1 published
+// season-2026 versions of the real documents corpus for the board demo (docs/plans/2026-07-19-
+// waivers-board-demo.md). A brand-new join with no signatures on file now correctly hits the
+// household-complete gate (`finalizeJoin` in `$theme/join-apply-form.ts`, member-waivers T5c)
+// before it ever reaches checkout, so the stub-checkout-degradation outcome this test used to
+// surface is no longer reachable from a fresh join -- the real, correct behavior now the club has
+// live documents to sign. Retitled and reasserted on the sign-required pivot's own copy
+// (join/apply/+page.svelte); a household that has already signed reaching the stub checkout is
+// not covered here.
+test('join happy path: individual tier submits and pivots to the sign-required application-saved state', async ({ page }) => {
   await page.goto('/join/apply/');
   await expect(page.getByRole('heading', { level: 1, name: 'Join the club' })).toBeVisible();
 
@@ -42,8 +51,9 @@ test('join happy path: individual tier submits and surfaces the stub checkout de
 
   await page.getByRole('button', { name: 'Join and continue to payment' }).click();
 
+  await expect(page.getByText('We’ve saved your application.')).toBeVisible();
   await expect(
-    page.getByText("Online payment isn't available yet; the club will follow up by email with how to pay."),
+    page.getByText('Before payment, a few documents need your signature.', { exact: false }),
   ).toBeVisible();
 });
 

@@ -22,11 +22,29 @@
       "links": []
     },
     {
+      "id": "boat-parking-acknowledgement-2026-v1",
+      "concept": "documents",
+      "title": "Trailered Boat Parking Rules Acknowledgement",
+      "permalink": "/documents/boat-parking-acknowledgement-2026-v1",
+      "summary": "Alaska Sailing Club—Trailered Boat Parking Rules Season: 2027. I sign this each season with my trailered boat space, alongside the Dry Storage Agreement. My space sits on Matanuska-Susitna Borough…",
+      "draft": false,
+      "links": []
+    },
+    {
       "id": "boat-parking-acknowledgement-v1",
       "concept": "documents",
       "title": "Trailered Boat Parking Rules Acknowledgement",
       "permalink": "/documents/boat-parking-acknowledgement-v1",
       "summary": "Alaska Sailing Club—Trailered Boat Parking Rules Season: 2027. I sign this each season with my trailered boat space, alongside the Dry Storage Agreement. My space sits on Matanuska-Susitna Borough…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "general-release-2026-v1",
+      "concept": "documents",
+      "title": "Release of Liability and Assumption of Risk",
+      "permalink": "/documents/general-release-2026-v1",
+      "summary": "Alaska Sailing Club—Release of Liability and Assumption of Risk Season: 2027. I sign this document once per season, for myself. If I am a parent or guardian signing for a minor in my household, Part…",
       "draft": false,
       "links": []
     },
@@ -40,11 +58,29 @@
       "links": []
     },
     {
+      "id": "mooring-agreement-2026-v1",
+      "concept": "documents",
+      "title": "Mooring Agreement",
+      "permalink": "/documents/mooring-agreement-2026-v1",
+      "summary": "Alaska Sailing Club—Mooring Agreement Season: 2027. This agreement is between Alaska Sailing Club, Inc. (\"the Club\") and the member signing below (\"I,\" \"me\"). It covers one seasonal mooring…",
+      "draft": false,
+      "links": []
+    },
+    {
       "id": "mooring-agreement-v1",
       "concept": "documents",
       "title": "Mooring Agreement",
       "permalink": "/documents/mooring-agreement-v1",
       "summary": "Alaska Sailing Club—Mooring Agreement Season: 2027. This agreement is between Alaska Sailing Club, Inc. (\"the Club\") and the member signing below (\"I,\" \"me\"). It covers one seasonal mooring…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "rack-acknowledgement-2026-v1",
+      "concept": "documents",
+      "title": "Rack Storage Rules Acknowledgement",
+      "permalink": "/documents/rack-acknowledgement-2026-v1",
+      "summary": "Alaska Sailing Club—Rack Storage Rules Season: 2027. I sign this each season with my rack space, alongside the Dry Storage Agreement. I have read these rules, and I agree to follow all of them: What…",
       "draft": false,
       "links": []
     },
@@ -58,6 +94,15 @@
       "links": []
     },
     {
+      "id": "rules-acknowledgement-2026-v1",
+      "concept": "documents",
+      "title": "Club Rules Acknowledgement",
+      "permalink": "/documents/rules-acknowledgement-2026-v1",
+      "summary": "Alaska Sailing Club—Club Rules Acknowledgement Season: 2027. I sign this document once per season. The Rules of the Alaska Sailing Club are published on the club site as Member Expectations. The full…",
+      "draft": false,
+      "links": []
+    },
+    {
       "id": "rules-acknowledgement-v1",
       "concept": "documents",
       "title": "Club Rules Acknowledgement",
@@ -67,11 +112,29 @@
       "links": []
     },
     {
+      "id": "rv-acknowledgement-2026-v1",
+      "concept": "documents",
+      "title": "Trailer Row Use Guidelines Acknowledgement",
+      "permalink": "/documents/rv-acknowledgement-2026-v1",
+      "summary": "Alaska Sailing Club—Trailer Row Use Guidelines Season: 2027. I sign this each season with my long-term RV space, alongside the Dry Storage Agreement. Signing these guidelines is a condition of…",
+      "draft": false,
+      "links": []
+    },
+    {
       "id": "rv-acknowledgement-v1",
       "concept": "documents",
       "title": "Trailer Row Use Guidelines Acknowledgement",
       "permalink": "/documents/rv-acknowledgement-v1",
       "summary": "Alaska Sailing Club—Trailer Row Use Guidelines Season: 2027. I sign this each season with my long-term RV space, alongside the Dry Storage Agreement. Signing these guidelines is a condition of…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "storage-agreement-2026-v1",
+      "concept": "documents",
+      "title": "Dry Storage Agreement",
+      "permalink": "/documents/storage-agreement-2026-v1",
+      "summary": "Alaska Sailing Club—Dry Storage Agreement Season: 2027. This agreement is between Alaska Sailing Club, Inc. (\"the Club\") and the member signing below (\"I,\" \"me\"). It covers the seasonal storage space…",
       "draft": false,
       "links": []
     },
@@ -117,6 +180,15 @@
       "title": "[E2E TEST] Sample Release — season 2025",
       "permalink": "/documents/test-release-v2",
       "summary": "E2E test fixture — sample release (season 2025) This document exists only for e2e/waivers-signing.spec.ts and e2e/waivers-visual.spec.ts. It is not a real Alaska Sailing Club waiver, and it never…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "youth-medical-form-2026-v1",
+      "concept": "documents",
+      "title": "Youth Medical & Emergency Form—field set and consent text",
+      "permalink": "/documents/youth-medical-form-2026-v1",
+      "summary": "Alaska Sailing Club—Youth Medical & Emergency Form Season: 2027. One form per child, completed fresh each season (medical facts change; last year's form is never carried forward). A parent or…",
       "draft": false,
       "links": []
     },

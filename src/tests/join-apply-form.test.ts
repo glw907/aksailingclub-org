@@ -13,6 +13,18 @@ vi.mock('../member-auth/lib/auth', () => ({
   requestMemberLink: vi.fn().mockResolvedValue({ status: 'sent' }),
 }));
 
+// This file's own fresh-join checkout tests predate any published document (member-waivers T1
+// now publishes season-2026 versions of the real corpus for the board demo, so `handleJoinApply`'s
+// own household-complete gate, `finalizeJoin` in `$theme/join-apply-form`, would otherwise pivot a
+// brand-new roster straight to `{ pivot: 'sign-required' }` against the real all-members documents
+// instead of building the checkout these tests assert on). Mocked to the pre-T1 empty corpus
+// (the same idiom `my-account-actions.test.ts`/`sign-send-nudge-action.test.ts` already use for a
+// deterministic document set), since this file's own job is the checkout/pricing wiring, not the
+// signature gate (covered by `household-signature-gate.test.ts` and the sign-route tests).
+vi.mock('$chassis/content', () => ({
+  documents: { all: () => [], byId: () => undefined },
+}));
+
 function issueMessages(err: unknown): string[] {
   return (err as { issues: Array<{ message: string }> }).issues.map((issue) => issue.message);
 }
