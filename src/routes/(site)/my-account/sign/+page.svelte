@@ -345,44 +345,65 @@ not just the first. -->
       {/if}
     </section>
   {:else if showWaiting}
-    <section class="signing-household" bind:this={afterEl} tabindex="-1" data-focus-target aria-labelledby="signing-household-title">
-      <!-- The waiting card(s) (signing-framing-copy.md's "The waiting card"): one per outstanding
-           OTHER adult, since the copy is written per-person. -->
+    <!-- The waiting card(s) and the household-signatures block are two separate compositions
+         (fix round, fresh-context coherence read): the copy calls them out separately
+         (signing-framing-copy.md's "The waiting card" vs. "The household-signatures block"), and
+         they read that way too -- one tinted panel carrying the primary "wait on this person"
+         action, then a plain hairline list of everyone's own status. `afterEl` sits on this
+         wrapping element (rather than either composition alone) so `advanceFocus` always has one
+         landing target regardless of how many outstanding adults there are. -->
+    <div class="signing-waiting" bind:this={afterEl} tabindex="-1" data-focus-target aria-label="Household signatures">
       {#each data.household.rows.filter((row) => row.waitingCardTitle) as row (`card-${row.key}`)}
-        <div class="signing-waiting-card">
-          <h2 class="signing-done-title">{row.waitingCardTitle}</h2>
+        <section class="signing-waiting-card" aria-labelledby="signing-waiting-title-{row.key}">
+          <h2 id="signing-waiting-title-{row.key}" class="signing-done-title">{row.waitingCardTitle}</h2>
           <p class="signing-done-line">{row.waitingCardLine}</p>
-        </div>
+          <!-- The card's own action pair (fix round): the primary nudge reuses `.signing-sign-btn`,
+               the portal's one filled button, beside the household block's own quiet return link --
+               the same cooldown-guarded `?/sendNudge` action the row action below posts to, keyed
+               identically so both surface the same in-flight/disabled state for the same person. -->
+          <div class="signing-waiting-actions">
+            <form method="POST" action="?/sendNudge&{contextQuery}" use:enhance={() => nudgeEnhance(`nudge-${row.key}`)}>
+              <input type="hidden" name="csrf" value={data.csrf} />
+              <input type="hidden" name="targetMemberId" value={row.nudgeMemberId} />
+              <button type="submit" class="btn signing-sign-btn" disabled={submittingKey === `nudge-${row.key}`}>
+                {submittingKey === `nudge-${row.key}` ? 'Sending…' : row.nudgeButtonLabel}
+              </button>
+            </form>
+            <a href="/my-account" class="portal-quiet-action portal-touch-btn btn btn-sm">I&#8217;ll come back later</a>
+          </div>
+        </section>
       {/each}
-
-      <!-- The household-signatures block: "You" (already covered by the welcome line's own intro
-           above), the household's minors once covered, and one row per other adult still owing
-           their own signatures, each with its own cooldown-guarded nudge action. -->
-      <h3 id="signing-household-title" class="signing-household-subhead">Household signatures</h3>
-      <ul class="signing-household-rows">
-        {#each data.household.rows as row (row.key)}
-          <li class="signing-household-row">
-            <span class="signing-household-label">{row.label}</span>
-            <span class="signing-household-status">{row.statusText}</span>
-            {#if row.nudgeMemberId}
-              <form method="POST" action="?/sendNudge&{contextQuery}" use:enhance={() => nudgeEnhance(`nudge-${row.key}`)}>
-                <input type="hidden" name="csrf" value={data.csrf} />
-                <input type="hidden" name="targetMemberId" value={row.nudgeMemberId} />
-                <button type="submit" class="portal-quiet-action portal-touch-btn btn btn-sm" disabled={submittingKey === `nudge-${row.key}`}>
-                  {submittingKey === `nudge-${row.key}` ? 'Sending…' : row.nudgeButtonLabel}
-                </button>
-              </form>
-            {/if}
-          </li>
-        {/each}
-      </ul>
       <!-- Rendered up front, empty, rather than only once `form.nudgeSent` is true (fix round,
            WCAG 4.1.3): a `role="status"` region a screen reader has never seen before is not
            reliably announced the instant it's inserted, only once it already exists and its text
            content changes. -->
       <p class="signing-done-line" role="status">{form && 'nudgeSent' in form && form.nudgeSent ? 'Sent.' : ''}</p>
-      <a href="/my-account" class="portal-quiet-action portal-touch-btn btn btn-sm">I&#8217;ll come back later</a>
-    </section>
+
+      <!-- The household-signatures block: "You" (already covered by the welcome line's own intro
+           above), the household's minors once covered, and one row per other adult still owing
+           their own signatures, each with its own cooldown-guarded nudge action (the copy's own
+           per-row text action, kept alongside the card's primary button above). -->
+      <section class="signing-household" aria-labelledby="signing-household-title">
+        <h3 id="signing-household-title" class="signing-household-subhead">Household signatures</h3>
+        <ul class="signing-household-rows">
+          {#each data.household.rows as row (row.key)}
+            <li class="signing-household-row">
+              <span class="signing-household-label">{row.label}</span>
+              <span class="signing-household-status">{row.statusText}</span>
+              {#if row.nudgeMemberId}
+                <form method="POST" action="?/sendNudge&{contextQuery}" use:enhance={() => nudgeEnhance(`nudge-${row.key}`)}>
+                  <input type="hidden" name="csrf" value={data.csrf} />
+                  <input type="hidden" name="targetMemberId" value={row.nudgeMemberId} />
+                  <button type="submit" class="portal-quiet-action portal-touch-btn btn btn-sm" disabled={submittingKey === `nudge-${row.key}`}>
+                    {submittingKey === `nudge-${row.key}` ? 'Sending…' : row.nudgeButtonLabel}
+                  </button>
+                </form>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      </section>
+    </div>
   {:else if showCompletion}
     <section class="signing-done" bind:this={afterEl} tabindex="-1" data-focus-target aria-labelledby="signing-done-title">
       <h2 id="signing-done-title" class="signing-done-title">That&#8217;s everything for {data.season}.</h2>

@@ -1527,31 +1527,53 @@
   margin-top: var(--spacing-s);
 }
 
-/* The household-signatures block (member-waivers T5b, the join/renewal household-complete
-   loop): the same quiet tinted panel as the contact/completion cards above, one row per
-   household member with an optional nudge action. */
-.signing-household {
+/* The waiting/household state's own wrapper (fix round, fresh-context coherence read): purely a
+   focus landing zone (`tabindex="-1"`, `data-focus-target`) for `advanceFocus` once the signer's
+   last document lands -- carries no chrome of its own, so it never competes with either
+   composition it wraps. */
+.signing-waiting {
   margin-top: var(--spacing-m);
   max-width: 46rem;
+}
+.signing-waiting:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* The waiting card(s), signing-framing-copy.md's own "Waiting on {name}": the same quiet tinted
+   panel as the contact/completion cards above, now carrying its own primary/quiet action pair
+   (fix round: the pair previously rendered as bare text nested inside the household-signatures
+   list below, rather than as this card's own action row). One card per outstanding OTHER adult,
+   since the copy is written per-person; stacked with a hairline between when there is more than
+   one. */
+.signing-waiting-card {
   border: 1px solid var(--color-card-border);
   border-radius: var(--radius-box);
   background: var(--color-base-200);
   padding: var(--spacing-m);
 }
-.signing-household:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-/* The waiting card(s), signing-framing-copy.md's own "Waiting on {name}": sit inside the same
-   panel as the household-signatures block below, separated by a hairline rather than a second
-   nested panel (the copy calls these two things out separately, but they read the same visit). */
-.signing-waiting-card {
-  padding-bottom: var(--spacing-s);
-  margin-bottom: var(--spacing-s);
-  border-bottom: 1px solid var(--color-card-border);
+.signing-waiting-card + .signing-waiting-card {
+  margin-top: var(--spacing-s);
 }
 .signing-waiting-card .signing-done-title {
   font-size: var(--text-step-1);
+}
+.signing-waiting-actions {
+  margin-top: var(--spacing-s);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-s);
+  align-items: center;
+}
+
+/* The household-signatures block (member-waivers T5b, the join/renewal household-complete
+   loop): a separate composition from the waiting card(s) above (fix round -- the two used to
+   share one bordered panel), a plain hairline-topped list rather than a second nested panel, one
+   row per household member with an optional nudge action. */
+.signing-household {
+  margin-top: var(--spacing-m);
+  padding-top: var(--spacing-s);
+  border-top: 1px solid var(--color-card-border);
 }
 .signing-household-subhead {
   margin: 0;
@@ -1607,13 +1629,15 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) .signing-contact-actions .btn:not(.signing-sign-btn),
   :root:not([data-theme]) .signing-done a.btn,
-  :root:not([data-theme]) .signing-household .btn {
+  :root:not([data-theme]) .signing-household .btn,
+  :root:not([data-theme]) .signing-waiting-card .btn:not(.signing-sign-btn) {
     border-color: var(--color-card-border);
   }
 }
 [data-theme='asc-dark'] .signing-contact-actions .btn:not(.signing-sign-btn),
 [data-theme='asc-dark'] .signing-done a.btn,
-[data-theme='asc-dark'] .signing-household .btn {
+[data-theme='asc-dark'] .signing-household .btn,
+[data-theme='asc-dark'] .signing-waiting-card .btn:not(.signing-sign-btn) {
   border-color: var(--color-card-border);
 }
 
@@ -1627,6 +1651,13 @@
   }
   .signing-sign-btn {
     width: 100%;
+  }
+  .signing-waiting-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .signing-waiting-actions .portal-quiet-action {
+    align-self: center;
   }
   .signing-contact-fields {
     grid-template-columns: 1fr;
