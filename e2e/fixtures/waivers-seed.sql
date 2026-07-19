@@ -95,6 +95,11 @@ INSERT INTO waiver_acceptances
 -- stay pure navigate-and-screenshot, matching e2e/portal-visual.spec.ts's own idiom, and so its
 -- states never depend on whether e2e/waivers-signing.spec.ts happened to run first in the same
 -- suite invocation.
+--
+-- Fix round (finding 4, fresh-context coherence read 2026-07-19): fixture 8 below adds the
+-- household device its own visual coverage was missing -- a parent whose own personal documents
+-- are already signed, so the moment lands directly on their minor's own Part Two entry (the
+-- per-child attestation radios plus the "type once, sign each" prefilled name).
 -- ============================================================================================
 
 -- 5. The signing moment mid-flow: `test-release` already signed, `test-acknowledgement` still
@@ -174,4 +179,32 @@ INSERT INTO waiver_acceptances
     '(fixture) the season-2025 test-mooring-ack text.',
     'Quinn Wavefixture', 'e2e-waiver-visual-contact@aksailingclub.org', 'mooring-fee',
     '2025-05-01 00:00:00', 'waiver-mem-visual-contact', NULL
+  );
+
+-- 8. The household device: one adult, one minor. The adult's own two personal documents
+-- (`test-release`, `test-acknowledgement`) are already signed, so the only outstanding item is
+-- the minor's own `test-release` Part Two -- the moment lands directly on it, expanded, with the
+-- AS 09.65.292 attestation radios and the "type once, sign each" name prefilled from the adult's
+-- own last signature above.
+INSERT INTO households (id, name, primary_member_id) VALUES ('waiver-hh-visual-family', 'Waiver Visual Family household', NULL);
+INSERT INTO members (id, household_id, name, email, phone, birthdate, directory_visibility) VALUES
+  ('waiver-mem-visual-family-parent', 'waiver-hh-visual-family', 'Sam Wavefixture', 'e2e-waiver-visual-family-parent@aksailingclub.org', NULL, NULL, 'visible'),
+  ('waiver-mem-visual-family-child', 'waiver-hh-visual-family', 'Robin Wavefixture', NULL, NULL, '2016-04-01', 'partial');
+UPDATE households SET primary_member_id = 'waiver-mem-visual-family-parent' WHERE id = 'waiver-hh-visual-family';
+INSERT INTO waiver_acceptances
+  (id, document_id, version, season, kind, content_hash, content_snapshot, person_name, person_email, context, signed_at, member_id, minor_member_id)
+  VALUES
+  (
+    'waiver-sig-visual-family-release', 'test-release', 2, 2025, 'release',
+    '0000000000000000000000000000000000000000000000000000000000000000',
+    '(fixture) the season-2025 test-release text.',
+    'Sam Wavefixture', 'e2e-waiver-visual-family-parent@aksailingclub.org', 'renewal',
+    '2025-05-01 00:00:00', 'waiver-mem-visual-family-parent', NULL
+  ),
+  (
+    'waiver-sig-visual-family-ack', 'test-acknowledgement', 1, 2025, 'acknowledgement',
+    '0000000000000000000000000000000000000000000000000000000000000000',
+    '(fixture) the season-2025 test-acknowledgement text.',
+    'Sam Wavefixture', 'e2e-waiver-visual-family-parent@aksailingclub.org', 'renewal',
+    '2025-05-01 00:00:00', 'waiver-mem-visual-family-parent', NULL
   );

@@ -235,25 +235,26 @@ not just the first. -->
 
                   <div class="signing-name-field">
                     <label class="signing-name-label" for="signing-name-{entry.key}">Type your full legal name</label>
-                    <input
-                      id="signing-name-{entry.key}"
-                      class="input signing-name-input"
-                      type="text"
-                      name="name"
-                      autocomplete="name"
-                      value={entry.prefillName}
-                      required
-                      data-focus-target
-                      aria-describedby="signing-name-helper-{entry.key}"
-                    />
+                    <div class="signing-name-row">
+                      <input
+                        id="signing-name-{entry.key}"
+                        class="input signing-name-input"
+                        type="text"
+                        name="name"
+                        autocomplete="name"
+                        value={entry.prefillName}
+                        required
+                        data-focus-target
+                        aria-describedby="signing-name-helper-{entry.key}"
+                      />
+                      <button type="submit" class="btn signing-sign-btn" disabled={submittingKey === entry.key}>
+                        {submittingKey === entry.key ? 'Signing…' : 'Sign'}
+                      </button>
+                    </div>
                     <p id="signing-name-helper-{entry.key}" class="signing-name-helper">
                       The club keeps a record of the text you saw, your name as you typed it, and the date and time.
                     </p>
                   </div>
-
-                  <button type="submit" class="btn signing-sign-btn" disabled={submittingKey === entry.key}>
-                    {submittingKey === entry.key ? 'Signing…' : 'Sign'}
-                  </button>
                 </form>
               </div>
             </div>

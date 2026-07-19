@@ -3,12 +3,14 @@ import { mintMemberSession } from './helpers/member-session';
 import { mintAdminSession } from './helpers/admin-session';
 import { REAL_CURRENT_SEASON, TEST_CURRENT_SEASON, setCurrentSeason } from './helpers/waivers-season';
 
-// The member-waivers signing flow's visual coverage (member-waivers T8): the signing moment
+// The member-waivers signing flow's visual coverage (member-waivers T8; the household device
+// added in the fresh-context coherence read's fix round, finding 4): the signing moment
 // mid-flow, the household-complete gate's waiting state, the mooring/storage contact-confirm
-// card, and the admin "is the club protected" rollup -- 390/1440 x light/dark, following
-// e2e/portal-visual.spec.ts's own conventions exactly (a `for` loop over widths and themes, one
-// `toHaveScreenshot` per state, `page.emulateMedia({ colorScheme })` rather than a `data-theme`
-// cookie, since neither surface here sets one of its own).
+// card, the household device (a parent mid-moment on a minor's own Part Two entry, attestation
+// radios and a prefilled name), and the admin "is the club protected" rollup -- 390/1440 x
+// light/dark, following e2e/portal-visual.spec.ts's own conventions exactly (a `for` loop over
+// widths and themes, one `toHaveScreenshot` per state, `page.emulateMedia({ colorScheme })` rather
+// than a `data-theme` cookie, since neither surface here sets one of its own).
 //
 // Every household below is PRE-SIGNED directly in e2e/fixtures/waivers-seed.sql (never live-
 // signed by this spec, unlike e2e/waivers-signing.spec.ts's own functional flows): these tests
@@ -79,6 +81,22 @@ test.describe('member-facing signing states', () => {
 
         await expect(page.getByRole('heading', { level: 2, name: 'Can the club reach you?' })).toBeVisible();
         await expect(page).toHaveScreenshot(`waivers-sign-contact-confirm-${colorScheme}-${width}.png`, { fullPage: true });
+      });
+
+      // The household device (finding 4, fresh-context coherence read): the ratified per-child Part
+      // Two entry, expanded, with the AS 09.65.292 attestation radios and the "type once, sign each"
+      // prefilled name -- fixture 8 (waivers-seed.sql) signs the parent's own two personal documents
+      // up front so the moment lands directly on their minor's own Part Two, the only outstanding item.
+      test(`household device — minor Part Two entry — ${colorScheme} — ${width}px`, async ({ page, context }) => {
+        await mintMemberSession(context, { memberId: 'waiver-mem-visual-family-parent' });
+        await page.setViewportSize({ width, height: 1100 });
+        await page.emulateMedia({ colorScheme });
+        await page.goto('/my-account/sign');
+
+        await expect(page.locator('.signing-minor-id', { hasText: 'Robin Wavefixture' })).toBeVisible();
+        await expect(page.getByText('I attest that I am, for this child')).toBeVisible();
+        await expect(page.locator('.signing-name-input')).toHaveValue('Sam Wavefixture');
+        await expect(page).toHaveScreenshot(`waivers-sign-family-${colorScheme}-${width}.png`, { fullPage: true });
       });
     }
   }

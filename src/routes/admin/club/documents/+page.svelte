@@ -39,10 +39,16 @@ per-document member-list drill-through. A plain GET season picker, matching Mone
       <table class="table">
         <thead>
           <tr>
+            <!-- Fix round (finding 3, fresh-context coherence read): Document and Outstanding lead
+                 the row -- at 390px, OfficeList's own overflow-x-auto card wrapper (cairn-cms,
+                 outside this repo's control) puts whatever column comes third and fourth off-canvas
+                 by default, and Outstanding is the screen's whole point ("is the club protected").
+                 Kind and Signed still read one swipe away; nothing is hidden, only reordered so the
+                 two load-bearing columns need no scroll. -->
             <th class={HEADER_CELL}>Document</th>
-            <th class={HEADER_CELL}>Kind</th>
-            <th class={HEADER_CELL}>Signed</th>
             <th class={HEADER_CELL}>Outstanding</th>
+            <th class={HEADER_CELL}>Signed</th>
+            <th class={HEADER_CELL}>Kind</th>
           </tr>
         </thead>
         <tbody>
@@ -57,7 +63,13 @@ per-document member-list drill-through. A plain GET season picker, matching Mone
                 </a>
                 <span class="ml-1 text-xs text-muted">v{summary.version}</span>
               </td>
-              <td class="text-sm text-muted">{KIND_LABEL[summary.kind] ?? summary.kind}</td>
+              <td>
+                {#if summary.outstanding.length > 0}
+                  <span class="badge badge-sm border-transparent bg-warning font-medium text-warning-content">{summary.outstanding.length}</span>
+                {:else}
+                  <span class="badge badge-ghost badge-sm font-medium">0</span>
+                {/if}
+              </td>
               <td>
                 <!-- Fix round: the tinted bg-success/10 text-success pairing read at ~4.2:1 in the
                      light theme, under the 4.5:1 WCAG floor for this normal-size count -- the
@@ -69,13 +81,7 @@ per-document member-list drill-through. A plain GET season picker, matching Mone
                      is dark; the mirror wouldn't hold for success's own light content color. -->
                 <span class="badge badge-sm border-transparent bg-success font-medium text-success-content">{summary.signed.length}</span>
               </td>
-              <td>
-                {#if summary.outstanding.length > 0}
-                  <span class="badge badge-sm border-transparent bg-warning font-medium text-warning-content">{summary.outstanding.length}</span>
-                {:else}
-                  <span class="badge badge-ghost badge-sm font-medium">0</span>
-                {/if}
-              </td>
+              <td class="text-sm text-muted">{KIND_LABEL[summary.kind] ?? summary.kind}</td>
             </tr>
           {/each}
         </tbody>
