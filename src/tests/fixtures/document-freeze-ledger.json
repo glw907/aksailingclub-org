@@ -1,1 +1,6 @@
-{}
+{
+  "test-release@2024v1": "a6a0eaa58f9f52ee7e485ed5152379c43db9f520e2c7383ff14fee10b571510e",
+  "test-release@2025v2": "b4b80eb03bc840297bc8181769c5e01c41f1dbe41d1a7168d3b89f543d72d0b9",
+  "test-acknowledgement@2025v1": "96a937979a66599c2afa7d1932c459b92a2fa68456d1c01a18b509f65bd868d1",
+  "test-mooring-ack@2025v1": "62d034fa2ba18e78bf01f6db91eda8ccaf537465325931dbc4d27b4a67339e1d"
+}

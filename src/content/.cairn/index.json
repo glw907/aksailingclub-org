@@ -85,6 +85,42 @@
       "links": []
     },
     {
+      "id": "test-acknowledgement-v1",
+      "concept": "documents",
+      "title": "[E2E TEST] Sample Acknowledgement — season 2025",
+      "permalink": "/documents/test-acknowledgement-v1",
+      "summary": "E2E test fixture — sample acknowledgement (season 2025) This document exists only for e2e/waivers-signing.spec.ts and e2e/waivers-visual.spec.ts. It is not a real Alaska Sailing Club rule set, and it…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "test-mooring-ack-v1",
+      "concept": "documents",
+      "title": "[E2E TEST] Sample Mooring Acknowledgement — season 2025",
+      "permalink": "/documents/test-mooring-ack-v1",
+      "summary": "E2E test fixture — sample mooring acknowledgement (season 2025) This document exists only for e2e/waivers-visual.spec.ts. It is not a real Alaska Sailing Club mooring document, and it never reaches a…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "test-release-v1",
+      "concept": "documents",
+      "title": "[E2E TEST] Sample Release — season 2024",
+      "permalink": "/documents/test-release-v1",
+      "summary": "E2E test fixture — sample release (season 2024) This document exists only for e2e/waivers-signing.spec.ts and e2e/waivers-visual.spec.ts. It is not a real Alaska Sailing Club waiver, and it never…",
+      "draft": false,
+      "links": []
+    },
+    {
+      "id": "test-release-v2",
+      "concept": "documents",
+      "title": "[E2E TEST] Sample Release — season 2025",
+      "permalink": "/documents/test-release-v2",
+      "summary": "E2E test fixture — sample release (season 2025) This document exists only for e2e/waivers-signing.spec.ts and e2e/waivers-visual.spec.ts. It is not a real Alaska Sailing Club waiver, and it never…",
+      "draft": false,
+      "links": []
+    },
+    {
       "id": "youth-medical-form-v1",
       "concept": "documents",
       "title": "Youth Medical & Emergency Form—field set and consent text",

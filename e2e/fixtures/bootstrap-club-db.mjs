@@ -70,3 +70,6 @@ d1File(path.join(repoRoot, 'e2e/fixtures/signup-seed.sql'));
 // blanket and unconditional, so this file's rows would be wiped right back out if it ran first
 // (portal-seed.sql's own header explains the full ordering).
 d1File(path.join(repoRoot, 'e2e/fixtures/portal-seed.sql'));
+// The member-waivers e2e fixture (T8): its own `waiver-`-prefixed rows never collide with
+// portal-seed.sql's `portal-`-prefixed ones, so ordering relative to that file does not matter.
+d1File(path.join(repoRoot, 'e2e/fixtures/waivers-seed.sql'));
