@@ -8,6 +8,52 @@
 > entries beyond the top two or three to the archive — this file is @-imported into every
 > session's context, so its length is a per-session token tax.
 
+**IN FLIGHT (2026-07-18 evening, Fable session): THE WAIVERS BUILD WORKFLOW + THE
+ADMIN-SIDEBAR-2 BRAINSTORM ran in one session (Geoff: "proceed with a workflow to
+release").** State at save:
+
+- **Waivers build: workflow `wf_07d3ab70-09b` running** (script:
+  `~/.claude/projects/-home-glw907-Projects-aksailingclub-org/6a3016c7-c503-45a2-b8d9-f11f55af4ed4/workflows/scripts/waivers-build-wf_07d3ab70-09b.js`;
+  resume with scriptPath + resumeFromRunId — completed tasks replay from cache; read
+  the transcript dir's journal.jsonl first). Base SHA 3904d7d. T1–T4 LANDED green with
+  per-task Opus reviews (T1 documents concept + freeze guard; T2 migration 0029 applied
+  LIVE; T3 requirement engine; T4 signing flow + 0030 contact-confirm). T5 escalated
+  correctly (money-critical underspec); CONDUCTOR RULING: recompute-at-unlock through
+  ONE shared checkout builder extracted from handleJoinApply (nothing money-derived
+  stored; metadata-equality test both ways); T5 decomposed into T5a (gate seam +
+  retirement + no-published-docs pass-through — the SHIPPED state, all docs DRAFT),
+  T5b (authenticated gates: renewal/asset/class + emails), T5c (join magic-link handoff
+  + payment resume, Opus). Still owed in-workflow: T6 admin rollup, simplifier, the
+  4-lens review gate (auth/svelte/a11y/workers, adversarial verify, fix), T8 tests,
+  and a tail "prep next pass" phase whose output doc
+  (docs/2026-07-18-admin-sidebar-2-prep.md) is SUPERSEDED by the ratified spec —
+  DELETE it on arrival, don't keep it. AFTER the workflow: review results + full
+  diff, close ritual (arc-log distill into decisions.md + remove, architecture,
+  STATUS trim, memory), PUSH to main (= the dev release; main holds unpushed local
+  commits — docs and build — so no push before the gate is verified), CI
+  update_snapshots dispatch for the new visual baselines (READ the log), fresh-context
+  coherence read at 390/1440. Geoff's queue: the signing-moment before/after on dev.
+- **Admin-sidebar-2: brainstormed live with Geoff, spec DRAFT committed**
+  (docs/2026-07-18-admin-sidebar-2-design.md; ratified: purpose-first 4-group tree,
+  Signups screen RETIRES fully (joins are automatic; board_join_notice email is the
+  notification), bulletins/notifications RE-UNIFIED to the production bulletins model,
+  relabel sweep, five plain-function roles (Administrator/Club manager/Webmaster/
+  Publisher/Instructor), function-first security (one permission map; categories
+  cosmetic; matrix generated/tested from the map), role-scoped pending-actions
+  notifications). BRAINSTORM STILL OPEN per Geoff: probe verdicts owed (open/closed
+  defaults, 25-icon assignment, within-group order) + whatever he raises next.
+  SEQUENCING: cairn engine pass FIRST — the handoff is
+  docs/2026-07-18-cairn-sidebar-seams-consumer-brief.md (four seams; Geoff runs it in
+  ~/Projects/cairn-cms; resume prompt in that brief's session note below), then the
+  ASC pass rides the bump. Cairn-session resume prompt: "Start the sidebar-seams
+  engine pass: read ~/Projects/aksailingclub-org/docs/2026-07-18-cairn-sidebar-seams-consumer-brief.md,
+  then invoke cairn-pass to brainstorm the API shapes and plan the four seams as one
+  minor release, ASC the named first consumer." ASC-session resume prompt (post-clear):
+  "Continue the admin-sidebar-2 brainstorm: read docs/2026-07-18-admin-sidebar-2-design.md
+  (DRAFT) and ROADMAP's admin-sidebar-2 entry; owed: probe-round verdicts (defaults/
+  icons/order) and Geoff's remaining topics; then finalize the spec and plan the ASC
+  pass (waits on the cairn seams release)."
+
 **THE FABLE WAIVERS SITTING IS DONE (2026-07-18): the T7 attorney-draft packet and the
 T4 signing-experience design are both delivered.** What landed:
 
