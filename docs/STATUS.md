@@ -52,6 +52,23 @@ fix round, 0 errors, ~5.1M subagent tokens.** What shipped (e1555f1..b21038d):
   baselines minted via the ci.yml update_snapshots dispatch at release (below).
 - **Gate re-verified by the conductor**: check 0/0 (972 files), 141 files / 1777
   tests, build green, no workstation snapshots.
+- **The coherence gate EARNED ITS KEEP (2026-07-19): first read FAILED the member
+  surfaces while every mechanical gate was green.** Root causes, both one-cause
+  families: (1) `@layer components` rules can never restyle a daisyUI `.btn` — the
+  later layer wins regardless of specificity, so the ratified filled-navy Sign never
+  rendered anywhere (and had already silently defeated one earlier shipped fix);
+  (2) dark overrides keyed only on `[data-theme='asc-dark']`, so system-dark members
+  got an illegible light strip. Fixes 4a420f9 (unlayered signing rules proven in the
+  built CSS; sage→base-200 with the dual dark-selector idiom; admin 390 column
+  reorder; family-scenario visual coverage added — the ratified household device had
+  shipped with zero visual coverage) and 2450cff (the waiting card's own filled/quiet
+  action pair, card and household block re-separated). Baselines re-minted twice via
+  the ci.yml dispatch (now 20 waivers baselines incl. family × 4); every surface
+  verified by the conductor's own eyes at 390/1440 both themes: midflow, family,
+  waiting, contact-confirm, admin rollup all match the ratified probe design. The
+  layer-cascade gotcha is banked as project memory (layer-cascade-gotcha). One
+  verifier over-call corrected by eye: contact-confirm's filled button was always
+  fine (daisy's own primary).
 
 **OPEN ON GEOFF'S QUEUE:** the signing-moment before/after (dev renders the no-docs
 state; the moment itself is visible in the CI-minted baselines and locally via the e2e
