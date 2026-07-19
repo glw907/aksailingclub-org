@@ -35,15 +35,21 @@ T4 signing-experience design are both delivered.** What landed:
 - **The T4 probe deck** (scratchpad/signing-probe/, arc log
   `docs/design-benchmark/waivers-signing-round-1-arc.md`): the signing moment grounded
   in the real release draft at 1440/390 both themes — sheet vs inline candidates,
-  collapsed-receipt progress, filled-navy Sign, contact-confirm glance card. **OPEN ON
-  GEOFF'S QUEUE: the probe verdicts** (deck opened in the browser; six questions on it).
+  collapsed-receipt progress, filled-navy Sign, contact-confirm glance card. **BOTH
+  PROBE ROUNDS ARE FULLY VERDICTED same-day** (arc log): inline text at both widths;
+  round 2 added the household paths — one Part Two entry per child, "type once, sign
+  each" (attorney confirms), attestation radios in the strip, and the
+  HOUSEHOLD-COMPLETE GATE (spec decision 7 amended 2026-07-18): no payment, no class
+  registration, no joined state until every member signs; incomplete applications
+  simply remain incomplete (signatures precede payment, so nothing is held); the
+  waiting state + nudge email + resumption email close the loop (copy in
+  signing-framing-copy.md).
 
-**IMMEDIATE NEXT ACTION: the waivers BUILD session (Opus-conducted), T1–T3 + T5–T6 now,
-T4 once Geoff's probe verdicts ratify the signing design.** Resume prompt: "Start the
-waivers build: read docs/plans/2026-07-17-member-waivers.md and docs/waivers/ (the
-sitting's drafts + signing-framing-copy.md + the arc log's ratified verdicts), then
-execute T1–T6 and T8 with Sonnet implementers per task." Launch from
-~/Projects/aksailingclub-org. The attorney packet can go out on Geoff's go — it does not
+**IMMEDIATE NEXT ACTION: the waivers BUILD session (Opus-conducted), T1–T8 — the
+signing design is fully ratified.** Resume prompt: "Start the waivers build: read
+docs/plans/2026-07-17-member-waivers.md and docs/waivers/ (the sitting's drafts +
+signing-framing-copy.md + the arc log's ratified verdicts), then execute T1–T6 and T8
+with Sonnet implementers per task." Launch from ~/Projects/aksailingclub-org. The attorney packet can go out on Geoff's go — it does not
 wait for the build. After the build: events-redesign, then the review-queue clear and
 mw-cutover per ROADMAP.
 

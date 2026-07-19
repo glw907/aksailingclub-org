@@ -71,7 +71,10 @@ Outcome: join and renewal hard-gate on every applicable document, and the gate i
 HOUSEHOLD-COMPLETE (decision 7 as amended 2026-07-18): no payment is taken, no
 membership activates, and no joined state displays until every member's signatures
 are in; an incomplete household gets a waiting state naming who remains plus a
-sign-in nudge, and payment unlocks when the household completes. Asset-fee payment
+sign-in nudge, and payment unlocks when the household completes. The loop closes
+with the resumption email: when the last signature lands, the managing adult gets
+one email deep-linking to the payment step, and the portal row shows the waiting
+state meanwhile (copy for all of it in signing-framing-copy.md). Asset-fee payment
 and season assignment confirmation gate on the matching asset documents; class
 signup requires an active (signature-complete) membership, gates on the
 current-season general release, and presents nothing when it is already on file

@@ -131,6 +131,57 @@ When everything is signed (and confirmed, where the step applies):
 Then the flow returns the member to what they were doing; the return action names
 it ("Back to renewal," "Back to class signup," "Back to your account").
 
+## The household gate (family join and renewal)
+
+Ratified 2026-07-18 (arc round 2): no payment, no class registration, no joined
+state until every household member has signed. A signature is personal; the flow
+ends an incomplete household's moment at a waiting state and closes the loop with
+one email when the last signature lands.
+
+Waiting-state intro (replaces the welcome body line once the signer's own documents
+are done):
+
+> Your signatures are done. {name}'s are needed before payment.
+
+The waiting card (title, line, actions):
+
+> **Waiting on {name}**
+> {N} documents need {name}'s own signature—a signature is personal, so no one else
+> can sign them. Payment and your family's {season} membership unlock when everyone
+> has signed.
+
+Primary action: **Email {first name} a sign-in link** · Quiet action: **I'll come
+back later**
+
+The household-signatures block (under the family signing moment):
+
+> **Household signatures**
+> You · {signed count} of {total} signed
+> {children's names} · covered by your Part Two signatures above
+> {adult name} · {N} of their own to sign—payment and membership wait on these ·
+> Email {first name} a sign-in link
+
+The nudge email (to the adult who hasn't signed):
+
+> Subject: Your signature is needed for your family's {season} membership
+>
+> {manager name} completed your family's {season} {join/renewal} up to the
+> signatures only you can make. {N} documents need your signature—the link below
+> signs you in and takes you straight to them. Plan on about {minutes} minutes.
+
+The resumption email (to the managing adult, when the last signature lands):
+
+> Subject: Everyone has signed—finish your family's {season} membership
+>
+> {name} signed just now, so your household is complete. The last step is payment:
+> {link to the payment step}.
+
+Portal row while a household is waiting:
+
+> Your family's {season} membership is waiting on {name}'s signatures.
+
+Row action: **Send a sign-in link**
+
 ## Portal "Needs your attention" row
 
 > {N} documents need your signature for the {season} season.

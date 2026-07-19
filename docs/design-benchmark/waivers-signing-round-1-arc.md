@@ -82,4 +82,17 @@ household's moment at a WAITING state (who remains, nudge action, payment locked
 not at a completed renewal with a quiet coda. `scenario=waiting` probes that state;
 the household-signatures block reads "payment waits on these" for the absent adult.
 
-**Verdicts:** (pending)
+**Verdicts (Geoff, 2026-07-18, "That all works"):**
+
+- **One entry per child, full Part Two text each** — the signature sits adjacent to
+  the exact text it adopts; the accordion absorbs the repetition.
+- **"Type once, sign each"** — first signature typed fresh, later ones prefill the
+  editable name, one Sign click per document. Attorney confirms.
+- **Attestation radios in the signature strip** — first child unselected (explicit
+  choice), later children carried forward with the note.
+- **The waiting card as probed, plus the resumption loop**: when the last signature
+  lands, the managing adult gets one email deep-linking to payment, and the portal
+  row shows "waiting on {name}" meanwhile. Copy in signing-framing-copy.md.
+
+Both rounds are fully verdicted. The arc's design is the build reference for T4/T5;
+distill into decisions.md and remove this log when the build lands.
