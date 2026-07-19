@@ -36,4 +36,45 @@ filled-navy Sign weight; sheet omits the document's own title (entry heading car
 it); the confirm card's register; the overall lightness bar ("does anything read as
 digital paperwork?").
 
+**Verdicts (Geoff, 2026-07-18):**
+
+- **Inline text, both widths** (candidate B), sheet framing retained. Ruled on the
+  research: nested scroll regions get overlooked (NN/g; GOV.UK advises against
+  scrollable areas in a page) and are awkward on touch; the accordion already contains
+  length since only one document expands at a time. Legally equivalent (the e-signature
+  research rates full in-page text + typed name above every enforced pattern); inline is
+  the most conservative reading of full-text display.
+- **Progress: keep as probed** — the collapsed list is the progress; no wizard chrome.
+- **Sign button: filled flag navy** — the portal's first filled button; the one weighty
+  act earns it. Fireweed stays zero.
+- **Contact-confirm: keep as probed** — glance card, read-only rows, filled confirm,
+  quiet "Update it".
+- **Sheet omits the document's own title** — the entry heading carries it; the record
+  still snapshots the full text.
+
+## Round 2 — household signing: multiple adults, kids (2026-07-18, same sitting)
+
+Geoff's prompt: "do we have good UI for multiple members signing, and for signing for
+kids/dependents?" Round 1 probed a single adult with no minors; round 2 probes the
+household paths.
+
+**Probe:** `frame.html?scenario=family` added to the same deck. A parent mid-moment:
+own documents signed, the per-child Part Two entries in the same accordion (full Part
+Two text per child, one distinct signature each — bundling releases under one signature
+is the pattern courts distrust), the AS 09.65.292 relationship attestation as a quiet
+radio group in the signature strip, the child's identity (name, birth year from the
+roster) named at the sheet's top, and a household coda naming the other adult's own
+outstanding signatures with a send-a-reminder text action.
+
+**The streamliner ("easy and streamlined, but still legally binding" — Geoff's bar):**
+"type once, sign each." The first signature in the moment is typed; later documents
+prefill the name (editable) and the attestation from the previous child, and each
+document still takes its own Sign click — a distinct affirmative act per document with
+the retyping ceremony removed. Goes to the attorney flagged for confirmation.
+
+**Policy the composition encodes (consistent with ratified decision 7):** a signature
+is personal — one adult can never sign for another. Household renewal completes for
+the renewing adult; other adults get their own portal attention rows, an optional
+nudge email, and hard gates at their own money/class moments.
+
 **Verdicts:** (pending)
