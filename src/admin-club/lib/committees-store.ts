@@ -163,17 +163,21 @@ export async function listCommitteeMembers(db: D1Database): Promise<CommitteeMem
 
 /** Add a member directly to a committee, active from the start: an admin-add stands in for the
  *  roles spec's own "chair-add" and "board appointment" paths (decision 4), both of which write
- *  `active` immediately rather than `pending`. */
+ *  `active` immediately rather than `pending`. `INSERT OR IGNORE`, so adding a member who already
+ *  holds a pending or active row on this committee hits the schema's own
+ *  `UNIQUE (committee_id, member_id)` pair gracefully (returns `null`) rather than throwing; both
+ *  callers (this admin screen's own `addMember` action and the portal's `addActiveMember`) turn
+ *  that into a friendly "already on this committee" message instead of an unhandled 500. */
 export async function addCommitteeMember(
   db: D1Database,
   args: { committeeId: string; memberId: string; role: CommitteeRole },
-): Promise<string> {
+): Promise<string | null> {
   const id = crypto.randomUUID();
-  await db
-    .prepare("INSERT INTO committee_members (id, committee_id, member_id, role, status) VALUES (?1, ?2, ?3, ?4, 'active')")
+  const result = await db
+    .prepare("INSERT OR IGNORE INTO committee_members (id, committee_id, member_id, role, status) VALUES (?1, ?2, ?3, ?4, 'active')")
     .bind(id, args.committeeId, args.memberId, args.role)
     .run();
-  return id;
+  return (result.meta.changes ?? 0) > 0 ? id : null;
 }
 
 /** Approve a pending join request: `status` `'pending'` -> `'active'`. */

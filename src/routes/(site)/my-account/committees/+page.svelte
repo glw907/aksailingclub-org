@@ -45,7 +45,9 @@ on its own. -->
 </p>
 
 {#if form && 'error' in form && form.error}
-  <p class="mt-s max-w-measure-wide rounded-field border border-error bg-error/10 px-s py-xs text-step--1 text-error">{form.error}</p>
+  <p class="mt-s max-w-measure-wide rounded-field border border-error bg-error/10 px-s py-xs text-step--1 text-error" role="alert">{form.error}</p>
+{:else if form && 'saved' in form && form.saved}
+  <p class="mt-s max-w-measure-wide rounded-field border border-success bg-success/10 px-s py-xs text-step--1 text-success" role="status">Saved.</p>
 {/if}
 
 {#if data.view.viewerIsBoard}
@@ -95,14 +97,14 @@ on its own. -->
           <form method="POST" action="?/leave" class="portal-committee-state-sub">
             <input type="hidden" name="csrf" value={data.csrf} />
             <input type="hidden" name="committeeMemberId" value={committee.viewerRelation.committeeMemberId} />
-            <button type="submit" class="portal-text-action">Leave</button>
+            <button type="submit" class="portal-text-action" aria-label={`Leave ${committee.name}`}>Leave</button>
           </form>
         {:else if committee.viewerRelation.kind === 'pending'}
           <p class="portal-committee-state">Request sent — awaiting chair approval</p>
           <form method="POST" action="?/cancelRequest" class="portal-committee-state-sub">
             <input type="hidden" name="csrf" value={data.csrf} />
             <input type="hidden" name="committeeMemberId" value={committee.viewerRelation.committeeMemberId} />
-            <button type="submit" class="portal-text-action">Cancel request</button>
+            <button type="submit" class="portal-text-action" aria-label={`Cancel request to join ${committee.name}`}>Cancel request</button>
           </form>
         {:else if !committee.viewerCanManage}
           <form method="POST" action="?/request">
@@ -146,12 +148,12 @@ on its own. -->
                     <form method="POST" action="?/approve">
                       <input type="hidden" name="csrf" value={data.csrf} />
                       <input type="hidden" name="committeeMemberId" value={request.committeeMemberId} />
-                      <button type="submit" class="portal-text-action portal-text-action-primary">Approve</button>
+                      <button type="submit" class="portal-text-action portal-text-action-primary" aria-label={`Approve ${request.name}`}>Approve</button>
                     </form>
                     <form method="POST" action="?/decline">
                       <input type="hidden" name="csrf" value={data.csrf} />
                       <input type="hidden" name="committeeMemberId" value={request.committeeMemberId} />
-                      <button type="submit" class="portal-text-action">Decline</button>
+                      <button type="submit" class="portal-text-action" aria-label={`Decline ${request.name}`}>Decline</button>
                     </form>
                   </span>
                 </li>
@@ -173,7 +175,7 @@ on its own. -->
                   <form method="POST" action="?/removeMember">
                     <input type="hidden" name="csrf" value={data.csrf} />
                     <input type="hidden" name="committeeMemberId" value={member.committeeMemberId} />
-                    <button type="submit" class="portal-text-action">Remove</button>
+                    <button type="submit" class="portal-text-action" aria-label={`Remove ${member.name} from ${committee.name}`}>Remove</button>
                   </form>
                 </li>
               {/each}

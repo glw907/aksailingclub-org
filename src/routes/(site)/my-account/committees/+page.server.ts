@@ -33,6 +33,7 @@ import {
   listCommitteeChairContacts,
   listPortalCommittees,
   removeActiveMember,
+  requestNotifySegment,
   requestToJoin,
   setMemberRoleAsBoard,
 } from '$member-portal/lib/committees';
@@ -81,26 +82,40 @@ function parseRole(form: FormData): CommitteeRole | { error: string } {
 
 /** Notify a committee's active chair(s) that a member asked to join. A plain notification, never an
  *  approval token (the chair approves in the portal); best-effort, degrading silently with no EMAIL
- *  binding, the same posture the household screen's leave notify uses. */
+ *  binding, the same posture the household screen's leave notify uses. Every send is tagged with
+ *  `requestNotifySegment` so `requestNotifiedRecently` can throttle a repeat request -> cancel ->
+ *  request spam cycle for this same (committee, requester) pair. Wrapped in its own try/catch: the
+ *  `request` action has already committed the pending row by the time this runs, so a D1 hiccup
+ *  reading the committee's name or its chairs' contacts must never surface as a failed action for a
+ *  write that actually succeeded (the same "committed write first, notify best-effort after" shape
+ *  `sendClubEmail` itself already applies to the send call proper). */
 async function notifyChairsOfRequest(
   db: Parameters<typeof listCommitteeChairContacts>[0],
   env: EmailBindingEnv | undefined,
   committeeId: string,
+  actorId: string,
   requesterName: string,
 ): Promise<void> {
   if (!env?.EMAIL) return;
-  const [committeeName, chairs] = await Promise.all([getCommitteeName(db, committeeId), listCommitteeChairContacts(db, committeeId)]);
-  const name = committeeName ?? 'a committee';
-  for (const chair of chairs) {
-    if (!chair.email) continue;
-    await sendClubEmail(db, env, {
-      to: chair.email,
-      raw: {
-        subject: `New request to join ${name}`,
-        body: '{{requester_name}} has asked to join {{committee_name}}. Approve or decline the request from your committees page in the member portal.',
-      },
-      vars: { requester_name: requesterName, committee_name: name },
-    });
+  try {
+    const [committeeName, chairs] = await Promise.all([getCommitteeName(db, committeeId), listCommitteeChairContacts(db, committeeId)]);
+    const name = committeeName ?? 'a committee';
+    const segment = requestNotifySegment(committeeId, actorId);
+    for (const chair of chairs) {
+      if (!chair.email) continue;
+      await sendClubEmail(db, env, {
+        to: chair.email,
+        raw: {
+          subject: `New request to join ${name}`,
+          body: '{{requester_name}} has asked to join {{committee_name}}. Approve or decline the request from your committees page in the member portal.',
+        },
+        vars: { requester_name: requesterName, committee_name: name },
+        segment,
+      });
+    }
+  } catch {
+    // Best-effort: the pending row is already committed, so a lookup or send failure here never
+    // fails the member's own "Request sent" outcome.
   }
 }
 
@@ -109,8 +124,9 @@ export const actions: Actions = {
     const committeeId = requireId(form, 'committeeId');
     if (typeof committeeId !== 'string') return { error: committeeId.error };
     const result = await requestToJoin(ctx.db, { actorId: ctx.member.id, committeeId });
-    if (result.created) {
-      await notifyChairsOfRequest(ctx.db, event.platform?.env as EmailBindingEnv | undefined, committeeId, ctx.member.name);
+    if (!result.ok) return { error: result.error };
+    if (result.shouldNotify) {
+      await notifyChairsOfRequest(ctx.db, event.platform?.env as EmailBindingEnv | undefined, committeeId, ctx.member.id, ctx.member.name);
     }
     return { saved: true as const };
   }),

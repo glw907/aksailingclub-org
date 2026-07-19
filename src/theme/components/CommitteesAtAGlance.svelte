@@ -16,35 +16,40 @@ empty or failed read renders the same directory pointer the fallback carries. Re
   let {}: Record<string, unknown> = $props();
 </script>
 
-{#await getCommitteesAtAGlance()}
-  <p class="cag-loading" aria-busy="true">Loading committee assignments…</p>
-{:then data}
-  {#if !data || (data.officers.length === 0 && data.committees.length === 0)}
+
+<!-- role="status" announces the loading -> resolved swap to assistive tech (the fallback and the
+     resolved table are otherwise silent DOM replacements). -->
+<div role="status" aria-live="polite">
+  {#await getCommitteesAtAGlance()}
+    <p class="cag-loading" aria-busy="true">Loading committee assignments…</p>
+  {:then data}
+    {#if !data || (data.officers.length === 0 && data.committees.length === 0)}
+      <p>
+        See current committee chairs and officers in the
+        <a href="/my-account/committees">member portal</a>.
+      </p>
+    {:else}
+      <table class="cag-table">
+        <thead>
+          <tr><th scope="col">Role</th><th scope="col">Who</th></tr>
+        </thead>
+        <tbody>
+          {#each data.officers as officer (officer.title)}
+            <tr><th scope="row">{officer.title}</th><td>{officer.name}</td></tr>
+          {/each}
+          {#each data.committees as committee (committee.name)}
+            <tr><th scope="row">{committee.name}</th><td>{committee.who || '—'}</td></tr>
+          {/each}
+        </tbody>
+      </table>
+    {/if}
+  {:catch}
     <p>
       See current committee chairs and officers in the
       <a href="/my-account/committees">member portal</a>.
     </p>
-  {:else}
-    <table class="cag-table">
-      <thead>
-        <tr><th scope="col">Role</th><th scope="col">Who</th></tr>
-      </thead>
-      <tbody>
-        {#each data.officers as officer (officer.title)}
-          <tr><th scope="row">{officer.title}</th><td>{officer.name}</td></tr>
-        {/each}
-        {#each data.committees as committee (committee.name)}
-          <tr><th scope="row">{committee.name}</th><td>{committee.who || '—'}</td></tr>
-        {/each}
-      </tbody>
-    </table>
-  {/if}
-{:catch}
-  <p>
-    See current committee chairs and officers in the
-    <a href="/my-account/committees">member portal</a>.
-  </p>
-{/await}
+  {/await}
+</div>
 
 <style>
   .cag-loading {

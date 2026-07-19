@@ -1027,8 +1027,15 @@
 
   /* The chromeless text-action register (Approve / Decline / Remove / Leave / Cancel / Edit /
      Archive / New committee / Add member): a quiet member page chairs also use, never an admin
-     screen. Added as the ONE named class the probe's hand-rolled `.tact` asked to become. */
+     screen. Added as the ONE named class the probe's hand-rolled `.tact` asked to become.
+     `min-height` clears WCAG 2.5.8's 24px target-size floor (this text register renders at
+     text-step--1/--2, whose natural line box falls short); `display: inline-flex` makes that
+     floor apply the same way to both a `<button>` (inline-block by default) and a `<summary>`
+     (block by default) without disturbing either's native disclosure-marker suppression below. */
   .portal-text-action {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
     background: none;
     border: none;
     padding: 0;

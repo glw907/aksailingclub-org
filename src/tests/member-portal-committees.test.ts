@@ -1,10 +1,13 @@
-// The member-facing committees domain (T6b): the read that powers /my-account/committees and,
-// above all, the SERVER-SIDE authorization guards every write on that page runs through. Each
-// actor tier is covered including its DENIAL cases (the roles spec's permissions table is the
-// contract): a plain member cannot approve/decline/add/remove/appoint/edit/archive; a chair cannot
-// touch another committee's queue or roster and cannot appoint chairs; a non-board member cannot
-// create/edit/archive; a member cannot cancel someone else's request or make someone else leave; a
-// duplicate request hits the UNIQUE pair gracefully.
+// The member-facing committees domain (T6b, plus the T6b fix round's security findings): the
+// read that powers /my-account/committees and, above all, the SERVER-SIDE authorization guards
+// every write on that page runs through. Each actor tier is covered including its DENIAL cases
+// (the roles spec's permissions table is the contract): a plain member cannot
+// approve/decline/add/remove/appoint/edit/archive; a chair cannot touch another committee's queue
+// or roster and cannot appoint chairs; a non-board member cannot create/edit/archive; a member
+// cannot cancel someone else's request or make someone else leave; a duplicate request hits the
+// UNIQUE pair gracefully; a request for an archived/nonexistent committee is refused; a repeat
+// request within the notify cooldown suppresses `shouldNotify`; approve/decline/remove/setRole
+// refuse a row whose committee has since been archived, and setRole refuses a still-pending row.
 import { describe, expect, it } from 'vitest';
 import { fakeD1 } from './_fake-d1';
 import {
@@ -22,12 +25,16 @@ import {
   listCommitteeChairContacts,
   listPortalCommittees,
   removeActiveMember,
+  requestNotifiedRecently,
+  requestNotifySegment,
   requestToJoin,
   setMemberRoleAsBoard,
 } from '$member-portal/lib/committees';
 
 const BOARD_PRESENT = { 'FROM member_positions WHERE member_id': { present: 1 } };
 const BOARD_ABSENT = { 'FROM member_positions WHERE member_id': null };
+const COMMITTEE_ACTIVE = { 'FROM committees WHERE id': { present: 1 } };
+const COMMITTEE_ARCHIVED = { 'FROM committees WHERE id': null };
 
 describe('isBoardMember', () => {
   it('is true when the member holds an officer or director position', async () => {
@@ -85,10 +92,10 @@ describe('canManageCommittee', () => {
 });
 
 describe('requestToJoin', () => {
-  it('inserts a pending row for the actor themself', async () => {
-    const { db, calls } = fakeD1();
+  it('inserts a pending row for the actor themself and asks the route to notify', async () => {
+    const { db, calls } = fakeD1({ firstResults: COMMITTEE_ACTIVE });
     const result = await requestToJoin(db, { actorId: 'mem-1', committeeId: 'cmt-1' });
-    expect(result).toEqual({ ok: true, created: true });
+    expect(result).toEqual({ ok: true, created: true, shouldNotify: true });
     const insert = calls.find((c) => c.sql.includes('INSERT OR IGNORE INTO committee_members'));
     expect(insert?.sql).toContain("'member', 'pending'");
     // bind order is (id, committeeId, actorId): the actor is always the row's own member_id
@@ -96,9 +103,45 @@ describe('requestToJoin', () => {
     expect(insert?.args[2]).toBe('mem-1');
   });
 
-  it('hits the UNIQUE pair gracefully on a duplicate (created=false, no throw)', async () => {
-    const { db } = fakeD1({ runResults: { 'INSERT OR IGNORE INTO committee_members': { changes: 0 } } });
-    await expect(requestToJoin(db, { actorId: 'mem-1', committeeId: 'cmt-1' })).resolves.toEqual({ ok: true, created: false });
+  it('hits the UNIQUE pair gracefully on a duplicate (created=false, no throw, no notify)', async () => {
+    const { db } = fakeD1({
+      firstResults: COMMITTEE_ACTIVE,
+      runResults: { 'INSERT OR IGNORE INTO committee_members': { changes: 0 } },
+    });
+    await expect(requestToJoin(db, { actorId: 'mem-1', committeeId: 'cmt-1' })).resolves.toEqual({
+      ok: true,
+      created: false,
+      shouldNotify: false,
+    });
+  });
+
+  it('refuses a committee that does not exist or is archived, and never inserts', async () => {
+    const { db, calls } = fakeD1({ firstResults: COMMITTEE_ARCHIVED });
+    const result = await requestToJoin(db, { actorId: 'mem-1', committeeId: 'cmt-gone' });
+    expect(result).toEqual({ ok: false, error: expect.any(String) });
+    expect(calls.some((c) => c.sql.includes('INSERT OR IGNORE INTO committee_members'))).toBe(false);
+  });
+
+  it('suppresses shouldNotify when a request for this pair already notified recently', async () => {
+    const { db } = fakeD1({
+      firstResults: { ...COMMITTEE_ACTIVE, 'FROM email_log WHERE segment': { present: 1 } },
+    });
+    const result = await requestToJoin(db, { actorId: 'mem-1', committeeId: 'cmt-1' });
+    expect(result).toEqual({ ok: true, created: true, shouldNotify: false });
+  });
+});
+
+describe('requestNotifiedRecently', () => {
+  it('is true when a send was logged for this pair within the cooldown window', async () => {
+    const { db, calls } = fakeD1({ firstResults: { 'FROM email_log WHERE segment': { present: 1 } } });
+    await expect(requestNotifiedRecently(db, { committeeId: 'cmt-1', actorId: 'mem-1' })).resolves.toBe(true);
+    const call = calls.find((c) => c.sql.includes('FROM email_log WHERE segment'));
+    expect(call?.args[0]).toBe(requestNotifySegment('cmt-1', 'mem-1'));
+  });
+
+  it('is false when no matching send is logged', async () => {
+    const { db } = fakeD1({ firstResults: { 'FROM email_log WHERE segment': null } });
+    await expect(requestNotifiedRecently(db, { committeeId: 'cmt-1', actorId: 'mem-1' })).resolves.toBe(false);
   });
 });
 
@@ -180,6 +223,15 @@ describe('approveRequest', () => {
     const { db } = fakeD1({ firstResults: { ...ACTIVE_ROW, ...BOARD_PRESENT } });
     await expect(approveRequest(db, { actorId: 'mem-board', committeeMemberId: 'cm-1' })).resolves.toEqual({ ok: false, error: expect.any(String) });
   });
+
+  it('refuses a request whose committee has since been archived, and never writes', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: { ...PENDING_ROW, ...BOARD_PRESENT, 'SELECT archived_at FROM committees': { archived_at: '2026-01-01' } },
+    });
+    const result = await approveRequest(db, { actorId: 'mem-board', committeeMemberId: 'cm-1' });
+    expect(result).toEqual({ ok: false, error: expect.any(String) });
+    expect(calls.some((c) => c.sql.includes("SET status = 'active'"))).toBe(false);
+  });
 });
 
 describe('declineRequest', () => {
@@ -195,20 +247,40 @@ describe('declineRequest', () => {
     expect(result).toEqual({ ok: false, error: expect.any(String) });
     expect(calls.some((c) => c.sql.startsWith('DELETE FROM committee_members'))).toBe(false);
   });
+
+  it('refuses a request whose committee has since been archived, and never deletes', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: { ...PENDING_ROW, ...BOARD_PRESENT, 'SELECT archived_at FROM committees': { archived_at: '2026-01-01' } },
+    });
+    const result = await declineRequest(db, { actorId: 'mem-board', committeeMemberId: 'cm-1' });
+    expect(result).toEqual({ ok: false, error: expect.any(String) });
+    expect(calls.some((c) => c.sql.startsWith('DELETE FROM committee_members'))).toBe(false);
+  });
 });
 
 describe('addActiveMember', () => {
   it('lets a manager add an active member', async () => {
     const { db, calls } = fakeD1({ firstResults: BOARD_PRESENT });
     await expect(addActiveMember(db, { actorId: 'mem-board', committeeId: 'cmt-1', memberId: 'mem-new' })).resolves.toEqual({ ok: true });
-    expect(calls.some((c) => c.sql.includes('INSERT INTO committee_members'))).toBe(true);
+    expect(calls.some((c) => c.sql.includes('INSERT OR IGNORE INTO committee_members'))).toBe(true);
   });
 
   it('DENIES a plain member and never inserts', async () => {
     const { db, calls } = fakeD1({ firstResults: { ...BOARD_ABSENT, 'FROM committee_members WHERE member_id': { role: 'member' } } });
     const result = await addActiveMember(db, { actorId: 'mem-plain', committeeId: 'cmt-1', memberId: 'mem-new' });
     expect(result).toEqual({ ok: false, error: expect.any(String) });
-    expect(calls.some((c) => c.sql.includes('INSERT INTO committee_members'))).toBe(false);
+    expect(calls.some((c) => c.sql.includes('INSERT OR IGNORE INTO committee_members'))).toBe(false);
+  });
+
+  it('fails gracefully (no throw) when the member already holds a row on this committee', async () => {
+    const { db } = fakeD1({
+      firstResults: BOARD_PRESENT,
+      runResults: { 'INSERT OR IGNORE INTO committee_members': { changes: 0 } },
+    });
+    await expect(addActiveMember(db, { actorId: 'mem-board', committeeId: 'cmt-1', memberId: 'mem-dup' })).resolves.toEqual({
+      ok: false,
+      error: expect.any(String),
+    });
   });
 });
 
@@ -225,6 +297,15 @@ describe('removeActiveMember', () => {
     expect(result).toEqual({ ok: false, error: expect.any(String) });
     expect(calls.some((c) => c.sql.startsWith('DELETE FROM committee_members'))).toBe(false);
   });
+
+  it('refuses a member of a committee that has since been archived, and never deletes', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: { ...ACTIVE_ROW, ...BOARD_PRESENT, 'SELECT archived_at FROM committees': { archived_at: '2026-01-01' } },
+    });
+    const result = await removeActiveMember(db, { actorId: 'mem-board', committeeMemberId: 'cm-1' });
+    expect(result).toEqual({ ok: false, error: expect.any(String) });
+    expect(calls.some((c) => c.sql.startsWith('DELETE FROM committee_members'))).toBe(false);
+  });
 });
 
 describe('setMemberRoleAsBoard (appoint/change chair)', () => {
@@ -237,6 +318,22 @@ describe('setMemberRoleAsBoard (appoint/change chair)', () => {
   it('DENIES a chair (appointing chairs is board-only) and never writes', async () => {
     const { db, calls } = fakeD1({ firstResults: { ...BOARD_ABSENT, 'FROM committee_members WHERE member_id': { role: 'chair' } } });
     const result = await setMemberRoleAsBoard(db, { actorId: 'mem-chair', committeeMemberId: 'cm-1', role: 'chair' });
+    expect(result).toEqual({ ok: false, error: expect.any(String) });
+    expect(calls.some((c) => c.sql.includes('SET role = ?1'))).toBe(false);
+  });
+
+  it('refuses a still-pending row (a role change can never mint a pending chair)', async () => {
+    const { db, calls } = fakeD1({ firstResults: { ...BOARD_PRESENT, ...PENDING_ROW } });
+    const result = await setMemberRoleAsBoard(db, { actorId: 'mem-board', committeeMemberId: 'cm-1', role: 'chair' });
+    expect(result).toEqual({ ok: false, error: expect.any(String) });
+    expect(calls.some((c) => c.sql.includes('SET role = ?1'))).toBe(false);
+  });
+
+  it('refuses a row whose committee has since been archived', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: { ...BOARD_PRESENT, ...ACTIVE_ROW, 'SELECT archived_at FROM committees': { archived_at: '2026-01-01' } },
+    });
+    const result = await setMemberRoleAsBoard(db, { actorId: 'mem-board', committeeMemberId: 'cm-1', role: 'chair' });
     expect(result).toEqual({ ok: false, error: expect.any(String) });
     expect(calls.some((c) => c.sql.includes('SET role = ?1'))).toBe(false);
   });

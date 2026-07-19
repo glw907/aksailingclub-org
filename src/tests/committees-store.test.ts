@@ -102,9 +102,14 @@ describe('addCommitteeMember', () => {
   it('inserts an active row directly (admin-add stands in for chair-add/board appointment)', async () => {
     const { db, calls } = fakeD1();
     const id = await addCommitteeMember(db, { committeeId: 'c-1', memberId: 'm-1', role: 'member' });
-    const insert = calls.find((c) => c.sql.startsWith('INSERT INTO committee_members ('));
+    const insert = calls.find((c) => c.sql.startsWith('INSERT OR IGNORE INTO committee_members ('));
     expect(insert?.sql).toContain("'active'");
     expect(insert?.args).toEqual([id, 'c-1', 'm-1', 'member']);
+  });
+
+  it('returns null gracefully (no throw) on a duplicate pair', async () => {
+    const { db } = fakeD1({ runResults: { 'INSERT OR IGNORE INTO committee_members': { changes: 0 } } });
+    await expect(addCommitteeMember(db, { committeeId: 'c-1', memberId: 'm-1', role: 'member' })).resolves.toBeNull();
   });
 });
 

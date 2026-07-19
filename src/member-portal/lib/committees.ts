@@ -32,6 +32,14 @@ export type GuardResult = { ok: true } | { ok: false; error: string };
 const NOT_AUTHORIZED = 'You do not have permission to do that.';
 const NOT_FOUND = 'That committee record no longer exists.';
 
+/** How long a fresh request-to-join notification suppresses a repeat notification for the SAME
+ *  (committee, requester) pair (the T6b fix round's security finding: `requestToJoin`'s own
+ *  `INSERT OR IGNORE` only dedupes while the pending row exists, so a member can loop request then
+ *  {@link cancelOwnRequest} then request again to re-fire the chair email every cycle -- the shared
+ *  per-session POST rate limiter is a general budget, not a defense against this specific spam
+ *  shape). Keyed off `email_log.segment`, so the throttle survives the pending row's own deletion. */
+const NOTIFY_COOLDOWN_MINUTES = 15;
+
 /** One active chair or co-chair, carrying the member id the portal links to the directory on (a
  *  chair name links to `/my-account/directory?q=<name>`, never a contact field: reachability lives
  *  in the directory where the visibility dial is enforced). */
@@ -257,14 +265,60 @@ async function getCommitteeMemberRow(db: D1Database, committeeMemberId: string):
   return row ? { committeeId: row.committee_id, memberId: row.member_id, status: row.status } : null;
 }
 
+/** Whether a committee is archived (or gone outright, which this treats the same way): the T6b fix
+ *  round's guard against a manager/board action reaching a row whose committee has already vanished
+ *  from every member surface (roles spec decision 4). A missing committee row answers `false`
+ *  (not archived) rather than throwing, matching this module's other "no fixture, no surprise
+ *  refusal" defaults -- a genuinely orphaned `committee_members` row cannot happen under the
+ *  schema's own `REFERENCES committees(id)`, so this only ever fires for a real archive. */
+async function isCommitteeArchived(db: D1Database, committeeId: string): Promise<boolean> {
+  const row = await db.prepare('SELECT archived_at FROM committees WHERE id = ?1').bind(committeeId).first<{ archived_at: string | null }>();
+  return row?.archived_at != null;
+}
+
+/** The `email_log.segment` tag one request-to-join notification batch is logged under: unique per
+ *  (committee, requester) pair, so {@link requestNotifiedRecently} can find a prior send for THIS
+ *  pair specifically, independent of the pending row's own lifecycle. */
+export function requestNotifySegment(committeeId: string, actorId: string): string {
+  return `committee-request:${committeeId}:${actorId}`;
+}
+
+/** Whether a request-to-join notification for this (committee, requester) pair already went out
+ *  within the cooldown window, throttling a request -> cancel -> request spam cycle: cancelling a
+ *  pending row frees the `UNIQUE (committee_id, member_id)` pair for a fresh insert, but the
+ *  notification itself stays rate-limited independent of that row's own lifecycle. Counts a
+ *  logged send attempt whether it ultimately succeeded or failed (an attempt is what a spammer
+ *  triggers; delivery outcome is irrelevant to the throttle). */
+export async function requestNotifiedRecently(db: D1Database, args: { committeeId: string; actorId: string }): Promise<boolean> {
+  const row = await db
+    .prepare(`SELECT 1 AS present FROM email_log WHERE segment = ?1 AND sent_at > datetime('now', ?2)`)
+    .bind(requestNotifySegment(args.committeeId, args.actorId), `-${NOTIFY_COOLDOWN_MINUTES} minutes`)
+    .first<{ present: number }>();
+  return row !== null;
+}
+
 /**
  * Request to join a committee: inserts a `pending` row for the ACTOR themself (never another
- * member -- `actorId` is the write's own `member_id`). The insert is `INSERT OR IGNORE`, so a
- * duplicate request or an existing membership hits the `UNIQUE (committee_id, member_id)` pair
- * gracefully rather than throwing; `created` is `false` in that case, and the route skips the
- * chair notification for a no-op. Any listed member may do this, so there is no further guard.
+ * member -- `actorId` is the write's own `member_id`). Refuses a committee that does not exist or
+ * is archived (roles spec decision 4: an archived committee vanishes from every member surface,
+ * so a crafted id for one must never mint a live pending row or notify its former chairs). The
+ * insert is `INSERT OR IGNORE`, so a duplicate request or an existing membership hits the
+ * `UNIQUE (committee_id, member_id)` pair gracefully rather than throwing; `created` is `false` in
+ * that case, and the route skips the chair notification for a no-op. `shouldNotify` additionally
+ * folds in {@link requestNotifiedRecently}'s cooldown, so the route's own notify step never needs
+ * to reimplement the throttle. Any listed member may request a real, active committee, so there is
+ * no further guard.
  */
-export async function requestToJoin(db: D1Database, args: { actorId: string; committeeId: string }): Promise<{ ok: true; created: boolean }> {
+export async function requestToJoin(
+  db: D1Database,
+  args: { actorId: string; committeeId: string },
+): Promise<{ ok: true; created: boolean; shouldNotify: boolean } | { ok: false; error: string }> {
+  const committee = await db
+    .prepare('SELECT 1 AS present FROM committees WHERE id = ?1 AND archived_at IS NULL')
+    .bind(args.committeeId)
+    .first<{ present: number }>();
+  if (!committee) return { ok: false, error: NOT_FOUND };
+
   const id = crypto.randomUUID();
   const result = await db
     .prepare(
@@ -272,7 +326,9 @@ export async function requestToJoin(db: D1Database, args: { actorId: string; com
     )
     .bind(id, args.committeeId, args.actorId)
     .run();
-  return { ok: true, created: (result.meta.changes ?? 0) > 0 };
+  const created = (result.meta.changes ?? 0) > 0;
+  const shouldNotify = created && !(await requestNotifiedRecently(db, { committeeId: args.committeeId, actorId: args.actorId }));
+  return { ok: true, created, shouldNotify };
 }
 
 /**
@@ -305,11 +361,13 @@ export async function leaveOwnCommittee(db: D1Database, args: { actorId: string;
 
 /** Approve a pending request: the actor must manage the request's own committee (a chair/co-chair
  *  of it, or any board member). A request in ANOTHER committee is refused because
- *  {@link canManageCommittee} resolves false there. Only a still-pending row can be approved. */
+ *  {@link canManageCommittee} resolves false there. Only a still-pending row can be approved, and
+ *  only for a committee that has not since been archived (roles spec decision 4). */
 export async function approveRequest(db: D1Database, args: { actorId: string; committeeMemberId: string }): Promise<GuardResult> {
   const row = await getCommitteeMemberRow(db, args.committeeMemberId);
   if (!row) return { ok: false, error: NOT_FOUND };
   if (row.status !== 'pending') return { ok: false, error: 'That request has already been handled.' };
+  if (await isCommitteeArchived(db, row.committeeId)) return { ok: false, error: NOT_FOUND };
   if (!(await canManageCommittee(db, args.actorId, row.committeeId))) return { ok: false, error: NOT_AUTHORIZED };
   await approveCommitteeMember(db, args.committeeMemberId);
   return { ok: true };
@@ -321,6 +379,7 @@ export async function declineRequest(db: D1Database, args: { actorId: string; co
   const row = await getCommitteeMemberRow(db, args.committeeMemberId);
   if (!row) return { ok: false, error: NOT_FOUND };
   if (row.status !== 'pending') return { ok: false, error: 'That request has already been handled.' };
+  if (await isCommitteeArchived(db, row.committeeId)) return { ok: false, error: NOT_FOUND };
   if (!(await canManageCommittee(db, args.actorId, row.committeeId))) return { ok: false, error: NOT_AUTHORIZED };
   await removeCommitteeMember(db, args.committeeMemberId);
   return { ok: true };
@@ -328,22 +387,26 @@ export async function declineRequest(db: D1Database, args: { actorId: string; co
 
 /** Add a member directly (active) to a committee the actor manages: a chair/co-chair adds a plain
  *  member of their own committee, a board member adds to any. Reuses the admin store's own
- *  active-from-the-start insert. */
+ *  active-from-the-start insert, which is itself an `INSERT OR IGNORE` (the schema's own
+ *  `UNIQUE (committee_id, member_id)` pair means adding someone who already holds a pending or
+ *  active row there is a graceful no-op, never an unhandled throw). */
 export async function addActiveMember(
   db: D1Database,
   args: { actorId: string; committeeId: string; memberId: string; role?: CommitteeRole },
 ): Promise<GuardResult> {
   if (!(await canManageCommittee(db, args.actorId, args.committeeId))) return { ok: false, error: NOT_AUTHORIZED };
-  await addCommitteeMember(db, { committeeId: args.committeeId, memberId: args.memberId, role: args.role ?? 'member' });
+  const id = await addCommitteeMember(db, { committeeId: args.committeeId, memberId: args.memberId, role: args.role ?? 'member' });
+  if (!id) return { ok: false, error: 'That member is already on this committee.' };
   return { ok: true };
 }
 
 /** Remove an active member from a committee the actor manages. Same manage guard as the approve
  *  path, keyed off the target row's own committee, so a chair can never remove a member of another
- *  committee. */
+ *  committee; refused once the committee is archived, same as {@link approveRequest}. */
 export async function removeActiveMember(db: D1Database, args: { actorId: string; committeeMemberId: string }): Promise<GuardResult> {
   const row = await getCommitteeMemberRow(db, args.committeeMemberId);
   if (!row) return { ok: false, error: NOT_FOUND };
+  if (await isCommitteeArchived(db, row.committeeId)) return { ok: false, error: NOT_FOUND };
   if (!(await canManageCommittee(db, args.actorId, row.committeeId))) return { ok: false, error: NOT_AUTHORIZED };
   await removeCommitteeMember(db, args.committeeMemberId);
   return { ok: true };
@@ -351,7 +414,8 @@ export async function removeActiveMember(db: D1Database, args: { actorId: string
 
 /** Appoint or change a chair/co-chair (or demote to plain member): BOARD MEMBERS ONLY (the roles
  *  spec's permissions table -- a chair cannot appoint chairs). Sets an existing active member's
- *  role. Reuses the admin store's own role update. */
+ *  role; refuses a still-pending row (a role change should never mint a "pending chair") and a
+ *  row whose committee has since been archived. Reuses the admin store's own role update. */
 export async function setMemberRoleAsBoard(
   db: D1Database,
   args: { actorId: string; committeeMemberId: string; role: CommitteeRole },
@@ -359,6 +423,8 @@ export async function setMemberRoleAsBoard(
   if (!(await isBoardMember(db, args.actorId))) return { ok: false, error: NOT_AUTHORIZED };
   const row = await getCommitteeMemberRow(db, args.committeeMemberId);
   if (!row) return { ok: false, error: NOT_FOUND };
+  if (row.status !== 'active') return { ok: false, error: 'That membership must be active first.' };
+  if (await isCommitteeArchived(db, row.committeeId)) return { ok: false, error: NOT_FOUND };
   await setCommitteeMemberRole(db, args.committeeMemberId, args.role);
   return { ok: true };
 }

@@ -100,8 +100,19 @@ describe('committees actions: addMember', () => {
       postEvent(admin, { committeeId: 'c-1', memberId: 'm-1', role: 'chair' }, { db, auditSink: sink }),
     );
     expect(result).toEqual({ ok: true });
-    const insert = calls.find((c) => c.sql.startsWith('INSERT INTO committee_members ('));
+    const insert = calls.find((c) => c.sql.startsWith('INSERT OR IGNORE INTO committee_members ('));
     expect(insert?.args).toEqual([insert?.args[0], 'c-1', 'm-1', 'chair']);
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'add', entity: 'committee-member' }));
+  });
+
+  it('fails 400 gracefully (no throw) on a duplicate pair, auditing the rejection', async () => {
+    const { db } = fakeD1({ runResults: { 'INSERT OR IGNORE INTO committee_members': { changes: 0 } } });
+    const sink = vi.fn();
+    const result = await actions.addMember(
+      postEvent(admin, { committeeId: 'c-1', memberId: 'm-1', role: 'chair' }, { db, auditSink: sink }),
+    );
+    expect(isActionFailure(result)).toBe(true);
+    expect((result as { status: number }).status).toBe(400);
     expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'add', entity: 'committee-member' }));
   });
 });

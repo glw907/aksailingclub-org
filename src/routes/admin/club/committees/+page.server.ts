@@ -121,6 +121,10 @@ export const actions: Actions = {
         return fail(400, { error: parsed.error });
       }
       const id = await addCommitteeMember(ctx.db, parsed);
+      if (!id) {
+        ctx.audit({ action: 'add', entity: 'committee-member', detail: 'rejected: already on this committee' });
+        return fail(400, { error: 'That member is already on this committee.' });
+      }
       ctx.audit({ action: 'add', entity: 'committee-member', entityId: id });
       return { ok: true };
     },
