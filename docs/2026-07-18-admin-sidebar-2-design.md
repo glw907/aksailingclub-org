@@ -55,7 +55,11 @@ mechanisms the fixed taxonomy needs.
    group never hides pending work. Counts share the Overview needs-attention strip's
    sources so the two never disagree. Items with status but no admin action (Money,
    Email, content screens) get no badge; Waivers coverage stays on the rollup screen,
-   not the sidebar.
+   not the sidebar. Amended same day: the engine idiom is delegated to the cairn
+   pass — sidebar badges plus possibly an in-admin notification surface, whichever
+   works best (consumer brief seam 3); the ruled outcome is that pending actionable
+   work is visible without opening anything, badges and collapsed-header sums the
+   minimum form.
 8. **Five declared roles, plain-function names** (Geoff, 2026-07-18): **Administrator**
    (full control; renames `owner`), **Club manager** (club operations; renames
    `club-admin`), **Webmaster** (new; website machinery), **Publisher** (new; the

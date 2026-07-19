@@ -47,19 +47,31 @@ editing routes gated today by the single editor capability.
 - Acceptance: ASC's full assignment validates; an overridden engine ref renders the
   override; an invalid name still fails validation with the allowlist named.
 
-## Seam 3: action-count badges
+## Seam 3: pending-actions notifications
 
-- The site supplies per-href action counts from its admin layout load (shape is the
-  engine's call; ASC's counts come from the same queries as its needs-attention
-  strip).
-- The shell renders a quiet count pill on the matching item; a collapsed group's
-  header shows the sum of its visible children's counts (a closed category never
-  hides pending work — the ruling that motivated the seam); zero renders nothing;
-  counts are announced accessibly, not just painted.
-- Badges follow visibility: an entry the session cannot see contributes nothing to
-  any sum.
+The outcome is ruled; the idiom is the cairn pass's design call (Geoff, 2026-07-18:
+sidebar badges plus an in-admin notification surface, "or really, whatever idiom
+works best").
+
+- The site supplies pending-action items from its admin layout load — at minimum a
+  count per admin function, ideally enough shape (label, href) for a unified
+  surface (shape is the engine's call; ASC's data comes from the same queries as
+  its needs-attention strip).
+- Required outcome, whatever the idiom: pending actionable work is visible without
+  opening anything. A quiet count pill on the matching sidebar item and a summed
+  count on a collapsed group's header (a closed category never hides pending work —
+  the ruling that motivated the seam); zero renders nothing; counts are announced
+  accessibly, not just painted.
+- In scope if the pass finds it the better idiom: a notification center in the
+  admin shell — pending items across screens in one place, the sidebar pills one
+  view of it. Read/unread semantics are the pass's call; ASC's items are
+  queue-backed (they clear when the work clears), which may make read-state
+  unnecessary.
+- Notifications follow visibility: an entry the session cannot reach contributes
+  nothing to any count, sum, or list.
 - Acceptance: pill on item, summed on collapsed header, absent at zero, gone when
-  the group opens (the item pill remains), screen-reader text present.
+  the group opens (the item pill remains), screen-reader text present; if a
+  notification surface ships, it lists exactly the reachable pending items.
 
 ## Seam 4: per-concept role gating and derived nav visibility
 
