@@ -150,6 +150,11 @@ per-class roster surface at all, so a transfer is invisible to the UI today; the
 toolkit angle is a "move between containers" action pattern (pick person → pick
 destination → money follows), which likely also serves asset reassignment.
 
+**Requirements evidence (Geoff, 2026-07-20, during the Members brainstorm):** class
+rosters should show each student's age (derived from `members.birthdate` — "that's
+definitely something we want to see for classes"). The Members pass's household panel
+establishes the age-rendering idiom; the roster surface inherits it.
+
 ## Stop 4 — Assets (`/admin/club/assets`, 2026-07-20)
 
 Captured at 1440 full-page (3,074px), live-data copy.
