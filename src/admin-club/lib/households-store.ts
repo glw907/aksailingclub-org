@@ -1,8 +1,8 @@
 // The household-grouped Members screen's own reads against `households`, `members`,
-// `memberships`, and `asset_assignments` (Task 3, docs/plans/2026-07-14-membership-admin.md): the
-// same thin, typed, `db`-as-parameter shape `classes-store.ts` and `assets-store.ts` already
-// establish. No validation or audit lives here; the write paths (Task 5) and the audit emit
-// (`clubAdminAction`'s `ctx.audit`) both stay in the route/action layer.
+// `memberships`, `asset_assignments`, and `class_enrollments` (Task 3, then the Members pass T7
+// rebuild): the same thin, typed, `db`-as-parameter shape `classes-store.ts` and `assets-store.ts`
+// already establish. No validation or audit lives here; the write paths (Task 5) and the audit
+// emit (`clubAdminAction`'s `ctx.audit`) both stay in the route/action layer.
 //
 // STANDING (Current/Overdue/Former/none) reads through `member-auth/lib/standing.ts`'s own
 // `classifyHouseholdStanding` (Members pass T3): the module's earlier independent duplication of
@@ -13,12 +13,24 @@
 // divergent notion of "Former". `listHouseholds` still computes every household's status from ONE
 // grounding query (a correlated subquery per household picks its own most recently paid,
 // non-refunded `memberships` row, the same "grounding row" `getHouseholdStanding` reads one
-// household at a time, now also carrying `former_at`), never a per-row `getHouseholdStanding`
-// call: the admin's 148-row list would otherwise cost 148 round trips.
+// household at a time), never a per-row `getHouseholdStanding` call: the admin's 148-row list
+// would otherwise cost 148 round trips.
+//
+// T7's screen rebuild (docs/2026-07-20-members-pass-design.md, "Row and expanded panel") folds the
+// household desk's own expand-in-place panel data into this SAME call, rather than a second
+// per-row fetch on expand: `ExpandableRow`'s own "receives the row's datum" contract means the
+// panel snippet already has whatever `listHouseholds` returned for that row, so eagerly reading
+// every household's holdings/enrollments here (two more set-based queries, never a per-household
+// round trip, the same reasoning `members`'s own single scan already established) is what makes
+// "reaches the panel with zero navigations" true with no client-side fetch at all. At the club's
+// current scale (149 households, a few hundred members/holdings/enrollments total) the resulting
+// payload is small; a future scale where that stops holding is the point to revisit this call
+// into a lazy per-row read.
 import type { D1Database } from '@cloudflare/workers-types';
+import type { AssetPaymentStanding } from './assets-store';
 import type { DirectoryVisibility, MembershipTier } from './member-types';
 import { classifyHouseholdStanding, type HouseholdStandingStatus } from '$member-auth/lib/standing';
-import { getTierPrices } from './club-settings';
+import { getCurrentSeason } from './club-settings';
 import { normalizeEmail, normalizeNameCaps, normalizePhoneE164 } from './member-normalize.js';
 
 /** Re-exported for this module's own long-standing consumers (`member-format.ts`,
@@ -28,54 +40,96 @@ import { normalizeEmail, normalizeNameCaps, normalizePhoneE164 } from './member-
 export type { HouseholdStandingStatus };
 
 /** One member's display chip in a household list row: display only (all member CRUD lives on the
- *  desk), so this carries just what the row needs to render and highlight a search match. */
+ *  desk), so this carries just what the row needs to render (primary-first, an age via
+ *  {@link ageFromBirthdate}) and to highlight a search match, plus what the expanded panel's own
+ *  Contacts section reads off the primary member (T7). */
 export interface HouseholdMemberChip {
   id: string;
   name: string;
+  email: string | null;
+  phone: string | null;
+  birthdate: string | null;
   archived: boolean;
   isPrimary: boolean;
-  /** Whether this member's own name or email is what matched `opts.search`, so the list row can
-   *  highlight the specific chip a household-name match would not explain. `false` when there is
+  /** Whether this member's own name or phone is what matched `opts.search`, so the list row can
+   *  highlight the specific member a household-name match would not explain. `false` when there is
    *  no active search, or when the household matched by its own name instead. */
   matchedSearch: boolean;
 }
 
-/** One row of the household-grouped Members list: the household's own standing, its latest
- *  membership's tier/amount (honestly flagged comped/discounted), its active-asset count, and its
- *  member chips. */
+/** One asset held by a household, its current-season billing standing (T7's panel "Holdings: assets
+ *  with paid/owing state", the design spec's own wording). Released assignments are never
+ *  returned here (mirrors `assets-store.ts`'s own `listActiveAssignments`, "who holds what now"). */
+export interface HouseholdHoldingChip {
+  id: string;
+  assetTypeName: string;
+  description: string | null;
+  /** The grounding membership's own `season`, display only. */
+  season: number;
+  paymentStanding: AssetPaymentStanding;
+}
+
+/** One class a household member is enrolled in, any season (T7's panel "Classes: enrollments with
+ *  paid status"). */
+export interface HouseholdEnrollmentChip {
+  id: string;
+  className: string;
+  season: number;
+  memberName: string;
+  feePaid: boolean;
+}
+
+/** One row of the household-grouped Members list (T7 rebuild): the household's own standing, its
+ *  primary-first member chips, and the expanded panel's own holdings/enrollments -- all read in the
+ *  same call as the row itself (this module's own header explains why). `tier`/`amount`/`comped`/
+ *  `discounted` retired with the row's own "Tier & Amount" column (the design spec's own stop-1
+ *  reaction); a household's money facts live on the desk, never this list. */
 export interface HouseholdListRow {
   id: string;
   name: string;
+  /** Kept for the Money screen's own household picker (`money/+page.server.ts`), which is not this
+   *  pass's row -- never rendered by the Members list itself (the design spec's own "no city
+   *  column" stop-1 reaction). */
   city: string | null;
   standing: HouseholdStandingStatus;
-  /** The grounding membership row's own `season`, `null` when `standing` is `'none'`. */
+  /** The grounding row's own `season`, `null` when `standing` is `'none'`. Surfaces as a
+   *  `StatusChip` legend for a Former household ("last active <season>"). */
   lastSeason: number | null;
-  tier: MembershipTier | null;
-  /** The grounding row's `price_paid` snapshot, whole dollars; `null` when `standing` is `'none'`. */
-  amount: number | null;
-  /** `amount === 0`: a $0 comp, rendered honestly rather than silently as a discount. */
-  comped: boolean;
-  /** `amount` is nonzero and differs from the settings' own current tier price: a real discount
-   *  (Nancy Black's $324 family, the design spec's own example), never true for a comp. */
-  discounted: boolean;
-  /** Live `asset_assignments` rows with `status = 'active'`, joined through this household's
-   *  memberships (assets attach to a membership, never a member; `assets-store.ts`'s own header). */
-  activeAssets: number;
-  /** `activeAssets > 0` and `standing !== 'current'`: an active assignment riding a stale
-   *  membership (Elayne C Hunter's Yellow Laser against a 2024 row, the design spec's own example). */
-  staleAssets: boolean;
+  /** Primary member sorted first, then alphabetically -- the row's own "primary member first"
+   *  ordering (the design spec's own wording; the unlabeled star retires in favor of a plain
+   *  "(primary)" label). */
   members: HouseholdMemberChip[];
+  holdings: HouseholdHoldingChip[];
+  enrollments: HouseholdEnrollmentChip[];
 }
 
 export interface ListHouseholdsOptions {
-  /** Case-insensitive; matches the household's own name, or any member's name or email. */
+  /** Case-insensitive; matches the household's own name, any member's name or phone (digits only,
+   *  so punctuation in either the query or the stored number never breaks a match), or the raw
+   *  standing key (`'current'`/`'overdue'`/`'former'`/`'none'`) -- the plan's own "search across
+   *  member names, standing, phone" (T7). Member email is deliberately no longer a search field:
+   *  the row that used to justify it (this module's prior header, "a client-side re-filter could
+   *  never reproduce an email match") is gone -- the row now shows exactly the fields search
+   *  matches (name, standing, phone), never a hidden one. */
   search?: string;
-  /** `'current'` keeps only `standing === 'current'`; `'lapsed'` keeps everything else (`overdue`,
-   *  `former`, and `none` all read as "not yet current" for this coarse filter, matching the
-   *  fixture screen's own three-option `all`/`current`/`lapsed` vocabulary, which never
-   *  distinguished Overdue as its own bucket either). `'all'` (the default) applies no standing
-   *  filter. */
-  segment?: 'all' | 'current' | 'lapsed';
+  /** `'members'` (the design spec's own default scope) keeps Current or Overdue only; `'current'`/
+   *  `'overdue'`/`'former'` narrow to exactly that one standing (`'former'` also matches `'none'`
+   *  -- a household that has never paid reads alongside a lapsed one for this coarse admin-facing
+   *  bucket, the same "not an active member" grouping `HOUSEHOLD_STANDING_CHIP`'s own dimmer
+   *  `none` chip already implies); `'all'` (the default) applies no standing filter at all, the
+   *  Money screen's own household-picker need (`money/+page.server.ts`'s `listHouseholds(db, {})`
+   *  call, which must offer every household regardless of standing). */
+  standing?: 'all' | 'members' | 'current' | 'overdue' | 'former';
+  /** `'holding'` keeps only households with at least one active asset assignment; `'all'` (the
+   *  default) applies no filter. */
+  holdings?: 'all' | 'holding';
+  /** `'instructor'` keeps only households with a member assigned to a current-season class (the
+   *  class filter's own current-season-only scoping, applied consistently here); `'all'` (the
+   *  default) applies no filter. */
+  role?: 'all' | 'instructor';
+  /** A real `classes.id` keeps only households with a member enrolled in that class; `'all'` (the
+   *  default) applies no filter. */
+  classId?: string;
   /** A household with at least one member, all of them archived, is hidden by default (mirrors
    *  the fixture screen's own "archived excluded unless toggled" rule); `true` shows it. A
    *  household with zero members (the visible-but-empty state Household surgery's move-member can
@@ -90,32 +144,20 @@ interface HouseholdGroundingRow {
   city: string | null;
   primary_member_id: string | null;
   season: number | null;
-  tier: string | null;
-  price_paid: number | null;
   paid_at: string | null;
   /** `households.former_at`, raw: {@link classifyHouseholdStanding}'s own recorded-Former input
    *  (migration `0033_member_standing`). */
   former_at: string | null;
-  active_assets: number;
 }
 
 const HOUSEHOLD_GROUNDING_SQL = `
-  SELECT h.id, h.name, h.city, h.primary_member_id, h.former_at,
-         gm.season, gm.tier, gm.price_paid, gm.paid_at,
-         COALESCE(assets.active_count, 0) AS active_assets
+  SELECT h.id, h.name, h.city, h.primary_member_id, h.former_at, gm.season, gm.paid_at
   FROM households h
   LEFT JOIN memberships gm ON gm.id = (
     SELECT id FROM memberships mm
     WHERE mm.household_id = h.id AND mm.paid_at IS NOT NULL AND mm.refunded_at IS NULL
     ORDER BY mm.paid_at DESC LIMIT 1
   )
-  LEFT JOIN (
-    SELECT ms.household_id AS household_id, COUNT(*) AS active_count
-    FROM asset_assignments aa
-    JOIN memberships ms ON ms.id = aa.membership_id
-    WHERE aa.status = 'active'
-    GROUP BY ms.household_id
-  ) assets ON assets.household_id = h.id
   ORDER BY h.name
 `;
 
@@ -124,36 +166,126 @@ interface MemberRosterRow {
   household_id: string;
   name: string;
   email: string | null;
+  phone: string | null;
+  birthdate: string | null;
   archived_at: string | null;
 }
 
-/** Every household, standing/tier/amount/asset-count computed off two set-based queries (this
- * module's own header): the grounding query above, and one plain `members` scan grouped in JS by
- * `household_id`, so filtering and search never cost a per-household round trip. `opts.search`
- * matches the household's own name or any member's name/email (case-insensitive); a matching
- * household whose match came from a member marks that member's own `matchedSearch`. Households
- * are dropped from the result (not merely unmarked) when neither the household name nor any
- * member matches a nonempty search, when `opts.segment` excludes their standing, or when every
- * member is archived and `opts.includeArchived` is not set.
+interface HoldingRow {
+  id: string;
+  household_id: string;
+  asset_type_name: string;
+  description: string | null;
+  season: number;
+  payment_id: string | null;
+  paid_at: string | null;
+}
+
+const HOLDINGS_SQL = `
+  SELECT aa.id, ms.household_id, at.name AS asset_type_name, aa.description, ms.season,
+         ap.id AS payment_id, ap.paid_at
+  FROM asset_assignments aa
+  JOIN asset_types at ON at.id = aa.asset_type
+  JOIN memberships ms ON ms.id = aa.membership_id
+  LEFT JOIN asset_payments ap ON ap.assignment_id = aa.id AND ap.season = ?1
+  WHERE aa.status = 'active'
+  ORDER BY at.sort_order, at.name
+`;
+
+interface EnrollmentRow {
+  id: string;
+  household_id: string;
+  class_name: string;
+  season: number;
+  member_name: string;
+  fee_paid: 0 | 1;
+}
+
+const ENROLLMENTS_SQL = `
+  SELECT ce.id, m.household_id, c.name AS class_name, c.season, m.name AS member_name, ce.fee_paid
+  FROM class_enrollments ce
+  JOIN classes c ON c.id = ce.class_id
+  JOIN members m ON m.id = ce.member_id
+  ORDER BY c.season DESC, c.name ASC
+`;
+
+interface InstructorMemberRow {
+  member_id: string;
+}
+
+const CURRENT_SEASON_INSTRUCTORS_SQL = `
+  SELECT DISTINCT ci.member_id
+  FROM class_instructors ci
+  JOIN classes c ON c.id = ci.class_id
+  WHERE c.season = ?1
+`;
+
+interface ClassMemberRow {
+  member_id: string;
+}
+
+/** Strip everything but digits, so a phone search matches regardless of how either side
+ *  punctuates it (a stored `+19075550100` against a typed `907-555-0100`). */
+function digitsOnly(value: string): string {
+  return value.replace(/\D/g, '');
+}
+
+function groupBy<T, K>(rows: T[], keyOf: (row: T) => K): Map<K, T[]> {
+  const map = new Map<K, T[]>();
+  for (const row of rows) {
+    const list = map.get(keyOf(row)) ?? [];
+    list.push(row);
+    map.set(keyOf(row), list);
+  }
+  return map;
+}
+
+/** Every household, its standing, and its full expand-in-place panel data (this module's own
+ * header on why the panel rides along rather than a second per-row fetch): five set-based queries
+ * -- the grounding query above, a plain `members` scan, the active-holdings scan, the enrollments
+ * scan, and (only when the corresponding filter is applied) the current-season instructor or
+ * class-roster member-id set -- grouped in JS by `household_id`, so filtering and search never
+ * cost a per-household round trip. `opts.search` matches the household's own name, any member's
+ * name/phone, or the raw standing key (case-insensitive); a matching household whose match came
+ * from a member marks that member's own `matchedSearch`. Households are dropped from the result
+ * (not merely unmarked) when neither the household name nor any member matches a nonempty search,
+ * when any of `opts.standing`/`opts.holdings`/`opts.role`/`opts.classId` excludes them, or when
+ * every member is archived and `opts.includeArchived` is not set.
  */
 export async function listHouseholds(db: D1Database, opts: ListHouseholdsOptions = {}): Promise<HouseholdListRow[]> {
-  const [groundingResult, memberResult, tierPrices] = await Promise.all([
+  const classId = opts.classId && opts.classId !== 'all' ? opts.classId : null;
+  const needsInstructors = opts.role === 'instructor';
+
+  const currentSeason = await getCurrentSeason(db);
+
+  const [groundingResult, memberResult, holdingsResult, enrollmentsResult] = await Promise.all([
     db.prepare(HOUSEHOLD_GROUNDING_SQL).all<HouseholdGroundingRow>(),
-    db.prepare('SELECT id, household_id, name, email, archived_at FROM members').all<MemberRosterRow>(),
-    getTierPrices(db),
+    db.prepare('SELECT id, household_id, name, email, phone, birthdate, archived_at FROM members').all<MemberRosterRow>(),
+    db.prepare(HOLDINGS_SQL).bind(currentSeason).all<HoldingRow>(),
+    db.prepare(ENROLLMENTS_SQL).all<EnrollmentRow>(),
   ]);
 
-  const membersByHousehold = new Map<string, MemberRosterRow[]>();
-  for (const member of memberResult.results) {
-    const list = membersByHousehold.get(member.household_id) ?? [];
-    list.push(member);
-    membersByHousehold.set(member.household_id, list);
-  }
+  const [instructorMemberIds, classMemberIds] = await Promise.all([
+    needsInstructors
+      ? db.prepare(CURRENT_SEASON_INSTRUCTORS_SQL).bind(currentSeason).all<InstructorMemberRow>()
+      : null,
+    classId
+      ? db.prepare('SELECT member_id FROM class_enrollments WHERE class_id = ?1').bind(classId).all<ClassMemberRow>()
+      : null,
+  ]);
+  const instructorIds = instructorMemberIds ? new Set(instructorMemberIds.results.map((r) => r.member_id)) : null;
+  const classMemberIdSet = classMemberIds ? new Set(classMemberIds.results.map((r) => r.member_id)) : null;
+
+  const membersByHousehold = groupBy(memberResult.results, (r) => r.household_id);
+  const holdingsByHousehold = groupBy(holdingsResult.results, (r) => r.household_id);
+  const enrollmentsByHousehold = groupBy(enrollmentsResult.results, (r) => r.household_id);
 
   const now = new Date();
   const query = (opts.search ?? '').trim().toLowerCase();
+  const queryDigits = digitsOnly(query);
   const includeArchived = opts.includeArchived ?? false;
-  const segment = opts.segment ?? 'all';
+  const standingFilter = opts.standing ?? 'all';
+  const holdingsFilter = opts.holdings ?? 'all';
 
   const rows: HouseholdListRow[] = [];
   for (const grounding of groundingResult.results) {
@@ -161,26 +293,38 @@ export async function listHouseholds(db: D1Database, opts: ListHouseholdsOptions
     if (members.length > 0 && !includeArchived && members.every((member) => member.archived_at !== null)) continue;
 
     const standing = classifyHouseholdStanding(grounding.paid_at, grounding.former_at ?? null, now);
-    if (segment === 'current' && standing !== 'current') continue;
-    if (segment === 'lapsed' && standing === 'current') continue;
+    if (standingFilter === 'members' && standing !== 'current' && standing !== 'overdue') continue;
+    if (standingFilter === 'current' && standing !== 'current') continue;
+    if (standingFilter === 'overdue' && standing !== 'overdue') continue;
+    if (standingFilter === 'former' && standing !== 'former' && standing !== 'none') continue;
 
-    const memberChips: HouseholdMemberChip[] = members.map((member) => ({
-      id: member.id,
-      name: member.name,
-      archived: member.archived_at !== null,
-      isPrimary: member.id === grounding.primary_member_id,
-      matchedSearch:
-        query !== '' &&
-        (member.name.toLowerCase().includes(query) || (member.email?.toLowerCase().includes(query) ?? false)),
-    }));
+    const holdings = holdingsByHousehold.get(grounding.id) ?? [];
+    if (holdingsFilter === 'holding' && holdings.length === 0) continue;
+
+    if (instructorIds && !members.some((member) => instructorIds.has(member.id))) continue;
+    if (classMemberIdSet && !members.some((member) => classMemberIdSet.has(member.id))) continue;
+
+    const memberChips: HouseholdMemberChip[] = members
+      .map((member) => ({
+        id: member.id,
+        name: member.name,
+        email: member.email,
+        phone: member.phone,
+        birthdate: member.birthdate,
+        archived: member.archived_at !== null,
+        isPrimary: member.id === grounding.primary_member_id,
+        matchedSearch:
+          query !== '' &&
+          (member.name.toLowerCase().includes(query) ||
+            (queryDigits !== '' && member.phone != null && digitsOnly(member.phone).includes(queryDigits))),
+      }))
+      .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary) || a.name.localeCompare(b.name));
 
     const householdNameMatches = query !== '' && grounding.name.toLowerCase().includes(query);
-    if (query !== '' && !householdNameMatches && !memberChips.some((chip) => chip.matchedSearch)) continue;
-
-    const tier = grounding.tier as MembershipTier | null;
-    const amount = grounding.price_paid;
-    const comped = amount === 0;
-    const discounted = comped ? false : amount != null && tier != null && amount !== tierPrices[tier];
+    const standingMatches = query !== '' && standing.includes(query);
+    if (query !== '' && !householdNameMatches && !standingMatches && !memberChips.some((chip) => chip.matchedSearch)) {
+      continue;
+    }
 
     rows.push({
       id: grounding.id,
@@ -188,13 +332,21 @@ export async function listHouseholds(db: D1Database, opts: ListHouseholdsOptions
       city: grounding.city,
       standing,
       lastSeason: grounding.season,
-      tier,
-      amount,
-      comped,
-      discounted,
-      activeAssets: grounding.active_assets,
-      staleAssets: grounding.active_assets > 0 && standing !== 'current',
       members: memberChips,
+      holdings: holdings.map((holding) => ({
+        id: holding.id,
+        assetTypeName: holding.asset_type_name,
+        description: holding.description,
+        season: holding.season,
+        paymentStanding: !holding.payment_id ? 'not-billed' : holding.paid_at ? 'paid' : 'outstanding',
+      })),
+      enrollments: (enrollmentsByHousehold.get(grounding.id) ?? []).map((enrollment) => ({
+        id: enrollment.id,
+        className: enrollment.class_name,
+        season: enrollment.season,
+        memberName: enrollment.member_name,
+        feePaid: enrollment.fee_paid === 1,
+      })),
     });
   }
   return rows;

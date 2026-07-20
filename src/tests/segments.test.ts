@@ -231,6 +231,28 @@ describe("resolveSegment: the 'class:<id>' segment", () => {
   });
 });
 
+describe("resolveSegment: the 'household:<id>' segment", () => {
+  it("resolves every non-archived, emailed member, the primary winning a shared-email tie (the Members panel's own Email household action)", async () => {
+    const { db } = fakeD1({
+      firstResults: { 'FROM households WHERE id': { id: 'hh-larsen', name: 'The Larsens', primary_member_id: 'mem-primary' } },
+      allResults: {
+        'FROM members WHERE archived_at': [
+          { id: 'mem-other', name: 'Not Primary', email: 'shared@example.com', household_id: 'hh-larsen' },
+          { id: 'mem-primary', name: 'The Primary', email: 'shared@example.com', household_id: 'hh-larsen' },
+        ],
+      },
+    });
+    const segment = await resolveSegment(db, 'household:hh-larsen');
+    expect(segment.label).toBe('The Larsens');
+    expect(segment.recipients).toEqual([{ email: 'shared@example.com', personName: 'The Primary', memberId: 'mem-primary' }]);
+  });
+
+  it('throws for an unknown household id, never a silent empty segment', async () => {
+    const { db } = fakeD1({ firstResults: { 'FROM households WHERE id': null } });
+    await expect(resolveSegment(db, 'household:no-such')).rejects.toThrow(/unknown segment/i);
+  });
+});
+
 describe('resolveSegment: an unrecognized key', () => {
   it('throws rather than returning a silently empty segment', async () => {
     const { db } = fakeD1({});

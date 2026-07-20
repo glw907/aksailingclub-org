@@ -139,6 +139,26 @@ describe('/admin/club/email/compose load', () => {
     const result = (await load(loadEventFor(admin, db, '?segment=class:no-such-class'))) as LoadResult;
     expect(result.presetSegmentKey).toBeNull();
   });
+
+  it('a `household:<id>` deep link (the Members panel own "Email household" action) preselects and synthesizes its own picker option, never enumerated by listSegmentOptions', async () => {
+    const { db } = fakeD1({
+      firstResults: { 'FROM households WHERE id': { id: 'hh-larsen', name: 'The Larsens', primary_member_id: null } },
+      allResults: { 'FROM members WHERE archived_at': [] },
+    });
+    const result = (await load(loadEventFor(admin, db, '?segment=household:hh-larsen'))) as LoadResult;
+    expect(result.presetSegmentKey).toBe('household:hh-larsen');
+    expect(result.segmentOptions[0]).toEqual({ key: 'household:hh-larsen', label: 'The Larsens' });
+    // Never enumerated among the ordinary browsable options -- only ever synthesized for a real
+    // deep link (segments.ts's own header on why there is no "browse every household" case).
+    expect(result.segmentOptions.filter((o: SegmentOption) => o.key.startsWith('household:'))).toHaveLength(1);
+  });
+
+  it('a `household:<id>` deep link naming no real household falls back to no preselection, never an error', async () => {
+    const { db } = fakeD1({ firstResults: { 'FROM households WHERE id': null } });
+    const result = (await load(loadEventFor(admin, db, '?segment=household:no-such'))) as LoadResult;
+    expect(result.presetSegmentKey).toBeNull();
+    expect(result.segmentOptions.some((o: SegmentOption) => o.key.startsWith('household:'))).toBe(false);
+  });
 });
 
 describe('/admin/club/email/compose review action', () => {

@@ -1,29 +1,45 @@
 <!--
 @component
-The Club section's Members screen (household-grouped list, Task 4): one row per household (the
-design doc's own ruling 1 -- standing and money are household facts by schema, not per-member
-ones), replacing the fixture screen's one-row-per-member table. Search/standing/archived filtering
-is server-driven (`+page.server.ts`'s own header explains why: a member's email never reaches this
-component, only the store's precomputed `matchedSearch` flag on the chip that matched), so every
-control push here is a `goto` that reloads `data.households` rather than a client-side re-filter;
-pagination alone stays client-side over that already-filtered set, the same load-once-page-in-
-memory shape the Events/Classes screens use. The standing badge, tier/amount (comped and
-discounted rendered honestly), asset count (with a stale-asset warning mark), and member chips
-(primary marked, a search-matched chip highlighted) all follow the design doc's Members section.
+The Club section's Members screen (household-grouped list; Members pass T7 rebuild,
+docs/2026-07-20-members-pass-design.md): search-first household rows built entirely from the
+toolkit (`$admin-club/toolkit`) plus this route's own layout -- `ListToolbar` (search, the four
+promoted filters, the primary "Add household" action, applied-filter pills, the scope-stating
+count line), `AdminTable`/`ExpandableRow` (the compact zebra rows, one expanded household panel at
+a time), `StatusChip` (standing and paid/owing states), and `Pagination`. Any styling this screen
+needs beyond a toolkit component's own contract lives in this file's own scoped `<style>` block
+(the panel grid, cell truncation, the archived toggle) -- never a bespoke component, per the
+toolkit README's own compiled-CSS constraint (`/admin/**` loads only cairn's precompiled CSS, so
+an unverified Tailwind utility silently renders nothing there).
+
+Search/standing/holdings/role/class/archived filtering is all server-driven
+(`+page.server.ts`'s own header explains why: a matched member's own phone/name never reaches the
+client in a form a client-side re-filter could reproduce), so every control push here is a `goto`
+that reloads `data.households`; pagination alone stays client-side over that already-filtered set.
+The expanded panel needs no separate fetch and no navigation at all: `listHouseholds` already
+returns every row's full contacts/members/holdings/enrollments alongside it
+(`households-store.ts`'s own header on why), so `ExpandableRow`'s `datum` prop already carries
+everything the panel renders.
 -->
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { ActionData, PageData } from './$types';
   import { goto } from '$app/navigation';
   import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
-  import { SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
-  import { HEADER_CELL, formatDollars } from '$admin-club/lib/ui';
-  import { HOUSEHOLD_STANDING_CHIP } from '$admin-club/lib/member-format';
-  import type { HouseholdListRow } from '$admin-club/lib/households-store';
+  import { TextField } from '@glw907/cairn-cms/admin-fields';
+  import { HEADER_CELL } from '$admin-club/lib/ui';
+  import { HOUSEHOLD_STANDING_CHIP, HOUSEHOLD_STANDING_TONE } from '$admin-club/lib/member-format';
+  import type { HouseholdListRow, HouseholdMemberChip } from '$admin-club/lib/households-store';
+  import type { AssetPaymentStanding } from '$admin-club/lib/assets-store';
+  import { ageFromBirthdate } from '$admin-club/toolkit/format';
+  import StatusChip, { type StatusChipTone } from '$admin-club/toolkit/StatusChip.svelte';
+  import AdminTable from '$admin-club/toolkit/AdminTable.svelte';
+  import ExpandableRow from '$admin-club/toolkit/ExpandableRow.svelte';
+  import ListToolbar, { type ListToolbarFilter } from '$admin-club/toolkit/ListToolbar.svelte';
+  import Pagination from '$admin-club/toolkit/Pagination.svelte';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
-  // -- add household dialog (the walk-up-join entry point, Task 5) --
+  // -- add household dialog (the walk-up-join entry point) --
   let addHouseholdDialog: HTMLDialogElement | undefined = $state();
   let newHouseholdName = $state('');
   let newHouseholdCity = $state('');
@@ -43,20 +59,21 @@ discounted rendered honestly), asset count (with a stale-asset warning mark), an
 
   const PAGE_SIZE = 10;
 
-  const segmentOptions = [
-    { value: 'all', label: 'All active' },
-    { value: 'current', label: HOUSEHOLD_STANDING_CHIP.current.label },
-    { value: 'lapsed', label: 'Not current' },
-  ];
+  type StandingFilterValue = 'members' | 'current' | 'overdue' | 'former';
+  type HoldingsFilterValue = 'all' | 'holding';
+  type RoleFilterValue = 'all' | 'instructor';
 
   // Seeded once from the URL `load` already parsed; every later change flows the other way (this
   // state pushes a new URL via `pushFilters`, not the reverse), so `untrack` here is deliberate,
-  // not a missed dependency (mirrors the Assets screen's own `untrack(() => data.assetTypes[0]...)`
-  // seed).
+  // not a missed dependency (mirrors the Assets screen's own seeding idiom).
   let searchQuery = $state(untrack(() => data.search));
-  let segmentFilter = $state(untrack(() => data.segment));
+  let standingFilter = $state<StandingFilterValue>(untrack(() => data.standing));
+  let holdingsFilter = $state<HoldingsFilterValue>(untrack(() => data.holdings));
+  let roleFilter = $state<RoleFilterValue>(untrack(() => data.role));
+  let classFilter = $state(untrack(() => data.classId));
   let includeArchived = $state(untrack(() => data.includeArchived));
   let page = $state(1);
+  let expandedId: string | null = $state(null);
 
   /** Push the current filter state into the URL (a `goto`, not a form submit): SvelteKit re-runs
    *  `+page.server.ts`'s `load` and swaps in the new `data.households` without a full page
@@ -65,25 +82,35 @@ discounted rendered honestly), asset count (with a stale-asset warning mark), an
   function pushFilters() {
     const params = new URLSearchParams();
     if (searchQuery.trim()) params.set('q', searchQuery.trim());
-    if (segmentFilter !== 'all') params.set('segment', segmentFilter);
+    if (standingFilter !== 'members') params.set('standing', standingFilter);
+    if (holdingsFilter !== 'all') params.set('holdings', holdingsFilter);
+    if (roleFilter !== 'all') params.set('role', roleFilter);
+    if (classFilter !== 'all') params.set('class', classFilter);
     if (includeArchived) params.set('archived', '1');
     const query = params.toString();
     goto(query ? `?${query}` : '?', { replaceState: true, keepFocus: true, noScroll: true, invalidateAll: true });
   }
 
   let debounceHandle: ReturnType<typeof setTimeout> | undefined;
-  function onSearchInput() {
+  function scheduleSearchPush() {
     clearTimeout(debounceHandle);
     debounceHandle = setTimeout(pushFilters, 300);
   }
 
-  // The standing select and the archived checkbox are discrete controls (no debounce needed);
-  // `SelectField` wraps a plain `bind:value` with no `onchange` passthrough, so this effect is
-  // the only way to react to it. `skipFirstRun` keeps the initial mount (local state already
-  // matches the URL `load` produced) from firing a redundant `goto`.
+  function onSearch(value: string) {
+    searchQuery = value;
+    scheduleSearchPush();
+  }
+
+  // The four promoted filters and the archived checkbox are discrete controls (no debounce
+  // needed); `skipFirstRun` keeps the initial mount (local state already matches the URL `load`
+  // produced) from firing a redundant `goto`.
   let skipFirstRun = true;
   $effect(() => {
-    segmentFilter;
+    standingFilter;
+    holdingsFilter;
+    roleFilter;
+    classFilter;
     includeArchived;
     if (skipFirstRun) {
       skipFirstRun = false;
@@ -100,46 +127,84 @@ discounted rendered honestly), asset count (with a stale-asset warning mark), an
     page = 1;
   });
 
-  const totalMembers = $derived(data.households.reduce((sum, row) => sum + row.members.length, 0));
+  const filters: ListToolbarFilter[] = $derived([
+    {
+      id: 'standing',
+      label: 'Standing',
+      value: standingFilter,
+      defaultValue: 'members',
+      options: [
+        { value: 'members', label: 'Current + Overdue' },
+        { value: 'current', label: HOUSEHOLD_STANDING_CHIP.current.label },
+        { value: 'overdue', label: HOUSEHOLD_STANDING_CHIP.overdue.label },
+        { value: 'former', label: HOUSEHOLD_STANDING_CHIP.former.label },
+      ],
+      onChange: (value) => (standingFilter = value as StandingFilterValue),
+    },
+    {
+      id: 'holdings',
+      label: 'Holdings',
+      value: holdingsFilter,
+      defaultValue: 'all',
+      options: [
+        { value: 'all', label: 'Any holdings' },
+        { value: 'holding', label: 'Holding assets' },
+      ],
+      onChange: (value) => (holdingsFilter = value as HoldingsFilterValue),
+    },
+    {
+      id: 'role',
+      label: 'Role',
+      value: roleFilter,
+      defaultValue: 'all',
+      options: [
+        { value: 'all', label: 'Any role' },
+        { value: 'instructor', label: 'Instructor' },
+      ],
+      onChange: (value) => (roleFilter = value as RoleFilterValue),
+    },
+    {
+      id: 'class',
+      label: 'Class',
+      value: classFilter,
+      defaultValue: 'all',
+      options: [
+        { value: 'all', label: 'Any class' },
+        ...data.classOptions.map((cls) => ({ value: cls.id, label: cls.name })),
+      ],
+      onChange: (value) => (classFilter = value),
+    },
+  ]);
+
   const totalPages = $derived(Math.max(1, Math.ceil(data.households.length / PAGE_SIZE)));
   const pageStart = $derived((page - 1) * PAGE_SIZE);
   const paged = $derived(data.households.slice(pageStart, pageStart + PAGE_SIZE));
 
-  const subtitle = $derived(
-    `${totalMembers} ${totalMembers === 1 ? 'member' : 'members'} across ${data.households.length} ${data.households.length === 1 ? 'household' : 'households'}.`,
-  );
-
-  function standingLabel(row: HouseholdListRow): string {
-    const chip = HOUSEHOLD_STANDING_CHIP[row.standing];
-    return row.standing === 'former' && row.lastSeason ? `${chip.label} — last ${row.lastSeason}` : chip.label;
+  function toggleExpanded(id: string) {
+    expandedId = expandedId === id ? null : id;
   }
+
+  /** The row's own "phone" column and the panel's own Contacts section both read the same
+   *  member: the primary, or the first member on file when no primary is set (the visible-but-
+   *  empty edge case `households-store.ts`'s own header names). */
+  function primaryContact(row: HouseholdListRow): HouseholdMemberChip | undefined {
+    return row.members.find((member) => member.isPrimary) ?? row.members[0];
+  }
+
+  const HOLDING_STATUS: Record<AssetPaymentStanding, { label: string; tone: StatusChipTone }> = {
+    paid: { label: 'Paid', tone: 'success' },
+    outstanding: { label: 'Outstanding', tone: 'warning' },
+    'not-billed': { label: 'Not billed', tone: 'neutral' },
+  };
 </script>
 
-<!-- The subtitle carries the total; this mirror announces filter/page changes to assistive tech
-     without re-reading the whole table, the same pattern the Events screen's filter uses. -->
+<!-- Announces filter/page changes to assistive tech without re-reading the whole table, the same
+     pattern the Events screen's filter uses. -->
 <span class="sr-only" role="status">
   Showing {data.households.length === 0 ? 0 : pageStart + 1}-{Math.min(pageStart + PAGE_SIZE, data.households.length)} of {data.households.length} households
 </span>
 
-<OfficeList eyebrow="Club" title="Members" {subtitle}>
-  {#snippet action()}
-    <div class="flex flex-wrap items-center gap-4">
-      <input
-        type="search"
-        class="input input-sm w-48"
-        placeholder="Search name or email"
-        aria-label="Search households by name, member name, or email"
-        bind:value={searchQuery}
-        oninput={onSearchInput}
-      />
-      <SelectField label="Standing" name="segment" bind:value={segmentFilter} options={segmentOptions} />
-      <label class="flex items-center gap-1.5 text-sm text-muted">
-        <input type="checkbox" class="checkbox checkbox-sm" bind:checked={includeArchived} />
-        Include archived
-      </label>
-      <button type="button" class="btn btn-primary btn-sm" onclick={openAddHouseholdDialog}>Add household</button>
-    </div>
-  {/snippet}
+<OfficeList eyebrow="Club" title="Members" subtitle="Household roster, standing, and quick actions.">
   {#if form?.error}
     <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-error" role="alert">
       {form.error}
@@ -148,93 +213,139 @@ discounted rendered honestly), asset count (with a stale-asset warning mark), an
   {#if data.error}
     <p class="px-6 py-10 text-center text-sm text-warning">{data.error}</p>
   {:else}
-    <table class="table">
-      <caption class="sr-only">Club households, searchable and filterable by standing, archived households hidden by default</caption>
-      <thead>
-        <tr>
-          <th class={HEADER_CELL}>Household</th>
-          <th class="{HEADER_CELL} w-40">Standing</th>
-          <th class="{HEADER_CELL} w-40">Tier &amp; amount</th>
-          <th class="{HEADER_CELL} w-24">Assets</th>
-          <th class={HEADER_CELL}>Members</th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each paged as row (row.id)}
-          {@const standing = HOUSEHOLD_STANDING_CHIP[row.standing]}
-          <tr class="transition-colors hover:bg-base-200/60">
-            <td>
-              <a class="font-semibold hover:text-primary hover:underline" href={`/admin/club/members/${row.id}`}>
-                {row.name}
-              </a>
-              {#if row.city}<p class="text-xs text-muted">{row.city}</p>{/if}
-            </td>
-            <td><span class="badge {standing.cls}">{standingLabel(row)}</span></td>
-            <td class="text-sm">
-              {#if row.tier}
-                <p>{formatDollars(row.amount)}</p>
-                {#if row.comped}
-                  <p class="text-xs text-warning">Comp</p>
-                {:else if row.discounted}
-                  <p class="text-xs text-warning">Discounted</p>
-                {/if}
+    <div class="members-toolbar-band border-b border-[var(--cairn-card-border)] p-6">
+      <ListToolbar
+        search={searchQuery}
+        {onSearch}
+        searchLabel="Search by name, standing, or phone"
+        autofocus
+        {filters}
+        primaryAction={{ label: 'Add household', onClick: openAddHouseholdDialog }}
+        count={data.households.length}
+        itemLabel="households"
+      />
+      <label class="members-archived-toggle">
+        <input type="checkbox" class="checkbox checkbox-sm" bind:checked={includeArchived} />
+        <span class="text-sm text-muted">Include archived</span>
+      </label>
+    </div>
+
+    <AdminTable density="sm" zebra rowCount={paged.length} emptyColspan={5}>
+      {#snippet header()}
+        <th class={HEADER_CELL}>Household</th>
+        <th class={HEADER_CELL}>Members</th>
+        <th class="{HEADER_CELL} w-32">Standing</th>
+        <th class="{HEADER_CELL} w-32">Phone</th>
+        <th class="sr-only">Details</th>
+      {/snippet}
+      {#snippet empty()}
+        <p>No households match that search.</p>
+      {/snippet}
+      {#each paged as row (row.id)}
+        {@const primary = primaryContact(row)}
+        <ExpandableRow
+          expanded={expandedId === row.id}
+          onToggle={() => toggleExpanded(row.id)}
+          datum={row}
+          colspan={5}
+          triggerLabel={expandedId === row.id ? `Collapse the ${row.name} household` : `Expand the ${row.name} household`}
+        >
+          {#snippet summary()}
+            <td class="members-name-cell">{row.name}</td>
+            <td class="members-cell">
+              {#each row.members as member, i (member.id)}
+                {#if i > 0}<span>, </span>{/if}
+                {#if member.matchedSearch}<mark>{member.name}</mark>{:else}{member.name}{/if}<span class="text-muted">{member.isPrimary ? ' (primary)' : ''}</span>
               {:else}
-                <span class="text-muted">—</span>
-              {/if}
-            </td>
-            <td class="text-sm">
-              {#if row.activeAssets > 0}
-                <span class="badge badge-sm {row.staleAssets ? 'border-transparent bg-warning/15 font-medium text-warning-content' : 'badge-ghost font-medium'}">
-                  {row.activeAssets}{row.staleAssets ? ' !' : ''}
-                </span>
-              {:else}
-                <span class="text-muted">—</span>
-              {/if}
+                <span class="text-muted">No members on file</span>
+              {/each}
             </td>
             <td>
-              <div class="flex flex-wrap gap-1">
-                {#each row.members as member (member.id)}
-                  <span
-                    class="badge badge-sm font-medium {member.matchedSearch ? 'border-transparent bg-primary/10 text-primary' : 'badge-ghost'} {member.archived ? 'opacity-50' : ''}"
-                  >
-                    {member.name}{member.isPrimary ? ' ★' : ''}
-                  </span>
-                {/each}
+              <StatusChip
+                tone={HOUSEHOLD_STANDING_TONE[row.standing]}
+                label={HOUSEHOLD_STANDING_CHIP[row.standing].label}
+                legend={row.standing === 'former' && row.lastSeason ? `Last active ${row.lastSeason}` : undefined}
+              />
+            </td>
+            <td class="text-sm">{primary?.phone ?? '—'}</td>
+          {/snippet}
+          {#snippet panel(datum: HouseholdListRow)}
+            {@const contact = primaryContact(datum)}
+            <div class="household-panel">
+              <div class="household-panel-grid">
+                <section>
+                  <h3 class={HEADER_CELL}>Contacts</h3>
+                  <p class="text-sm">{contact?.email ?? 'No email on file'}</p>
+                  <p class="text-sm">{contact?.phone ?? 'No phone on file'}</p>
+                </section>
+                <section>
+                  <h3 class={HEADER_CELL}>Members</h3>
+                  <ul class="household-panel-list">
+                    {#each datum.members as member (member.id)}
+                      <li class="text-sm">
+                        {member.name}{member.isPrimary ? ' · Primary' : ''} · Age {ageFromBirthdate(member.birthdate) ?? '—'}
+                      </li>
+                    {:else}
+                      <li class="text-sm text-muted">No members on file.</li>
+                    {/each}
+                  </ul>
+                </section>
+                <section>
+                  <h3 class={HEADER_CELL}>Holdings</h3>
+                  <ul class="household-panel-list">
+                    {#each datum.holdings as holding (holding.id)}
+                      <li class="text-sm">
+                        {holding.assetTypeName}
+                        <StatusChip
+                          tone={HOLDING_STATUS[holding.paymentStanding].tone}
+                          label={HOLDING_STATUS[holding.paymentStanding].label}
+                          size="xs"
+                        />
+                      </li>
+                    {:else}
+                      <li class="text-sm text-muted">No holdings.</li>
+                    {/each}
+                  </ul>
+                </section>
+                <section>
+                  <h3 class={HEADER_CELL}>Classes</h3>
+                  <ul class="household-panel-list">
+                    {#each datum.enrollments as enrollment (enrollment.id)}
+                      <li class="text-sm">
+                        {enrollment.memberName} &middot; {enrollment.className} ({enrollment.season})
+                        <StatusChip
+                          tone={enrollment.feePaid ? 'success' : 'warning'}
+                          label={enrollment.feePaid ? 'Paid' : 'Owing'}
+                          size="xs"
+                        />
+                      </li>
+                    {:else}
+                      <li class="text-sm text-muted">No class enrollments.</li>
+                    {/each}
+                  </ul>
+                </section>
               </div>
-            </td>
-          </tr>
-        {:else}
-          <tr>
-            <td colspan="5" class="px-6 py-10 text-center text-sm text-muted">
-              No households match that search.
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-    {#if totalPages > 1}
-      <div class="flex items-center justify-between border-t border-[var(--cairn-card-border)] px-6 py-3">
-        <span class="text-sm text-muted">Page {page} of {totalPages}</span>
-        <div class="join">
-          <button
-            type="button"
-            class="join-item btn btn-sm"
-            disabled={page <= 1}
-            onclick={() => (page -= 1)}
-          >
-            Prev
-          </button>
-          <button
-            type="button"
-            class="join-item btn btn-sm"
-            disabled={page >= totalPages}
-            onclick={() => (page += 1)}
-          >
-            Next
-          </button>
-        </div>
-      </div>
-    {/if}
+              <div class="household-panel-actions">
+                <a class="btn btn-sm" href={`/admin/club/members/${datum.id}`}>Open household</a>
+                <a class="btn btn-sm" href={`/admin/club/email/compose?segment=household:${datum.id}`}>Email household</a>
+                <a class="btn btn-sm" href={`/admin/club/members/${datum.id}?action=add-member`}>Add member</a>
+              </div>
+            </div>
+          {/snippet}
+        </ExpandableRow>
+      {/each}
+    </AdminTable>
+
+    <div class="border-t border-[var(--cairn-card-border)] px-6 py-3">
+      <Pagination
+        {page}
+        pageCount={totalPages}
+        onPageChange={(p) => (page = p)}
+        totalItems={data.households.length}
+        pageSize={PAGE_SIZE}
+        itemLabel="households"
+      />
+    </div>
   {/if}
 </OfficeList>
 
@@ -260,3 +371,61 @@ discounted rendered honestly), asset count (with a stale-asset warning mark), an
     </form>
   </div>
 </dialog>
+
+<style>
+  /* Layout only, per the toolkit README's own compiled-CSS constraint: `/admin/**` loads only
+     cairn's precompiled CSS, so an arbitrary grid/truncation utility string would render nothing
+     there. Values stay literal, matching every toolkit component's own scoped block. */
+  .members-toolbar-band {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .members-archived-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.75rem;
+    width: fit-content;
+    cursor: pointer;
+  }
+
+  .members-name-cell {
+    font-weight: 600;
+  }
+
+  .members-cell {
+    max-width: 22rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .household-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .household-panel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 1.5rem;
+  }
+
+  .household-panel-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin: 0.5rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .household-panel-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--cairn-card-border);
+  }
+</style>

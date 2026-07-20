@@ -7,6 +7,7 @@ import type { ChipStyle } from './ui';
 import type { DirectoryVisibility, MemberSegment, MembershipTier } from './member-types';
 import type { HouseholdStandingStatus } from '$member-auth/lib/standing';
 import type { LineItem, TransactionKind, TransactionSource } from './ledger';
+import type { StatusChipTone } from '$admin-club/toolkit/StatusChip.svelte';
 
 /** Segment chips, following the same vocabulary the Events/Classes screens already established
  *  (`docs/club-admin-scaffold.md`'s chip vocabulary): the one state a volunteer can act on
@@ -51,6 +52,21 @@ export const HOUSEHOLD_STANDING_CHIP: Record<HouseholdStandingStatus, ChipStyle>
   overdue: { label: 'Overdue', cls: 'badge-sm border-transparent bg-warning/15 font-medium text-warning-content' },
   former: { label: 'Former', cls: 'badge-ghost badge-sm font-medium' },
   none: { label: 'No membership', cls: 'badge-ghost badge-sm font-medium opacity-60' },
+};
+
+/** The same household standing, as a `StatusChip` tone (Members pass T7, the toolkit's first
+ *  consumer): `current` reads `success` (in good standing), `overdue` reads `warning` (worth a
+ *  volunteer's notice, full benefits regardless), `former`/`none` both read `neutral` (no longer,
+ *  or never, an active member -- no alarm color, just a quiet fact). This mapping is a reasonable
+ *  first choice, not a ratified one: `StatusChip`'s own color mapping onto the admin palette is
+ *  still an open probe-round item (`docs/design-benchmark/decisions.md`, "OPEN at pass close").
+ *  `HOUSEHOLD_STANDING_CHIP` above stays the household desk's own vocabulary (out of this pass's
+ *  scope; the desk only picks up toolkit components a later pass wires it to). */
+export const HOUSEHOLD_STANDING_TONE: Record<HouseholdStandingStatus, StatusChipTone> = {
+  current: 'success',
+  overdue: 'warning',
+  former: 'neutral',
+  none: 'neutral',
 };
 
 /** Display labels for the money ledger's own three-part vocabulary (`ledger.ts`): a transaction's

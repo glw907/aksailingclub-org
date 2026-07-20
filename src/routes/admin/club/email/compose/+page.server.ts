@@ -16,7 +16,13 @@ import type { Actions, PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
 import { resolveClubDb } from '$admin-club/lib/club-db';
 import { clubAdminAction } from '$admin-club/lib/club-action';
-import { listSegmentOptions, resolveSegment, type SegmentKey, type SegmentOption, type SegmentRecipient } from '$admin-club/lib/segments';
+import {
+  listSegmentOptions,
+  resolveSegment,
+  type SegmentKey,
+  type SegmentOption,
+  type SegmentRecipient,
+} from '$admin-club/lib/segments';
 import { listBlasts, sendBlastTest, sendSegmentBlast, type BulkEmailEnv, type EmailBlastRow } from '$admin-club/lib/bulk-email';
 
 /** How many resolved recipients the review step shows by name, enough to spot-check "did this
@@ -58,8 +64,28 @@ export const load: PageServerLoad = async (event) => {
     };
   }
   const [blasts, segmentOptions] = await Promise.all([listBlasts(db), listSegmentOptions(db)]);
-  const presetSegmentKey = resolvePresetSegmentKey(event.url.searchParams.get('segment'), segmentOptions);
-  return { blasts, segmentOptions, editorEmail: editor.email, error: null as string | null, presetSegmentKey };
+
+  const segmentParam = event.url.searchParams.get('segment');
+  let presetSegmentKey = resolvePresetSegmentKey(segmentParam, segmentOptions);
+  let pickerOptions = segmentOptions;
+  // A `household:<id>` deep link (the Members panel's own "Email household" action, T7) never
+  // appears in `listSegmentOptions` (this module's own header on why: no "browse every household"
+  // picker case), so it never matches `resolvePresetSegmentKey`'s own exact-option check above.
+  // Resolving it here, once, both confirms the household is real and supplies the one picker
+  // option the `<select>` needs to render it selected -- the same reason the `class` sentinel
+  // preselects an option already present in `segmentOptions` rather than an invented one.
+  if (!presetSegmentKey && segmentParam?.startsWith('household:')) {
+    try {
+      const household = await resolveSegment(db, segmentParam as SegmentKey);
+      presetSegmentKey = household.key;
+      pickerOptions = [{ key: household.key, label: household.label }, ...segmentOptions];
+    } catch {
+      // No such household: fall through with no preselection, the same as any other deep link
+      // naming no real option.
+    }
+  }
+
+  return { blasts, segmentOptions: pickerOptions, editorEmail: editor.email, error: null as string | null, presetSegmentKey };
 };
 
 /** The three fields every action here reads off the compose form; `body` is deliberately not

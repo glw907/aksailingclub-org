@@ -2,229 +2,55 @@ import { describe, expect, it } from 'vitest';
 import { fakeD1 } from './_fake-d1';
 import { getHouseholdDesk, listHouseholds, resolveMemberHousehold } from '$admin-club/lib/households-store';
 
-const TIER_PRICE_ROWS = [
-  { key: 'tier_price_individual', value: '250' },
-  { key: 'tier_price_family', value: '500' },
-  { key: 'tier_price_young_adult', value: '100' },
-];
-
-function settingsFixture() {
-  return {
-    allResults: { 'tier_price_individual': TIER_PRICE_ROWS },
-  };
-}
-
 function daysAgo(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
 describe('listHouseholds', () => {
-  it('maps a multi-member household, marking the primary member', async () => {
+  it('maps a multi-member household, sorting the primary member first', async () => {
     const { db } = fakeD1({
-      ...settingsFixture(),
       allResults: {
-        ...settingsFixture().allResults,
         'FROM households h': [
-          {
-            id: 'hh-larsen',
-            name: 'The Larsens',
-            city: 'Anchorage',
-            primary_member_id: 'mem-erik',
-            season: 2026,
-            tier: 'family',
-            price_paid: 500,
-            paid_at: daysAgo(30),
-            active_assets: 0,
-          },
+          { id: 'hh-larsen', name: 'The Larsens', city: 'Anchorage', primary_member_id: 'mem-erik', season: 2026, paid_at: daysAgo(30) },
         ],
         'FROM members': [
-          { id: 'mem-erik', household_id: 'hh-larsen', name: 'Erik Larsen', email: 'erik@example.com', archived_at: null },
-          { id: 'mem-kaija', household_id: 'hh-larsen', name: 'Kaija Larsen', email: 'kaija@example.com', archived_at: null },
+          // Kaija sorts alphabetically before Erik, but Erik is primary: primary-first still wins.
+          { id: 'mem-kaija', household_id: 'hh-larsen', name: 'Kaija Larsen', email: 'kaija@example.com', phone: '+19075550101', birthdate: '2010-05-01', archived_at: null },
+          { id: 'mem-erik', household_id: 'hh-larsen', name: 'Erik Larsen', email: 'erik@example.com', phone: '+19075550100', birthdate: '1980-01-01', archived_at: null },
         ],
       },
     });
 
     const rows = await listHouseholds(db);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ id: 'hh-larsen', standing: 'current', tier: 'family', amount: 500 });
+    expect(rows[0]).toMatchObject({ id: 'hh-larsen', standing: 'current', lastSeason: 2026 });
     expect(rows[0].members).toEqual([
-      { id: 'mem-erik', name: 'Erik Larsen', archived: false, isPrimary: true, matchedSearch: false },
-      { id: 'mem-kaija', name: 'Kaija Larsen', archived: false, isPrimary: false, matchedSearch: false },
+      { id: 'mem-erik', name: 'Erik Larsen', email: 'erik@example.com', phone: '+19075550100', birthdate: '1980-01-01', archived: false, isPrimary: true, matchedSearch: false },
+      { id: 'mem-kaija', name: 'Kaija Larsen', email: 'kaija@example.com', phone: '+19075550101', birthdate: '2010-05-01', archived: false, isPrimary: false, matchedSearch: false },
     ]);
-  });
-
-  it('flags a $0 comp as comped, never discounted', async () => {
-    const { db } = fakeD1({
-      ...settingsFixture(),
-      allResults: {
-        ...settingsFixture().allResults,
-        'FROM households h': [
-          {
-            id: 'hh-wright',
-            name: 'Geoff Wright',
-            city: 'Homer',
-            primary_member_id: 'mem-wright',
-            season: 2026,
-            tier: 'individual',
-            price_paid: 0,
-            paid_at: daysAgo(10),
-            active_assets: 0,
-          },
-        ],
-        'FROM members': [{ id: 'mem-wright', household_id: 'hh-wright', name: 'Geoff Wright', email: null, archived_at: null }],
-      },
-    });
-
-    const [row] = await listHouseholds(db);
-    expect(row.comped).toBe(true);
-    expect(row.discounted).toBe(false);
-  });
-
-  it('flags a nonzero amount off the settings price as discounted', async () => {
-    const { db } = fakeD1({
-      ...settingsFixture(),
-      allResults: {
-        ...settingsFixture().allResults,
-        'FROM households h': [
-          {
-            id: 'hh-black',
-            name: 'Nancy Black',
-            city: 'Sitka',
-            primary_member_id: 'mem-black',
-            season: 2026,
-            tier: 'family',
-            price_paid: 324,
-            paid_at: daysAgo(10),
-            active_assets: 4,
-          },
-        ],
-        'FROM members': [{ id: 'mem-black', household_id: 'hh-black', name: 'Nancy Black', email: null, archived_at: null }],
-      },
-    });
-
-    const [row] = await listHouseholds(db);
-    expect(row.comped).toBe(false);
-    expect(row.discounted).toBe(true);
-    expect(row.amount).toBe(324);
-  });
-
-  it('flags a stale membership with an active asset assignment (Overdue with no recorded former_at, per T3s classifier)', async () => {
-    const { db } = fakeD1({
-      ...settingsFixture(),
-      allResults: {
-        ...settingsFixture().allResults,
-        'FROM households h': [
-          {
-            id: 'hh-hunter',
-            name: 'Elayne C Hunter',
-            city: 'Kodiak',
-            primary_member_id: 'mem-hunter',
-            season: 2024,
-            tier: 'individual',
-            price_paid: 250,
-            paid_at: daysAgo(500),
-            former_at: null,
-            active_assets: 1,
-          },
-        ],
-        'FROM members': [{ id: 'mem-hunter', household_id: 'hh-hunter', name: 'Elayne C Hunter', email: null, archived_at: null }],
-      },
-    });
-
-    // Well past the old fixed 30-day grace window, but never recorded Former (no sweep or manual
-    // mark has run against this fixture): classifyHouseholdStanding reads it Overdue, not Former,
-    // since Former is a recorded fact now, never re-derived from elapsed time alone. staleAssets
-    // stays true regardless -- it fires for anything short of 'current'.
-    const [row] = await listHouseholds(db);
-    expect(row.standing).toBe('overdue');
-    expect(row.activeAssets).toBe(1);
-    expect(row.staleAssets).toBe(true);
-  });
-
-  it('never flags stale assets for a current household even with assets attached', async () => {
-    const { db } = fakeD1({
-      ...settingsFixture(),
-      allResults: {
-        ...settingsFixture().allResults,
-        'FROM households h': [
-          {
-            id: 'hh-current',
-            name: 'The Currents',
-            city: 'Juneau',
-            primary_member_id: 'mem-cur',
-            season: 2026,
-            tier: 'individual',
-            price_paid: 250,
-            paid_at: daysAgo(10),
-            active_assets: 2,
-          },
-        ],
-        'FROM members': [{ id: 'mem-cur', household_id: 'hh-current', name: 'Cur Rent', email: null, archived_at: null }],
-      },
-    });
-
-    const [row] = await listHouseholds(db);
-    expect(row.staleAssets).toBe(false);
   });
 
   it('reads none for a household with no grounding row at all', async () => {
     const { db } = fakeD1({
-      ...settingsFixture(),
       allResults: {
-        ...settingsFixture().allResults,
-        'FROM households h': [
-          {
-            id: 'hh-fresh',
-            name: 'Fresh Household',
-            city: null,
-            primary_member_id: null,
-            season: null,
-            tier: null,
-            price_paid: null,
-            paid_at: null,
-            active_assets: 0,
-          },
-        ],
+        'FROM households h': [{ id: 'hh-fresh', name: 'Fresh Household', city: null, primary_member_id: null, season: null, paid_at: null }],
         'FROM members': [],
       },
     });
 
     const [row] = await listHouseholds(db);
     expect(row.standing).toBe('none');
-    expect(row.tier).toBeNull();
-    expect(row.amount).toBeNull();
+    expect(row.lastSeason).toBeNull();
   });
 
   it('reads Overdue off elapsed time alone, and Former only once the household is actually recorded so', async () => {
     const { db } = fakeD1({
-      ...settingsFixture(),
       allResults: {
-        ...settingsFixture().allResults,
         'FROM households h': [
-          {
-            id: 'hh-overdue',
-            name: 'Overdue Household',
-            city: null,
-            primary_member_id: null,
-            season: 2025,
-            tier: 'individual',
-            price_paid: 250,
-            paid_at: daysAgo(380), // expiry = paid + 365 = 15 days ago; no former_at recorded
-            former_at: null,
-            active_assets: 0,
-          },
-          {
-            id: 'hh-former',
-            name: 'Former Household',
-            city: null,
-            primary_member_id: null,
-            season: 2024,
-            tier: 'individual',
-            price_paid: 250,
-            paid_at: daysAgo(400), // expiry = 35 days ago; the sweep already recorded former_at
-            former_at: daysAgo(5),
-            active_assets: 0,
-          },
+          // expiry = paid + 365 = 15 days ago; no former_at recorded.
+          { id: 'hh-overdue', name: 'Overdue Household', city: null, primary_member_id: null, season: 2025, paid_at: daysAgo(380), former_at: null },
+          // expiry = 35 days ago; the sweep already recorded former_at.
+          { id: 'hh-former', name: 'Former Household', city: null, primary_member_id: null, season: 2024, paid_at: daysAgo(400), former_at: daysAgo(5) },
         ],
         'FROM members': [],
       },
@@ -236,105 +62,194 @@ describe('listHouseholds', () => {
   });
 
   it('ignores a refunded row via the grounding query itself (asserted on the SQL text)', async () => {
-    const { db, calls } = fakeD1({ ...settingsFixture(), allResults: { ...settingsFixture().allResults, 'FROM households h': [], 'FROM members': [] } });
+    const { db, calls } = fakeD1({ allResults: { 'FROM households h': [], 'FROM members': [] } });
     await listHouseholds(db);
     const groundingCall = calls.find((c) => c.sql.includes('FROM households h'));
     expect(groundingCall?.sql).toContain('mm.refunded_at IS NULL');
   });
 
+  it('reads a household panel data (holdings, enrollments) alongside the row, grouped by household', async () => {
+    const { db } = fakeD1({
+      allResults: {
+        'FROM households h': [{ id: 'hh-panel', name: 'Panel House', city: null, primary_member_id: 'mem-panel', season: 2026, paid_at: daysAgo(10) }],
+        'FROM members': [{ id: 'mem-panel', household_id: 'hh-panel', name: 'Panel Person', email: null, phone: null, birthdate: null, archived_at: null }],
+        'FROM asset_assignments aa': [
+          { id: 'aa-1', household_id: 'hh-panel', asset_type_name: 'Mooring', description: 'Buoy M-14', season: 2026, payment_id: 'ap-1', paid_at: '2026-02-01' },
+          { id: 'aa-2', household_id: 'hh-panel', asset_type_name: 'RV Parking', description: null, season: 2026, payment_id: null, paid_at: null },
+        ],
+        'ce.id, m.household_id': [
+          { id: 'ce-1', household_id: 'hh-panel', class_name: 'Keelboat 101', season: 2026, member_name: 'Panel Person', fee_paid: 1 },
+        ],
+      },
+    });
+
+    const [row] = await listHouseholds(db);
+    expect(row.holdings).toEqual([
+      { id: 'aa-1', assetTypeName: 'Mooring', description: 'Buoy M-14', season: 2026, paymentStanding: 'paid' },
+      { id: 'aa-2', assetTypeName: 'RV Parking', description: null, season: 2026, paymentStanding: 'not-billed' },
+    ]);
+    expect(row.enrollments).toEqual([
+      { id: 'ce-1', className: 'Keelboat 101', season: 2026, memberName: 'Panel Person', feePaid: true },
+    ]);
+  });
+
   describe('search matcher', () => {
-    const HOUSEHOLD_FIXTURE = {
-      id: 'hh-mixed',
-      name: 'The Mixed Household',
-      city: null,
-      primary_member_id: 'mem-oliver',
-      season: 2026,
-      tier: 'family',
-      price_paid: 500,
-      paid_at: daysAgo(10),
-      active_assets: 0,
-    };
+    const HOUSEHOLD_FIXTURE = { id: 'hh-mixed', name: 'The Mixed Household', city: null, primary_member_id: 'mem-oliver', season: 2026, paid_at: daysAgo(10) };
     const MEMBERS_FIXTURE = [
-      { id: 'mem-oliver', household_id: 'hh-mixed', name: 'Oliver Wright', email: 'oliver@example.com', archived_at: null },
-      { id: 'mem-jane', household_id: 'hh-mixed', name: 'Jane Wright', email: 'jane@example.com', archived_at: null },
+      { id: 'mem-oliver', household_id: 'hh-mixed', name: 'Oliver Wright', email: 'oliver@example.com', phone: '+19075550100', birthdate: null, archived_at: null },
+      { id: 'mem-jane', household_id: 'hh-mixed', name: 'Jane Wright', email: 'jane@example.com', phone: '+19075550199', birthdate: null, archived_at: null },
     ];
 
-    it('marks the matching member, not every household member', async () => {
-      const { db } = fakeD1({
-        ...settingsFixture(),
-        allResults: { ...settingsFixture().allResults, 'FROM households h': [HOUSEHOLD_FIXTURE], 'FROM members': MEMBERS_FIXTURE },
-      });
+    it('marks the matching member by name, not every household member', async () => {
+      const { db } = fakeD1({ allResults: { 'FROM households h': [HOUSEHOLD_FIXTURE], 'FROM members': MEMBERS_FIXTURE } });
       const rows = await listHouseholds(db, { search: 'Oliver' });
       expect(rows).toHaveLength(1);
       expect(rows[0].members.find((m) => m.id === 'mem-oliver')?.matchedSearch).toBe(true);
       expect(rows[0].members.find((m) => m.id === 'mem-jane')?.matchedSearch).toBe(false);
     });
 
-    it('matches on member email case-insensitively', async () => {
-      const { db } = fakeD1({
-        ...settingsFixture(),
-        allResults: { ...settingsFixture().allResults, 'FROM households h': [HOUSEHOLD_FIXTURE], 'FROM members': MEMBERS_FIXTURE },
-      });
-      const rows = await listHouseholds(db, { search: 'JANE@EXAMPLE.COM' });
+    it('matches on member phone regardless of punctuation on either side', async () => {
+      const { db } = fakeD1({ allResults: { 'FROM households h': [HOUSEHOLD_FIXTURE], 'FROM members': MEMBERS_FIXTURE } });
+      const rows = await listHouseholds(db, { search: '907-555-0199' });
       expect(rows).toHaveLength(1);
       expect(rows[0].members.find((m) => m.id === 'mem-jane')?.matchedSearch).toBe(true);
+      expect(rows[0].members.find((m) => m.id === 'mem-oliver')?.matchedSearch).toBe(false);
+    });
+
+    it('matches on the raw standing key', async () => {
+      const { db } = fakeD1({ allResults: { 'FROM households h': [HOUSEHOLD_FIXTURE], 'FROM members': MEMBERS_FIXTURE } });
+      const rows = await listHouseholds(db, { search: 'current' });
+      expect(rows).toHaveLength(1);
     });
 
     it('matches on the household name with no member flagged', async () => {
-      const { db } = fakeD1({
-        ...settingsFixture(),
-        allResults: { ...settingsFixture().allResults, 'FROM households h': [HOUSEHOLD_FIXTURE], 'FROM members': MEMBERS_FIXTURE },
-      });
+      const { db } = fakeD1({ allResults: { 'FROM households h': [HOUSEHOLD_FIXTURE], 'FROM members': MEMBERS_FIXTURE } });
       const rows = await listHouseholds(db, { search: 'mixed household' });
       expect(rows).toHaveLength(1);
       expect(rows[0].members.every((m) => !m.matchedSearch)).toBe(true);
     });
 
-    it('drops a household with no name or member match', async () => {
-      const { db } = fakeD1({
-        ...settingsFixture(),
-        allResults: { ...settingsFixture().allResults, 'FROM households h': [HOUSEHOLD_FIXTURE], 'FROM members': MEMBERS_FIXTURE },
-      });
+    it('drops a household with no name, member, or standing match', async () => {
+      const { db } = fakeD1({ allResults: { 'FROM households h': [HOUSEHOLD_FIXTURE], 'FROM members': MEMBERS_FIXTURE } });
       const rows = await listHouseholds(db, { search: 'nonexistent' });
       expect(rows).toHaveLength(0);
     });
   });
 
-  describe('segment filter', () => {
+  describe('standing filter', () => {
     const ROWS = [
-      { id: 'hh-current', name: 'Current House', city: null, primary_member_id: null, season: 2026, tier: 'individual', price_paid: 250, paid_at: daysAgo(10), active_assets: 0 },
-      { id: 'hh-lapsed', name: 'Lapsed House', city: null, primary_member_id: null, season: 2023, tier: 'individual', price_paid: 250, paid_at: daysAgo(1000), active_assets: 0 },
+      { id: 'hh-current', name: 'Current House', city: null, primary_member_id: null, season: 2026, paid_at: daysAgo(10) },
+      { id: 'hh-overdue', name: 'Overdue House', city: null, primary_member_id: null, season: 2025, paid_at: daysAgo(380), former_at: null },
+      { id: 'hh-former', name: 'Former House', city: null, primary_member_id: null, season: 2023, paid_at: daysAgo(1000), former_at: daysAgo(5) },
+      { id: 'hh-none', name: 'None House', city: null, primary_member_id: null, season: null, paid_at: null },
     ];
 
+    it("'members' (the default) keeps Current and Overdue, hiding Former and never-paid", async () => {
+      const { db } = fakeD1({ allResults: { 'FROM households h': ROWS, 'FROM members': [] } });
+      const rows = await listHouseholds(db, { standing: 'members' });
+      expect(rows.map((r) => r.id).sort()).toEqual(['hh-current', 'hh-overdue']);
+    });
+
     it("'current' keeps only current standing", async () => {
-      const { db } = fakeD1({ ...settingsFixture(), allResults: { ...settingsFixture().allResults, 'FROM households h': ROWS, 'FROM members': [] } });
-      const rows = await listHouseholds(db, { segment: 'current' });
+      const { db } = fakeD1({ allResults: { 'FROM households h': ROWS, 'FROM members': [] } });
+      const rows = await listHouseholds(db, { standing: 'current' });
       expect(rows.map((r) => r.id)).toEqual(['hh-current']);
     });
 
-    it("'lapsed' keeps everything not current (overdue, former, and none alike)", async () => {
-      const { db } = fakeD1({ ...settingsFixture(), allResults: { ...settingsFixture().allResults, 'FROM households h': ROWS, 'FROM members': [] } });
-      const rows = await listHouseholds(db, { segment: 'lapsed' });
-      expect(rows.map((r) => r.id)).toEqual(['hh-lapsed']);
+    it("'overdue' keeps only overdue standing", async () => {
+      const { db } = fakeD1({ allResults: { 'FROM households h': ROWS, 'FROM members': [] } });
+      const rows = await listHouseholds(db, { standing: 'overdue' });
+      expect(rows.map((r) => r.id)).toEqual(['hh-overdue']);
     });
 
-    it("'all' (the default) applies no standing filter", async () => {
-      const { db } = fakeD1({ ...settingsFixture(), allResults: { ...settingsFixture().allResults, 'FROM households h': ROWS, 'FROM members': [] } });
+    it("'former' also keeps a never-paid ('none') household, the coarse admin-facing bucket", async () => {
+      const { db } = fakeD1({ allResults: { 'FROM households h': ROWS, 'FROM members': [] } });
+      const rows = await listHouseholds(db, { standing: 'former' });
+      expect(rows.map((r) => r.id).sort()).toEqual(['hh-former', 'hh-none']);
+    });
+
+    it("'all' (the default with no options at all) applies no standing filter -- the Money screen's own household-picker need", async () => {
+      const { db } = fakeD1({ allResults: { 'FROM households h': ROWS, 'FROM members': [] } });
       const rows = await listHouseholds(db);
-      expect(rows).toHaveLength(2);
+      expect(rows).toHaveLength(4);
+    });
+  });
+
+  describe('holdings filter', () => {
+    it("'holding' keeps only households with at least one active asset assignment", async () => {
+      const { db } = fakeD1({
+        allResults: {
+          'FROM households h': [
+            { id: 'hh-holds', name: 'Holds Assets', city: null, primary_member_id: null, season: null, paid_at: null },
+            { id: 'hh-bare', name: 'No Assets', city: null, primary_member_id: null, season: null, paid_at: null },
+          ],
+          'FROM members': [],
+          'FROM asset_assignments aa': [{ id: 'aa-1', household_id: 'hh-holds', asset_type_name: 'Mooring', description: null, season: 2026, payment_id: null, paid_at: null }],
+        },
+      });
+      const rows = await listHouseholds(db, { holdings: 'holding' });
+      expect(rows.map((r) => r.id)).toEqual(['hh-holds']);
+    });
+  });
+
+  describe('role filter', () => {
+    it("'instructor' keeps only households with a member in this season's class_instructors", async () => {
+      const { db } = fakeD1({
+        firstResults: { "'current_season'": { value: '2026' } },
+        allResults: {
+          'FROM households h': [
+            { id: 'hh-teach', name: 'Teaches', city: null, primary_member_id: null, season: null, paid_at: null },
+            { id: 'hh-plain', name: 'Plain', city: null, primary_member_id: null, season: null, paid_at: null },
+          ],
+          'FROM members': [
+            { id: 'mem-teach', household_id: 'hh-teach', name: 'Teach Er', email: null, phone: null, birthdate: null, archived_at: null },
+            { id: 'mem-plain', household_id: 'hh-plain', name: 'Plain One', email: null, phone: null, birthdate: null, archived_at: null },
+          ],
+          'FROM class_instructors': [{ member_id: 'mem-teach' }],
+        },
+      });
+      const rows = await listHouseholds(db, { role: 'instructor' });
+      expect(rows.map((r) => r.id)).toEqual(['hh-teach']);
+    });
+  });
+
+  describe('classId filter', () => {
+    it('keeps only households with a member enrolled in the given class', async () => {
+      const { db } = fakeD1({
+        allResults: {
+          'FROM households h': [
+            { id: 'hh-enrolled', name: 'Enrolled', city: null, primary_member_id: null, season: null, paid_at: null },
+            { id: 'hh-not', name: 'Not Enrolled', city: null, primary_member_id: null, season: null, paid_at: null },
+          ],
+          'FROM members': [
+            { id: 'mem-enrolled', household_id: 'hh-enrolled', name: 'En Rolled', email: null, phone: null, birthdate: null, archived_at: null },
+            { id: 'mem-not', household_id: 'hh-not', name: 'Not Rolled', email: null, phone: null, birthdate: null, archived_at: null },
+          ],
+          'FROM class_enrollments WHERE class_id': [{ member_id: 'mem-enrolled' }],
+        },
+      });
+      const rows = await listHouseholds(db, { classId: 'cls-1' });
+      expect(rows.map((r) => r.id)).toEqual(['hh-enrolled']);
+    });
+
+    it("'all' applies no class filter", async () => {
+      const { db } = fakeD1({
+        allResults: {
+          'FROM households h': [{ id: 'hh-a', name: 'A', city: null, primary_member_id: null, season: null, paid_at: null }],
+          'FROM members': [],
+        },
+      });
+      const rows = await listHouseholds(db, { classId: 'all' });
+      expect(rows).toHaveLength(1);
     });
   });
 
   describe('includeArchived', () => {
     it('hides a household whose every member is archived by default', async () => {
       const { db } = fakeD1({
-        ...settingsFixture(),
         allResults: {
-          ...settingsFixture().allResults,
-          'FROM households h': [
-            { id: 'hh-gone', name: 'Gone Household', city: null, primary_member_id: null, season: null, tier: null, price_paid: null, paid_at: null, active_assets: 0 },
-          ],
-          'FROM members': [{ id: 'mem-gone', household_id: 'hh-gone', name: 'Gone Member', email: null, archived_at: '2025-01-01' }],
+          'FROM households h': [{ id: 'hh-gone', name: 'Gone Household', city: null, primary_member_id: null, season: null, paid_at: null }],
+          'FROM members': [{ id: 'mem-gone', household_id: 'hh-gone', name: 'Gone Member', email: null, phone: null, birthdate: null, archived_at: '2025-01-01' }],
         },
       });
       await expect(listHouseholds(db)).resolves.toEqual([]);
@@ -343,12 +258,8 @@ describe('listHouseholds', () => {
 
     it('never hides a household with zero members, regardless of the flag', async () => {
       const { db } = fakeD1({
-        ...settingsFixture(),
         allResults: {
-          ...settingsFixture().allResults,
-          'FROM households h': [
-            { id: 'hh-empty', name: 'Empty Household', city: null, primary_member_id: null, season: null, tier: null, price_paid: null, paid_at: null, active_assets: 0 },
-          ],
+          'FROM households h': [{ id: 'hh-empty', name: 'Empty Household', city: null, primary_member_id: null, season: null, paid_at: null }],
           'FROM members': [],
         },
       });
@@ -357,15 +268,11 @@ describe('listHouseholds', () => {
 
     it('keeps a household with a mix of archived and active members', async () => {
       const { db } = fakeD1({
-        ...settingsFixture(),
         allResults: {
-          ...settingsFixture().allResults,
-          'FROM households h': [
-            { id: 'hh-mix', name: 'Mixed Archive', city: null, primary_member_id: null, season: null, tier: null, price_paid: null, paid_at: null, active_assets: 0 },
-          ],
+          'FROM households h': [{ id: 'hh-mix', name: 'Mixed Archive', city: null, primary_member_id: null, season: null, paid_at: null }],
           'FROM members': [
-            { id: 'mem-a', household_id: 'hh-mix', name: 'Active One', email: null, archived_at: null },
-            { id: 'mem-b', household_id: 'hh-mix', name: 'Archived One', email: null, archived_at: '2025-01-01' },
+            { id: 'mem-a', household_id: 'hh-mix', name: 'Active One', email: null, phone: null, birthdate: null, archived_at: null },
+            { id: 'mem-b', household_id: 'hh-mix', name: 'Archived One', email: null, phone: null, birthdate: null, archived_at: '2025-01-01' },
           ],
         },
       });

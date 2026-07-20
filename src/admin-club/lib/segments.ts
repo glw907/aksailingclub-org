@@ -19,9 +19,13 @@ import { resolveClassContact } from './class-contact';
 import { getClass, listEnrollments, type ClassRow } from './classes-store';
 import { getCurrentSeason } from './club-settings';
 
-/** Every resolvable segment key: the two membership segments, instructors, or a specific class's
- *  enrollment roster (`class:<id>`, the class's own `classes.id`). */
-export type SegmentKey = 'current' | 'lapsed' | 'instructors' | `class:${string}`;
+/** Every resolvable segment key: the two membership segments, instructors, a specific class's
+ *  enrollment roster (`class:<id>`, the class's own `classes.id`), or one household's own contact
+ *  list (`household:<id>`, the Members panel's own "Email household" action, T7 -- never a picker
+ *  option `listSegmentOptions` enumerates, since there is no "browse every household" case; a
+ *  consumer reaches it only via the deep-link `?segment=household:<id>` the compose route's own
+ *  `load` synthesizes a picker option for). */
+export type SegmentKey = 'current' | 'lapsed' | 'instructors' | `class:${string}` | `household:${string}`;
 
 /** One recipient a segment resolves to: `personName` is who `{{person_name}}` renders as at send
  *  time, `memberId` the `members.id` row that name and email came from (the household primary
@@ -225,14 +229,40 @@ async function resolveClassSegment(db: D1Database, key: `class:${string}`): Prom
   return { key, label: classSegmentLabel(cls, currentSeason), recipients };
 }
 
+/** One household's own contact segment (the Members panel's "Email household" action, T7): every
+ *  non-archived, emailed member, deduplicated the same shared-email/primary-wins rule every other
+ *  segment here follows. Throws when the id resolves to no real household: an unknown segment is
+ *  never silently empty, matching every other resolver in this module. */
+async function resolveHouseholdSegment(db: D1Database, key: `household:${string}`): Promise<ResolvedSegment> {
+  const householdId = key.slice('household:'.length);
+  const household = await db
+    .prepare('SELECT id, name, primary_member_id FROM households WHERE id = ?1')
+    .bind(householdId)
+    .first<{ id: string; name: string; primary_member_id: string | null }>();
+  if (!household) throw new Error(`Unknown segment key: ${key}`);
+
+  const members = await membersInHouseholds(db, [householdId]);
+  const recipients = dedupeRecipients(
+    members.map((member) => ({
+      memberId: member.id,
+      name: member.name,
+      email: member.email,
+      isPrimary: member.id === household.primary_member_id,
+    })),
+  );
+  return { key, label: household.name, recipients };
+}
+
 /**
  * Resolve one segment to its label and deduplicated recipients. Never a silent empty segment: an
- * unrecognized key (including a `class:<id>` whose class does not exist) throws.
+ * unrecognized key (including a `class:<id>` or `household:<id>` whose household does not exist)
+ * throws.
  */
 export async function resolveSegment(db: D1Database, key: SegmentKey): Promise<ResolvedSegment> {
   if (key === 'current' || key === 'lapsed') return resolveMembershipSegment(db, key);
   if (key === 'instructors') return resolveInstructorsSegment(db);
   if (key.startsWith('class:')) return resolveClassSegment(db, key as `class:${string}`);
+  if (key.startsWith('household:')) return resolveHouseholdSegment(db, key as `household:${string}`);
   throw new Error(`Unknown segment key: ${key}`);
 }
 

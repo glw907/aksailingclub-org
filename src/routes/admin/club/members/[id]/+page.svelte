@@ -118,6 +118,19 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
     memberBirthdate = '';
     memberDialog?.showModal();
   }
+
+  // The Members panel's own "Add member" deep link (`?action=add-member`, T7): opens the add-
+  // member dialog once, on arrival. `autoOpened` guards against re-firing on a later `update()`
+  // refresh from an unrelated action on this same page (the URL param persists across a soft
+  // navigation's own data reload, but the dialog should only ever auto-open the first time).
+  let autoOpened = $state(false);
+  $effect(() => {
+    if (data.openAddMember && !autoOpened) {
+      autoOpened = true;
+      openAddMemberDialog();
+    }
+  });
+
   function openEditMemberDialog(member: HouseholdRosterMember) {
     memberDialogMode = 'edit';
     memberId = member.id;

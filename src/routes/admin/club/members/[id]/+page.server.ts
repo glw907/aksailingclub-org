@@ -44,6 +44,11 @@ export const load: PageServerLoad = async (event) => {
   requireSession(event);
   const db = resolveClubDb(event.platform?.env);
   const id = event.params.id;
+  // The Members panel's own "Add member" action (T7, docs/2026-07-20-members-pass-design.md):
+  // `?action=add-member` opens the roster's own add-member dialog on arrival, so that action
+  // actually lands the admin inside the add flow rather than merely on the desk it happens to
+  // live on -- the same deep-link idiom the Compose route's own `?segment=` param already uses.
+  const openAddMember = event.url.searchParams.get('action') === 'add-member';
 
   if (!db) {
     return {
@@ -52,6 +57,7 @@ export const load: PageServerLoad = async (event) => {
       standing: null as HouseholdStanding | null,
       currentSeason: new Date().getUTCFullYear(),
       tierPrices: null as Record<MembershipTier, number> | null,
+      openAddMember,
       error: 'CLUB_DB is not bound.',
     };
   }
@@ -66,6 +72,7 @@ export const load: PageServerLoad = async (event) => {
       standing: null as HouseholdStanding | null,
       currentSeason: new Date().getUTCFullYear(),
       tierPrices: null as Record<MembershipTier, number> | null,
+      openAddMember,
       error: null as string | null,
     };
   }
@@ -77,7 +84,7 @@ export const load: PageServerLoad = async (event) => {
     getTierPrices(db),
   ]);
 
-  return { desk, timeline, standing, currentSeason, tierPrices, error: null as string | null };
+  return { desk, timeline, standing, currentSeason, tierPrices, openAddMember, error: null as string | null };
 };
 
 const DENIED_MESSAGE = 'A club role is required to manage members.';
