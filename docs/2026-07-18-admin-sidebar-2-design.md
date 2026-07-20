@@ -135,8 +135,13 @@ probe round; the group structure, membership, and labels are ratified.
 |---|---|---|---|---|---|
 | Club | all 9 | all but Admin access | — | — | — |
 | Events & Classes | all | all | — | — | own classes, scoped |
-| Communication | all | all | — | all 4 | — |
+| Communication | all | all | all 4 | all 4 | — |
 | Website | all | all | all | — | — |
+
+**Amendment (Geoff, 2026-07-19, sidebar-build pass B T1 probe settle,
+docs/design-benchmark/decisions.md "Admin sidebar round 2"): Webmaster gains the whole
+Communication group (Posts, Bulletins, Email, Announce, sends included) alongside Website; the
+table above reflects this, superseding the "—" this row originally carried.**
 
 Waiver text: Administrator and Club manager only, in every role's view.
 

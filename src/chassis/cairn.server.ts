@@ -4,9 +4,14 @@
 import { composeRuntime } from '@glw907/cairn-cms';
 import { createCairnAdmin } from '@glw907/cairn-cms/sveltekit';
 import { cairn, siteConfig } from '$theme/cairn.config.js';
+import { applyNavDefaults } from '$theme/nav-defaults.js';
 
 export const runtime = composeRuntime({ adapter: cairn, siteConfig });
-// Initiative 5 Task 4: the declared navLayout tree (cairn.config.ts) gates the Club, Outreach,
-// and Boats & Gear groups by role directly, so the site's own per-request nav-hiding hook (which
-// read the now-retired `club_roles` table) is gone; role visibility is declarative.
-export const admin = createCairnAdmin(runtime);
+// Initiative 5 Task 4: the declared navLayout tree (cairn.config.ts) gates every group by the
+// access map (`resolveNavLayout`/`canReach`) directly, so the site's own per-request nav-hiding
+// hook (which read the now-retired `club_roles` table) is gone; role visibility is declarative.
+// `navFilter` (pass-B sidebar-build T6) carries only the role-dependent collapsed defaults
+// (src/theme/nav-defaults.ts); it never hides anything the map has already resolved.
+export const admin = createCairnAdmin(runtime, {
+  navFilter: (items, { editor }) => applyNavDefaults(items, editor.role),
+});

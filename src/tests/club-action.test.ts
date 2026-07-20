@@ -13,8 +13,11 @@ const clubAdmin: Editor = { email: 'admin@example.com', displayName: 'Admin', ro
 const administrator: Editor = { email: 'admin-owner@example.com', displayName: 'Administrator', role: 'Administrator', capability: 'owner' };
 const instructor: Editor = { email: 'instructor@example.com', displayName: 'Instructor', role: 'Instructor', capability: 'none' };
 // The two roles the roles-adoption pass's T4 exercises specifically: Publisher is the widened
-// role admitted to the Email/Announce send actions but no other club action; Webmaster has no
-// club access at all, same shape as Instructor but editor capability rather than none.
+// role admitted to the Email/Announce send actions but no other club action. Webmaster joined
+// the same two send actions in the sidebar-build pass B (T1 probe verdict #5, Geoff-ruled
+// amendment 2026-07-19, docs/design-benchmark/decisions.md "Admin sidebar round 2": Webmaster
+// gains the whole Communication group, sends included); every other club action stays out of
+// reach for it, same shape as Publisher's own remaining denial.
 const publisher: Editor = { email: 'publisher@example.com', displayName: 'Publisher', role: 'Publisher', capability: 'editor' };
 const webmaster: Editor = { email: 'webmaster@example.com', displayName: 'Webmaster', role: 'Webmaster', capability: 'editor' };
 
@@ -170,8 +173,9 @@ describe('clubAdminAction', () => {
 });
 
 // The roles-adoption pass's T4: the role decision now composes `canReach` against the site's real
-// `access` map (`src/theme/cairn.config.ts`), so the Publisher widening on `/admin/club/email` and
-// `/admin/club/announce` (Communication's Email/Announce send actions) and every other club
+// `access` map (`src/theme/cairn.config.ts`), so the Publisher and Webmaster widening on
+// `/admin/club/email` and `/admin/club/announce` (Communication's Email/Announce send actions;
+// sidebar-build pass B added Webmaster to both) and every other club
 // action's `/admin/club` section default both fall out of the map with no bespoke per-action role
 // list -- this is the property T4 exists to prove.
 describe('clubAdminAction reads the site access map', () => {
@@ -221,12 +225,16 @@ describe('clubAdminAction reads the site access map', () => {
     await allowThrough(administrator, '/admin/club/money/approve');
   });
 
-  it('denies Webmaster the Email send action', async () => {
-    await denyAtTheAction(webmaster, '/admin/club/email/send');
+  it('admits Webmaster to the Email send action', async () => {
+    await allowThrough(webmaster, '/admin/club/email/send');
   });
 
-  it('denies Webmaster the Announce send action', async () => {
-    await denyAtTheAction(webmaster, '/admin/club/announce/send');
+  it('admits Webmaster to the Announce send action', async () => {
+    await allowThrough(webmaster, '/admin/club/announce/send');
+  });
+
+  it('denies Webmaster a representative other club action (Money), audited', async () => {
+    await denyAtTheAction(webmaster, '/admin/club/money/approve');
   });
 
   it('denies Instructor the Email send action', async () => {

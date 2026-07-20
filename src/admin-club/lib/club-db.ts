@@ -24,7 +24,11 @@ export function resolveClubDb(env: unknown): D1Database | undefined {
  *  either. **Enforcement no longer reads this constant**: T4 moved the `/admin/club` layout guard
  *  and `clubAdminAction`'s routine gate onto the site's `access` map (`requireAccess`/`canReach`),
  *  so the map (`src/theme/access.ts`) is the single source of role truth for what those two
- *  actually admit. This export's only remaining readers are the round-1 `navLayout` tree's
- *  `roles:` visibility hints in `cairn.config.ts` (pass B, docs/2026-07-18-admin-sidebar-2-
- *  design.md, removes those and may retire this constant with them). */
+ *  actually admit.
+ *
+ *  retirement candidate: the sidebar-build pass B T6 removed this export's last readers (the
+ *  round-1 `navLayout` tree's `roles:` visibility hints in `cairn.config.ts`), so nothing in the
+ *  repo imports it anymore as of that task. Left declared rather than deleted here (T6's own
+ *  scope is the tree rewrite, not this cleanup); a future pass-close sweep can drop it once
+ *  confirmed still unread. */
 export const CLUB_ROLES: Role[] = ['Administrator', 'Club manager'];

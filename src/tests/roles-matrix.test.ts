@@ -43,13 +43,15 @@ const FUNCTIONS = [
 // - Administrator: all true (owner capability floor).
 // - Club manager: all true (the spec's "all but Admin access" -- its one exclusion is the
 //   `editors` engine floor below, not a map cell, so every mapped function here is true).
-// - Webmaster: true only for the Website group's mapped functions.
+// - Webmaster: true for the Website group's mapped functions, plus the whole Communication
+//   group (sidebar-build pass B, T1 probe verdict #5, Geoff-ruled amendment 2026-07-19: Webmaster
+//   gains Communication alongside Website).
 // - Publisher: true only for the Communication group's mapped functions plus the two widened
 //   club routes.
 // - Instructor: false everywhere (`none` capability).
 const ADMITTED: Record<(typeof FUNCTIONS)[number], readonly Role[]> = {
-  posts: [ADMINISTRATOR, CLUB_MANAGER, PUBLISHER],
-  bulletins: [ADMINISTRATOR, CLUB_MANAGER, PUBLISHER],
+  posts: [ADMINISTRATOR, CLUB_MANAGER, WEBMASTER, PUBLISHER],
+  bulletins: [ADMINISTRATOR, CLUB_MANAGER, WEBMASTER, PUBLISHER],
   pages: [ADMINISTRATOR, CLUB_MANAGER, WEBMASTER],
   fragments: [ADMINISTRATOR, CLUB_MANAGER, WEBMASTER],
   documents: [ADMINISTRATOR, CLUB_MANAGER],
@@ -58,8 +60,8 @@ const ADMITTED: Record<(typeof FUNCTIONS)[number], readonly Role[]> = {
   nav: [ADMINISTRATOR, CLUB_MANAGER, WEBMASTER],
   settings: [ADMINISTRATOR, CLUB_MANAGER, WEBMASTER],
   '/admin/club': [ADMINISTRATOR, CLUB_MANAGER],
-  '/admin/club/email': [ADMINISTRATOR, CLUB_MANAGER, PUBLISHER],
-  '/admin/club/announce': [ADMINISTRATOR, CLUB_MANAGER, PUBLISHER],
+  '/admin/club/email': [ADMINISTRATOR, CLUB_MANAGER, WEBMASTER, PUBLISHER],
+  '/admin/club/announce': [ADMINISTRATOR, CLUB_MANAGER, WEBMASTER, PUBLISHER],
 };
 
 const CASES = FUNCTIONS.flatMap((target) =>

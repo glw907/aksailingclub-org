@@ -5,7 +5,6 @@
 import { defineAdapter, defineConcept, defineRoles, fieldset, fields, githubApp, createRenderer, parseSiteConfig } from '@glw907/cairn-cms';
 import { normalizeAssets, makeMediaResolver, readCommittedManifest } from '@glw907/cairn-cms/media';
 import type { NavLayout } from '@glw907/cairn-cms/sveltekit';
-import { CLUB_ROLES } from '$admin-club/lib/club-db';
 import { buildAccess } from './access.js';
 import { ascRegistry } from './markdown/components.js';
 import { ICON_PATHS } from './markdown/icons.js';
@@ -29,104 +28,108 @@ import siteCss from './site.css?url';
 // ordinary content, rather than a second, weaker renderer.
 export const { renderMarkdown } = createRenderer(ascRegistry);
 
-// The split-desk sidebar (initiative 5 Task 4,
-// docs/2026-07-14-admin-roles-navlayout-design.md#phase-2): the whole admin sidebar as one
-// declared tree, cairn's own screens interleaved with the site's /admin/club/* routes rather
-// than segregated by provenance. The six screens a committee volunteer works routinely lead
-// (Club), the lower-frequency pairs get their own labeled groups (Outreach, Boats & Gear), and
-// configuration sinks to the trailing Site group. Every `roles` gate names the two declared
-// role names with club access (`Administrator`, `Club manager`); an `Instructor` session (no
-// `home`, `none` capability) resolves neither a club group nor an engine screen. Icon picks stay
-// inside cairn's nine-name allowlist, matching the icons the site's routes carried before this tree
-// existed. `{ screen: 'nav' }` is referenced here (not omitted, despite the design doc's phase-2
-// prose assuming no navMenu is configured): the adapter's `editor.nav` block below DOES
-// configure the site's nav-menu editor, so `navMenuConfigured` is true at construction and the
-// screen is real; omitting it would leave it in the fallback foot group instead of the
-// acceptance criterion's empty fallback.
+// The ratified four-group sidebar (pass-B sidebar-build T6,
+// docs/plans/2026-07-19-asc-sidebar-build.md; icons/order/collapsed-defaults settled by the T1
+// probe round, docs/design-benchmark/decisions.md "Admin sidebar round 2"). Replaces the round-1
+// split-desk tree (Club/Outreach/Boats & Gear/Content/Site): Club, Events & Classes,
+// Communication, and Website, cairn's own screens interleaved with the site's /admin/club/*
+// routes rather than segregated by provenance. No `roles:` gate appears anywhere in this tree
+// (security model point 3, docs/2026-07-18-admin-sidebar-2-design.md): visibility derives
+// entirely from `src/theme/access.ts`'s map through `resolveNavLayout`/`canReach`, so an entry
+// renders iff the session reaches its function and a group renders iff it has a visible child.
+// `collapsed` below is only the widest-roles' starting position (Administrator/Club manager);
+// every other role's per-session open/closed set is a `navFilter` rewrite over this same shape
+// (src/theme/nav-defaults.ts, wired in src/chassis/cairn.server.ts), not a second declaration
+// here. `{ screen: 'nav' }` is referenced (not omitted, despite the round-1 comment's caution):
+// the adapter's `editor.nav` block below configures the site's nav-menu editor, so
+// `navMenuConfigured` is true at construction and the screen is real; omitting it would leave it
+// in the fallback foot instead of the acceptance criterion's empty fallback.
 export const navLayout: NavLayout = [
   {
     label: 'Club',
-    roles: CLUB_ROLES,
     children: [
       // portal-capstone: the section's own landing, the needs-attention strip's front door
       // (pending asset requests, offers nearing expiry). First in the list: the section's
-      // "home", not just another screen. The post-hoc Signups review queue retired (pass B T2:
-      // joins are automatic and self-serve, `board_join_notice` already notifies the board of
-      // every paid join, so the queue reviewed nothing); T6 folds this list into the ratified
-      // four-group tree.
+      // "home", not just another screen.
       { label: 'Overview', icon: 'anchor', href: '/admin/club' },
-      { label: 'Events', icon: 'calendar', href: '/admin/club/events' },
-      { label: 'Classes', icon: 'clipboard-list', href: '/admin/club/classes' },
       { label: 'Members', icon: 'users', href: '/admin/club/members' },
-      // Task 7 (docs/plans/2026-07-14-membership-admin.md): the season-flat Money & Renewals
-      // screen. Every allowlisted icon is already claimed elsewhere in this tree (Announce's
-      // reused 'inbox' below names the same constraint); 'table' fits the screen's own
-      // season-flat table best.
-      { label: 'Money', icon: 'table', href: '/admin/club/money' },
-      // member-directory pass T6 (docs/plans/2026-07-17-member-directory.md): the deliberately
-      // small committees/positions admin stopgap the queued admin-nav-reorg + admin-roles pass
-      // absorbs later. Every allowlisted icon is already claimed by this point; reuses 'users'
-      // (Members' own icon), the same small tradeoff Announce's reused 'inbox' already accepts.
-      { label: 'Committees', icon: 'users', href: '/admin/club/committees' },
-      // member-waivers T6 (docs/plans/2026-07-17-member-waivers.md, spec decision 8): "is the club
-      // protected" -- the per-season signed/outstanding rollup. Every allowlisted icon is already
-      // claimed by this point; reuses 'list' (the retired Signups screen's own icon), the same
-      // small tradeoff Committees' reused 'users' already accepts.
-      { label: 'Waivers', icon: 'list', href: '/admin/club/documents' },
-    ],
-  },
-  {
-    label: 'Outreach',
-    roles: CLUB_ROLES,
-    children: [
-      { label: 'Email', icon: 'inbox', href: '/admin/club/email' },
-      // The Announce screen (a published post's own "notify the club" step): recently published
-      // posts, each with an email-and/or-Discord send form. No spare icon in the nine-name
-      // allowlist is unclaimed by this point, so this reuses 'inbox', the same messaging-shaped
-      // glyph Email already carries; two adjacent inbox icons is a small, deliberate tradeoff
-      // against widening the allowlist for one more screen.
-      { label: 'Announce', icon: 'inbox', href: '/admin/club/announce' },
-    ],
-  },
-  {
-    label: 'Boats & Gear',
-    roles: CLUB_ROLES,
-    children: [
+      { label: 'Committees', icon: 'users-round', href: '/admin/club/committees' },
       { label: 'Assets', icon: 'package', href: '/admin/club/assets' },
-      // portal-capstone: the asset-request review inbox (the signup queue's own pattern).
-      { label: 'Requests', icon: 'table', href: '/admin/club/asset-requests' },
-    ],
-  },
-  {
-    label: 'Content',
-    children: [
-      { screen: 'posts' },
-      { screen: 'bulletins' },
-      { screen: 'pages' },
-      { screen: 'fragments' },
-      { screen: 'documents' },
-    ],
-  },
-  {
-    label: 'Site',
-    children: [
-      { screen: 'media' },
-      { screen: 'vocabulary' },
-      { screen: 'nav' },
-      // Initiative 5 Task 2 collapsed role management onto the engine's typed session; the
-      // grant/revoke UI retired with `club-roles.ts` in favor of cairn's own ManageEditors
-      // (`{ screen: 'editors' }`, below). This entry is only the offer-window setting now; the
-      // layout guard admits either club role, and the screen's own owner-only actions re-check
-      // `capability` server-side.
+      // Relabeled from "Requests" (T1 decision 5): distinct from Assets above without reading
+      // the whole tree for context.
+      { label: 'Asset requests', icon: 'inbox', href: '/admin/club/asset-requests' },
+      { label: 'Money', icon: 'banknote', href: '/admin/club/money' },
+      // The waivers rollup ("is the club protected"), not the document text itself -- that's
+      // Website's "Waiver text" engine ref below, editing the signable-document markdown.
+      { label: 'Waivers', icon: 'shield-check', href: '/admin/club/documents' },
       // "Club settings", not "Settings": cairn's own Settings screen already carries that name,
       // and two identical labels in one nav read as a defect (Geoff, 2026-07-07 admin review).
-      { label: 'Club settings', icon: 'wrench', href: '/admin/club/settings', roles: CLUB_ROLES },
-      { screen: 'settings', label: 'Site settings' },
-      { screen: 'editors' },
-      { screen: 'help' },
+      { label: 'Club settings', icon: 'wrench', href: '/admin/club/settings' },
+      // Relabeled from cairn's own "Editors" (T1 decision 5): `key-round` overrides the engine's
+      // default `users` glyph, which would otherwise collide with Members above.
+      { screen: 'editors', label: 'Admin access', icon: 'key-round' },
+    ],
+  },
+  {
+    label: 'Events & Classes',
+    collapsed: true,
+    children: [
+      { label: 'Events', icon: 'calendar', href: '/admin/club/events' },
+      { label: 'Classes', icon: 'graduation-cap', href: '/admin/club/classes' },
+      // T4: the cross-class waitlist/offer overview.
+      { label: 'Class waitlist', icon: 'list-ordered', href: '/admin/club/classes/waitlist' },
+      // T5's deep link into the Communication group's own Email/compose screen, preselected to
+      // the class segment via a query param. A distinct href (the query string) satisfies
+      // navLayout's own href-uniqueness check against the plain Email entry below, and it
+      // inherits the `/admin/club/email` access-map key's coverage rather than declaring a new
+      // one -- which also means a Publisher session (admitted to `/admin/club/email`) reaches
+      // this one Events & Classes entry, even though the rest of the group stays
+      // Administrator/Club manager only (T5's own header comment on the compose route).
+      { label: 'Email class members', icon: 'send', href: '/admin/club/email/compose?segment=class' },
+    ],
+  },
+  {
+    label: 'Communication',
+    children: [
+      // No icon override: the engine's dated-concept default glyph is unique in this tree once
+      // Bulletins below takes its own override.
+      { screen: 'posts' },
+      // Override required: the engine's dated-concept default would otherwise collide with Posts.
+      { screen: 'bulletins', icon: 'bell' },
+      { label: 'Email', icon: 'mail', href: '/admin/club/email' },
+      { label: 'Announce', icon: 'megaphone', href: '/admin/club/announce' },
+    ],
+  },
+  {
+    label: 'Website',
+    collapsed: true,
+    children: [
+      { screen: 'pages', icon: 'files' },
+      { screen: 'media' },
+      // No icon override: `puzzle` (the editor's own component-block glyph) was declined for
+      // this door (T1 probe verdict); the engine's own default glyph stays.
+      { screen: 'fragments' },
+      // No label override: the engine's own default label for this screen is already "Tags"
+      // (0.88's own `ENGINE_SCREEN_DEFAULTS`, verified against the installed package rather than
+      // assumed -- the round-1 tree's "Vocabulary" complaint no longer applies). `tags` still
+      // overrides the icon: the engine's own default glyph for this door is a different,
+      // singular tag outline, not the plural `tags` this allowlist name renders.
+      { screen: 'vocabulary', icon: 'tags' },
+      { screen: 'nav', icon: 'menu' },
+      // The signable-document markdown itself, not the waivers rollup -- that's Club's "Waivers"
+      // site entry above, reading the season's signed/outstanding state.
+      { screen: 'documents', label: 'Waiver text', icon: 'file-pen' },
+      // Relabeled from cairn's own "Settings" (T1 decision 5); the engine's default glyph fits.
+      { screen: 'settings', label: 'Website settings' },
     ],
   },
 ];
+// `help` is deliberately never referenced above (T1 probe verdict, "foot is perfect" --
+// docs/2026-07-19-sidebar-build-harvest-findings.md finding 1): an unreferenced screen resolves
+// into the engine's own fallback foot, open to every editor-capability session and unfilterable
+// by the access map (`help` and `editors` are the two documented non-map cases in access.ts), so
+// it is the one door every role reaches identically. Filing it inside a group instead would
+// strand a single-group role (Publisher, say) with a second, lonely group holding only Help.
 
 // The committed media manifest the public render resolver reads. A bare {} until an editor
 // uploads. Read through import.meta.glob so a fresh site with no committed media.json degrades
@@ -350,6 +353,10 @@ export const cairn = defineAdapter({
     // The preview knob: the (site) layout renders entries inside <main class="site-main">
     // (site.css), so the frame links the same theme/site sheets and reproduces that container.
     preview: { stylesheets: [themeCss, siteCss], containerClass: 'site-main' },
+    // A stuck editor's Help hand-off (pass-B sidebar-build T6, Geoff-approved): an explicit
+    // address stops cairn's own hosted-help default (`https://cairn.pub/help`) from standing in
+    // for a real club contact.
+    supportContact: 'geoff.wright@aksailingclub.org',
     navLayout,
     // The publish-actions seam: a published post lands beside the Announce screen's own
     // detail route (`/admin/club/announce/[id]`, a path param, not the doc example's query-string

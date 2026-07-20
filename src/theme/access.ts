@@ -43,9 +43,12 @@ import { defineAccess, type AccessMap, type RolesDeclaration } from '@glw907/cai
  */
 export function buildAccess(roles: RolesDeclaration): AccessMap {
   return defineAccess(roles, {
-    // Communication (roles matrix): publish-and-notify is Publisher's whole remit.
-    posts: ['Administrator', 'Club manager', 'Publisher'],
-    bulletins: ['Administrator', 'Club manager', 'Publisher'],
+    // Communication (roles matrix): publish-and-notify is Publisher's whole remit. Webmaster
+    // joins the same sets (sidebar-build pass B, T1 probe verdict #5, Geoff-ruled amendment
+    // 2026-07-19, docs/design-benchmark/decisions.md "Admin sidebar round 2"): Webmaster gains
+    // the whole Communication group alongside Website; Publisher stays Communication-only.
+    posts: ['Administrator', 'Club manager', 'Webmaster', 'Publisher'],
+    bulletins: ['Administrator', 'Club manager', 'Webmaster', 'Publisher'],
     // Website (roles matrix): Publisher gets no access to Pages -- an explicit exclusion, not an
     // oversight (design decision 8).
     pages: ['Administrator', 'Club manager', 'Webmaster'],
@@ -75,8 +78,9 @@ export function buildAccess(roles: RolesDeclaration): AccessMap {
     // Club (roles matrix): the section default every /admin/club/** path inherits unless a deeper
     // key overrides it, per `canReach`'s deepest-path-segment-prefix match.
     '/admin/club': ['Administrator', 'Club manager'],
-    // The Publisher widening (roles matrix: Communication includes Email and Announce).
-    '/admin/club/email': ['Administrator', 'Club manager', 'Publisher'],
-    '/admin/club/announce': ['Administrator', 'Club manager', 'Publisher'],
+    // The Communication widening (roles matrix: Communication includes Email and Announce, sends
+    // included, for both Publisher and Webmaster).
+    '/admin/club/email': ['Administrator', 'Club manager', 'Webmaster', 'Publisher'],
+    '/admin/club/announce': ['Administrator', 'Club manager', 'Webmaster', 'Publisher'],
   });
 }
