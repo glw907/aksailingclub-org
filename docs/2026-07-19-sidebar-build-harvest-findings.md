@@ -64,3 +64,21 @@ package tokens (`--cairn-card-border`, `--cairn-warning-ink`, `--color-muted`), 
 the strip in pass B. Engine-side fixes worth weighing: publish the class inventory (or a
 safelist contract) a site may rely on, document the scoped-style idiom as THE supported
 path for site-authored admin screens, or let a site append its own compiled admin sheet.
+
+## 6. Shell nav spacing: a collapsed group loses its boundary breathing room (engine polish)
+
+The pass-B coherence read measured the sidebar's group rhythm: an open group's last item
+to the next header runs ~42px, but a collapsed header stacked above the next header sits
+at ~33px, systematically, in every role tree and both themes. Collapsed groups pack at
+near item pitch and the rhythm inconsistency is visible on the flagship admin view. The
+spacing lives in the shell (`space-y-1` scroll area + per-group padding), so a site
+cannot correct it; a collapsed section wants the same group-boundary margin an open one
+gets. Related minor notes from the same read: the light-theme drawer scrim at 390 is on
+the transparent side, and the dark-theme primary button's boundary is subtle on near-black.
+
+## 7. The concept new-entry button says "New <plural label>" (engine copy)
+
+The engine's new-entry button composes "New" + the concept's label verbatim, and concept
+labels are plural by convention ("Posts"), yielding "New Posts" where "New Post" is the
+natural copy. A singular-form field on the concept declaration (or a smarter compose)
+fixes it engine-side; every cairn site with plural concept labels shows the same tell.

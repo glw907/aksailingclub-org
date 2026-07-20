@@ -127,3 +127,26 @@ fresh to the code:
   apostrophes in both ledes) fixed in the same commit.
 - Pre-existing flags routed to the polish backlog: dark-mode header logo near-invisible in
   site chrome; directory mail-icon optical alignment (settle by computed midline, not eye).
+
+## Admin sidebar rebuild, pass B close (2026-07-19, fresh-context coherence read)
+
+Read over 9 local-render captures (Administrator/Club manager/Publisher/Webmaster; 1440 +
+390 drawer; both themes; live badge counts from seeded pending rows), verifier fresh to
+the code: **PASS — no structural findings; the sidebar "reads as designed, not
+assembled"** across all five role trees ("reduced trees degrade by subtraction rather
+than by breakage"). Ranked cosmetic nits, triaged:
+
+- Collapsed-group boundary spacing (~33px header-to-header vs ~42px item-to-header) —
+  engine shell chrome, not site-declarable; filed as pass-B harvest finding 6.
+- Members/Committees glyph twinning (`users`/`users-round` at 16px) and "Announce" as the
+  lone verb — both T1-ratified verdicts; stand unless Geoff reopens (flagged in the
+  walkthrough queue note).
+- "Gold zero in the strip" — DISMISSED with evidence: the scoped-CSS strip (dc201c9)
+  renders zero counts in base ink (DOM-verified oklch computed colors + crop read); the
+  nonzero warning tint is new in dc201c9, never previously rendered.
+- Dark "New Posts" button boundary + light scrim opacity at 390 — engine chrome, minor;
+  noted in harvest finding 6. ("New Posts" plural is the engine's new-entry button using
+  the concept's plural label verbatim — harvest finding 7.)
+
+Coverage caveats (unexercised in this set, covered by CI baselines + Geoff's walkthrough):
+collapsed-header sum pills, the Waiver text label, the E&C singleton's expanded state.
