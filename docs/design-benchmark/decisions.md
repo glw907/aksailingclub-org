@@ -301,6 +301,26 @@ Dates are 2026-07-07/08 (the home convergence arc) unless noted.
   Contact-confirm (storage/mooring holders, once, after the last signature) is a
   glance card: read-only rows, filled "This is current", quiet "Update it".
 
+- **Admin sidebar round 2, T1 probe verdicts (Geoff, 2026-07-19, pass B; probes were static
+  HTML in real 0.88 chrome, settled in two probes)**: (1) **Icons**: the design's proposed
+  25-glyph assignment as-is, except Fragments keeps the engine default `layers` — `puzzle`
+  declined because the editor reserves it for component blocks. Three `icon:` overrides ride
+  the 0.88 engine-ref seam (Admin access `key-round`, Bulletins `bell`, Waiver text
+  `file-pen`); everything else is a site-entry icon or an engine default. (2) **Open/closed
+  defaults are role-dependent**, expressed via the `navFilter` seam rewriting `collapsed`
+  per session (no cairn change): Administrator and Club manager land with Club +
+  Communication open; Publisher with Communication; Webmaster with Communication + Website;
+  collapsed groups keep their header sums. (3) **Within-group order**: as proposed with one
+  move — Club runs Overview, Members, Committees, Assets, Asset requests, Money, Waivers,
+  Club settings, Admin access (Money dropped to sixth, after the two badge queues). (4)
+  **Help lives in the engine's fallback foot**, unreferenced by the tree ("foot is
+  perfect") — it is engine-open to every capability, so in-group placement gave
+  single-group roles a lonely extra group; the foot is universal by construction and the
+  idiom is filed for cairn's consumer guide (pass-B harvest). (5) **Roles-matrix
+  amendment: Webmaster gains the whole Communication group** (Posts, Bulletins, Email,
+  Announce, sends included) alongside Website; Publisher stays Communication-only. The
+  access map, matrix drift-guard test, and design matrix update in pass B.
+
 ## Benchmark provenance
 
 Pinned by the owner 2026-07-08 ("that's our new design benchmark"): the home page at commit
