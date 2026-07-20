@@ -8,6 +8,30 @@
 > entries beyond the top two or three to the archive — this file is @-imported into every
 > session's context, so its length is a per-session token tax.
 
+**THE ADMIN TOOLKIT WALKTHROUGH IS DONE AND THE INITIATIVE SHAPE IS SETTLED
+(2026-07-20, Fable-conducted "I drive, you react" walk with Geoff over a live-data
+local replica).** The settle: the admin screens get redesigned **one by one, each a
+full pass opening with its own functional brainstorm**, components and standards
+harvested into cairn as passes land (ROADMAP `admin-screen-passes`, inserted ahead of
+`events-redesign`). Ordering: **Members first, then Classes or Assets**; Money
+deliberately later. Evidence base: `docs/2026-07-20-admin-toolkit-catalog.md` — five
+reacted stops (Members, Money, Classes+waitlist, class detail, Assets, Committees,
+Asset requests) plus assistant-filed sweep inventories of every remaining screen;
+cross-cutting themes (density, one chip system, per-row action discipline,
+function-first resets) and Geoff's methodology ruling (recipes grounded in published
+UX research, not impressions — a research survey rides the first pass). Notables: the
+class-detail roster renders raw UUIDs (data intact, UI never joins members); reusable
+walkthrough harness (real `asc-club` copied into the local replica via
+`wrangler d1 export` + direct sqlite import; `scratchpad/walk.mjs`); fixture fix
+committed (signup-seed clear list missed the 0027–0030 children — warm replicas
+crashed bootstrap). **Flag for the existing apology-send queue item: the live
+`email_log` holds 471 failed vs 279 sent, latest failures 2026-07-14 08:15 UTC** —
+real rows, seen during the walk. **NEXT: the Members pass functional brainstorm.**
+Resume prompt: "Start the Members admin pass: read ROADMAP.md's admin-screen-passes
+entry and docs/2026-07-20-admin-toolkit-catalog.md, then open the functional
+brainstorm with Geoff (superpowers:brainstorming) on the Members screen's purpose and
+use cases before any visual work." Launch fresh from ~/Projects/aksailingclub-org.
+
 **PASS B `asc-sidebar-build` IS BUILD-COMPLETE AND SHIPPED TO DEV; GEOFF'S WALKTHROUGH
 IS THE OPEN GATE (2026-07-19, Fable-conducted: T1 probe round settled in-session, 5
 Sonnet implementer dispatches + simplifier + 2 reviewers + a fresh-context coherence

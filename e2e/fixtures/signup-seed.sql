@@ -43,6 +43,13 @@ DELETE FROM credit_grants;
 DELETE FROM signup_review_resolutions;
 DELETE FROM processed_stripe_sessions;
 DELETE FROM renewal_reminders_sent;
+-- The directory/boats/signature-era children (0027_directory_domain through
+-- 0030_contact_confirmation) postdate the original clear list; a warm replica's rows in any
+-- of them block the member deletes below just like the older children above.
+DELETE FROM committee_members;
+DELETE FROM member_positions;
+DELETE FROM boats;
+DELETE FROM contact_confirmations;
 DELETE FROM memberships;
 DELETE FROM members;
 DELETE FROM households;

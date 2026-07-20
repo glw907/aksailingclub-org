@@ -24,11 +24,13 @@ the design.
    apex cutover, since live signups need current waivers, but there is no live exposure
    before cutover (dev is behind Access), so it follows the directory rather than
    preceding it. Hooks into the built signup/renewal flows and into `season-rollover`.
-3. **`admin-sidebar-2`** — moved ahead of events by Geoff 2026-07-18: the second
-   sidebar round (fewer groups, collapsed-by-default with one open, unique icons),
-   brainstorm-first. Apex-independent, so also the natural break from member-facing
-   review cycles.
-4. **`events-redesign`** — self-contained, its own template, the special-focus page.
+3. **`admin-sidebar-2`** — DONE 2026-07-19 (pass B `asc-sidebar-build`; see
+   docs/STATUS.md).
+4. **`admin-screen-passes`** — inserted ahead of events by the 2026-07-20 walkthrough
+   settle: the admin screens one by one, each a full pass opening with its own
+   functional brainstorm; Members first, then Classes or Assets. See the Active entry
+   below.
+5. **`events-redesign`** — self-contained, its own template, the special-focus page.
    Independent of the first two.
 5. **`admin-nav-reorg` + `admin-roles`** — DONE 2026-07-15 (executed early as one
    initiative once cairn 0.86.0 landed; see the initiative entries below).
@@ -47,6 +49,18 @@ feature. Events and nav/roles brainstorm on their own. Three of Geoff's sittings
 five passes.
 
 ## Active
+
+### Admin screen redesign series `admin-screen-passes`
+The ASC admin screens taken one by one, each as a full pass opening with its own
+functional brainstorm (purpose and common use cases documented first; UI/UX flows from
+that). Ordering per Geoff 2026-07-20: Members first, probably followed by Classes or
+Assets; Money deliberately later, once the table and form vocabulary exists. Toolkit
+components and written standards are harvested into cairn as each pass lands, so the
+process compounds; an early pass carries the UX-research survey (table density,
+striping, form layout) the rest inherit. Evidence base and per-screen reactions:
+`docs/2026-07-20-admin-toolkit-catalog.md` (walkthrough of 2026-07-20, all screens
+captured against a live-data copy). Supersedes the catalog-then-build framing of
+`docs/2026-07-20-admin-toolkit-catalog-kickoff.md`.
 
 ### The money ledger `money-ledger` — DONE 2026-07-13
 The QBO-shaped `transactions` table: one row per money event (charge, refund, void,
