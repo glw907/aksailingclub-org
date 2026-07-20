@@ -80,14 +80,18 @@ export type ClassSignupOutcome = SignUpResult | ClassSignupJoinPivot | ClassSign
 
 /** The class-door standing gate's own three-way answer: `'eligible'` proceeds through the
  *  ordinary enroll/waitlist path, `'no-match'` pivots into the join door, and `'lapsed'` pivots
- *  into the renewal handoff instead (joining fresh would duplicate an existing household). */
+ *  into the renewal handoff instead (joining fresh would duplicate an existing household). Kept
+ *  as this door's own local vocabulary (never renamed to match `MemberStandingStatus`): `'lapsed'`
+ *  here means "not eligible today", which now covers BOTH the retired `'lapsed'` standing and the
+ *  renamed `'former'` one. */
 export type ClassEligibilityStatus = 'eligible' | 'lapsed' | 'no-match';
 
 /**
  * The class-door standing gate: resolves `email` (normalized) to a member and that member's
- * household standing. `'eligible'` only for a `current` or `grace` household; a no-match answers
- * `'no-match'`, and a `lapsed` household (including one with no paid membership at all, which
- * `getMemberStanding` also reports as `lapsed`) answers `'lapsed'`. The caller
+ * household standing. `'eligible'` only for a `'current'` or `'overdue'` household (Members pass
+ * T2's renamed vocabulary; Overdue keeps full class-access benefits); a no-match answers
+ * `'no-match'`, and a `'former'` household (including one with no paid membership at all, which
+ * `getMemberStanding` also reports as `'former'`) answers `'lapsed'`. The caller
  * (`handleClassSignup`, or the email-blur probe in `class-signup.remote.ts`) pivots the visitor
  * accordingly instead of the ordinary enroll/waitlist path. This is the one gate the public
  * form's submission runs through; the signed-in portal class flow (`$member-portal/lib/classes.ts`)
@@ -99,7 +103,7 @@ export async function resolveClassEligibility(db: D1Database, email: string): Pr
   if (!member) return 'no-match';
 
   const standing = await getMemberStanding(db, member.id);
-  if (standing?.status === 'current' || standing?.status === 'grace') return 'eligible';
+  if (standing?.status === 'current' || standing?.status === 'overdue') return 'eligible';
   return 'lapsed';
 }
 

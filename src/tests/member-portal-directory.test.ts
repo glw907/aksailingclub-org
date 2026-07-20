@@ -1,16 +1,20 @@
-// listDirectory's own listing rule (plan T3): non-archived, non-hidden, current-or-grace members
-// (standing sourced from $member-auth/lib/standing's shared boundary math, never a directory-local
-// clock), joined with boats (by owner), positions, and active non-archived committee memberships.
-// A fixed `NOW` (fake timers, member-standing.test.ts's own convention) makes the grace-boundary
-// assertions exact, since listDirectory reads the real clock rather than taking one as a parameter.
+// listDirectory's own listing rule (plan T3, renamed vocabulary Members pass T2): non-archived,
+// non-hidden, Current-or-Overdue members (standing sourced from $member-auth/lib/standing's one
+// exported classifier, never a directory-local clock), joined with boats (by owner), positions,
+// and active non-archived committee memberships. Overdue keeps full benefits, directory listing
+// included, until a household is actually recorded Former (`former_at`) -- no time-based cutoff
+// on read. A fixed `NOW` (fake timers, member-standing.test.ts's own convention) keeps the
+// boundary assertions exact, since listDirectory reads the real clock rather than taking one as a
+// parameter.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeD1 } from './_fake-d1';
 import { formatPhone, listDirectory } from '$member-portal/lib/directory';
 
 const NOW = new Date('2027-06-15T12:00:00Z');
 
-/** `paid_at` a fixed distance in the past from `NOW`, in the schema's own SQLite-datetime shape. */
-function paidAtDaysAgo(days: number): string {
+/** `paid_at` (or `former_at`) a fixed distance in the past from `NOW`, in the schema's own
+ *  SQLite-datetime shape. */
+function daysAgo(days: number): string {
   return new Date(NOW.getTime() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
 }
 
@@ -22,25 +26,17 @@ const BASE_ROW = {
   address_line2: null,
   state: 'AK',
   postal_code: '99501',
-  paid_at: paidAtDaysAgo(30),
+  paid_at: daysAgo(30),
+  former_at: null,
 };
 
-function fixture(opts: {
-  grounding?: unknown[];
-  boats?: unknown[];
-  positions?: unknown[];
-  memberships?: unknown[];
-  graceDays?: string;
-}) {
+function fixture(opts: { grounding?: unknown[]; boats?: unknown[]; positions?: unknown[]; memberships?: unknown[] }) {
   return fakeD1({
     allResults: {
       'FROM members m': opts.grounding ?? [],
       'FROM boats': opts.boats ?? [],
       'FROM member_positions': opts.positions ?? [],
       'FROM committee_members cm': opts.memberships ?? [],
-    },
-    firstResults: {
-      "'renewal_grace_days'": { value: opts.graceDays ?? '30' },
     },
   });
 }
@@ -93,7 +89,7 @@ describe('listDirectory', () => {
     expect(entry.household).toEqual({ name: 'The Scratches', city: 'Anchorage' });
   });
 
-  it('excludes a member whose household has never had a paid row (folds into lapsed, like getMemberStanding)', async () => {
+  it('excludes a member whose household has never had a paid row (folds into "none", like getHouseholdStanding)', async () => {
     const { db } = fixture({
       grounding: [
         { ...BASE_ROW, member_id: 'mem-3', member_name: 'Never Paid', email: null, phone: null, directory_visibility: 'visible', paid_at: null },
@@ -102,64 +98,65 @@ describe('listDirectory', () => {
     await expect(listDirectory(db)).resolves.toEqual([]);
   });
 
-  it('excludes a lapsed member (well past the grace window)', async () => {
+  it('includes an Overdue member well past the one-year boundary, as long as former_at is not recorded (full benefits until Former)', async () => {
     const { db } = fixture({
       grounding: [
-        { ...BASE_ROW, member_id: 'mem-4', member_name: 'Lana Lapsed', email: null, phone: null, directory_visibility: 'visible', paid_at: paidAtDaysAgo(365 + 31) },
+        { ...BASE_ROW, member_id: 'mem-4', member_name: 'Odell Overdue', email: null, phone: null, directory_visibility: 'visible', paid_at: daysAgo(365 + 200) },
       ],
-      graceDays: '30',
     });
-    await expect(listDirectory(db)).resolves.toEqual([]);
+    await expect(listDirectory(db)).resolves.toHaveLength(1);
   });
 
-  it('lists a member inside the grace window, drops one instant past the grace-window-end boundary (inclusive at the boundary)', async () => {
-    const { db: graceDb } = fixture({
-      grounding: [
-        { ...BASE_ROW, member_id: 'mem-5', member_name: 'Gwen Grace', email: null, phone: null, directory_visibility: 'visible', paid_at: paidAtDaysAgo(365 + 20) },
-      ],
-      graceDays: '30',
-    });
-    await expect(listDirectory(graceDb)).resolves.toHaveLength(1);
-
-    // paid_at such that graceEnd is exactly NOW (30-day grace window): still listed, inclusive.
-    const graceDays = 30;
-    const boundary = new Date(NOW);
-    boundary.setUTCFullYear(boundary.getUTCFullYear() - 1);
-    boundary.setUTCDate(boundary.getUTCDate() - graceDays);
-    const { db: boundaryDb } = fixture({
+  it('excludes a member whose household is recorded Former, regardless of source', async () => {
+    const { db: sequenceDb } = fixture({
       grounding: [
         {
           ...BASE_ROW,
           member_id: 'mem-5',
-          member_name: 'Gwen Grace',
+          member_name: 'Frankie Former',
           email: null,
           phone: null,
           directory_visibility: 'visible',
-          paid_at: boundary.toISOString().slice(0, 19).replace('T', ' '),
+          paid_at: daysAgo(365 + 40),
+          former_at: daysAgo(1),
         },
       ],
-      graceDays: '30',
     });
-    await expect(listDirectory(boundaryDb)).resolves.toHaveLength(1);
+    await expect(listDirectory(sequenceDb)).resolves.toEqual([]);
 
-    // paid_at one millisecond earlier: graceEnd is one instant before NOW, so this member has just lapsed.
-    const pastBoundary = new Date(boundary);
-    pastBoundary.setUTCMilliseconds(pastBoundary.getUTCMilliseconds() - 1);
-    const { db: pastDb } = fixture({
+    const { db: manualDb } = fixture({
       grounding: [
         {
           ...BASE_ROW,
           member_id: 'mem-5',
-          member_name: 'Gwen Grace',
+          member_name: 'Frankie Former',
           email: null,
           phone: null,
           directory_visibility: 'visible',
-          paid_at: pastBoundary.toISOString().slice(0, 19).replace('T', ' '),
+          paid_at: daysAgo(10),
+          former_at: daysAgo(5),
         },
       ],
-      graceDays: '30',
     });
-    await expect(listDirectory(pastDb)).resolves.toHaveLength(0);
+    await expect(listDirectory(manualDb)).resolves.toEqual([]);
+  });
+
+  it('a payment newer than former_at clears it: the member is listed again ("payment clears Former")', async () => {
+    const { db } = fixture({
+      grounding: [
+        {
+          ...BASE_ROW,
+          member_id: 'mem-6',
+          member_name: 'Renata Renewed',
+          email: null,
+          phone: null,
+          directory_visibility: 'visible',
+          paid_at: daysAgo(5), // renewed after the former_at marking below
+          former_at: daysAgo(40),
+        },
+      ],
+    });
+    await expect(listDirectory(db)).resolves.toHaveLength(1);
   });
 
   it('attributes a boat to its owning member only, never a household-mate', async () => {

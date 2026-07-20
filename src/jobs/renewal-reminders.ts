@@ -7,12 +7,24 @@
 // touch"). `renewal_reminders_sent` (migration 0015_job_runner) marks each touch exactly once per
 // household so a daily tick never double-fires one a prior tick already sent.
 //
+// Members pass T2: this job also carries the Former-transition sweep (migration
+// 0033_member_standing). The sweep's own boundary is deliberately time-based, not gated on the
+// touch-send machinery above: a household whose renewal boundary plus `FORMER_SEQUENCE_DAYS` has
+// passed is marked Former via `markHouseholdFormer` whether or not its `30_after` touch actually
+// SENT (a stale cron gap can leave that touch permanently un-sent, per `isDue`'s own staleness
+// cutoff below -- imported/dormant households must still transition), and a household whose
+// boundary has since moved back into the future (a renewal) has its own sequence-sourced marker
+// auto-cleared via `clearSequenceFormer`. Neither call touches `renewal_reminders_sent` or the
+// touch-sending budget; marking Former is a pure database write with no external side effect, so
+// it carries none of the touch cadence's own blast-radius concerns (this file's own 2026-07-14
+// incident note below).
+//
 // This module has no other consumer today (unlike `offers.ts`, which the admin's own "offer"
 // action and the public claim page both already call), so its query and send logic lives here
 // directly rather than in a new `$admin-club/lib` module a second caller would have to be
 // invented to justify.
 import type { D1Database } from '@cloudflare/workers-types';
-import { renewalExpiryFrom } from '$member-auth/lib/standing';
+import { clearSequenceFormer, formerBoundaryFrom, markHouseholdFormer, renewalExpiryFrom } from '$member-auth/lib/standing';
 import { sendClubEmail } from '$admin-club/lib/club-email';
 import { formatCivilDate } from '$admin-club/lib/ui';
 import { UNLIMITED_SEND_BUDGET, type Job, type JobSummary } from './registry';
@@ -175,45 +187,58 @@ export const renewalRemindersJob: Job = {
     const households = await listHouseholdsWithPaidMembership(ctx.db);
     let sent = 0;
     let householdsTouched = 0;
+    let formerMarked = 0;
+    let formerCleared = 0;
 
     for (const row of households) {
       const expiresOn = renewalExpiryFrom(row.paid_at);
       const expiresOnCivil = toCivilDateString(expiresOn);
       const alreadySent = await alreadySentTouches(ctx.db, row.household_id, expiresOnCivil);
       const due = dueTouches(expiresOn, ctx.now, alreadySent);
-      if (due.length === 0) continue;
-      householdsTouched += 1;
 
-      const contact = await resolveHouseholdContact(ctx.db, row.household_id);
-      const expiresOnDisplay = formatCivilDate(expiresOnCivil);
+      if (due.length > 0) {
+        householdsTouched += 1;
 
-      for (const touch of due) {
-        // Marked sent regardless of whether the per-tick send cap below still has room: a
-        // marked-but-unsent touch is an accepted tradeoff in a blast scenario (the household
-        // simply never gets that one touch this cycle, rather than the cap forcing a
-        // re-derivation of "already attempted" some other way).
-        await markTouchSent(ctx.db, row.household_id, touch, expiresOnCivil);
-        if (!contact) continue;
-        if (!(await budget.reserve(JOB_NAME))) continue;
-        await sendClubEmail(ctx.db, env, {
-          to: contact.email,
-          templateId: RENEWAL_TEMPLATE_ID,
-          vars: {
-            person_name: contact.name,
-            household_name: row.household_name,
-            message: TOUCH_MESSAGE[touch](expiresOnDisplay),
-            portal_url: `${env.PUBLIC_ORIGIN ?? ''}/my-account`,
-            committee_email: COMMITTEE_EMAIL,
-          },
-        });
-        sent += 1;
+        const contact = await resolveHouseholdContact(ctx.db, row.household_id);
+        const expiresOnDisplay = formatCivilDate(expiresOnCivil);
+
+        for (const touch of due) {
+          // Marked sent regardless of whether the per-tick send cap below still has room: a
+          // marked-but-unsent touch is an accepted tradeoff in a blast scenario (the household
+          // simply never gets that one touch this cycle, rather than the cap forcing a
+          // re-derivation of "already attempted" some other way).
+          await markTouchSent(ctx.db, row.household_id, touch, expiresOnCivil);
+          if (!contact) continue;
+          if (!(await budget.reserve(JOB_NAME))) continue;
+          await sendClubEmail(ctx.db, env, {
+            to: contact.email,
+            templateId: RENEWAL_TEMPLATE_ID,
+            vars: {
+              person_name: contact.name,
+              household_name: row.household_name,
+              message: TOUCH_MESSAGE[touch](expiresOnDisplay),
+              portal_url: `${env.PUBLIC_ORIGIN ?? ''}/my-account`,
+              committee_email: COMMITTEE_EMAIL,
+            },
+          });
+          sent += 1;
+        }
+      }
+
+      // The Former-transition sweep (migration 0033_member_standing): deliberately independent
+      // of `due`/staleness above -- this file's own header on why. Whichever branch runs is a
+      // cheap, idempotent single-row UPDATE keyed by the household's own primary key.
+      if (ctx.now >= formerBoundaryFrom(row.paid_at)) {
+        if (await markHouseholdFormer(ctx.db, row.household_id, 'sequence')) formerMarked += 1;
+      } else if (await clearSequenceFormer(ctx.db, row.household_id)) {
+        formerCleared += 1;
       }
     }
 
     const summary: JobSummary = {
       examined: households.length,
       acted: sent,
-      detail: `households_with_a_due_touch=${householdsTouched} touches_sent=${sent}`,
+      detail: `households_with_a_due_touch=${householdsTouched} touches_sent=${sent} former_marked=${formerMarked} former_cleared=${formerCleared}`,
     };
     return summary;
   },

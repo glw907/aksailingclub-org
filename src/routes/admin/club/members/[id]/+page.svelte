@@ -18,7 +18,7 @@ follow-up, out of this task's scope.
   import { CsrfField } from '@glw907/cairn-cms/components';
   import { FieldLabel, SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
   import { HEADER_CELL, formatCents, formatCivilDate, formatClubTimestamp, formatDollars } from '$admin-club/lib/ui';
-  import { LINE_ITEM_LABEL, STANDING_CHIP, TIER_LABEL, TRANSACTION_KIND_LABEL, TRANSACTION_SOURCE_LABEL, VISIBILITY_CHIP } from '$admin-club/lib/member-format';
+  import { HOUSEHOLD_STANDING_CHIP, LINE_ITEM_LABEL, TIER_LABEL, TRANSACTION_KIND_LABEL, TRANSACTION_SOURCE_LABEL, VISIBILITY_CHIP } from '$admin-club/lib/member-format';
   import type { TransactionSource } from '$admin-club/lib/ledger';
   import type { DirectoryVisibility, MembershipTier } from '$admin-club/lib/member-types';
   import type { HouseholdMembershipRow, HouseholdRosterMember } from '$admin-club/lib/households-store';
@@ -206,9 +206,9 @@ follow-up, out of this task's scope.
     </div>
     <div class="flex items-center gap-2">
       {#if standing}
-        {@const chip = STANDING_CHIP[standing.status]}
+        {@const chip = HOUSEHOLD_STANDING_CHIP[standing.status]}
         <span class="badge {chip.cls}">
-          {standing.status === 'lapsed' && standing.lastSeason ? `${chip.label} — last ${standing.lastSeason}` : chip.label}
+          {standing.status === 'former' && standing.lastSeason ? `${chip.label} — last ${standing.lastSeason}` : chip.label}
         </span>
       {/if}
       <button type="button" class="btn btn-ghost btn-sm" onclick={openHouseholdDialog}>Edit household</button>

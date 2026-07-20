@@ -2,26 +2,29 @@
 // 2.2's portal, Part 3's "signed-in landing" — this task keeps the landing auth-focused and
 // defers the full task-list/receipts composition to a later pass; only the standing card's own
 // data derives here). A MEMBERSHIP is the household's per-season purchase
-// (0005_member_domain's own header): standing is a HOUSEHOLD fact every member of it shares,
-// derived, never a stored status flag.
+// (0005_member_domain's own header): standing is a HOUSEHOLD fact every member of it shares.
 //
-// Derivation is ROLLING, not season-boundary (Geoff's mid-pass 2026-07-07 correction, superseding
-// this task's own original "April 30 <season+1>" draft): a household's standing derives from its
-// own most recently paid `memberships` row's `paid_at`, plus one year — "Current through
-// <paid_at + 1 year>" — never from the calendar-aligned `season` column, which stays on the row
-// purely as the period label a renewal or the MembershipWorks import assigned it. A household
-// past that boundary sits in a 'grace' standing for `getRenewalGraceDays` days
-// (`$admin-club/lib/club-settings.ts`, a Club setting, default 30) before finally reading as
-// 'lapsed': the asset-retention and renewal-reminder work the correction names both key on the
-// same three-state distinction.
+// The three-state vocabulary (Members pass T2, docs/2026-07-20-members-pass-design.md "Standing
+// vocabulary and the data tier", superseding this module's own original current/grace/lapsed
+// design): Current through the household's own rolling `paid_at` plus one year
+// (`renewalExpiryFrom`, Geoff's 2026-07-07 rolling-renewal ruling — never a season boundary),
+// Overdue past that boundary while the reminder sequence is still running (FULL member benefits,
+// exactly like Current), Former once the sequence's own stated-final `30_after` touch has passed
+// unpaid. Former is RECORDED, not re-derived from a time window on every read: migration
+// `0033_member_standing` adds `households.former_at`/`former_source`, the daily
+// renewal-reminders sweep (`src/jobs/renewal-reminders.ts`) writes it once a household crosses
+// the boundary, and {@link classifyHouseholdStanding} — the one exported classifier every
+// consumer calls — reads that recorded fact rather than re-computing a grace window. A household
+// whose `paid_at` has since advanced past its own `former_at` (a renewal) reads Current/Overdue
+// again automatically, with no explicit "clear" write required on the payment path itself; the
+// sweep also opportunistically clears a now-stale sequence-sourced marker (see
+// {@link clearSequenceFormer}), so the stored column stays eventually accurate too.
 //
-// This module imports `getRenewalGraceDays` from `$admin-club/lib/club-settings`: that module is
-// shared club-wide settings infrastructure, not the club-admin surface itself (its own
-// `getOfferWindowHours` already has a non-admin consumer, `src/admin-club/lib/offers.ts`'s public
-// `offerSpot`), so reading one more of its getters here does not blur member-auth's own
-// admin-club-independent boundary the way importing an admin-only module would.
+// This module imports `getRenewalGraceDays` from neither this file nor any function it calls: the
+// grace vocabulary retired here at the source (T2's own outcome). `renewal_grace_days` itself
+// survives in `club-settings.ts` for its other, not-yet-migrated readers (T3's own file list) —
+// see that module's own header on why.
 import type { D1Database } from '@cloudflare/workers-types';
-import { getRenewalGraceDays } from '$admin-club/lib/club-settings';
 import { toSqliteDatetime } from './crypto';
 import { formatMemberDate, parseMemberDate } from './format';
 
@@ -44,9 +47,19 @@ export const MEMBERSHIP_TIER_LABEL: Record<MembershipTier, string> = {
   'young-adult': 'Young Adult',
 };
 
-/** A household's renewal standing: `'current'` through its paid boundary, `'grace'` for
- *  `getRenewalGraceDays` days past it, `'lapsed'` after that. */
-export type MemberStandingStatus = 'current' | 'grace' | 'lapsed';
+/** A member-facing renewal standing: `'current'` through the household's own paid boundary,
+ *  `'overdue'` past it while still a full member, `'former'` once the reminder sequence's own
+ *  stated-final touch has passed unpaid (Members pass T2; replaces the retired
+ *  current/grace/lapsed vocabulary). Overdue and Current carry identical member benefits
+ *  everywhere in this codebase; only Former excludes. */
+export type MemberStandingStatus = 'current' | 'overdue' | 'former';
+
+/** A household-keyed renewal standing: {@link MemberStandingStatus}'s three states, plus
+ *  `'none'` for a household that has never had a non-refunded paid `memberships` row at all — a
+ *  state {@link getMemberStanding} folds into its own `'former'` for a member-facing landing
+ *  (this module's own long-standing "no membership on file" convention), but the admin's Members
+ *  list needs distinct from a household that was once a member and lapsed. */
+export type HouseholdStandingStatus = MemberStandingStatus | 'none';
 
 export interface MemberStanding {
   memberId: string;
@@ -63,11 +76,9 @@ export interface MemberStanding {
   /** `paid_at` plus one year, SQLite-datetime shaped (`toSqliteDatetime`'s own format); `null`
    *  when there is no paid row to derive from. */
   expiresOn: string | null;
-  /** `expiresOn` plus the grace window; `null` alongside `expiresOn`. */
-  graceEndsOn: string | null;
   /** The plain-words line the standing card leads with (design doc's own "The standing card"
-   *  section), e.g. "Current through July 7, 2027" or "Your membership lapsed July 7, 2026 ·
-   *  renew by August 6, 2026 to avoid a gap". */
+   *  section), e.g. "You're current through July 7, 2027." or "Your membership lapsed July 7,
+   *  2026 · renew by August 6, 2026 to avoid a gap." */
   statusLine: string;
 }
 
@@ -88,11 +99,10 @@ interface PaidMembershipRow {
   price_paid: number;
 }
 
-/** A household's renewal standing, keyed by household id rather than a member: `'none'` when the
- *  household has never had a non-refunded paid `memberships` row (a state {@link getMemberStanding}
- *  folds into its own `'lapsed'` for a member-facing landing, but the admin's Members list needs
- *  distinct from a household that simply lapsed). */
-export type HouseholdStandingStatus = 'current' | 'grace' | 'lapsed' | 'none';
+interface HouseholdFormerRow {
+  former_at: string | null;
+  former_source: 'sequence' | 'manual' | null;
+}
 
 export interface HouseholdStanding {
   status: HouseholdStandingStatus;
@@ -105,6 +115,13 @@ export interface HouseholdStanding {
   pricePaid: number | null;
   /** The grounding row's `paid_at`, raw (not the derived expiry); `null` when `status` is `'none'`. */
   paidAt: string | null;
+  /** `households.former_at`, raw: when this household most recently transitioned to Former, or
+   *  `null` if it never has (or a later payment has since superseded that marking — see this
+   *  module's own header on why a stale `former_at` does not itself force `status: 'former'`). */
+  formerAt: string | null;
+  /** `households.former_source`: `'sequence'` (the daily sweep) or `'manual'` (the household
+   *  desk's own override, T3); `null` alongside `formerAt`. */
+  formerSource: 'sequence' | 'manual' | null;
 }
 
 /** `date`, one calendar year later (same month and day; JS `Date`'s own rollover handles a Feb 29
@@ -121,66 +138,23 @@ function plusDays(date: Date, days: number): Date {
 }
 
 export interface StandingWindow {
-  status: 'current' | 'grace' | 'lapsed';
+  status: 'current' | 'overdue';
   expiry: Date;
-  graceEnd: Date;
 }
 
 /**
- * The current/grace/lapsed transition off a raw `paid_at` value and an already-known grace-window
- * length -- no database access, so a batch reader (the directory's own listing rule,
- * `member-portal/lib/directory.ts`'s `listDirectory`) can derive every household's standing from
- * ONE `getRenewalGraceDays` read plus a set-based grounding query, rather than paying this
- * module's own per-row `standingWindowFor` round trip once per member. This is the module's one
- * definition of the rolling-renewal boundary (this file's own header); a caller reuses this
- * function rather than re-deriving the math against its own SQL.
+ * The current/overdue split off a raw `paid_at` value alone — no grace window, no database
+ * access, so a batch reader (the directory's own listing rule, `member-portal/lib/directory.ts`'s
+ * `listDirectory`) can derive this half of a household's standing from a single already-loaded
+ * `paid_at`. This is NOT the full standing classification: a caller must still combine this with
+ * the household's own `former_at` via {@link classifyHouseholdStanding} to know whether it has
+ * actually transitioned to Former, since that transition is recorded, not re-derived here (this
+ * module's own header on why).
  */
-export function standingWindowFromPaidAt(paidAt: string, graceDays: number, now: Date): StandingWindow {
+export function standingWindowFromPaidAt(paidAt: string, now: Date): StandingWindow {
   const expiry = plusOneYear(parseMemberDate(paidAt));
-  const graceEnd = plusDays(expiry, graceDays);
-  const status: 'current' | 'grace' | 'lapsed' = now <= expiry ? 'current' : now <= graceEnd ? 'grace' : 'lapsed';
-  return { status, expiry, graceEnd };
-}
-
-/** The current/grace/lapsed transition, computed once off a grounding row's `paid_at` and the
- *  Club's `renewal_grace_days` setting: shared by {@link getHouseholdStanding} (status only) and
- *  {@link getMemberStanding} (status plus the display-shaped `expiresOn`/`graceEndsOn`/`statusLine`)
- *  so the boundary math lives in exactly one place. A thin async wrapper over
- *  {@link standingWindowFromPaidAt}, which carries the actual math. */
-async function standingWindowFor(db: D1Database, paidAt: string, now: Date): Promise<StandingWindow> {
-  const graceDays = await getRenewalGraceDays(db);
-  return standingWindowFromPaidAt(paidAt, graceDays, now);
-}
-
-/**
- * A household's renewal standing, keyed directly by `householdId` (no member lookup): `'none'`
- * when the household has never had a non-refunded paid `memberships` row, otherwise
- * current/grace/lapsed off its most recently paid such row's `paid_at` (the same rolling math this
- * module's own header describes). Every membership query in this module, this one included, carries
- * `AND refunded_at IS NULL`: a refunded row never grounds a household's standing, so a household
- * whose only paid row for the current season was refunded reads `'lapsed'` (against an older
- * non-refunded row) or `'none'` (if it has no other paid row), never `'current'`.
- */
-export async function getHouseholdStanding(db: D1Database, householdId: string): Promise<HouseholdStanding> {
-  const paidRow = await db
-    .prepare(
-      'SELECT tier, season, paid_at, price_paid FROM memberships WHERE household_id = ?1 AND paid_at IS NOT NULL AND refunded_at IS NULL ORDER BY paid_at DESC LIMIT 1',
-    )
-    .bind(householdId)
-    .first<PaidMembershipRow>();
-
-  if (!paidRow) {
-    return { status: 'none', lastSeason: null, tier: null, pricePaid: null, paidAt: null };
-  }
-
-  const { status } = await standingWindowFor(db, paidRow.paid_at, new Date());
-  return {
-    status,
-    lastSeason: paidRow.season,
-    tier: paidRow.tier,
-    pricePaid: paidRow.price_paid,
-    paidAt: paidRow.paid_at,
-  };
+  const status: 'current' | 'overdue' = now <= expiry ? 'current' : 'overdue';
+  return { status, expiry };
 }
 
 /**
@@ -195,14 +169,133 @@ export function renewalExpiryFrom(paidAt: string): Date {
   return plusOneYear(parseMemberDate(paidAt));
 }
 
+/** How many days past a household's own renewal boundary the reminder sequence's stated-final
+ *  touch (`renewal-reminders.ts`'s own `TOUCH_OFFSET_DAYS['30_after']`) fires: this module's own
+ *  Former-transition boundary, kept as one exported constant so the two modules stay in lockstep
+ *  by construction rather than by two authors remembering to keep two numbers equal. */
+export const FORMER_SEQUENCE_DAYS = 30;
+
+/** A household's own Former boundary: {@link renewalExpiryFrom} plus {@link FORMER_SEQUENCE_DAYS}
+ *  days — the point the daily reminder-sequence sweep marks it Former if still unpaid. Also used
+ *  by {@link getMemberStanding}'s own "renew by" statusLine wording for an Overdue household,
+ *  since it is still the real date the sequence will mark them Former if they do not renew before
+ *  then, even though that marking itself only actually happens via the recorded sweep write. */
+export function formerBoundaryFrom(paidAt: string): Date {
+  return plusDays(renewalExpiryFrom(paidAt), FORMER_SEQUENCE_DAYS);
+}
+
+/**
+ * The one exported classifier every consumer calls (Members pass T2's own "single exported
+ * classifier" requirement): `paidAt` is the household's own most recently paid, non-refunded
+ * `memberships` row's `paid_at` (`null` if it has never had one); `formerAt` is the household's
+ * raw `households.former_at` (`null` if never marked, or marked and since superseded).
+ *
+ * A recorded `formerAt` only holds while no payment has happened since it was written: if
+ * `paidAt` is newer than `formerAt` (a renewal after the marking), this reads Current/Overdue off
+ * the NEW `paidAt` instead, the same "payment clears Former" behavior a caller gets automatically
+ * without needing to explicitly clear the column on the payment path itself (this module's own
+ * header). `paidAt === null` with `formerAt` set still reads `'former'` (a manual override with
+ * no paid history at all is a real, if rare, edge case the household desk's own T3 action can
+ * produce).
+ */
+export function classifyHouseholdStanding(paidAt: string | null, formerAt: string | null, now: Date): HouseholdStandingStatus {
+  if (formerAt !== null) {
+    const supersededByNewerPayment = paidAt !== null && parseMemberDate(paidAt).getTime() > parseMemberDate(formerAt).getTime();
+    if (!supersededByNewerPayment) return 'former';
+  }
+  if (paidAt === null) return 'none';
+  return standingWindowFromPaidAt(paidAt, now).status;
+}
+
+/** Marks a household Former, recording `former_at` (now) and `source` — `'sequence'` from the
+ *  daily renewal-reminders sweep, `'manual'` from the household desk's own override (T3).
+ *  Idempotent via `former_at IS NULL`: a household already marked (by either source) is left
+ *  untouched, so a manual mark is never silently overwritten by a same-day sequence tick, and a
+ *  re-run sequence tick never rewrites an already-recorded timestamp. Returns whether this call
+ *  actually wrote the row, so a caller like the sweep can report an accurate "households
+ *  transitioned" count without a second read. */
+export async function markHouseholdFormer(db: D1Database, householdId: string, source: 'sequence' | 'manual'): Promise<boolean> {
+  const result = await db
+    .prepare("UPDATE households SET former_at = datetime('now'), former_source = ?2 WHERE id = ?1 AND former_at IS NULL")
+    .bind(householdId, source)
+    .run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
+/** The daily sweep's own auto-heal: clears a household's Former marker ONLY when it was
+ *  `'sequence'`-sourced, so a renewal that moves the boundary back into the future is reflected
+ *  in the stored column within one business day, without ever touching a `'manual'`-sourced
+ *  marker (which only {@link clearManualFormer} undoes). {@link classifyHouseholdStanding} already
+ *  reads a superseded `former_at` correctly on every live lookup regardless of whether this has
+ *  run yet — this exists to keep the stored column itself eventually accurate for a caller that
+ *  queries `households` directly rather than through the classifier. Returns whether it actually
+ *  cleared anything. */
+export async function clearSequenceFormer(db: D1Database, householdId: string): Promise<boolean> {
+  const result = await db
+    .prepare("UPDATE households SET former_at = NULL, former_source = NULL WHERE id = ?1 AND former_source = 'sequence'")
+    .bind(householdId)
+    .run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
+/** The household desk's own manual clear (T3): unlike {@link clearSequenceFormer}, clears
+ *  regardless of source, since an operator's own "they're renewing, unmark it" call overrides
+ *  either origin. Returns whether it actually cleared anything. */
+export async function clearManualFormer(db: D1Database, householdId: string): Promise<boolean> {
+  const result = await db
+    .prepare('UPDATE households SET former_at = NULL, former_source = NULL WHERE id = ?1 AND former_at IS NOT NULL')
+    .bind(householdId)
+    .run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
+/**
+ * A household's renewal standing, keyed directly by `householdId` (no member lookup):
+ * {@link classifyHouseholdStanding} combines its grounding `memberships` row (the most recently
+ * paid, non-refunded one) with its own `former_at`/`former_source`. Every membership query in
+ * this module, this one included, carries `AND refunded_at IS NULL`: a refunded row never
+ * grounds a household's standing, so a household whose only paid row for the current season was
+ * refunded reads `'former'` (against an older non-refunded row, if marked) or `'none'` (if it has
+ * no other paid row and was never marked), never `'current'`.
+ */
+export async function getHouseholdStanding(db: D1Database, householdId: string): Promise<HouseholdStanding> {
+  const [paidRow, formerRow] = await Promise.all([
+    db
+      .prepare(
+        'SELECT tier, season, paid_at, price_paid FROM memberships WHERE household_id = ?1 AND paid_at IS NOT NULL AND refunded_at IS NULL ORDER BY paid_at DESC LIMIT 1',
+      )
+      .bind(householdId)
+      .first<PaidMembershipRow>(),
+    db.prepare('SELECT former_at, former_source FROM households WHERE id = ?1').bind(householdId).first<HouseholdFormerRow>(),
+  ]);
+
+  const formerAt = formerRow?.former_at ?? null;
+  const formerSource = formerRow?.former_source ?? null;
+  const status = classifyHouseholdStanding(paidRow?.paid_at ?? null, formerAt, new Date());
+
+  if (!paidRow) {
+    return { status, lastSeason: null, tier: null, pricePaid: null, paidAt: null, formerAt, formerSource };
+  }
+
+  return {
+    status,
+    lastSeason: paidRow.season,
+    tier: paidRow.tier,
+    pricePaid: paidRow.price_paid,
+    paidAt: paidRow.paid_at,
+    formerAt,
+    formerSource,
+  };
+}
+
 /**
  * A household's renewal standing, read through one of its members (`memberId`). Resolves the
- * member's household, then that household's most recently paid `memberships` row (by `paid_at`,
- * not `season`: this module's own header on why), and derives `status`/`expiresOn`/`graceEndsOn`
- * from that row's `paid_at` plus one year and the Club's own `renewal_grace_days` setting.
- * Returns `null` only when `memberId` itself does not resolve to a real `members` row; a member
- * whose household has never had a single paid membership row still resolves, with `status:
- * 'lapsed'`, `tier`/`season`/`expiresOn`/`graceEndsOn` all `null`, and a neutral status line.
+ * member's household, then that household's full standing via {@link getHouseholdStanding}, and
+ * derives `expiresOn`/`statusLine` from its grounding `paid_at`. Returns `null` only when
+ * `memberId` itself does not resolve to a real `members` row; a member whose household has never
+ * had a single paid membership row still resolves, with `status: 'former'`,
+ * `tier`/`season`/`expiresOn` all `null`, and a neutral status line (this module's own long-
+ * standing "no membership on file" fold, renamed from the retired `'lapsed'`).
  */
 export async function getMemberStanding(db: D1Database, memberId: string): Promise<MemberStanding | null> {
   const member = await db
@@ -225,26 +318,29 @@ export async function getMemberStanding(db: D1Database, memberId: string): Promi
       memberName: member.name,
       householdId: member.household_id,
       householdName,
-      status: 'lapsed',
+      status: 'former',
       tier: null,
       season: null,
       expiresOn: null,
-      graceEndsOn: null,
       statusLine: 'No membership on file yet.',
     };
   }
 
-  const { status, expiry, graceEnd } = await standingWindowFor(db, standing.paidAt, new Date());
+  const { status, paidAt } = standing;
+  const expiry = renewalExpiryFrom(paidAt);
   // A full plain-words sentence (the design doc's own quoted example, "You're current through
   // May 17, 2027."; mock D renders the identical string), not the bare "Current through {date}"
   // fragment this used to read: the masthead's greeting directly above it ("Welcome back,
   // {firstName}.") is already a complete sentence, and this line is the page's single most
-  // important one.
+  // important one. Overdue keeps the same "renew by" nudge the retired 'grace' status carried
+  // (the sequence's own Former boundary, {@link formerBoundaryFrom}) — still the real date the
+  // sweep marks Former if unpaid, even though the marking itself happens via the recorded write,
+  // not by re-deriving this date on a later read.
   const statusLine =
     status === 'current'
       ? `You're current through ${formatMemberDate(expiry)}.`
-      : status === 'grace'
-        ? `Your membership lapsed ${formatMemberDate(expiry)} · renew by ${formatMemberDate(graceEnd)} to avoid a gap.`
+      : status === 'overdue'
+        ? `Your membership lapsed ${formatMemberDate(expiry)} · renew by ${formatMemberDate(formerBoundaryFrom(paidAt))} to avoid a gap.`
         : `Your membership lapsed ${formatMemberDate(expiry)}.`;
 
   return {
@@ -256,7 +352,6 @@ export async function getMemberStanding(db: D1Database, memberId: string): Promi
     tier: standing.tier,
     season: standing.lastSeason,
     expiresOn: toSqliteDatetime(expiry),
-    graceEndsOn: toSqliteDatetime(graceEnd),
     statusLine,
   };
 }

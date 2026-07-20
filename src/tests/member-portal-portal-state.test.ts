@@ -14,7 +14,6 @@ function standing(overrides: Partial<MemberStanding>): MemberStanding {
     tier: 'individual',
     season: 2026,
     expiresOn: '2027-06-01 00:00:00',
-    graceEndsOn: '2027-07-01 00:00:00',
     statusLine: 'Current through June 1, 2027',
     ...overrides,
   };
@@ -23,10 +22,10 @@ function standing(overrides: Partial<MemberStanding>): MemberStanding {
 describe('isRenewalWindowStanding', () => {
   const today = new Date('2027-05-01T00:00:00Z');
 
-  it('mirrors portalState\'s own rule 1: no standing, grace, lapsed, or current-within-window all read true', () => {
+  it('mirrors portalState\'s own rule 1: no standing, overdue, former, or current-within-window all read true', () => {
     expect(isRenewalWindowStanding(null, today)).toBe(true);
-    expect(isRenewalWindowStanding(standing({ status: 'grace' }), today)).toBe(true);
-    expect(isRenewalWindowStanding(standing({ status: 'lapsed' }), today)).toBe(true);
+    expect(isRenewalWindowStanding(standing({ status: 'overdue' }), today)).toBe(true);
+    expect(isRenewalWindowStanding(standing({ status: 'former' }), today)).toBe(true);
     expect(isRenewalWindowStanding(standing({ status: 'current', expiresOn: '2027-05-20 00:00:00' }), today)).toBe(true);
   });
 
@@ -44,28 +43,28 @@ describe('portalState', () => {
     ).toEqual({ kind: 'renewal-window', standingStatus: null });
   });
 
-  it('rules grace standing renewal-window regardless of expiry date', () => {
+  it('rules overdue standing renewal-window regardless of expiry date', () => {
     expect(
       portalState({
-        standing: standing({ status: 'grace', expiresOn: '2027-12-01 00:00:00' }),
+        standing: standing({ status: 'overdue', expiresOn: '2027-12-01 00:00:00' }),
         seasonHasLiveEvents: true,
         classRegistrationOpens: '',
         hasWeightedActionRows: false,
         today: TODAY,
       }),
-    ).toEqual({ kind: 'renewal-window', standingStatus: 'grace' });
+    ).toEqual({ kind: 'renewal-window', standingStatus: 'overdue' });
   });
 
-  it('rules lapsed standing renewal-window regardless of expiry date', () => {
+  it('rules former standing renewal-window regardless of expiry date', () => {
     expect(
       portalState({
-        standing: standing({ status: 'lapsed', expiresOn: '2027-12-01 00:00:00' }),
+        standing: standing({ status: 'former', expiresOn: '2027-12-01 00:00:00' }),
         seasonHasLiveEvents: true,
         classRegistrationOpens: '',
         hasWeightedActionRows: false,
         today: TODAY,
       }),
-    ).toEqual({ kind: 'renewal-window', standingStatus: 'lapsed' });
+    ).toEqual({ kind: 'renewal-window', standingStatus: 'former' });
   });
 
   it('rules current standing renewal-window on the expiry day itself', () => {

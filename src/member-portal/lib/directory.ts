@@ -5,17 +5,17 @@
 // `boats.member_id` -- a boat shows on its OWNER only, never a household-mate), `member_positions`,
 // and active `committee_members` (with their committee's name, excluding an archived committee and
 // any pending request). `hidden` and archived members never leave this module, the same as before;
-// LISTING NOW ALSO REQUIRES current-or-grace standing (directory spec decision 8), sourced from
-// `$member-auth/lib/standing`'s own `standingWindowFromPaidAt` -- the unified-signup machinery's one
-// definition of the rolling paid_at-plus-one-year-plus-grace boundary -- rather than a
-// directory-local clock. Every household's standing derives from ONE set-based grounding query (a
-// correlated subquery per household picks its own most recently paid, non-refunded `memberships`
-// row, mirroring `admin-club/lib/households-store.ts`'s own `HOUSEHOLD_GROUNDING_SQL`) plus one
-// `getRenewalGraceDays` read, never a per-member standing lookup: the directory's read stays four
-// queries regardless of club size.
+// LISTING REQUIRES Current or Overdue standing (directory spec decision 8, Members pass T2's
+// renamed vocabulary: Overdue keeps full benefits everywhere, directory listing included, until a
+// household is actually marked Former), sourced from `$member-auth/lib/standing`'s own single
+// exported classifier (`classifyHouseholdStanding`) rather than a directory-local clock. Every
+// household's standing derives from ONE set-based grounding query (a correlated subquery per
+// household picks its own most recently paid, non-refunded `memberships` row, mirroring
+// `admin-club/lib/households-store.ts`'s own `HOUSEHOLD_GROUNDING_SQL`, plus the household's own
+// `former_at`), never a per-member standing lookup: the directory's read stays four queries
+// regardless of club size.
 import type { D1Database } from '@cloudflare/workers-types';
-import { getRenewalGraceDays } from '$admin-club/lib/club-settings';
-import { standingWindowFromPaidAt } from '$member-auth/lib/standing';
+import { classifyHouseholdStanding } from '$member-auth/lib/standing';
 import type { DirectoryVisibility } from './household';
 
 /** A stored E.164 `+1` number (10 digits after the country code), the shape `profile.ts`'s own
@@ -124,6 +124,9 @@ interface DirectoryGroundingRow {
    *  `$member-auth/lib/standing.ts` and `$admin-club/lib/households-store.ts` each read, here via
    *  a matching correlated subquery so this stays one set-based query. */
   paid_at: string | null;
+  /** `households.former_at`, raw: `classifyHouseholdStanding`'s own recorded-Former input
+   *  (migration 0033_member_standing). */
+  former_at: string | null;
 }
 
 /** Every listed member, plus each household's own grounding row in one query: mirrors
@@ -132,7 +135,7 @@ interface DirectoryGroundingRow {
 const DIRECTORY_GROUNDING_SQL = `
   SELECT m.id AS member_id, m.name AS member_name, m.email, m.phone, m.directory_visibility,
          h.id AS household_id, h.name AS household_name, h.city AS household_city,
-         h.address_line1, h.address_line2, h.state, h.postal_code,
+         h.address_line1, h.address_line2, h.state, h.postal_code, h.former_at,
          gm.paid_at
   FROM members m
   JOIN households h ON h.id = m.household_id
@@ -187,12 +190,12 @@ function derivedCommitteeTitle(role: CommitteeRole, committeeName: string): stri
 
 /**
  * Every listed member: non-archived, non-hidden (`directory_visibility != 'hidden'`), and
- * current-or-grace standing (directory spec decision 8), in member-name order. Standing is
- * derived from each household's own grounding `memberships` row via
- * {@link standingWindowFromPaidAt} -- `$member-auth/lib/standing`'s shared boundary math -- off a
- * SINGLE `getRenewalGraceDays` read, never a per-member standing lookup. A household that has
- * never had a paid row reads the same as a lapsed one for listing purposes (folding into
- * `getMemberStanding`'s own "no membership on file" convention) and is excluded.
+ * Current-or-Overdue standing (directory spec decision 8; Overdue keeps full benefits everywhere,
+ * directory listing included), in member-name order. Standing is derived from each household's
+ * own grounding `memberships` row plus its own `former_at` via {@link classifyHouseholdStanding}
+ * -- `$member-auth/lib/standing`'s one exported classifier -- never a per-member standing lookup.
+ * A household that has never had a paid row and was never manually marked Former reads `'none'`
+ * for listing purposes (excluded, the same as a real Former household).
  *
  * Boats, positions, and active committee memberships (chair titles derived, pending rows and
  * archived committees excluded) each read from one set-based query and are grouped in JS by
@@ -201,7 +204,7 @@ function derivedCommitteeTitle(role: CommitteeRole, committeeName: string): stri
  */
 export async function listDirectory(db: D1Database): Promise<DirectoryEntry[]> {
   const now = new Date();
-  const [groundingResult, boatsResult, positionsResult, membershipsResult, graceDays] = await Promise.all([
+  const [groundingResult, boatsResult, positionsResult, membershipsResult] = await Promise.all([
     db.prepare(DIRECTORY_GROUNDING_SQL).all<DirectoryGroundingRow>(),
     db.prepare('SELECT member_id, name, model, kept_on FROM boats ORDER BY name').all<BoatRawRow>(),
     db
@@ -216,7 +219,6 @@ export async function listDirectory(db: D1Database): Promise<DirectoryEntry[]> {
          ORDER BY c.name`,
       )
       .all<CommitteeMembershipRawRow>(),
-    getRenewalGraceDays(db),
   ]);
 
   const boatsByMember = groupBy(boatsResult.results, (row) => row.member_id);
@@ -225,8 +227,8 @@ export async function listDirectory(db: D1Database): Promise<DirectoryEntry[]> {
 
   const entries: DirectoryEntry[] = [];
   for (const row of groundingResult.results) {
-    const status = row.paid_at ? standingWindowFromPaidAt(row.paid_at, graceDays, now).status : 'lapsed';
-    if (status !== 'current' && status !== 'grace') continue;
+    const status = classifyHouseholdStanding(row.paid_at, row.former_at, now);
+    if (status !== 'current' && status !== 'overdue') continue;
 
     const exposesContact = row.directory_visibility === 'visible';
     const boats: DirectoryBoat[] = (boatsByMember.get(row.member_id) ?? []).map((boat) => ({

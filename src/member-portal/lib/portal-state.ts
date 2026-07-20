@@ -84,14 +84,17 @@ export function isWithinRenewalWindow(standing: MemberStanding, today: Date): bo
   return daysUntilExpiry >= 0 && daysUntilExpiry <= RENEWAL_WINDOW_DAYS;
 }
 
-/** Rule 1's own full condition, standalone (member-waivers T5b): no resolvable standing at all, a
- *  `'grace'` or `'lapsed'` household, or a `'current'` one within {@link RENEWAL_WINDOW_DAYS} days
- *  of expiry. `portalState` itself is this plus the rest of the state machine; a caller that only
- *  needs THIS one yes/no (the portal landing's own waiver-loop row, which must never read a
- *  fully-active household as "waiting" -- see `waiver-action-rows.ts`'s own header) calls this
- *  directly rather than computing the whole state twice. */
+/** Rule 1's own full condition, standalone (member-waivers T5b): no resolvable standing at all,
+ *  an `'overdue'` or `'former'` household (Members pass T2's renamed vocabulary; Overdue still
+ *  reads renewal-window here even though it keeps full benefits everywhere else, since the
+ *  masthead's own renewal nudge is exactly the UI Overdue needs), or a `'current'` one within
+ *  {@link RENEWAL_WINDOW_DAYS} days of expiry. `portalState` itself is this plus the rest of the
+ *  state machine; a caller that only needs THIS one yes/no (the portal landing's own waiver-loop
+ *  row, which must never read a fully-active household as "waiting" -- see
+ *  `waiver-action-rows.ts`'s own header) calls this directly rather than computing the whole
+ *  state twice. */
 export function isRenewalWindowStanding(standing: MemberStanding | null, today: Date): boolean {
-  return !standing || standing.status === 'grace' || standing.status === 'lapsed' || isWithinRenewalWindow(standing, today);
+  return !standing || standing.status === 'overdue' || standing.status === 'former' || isWithinRenewalWindow(standing, today);
 }
 
 /** {@link portalState}'s own inputs, each already loaded by the caller (a route's `load`, per
@@ -135,7 +138,7 @@ function unstaleClassRegistrationOpens(classRegistrationOpens: string, today: Da
 
 /**
  * The landing's one first-class state, by the conductor's own binding precedence: a household in
- * `'grace'` or `'lapsed'` standing, a `'current'` one within {@link RENEWAL_WINDOW_DAYS} days of
+ * `'overdue'` or `'former'` standing, a `'current'` one within {@link RENEWAL_WINDOW_DAYS} days of
  * expiry, or no resolvable standing at all reads `'renewal-window'` before anything else is even
  * considered. Otherwise, a season with no live events left reads `'off-season'`. Otherwise, a
  * real weighted action row reads `'in-season-needs-you'`; failing that, `'in-season-clear'`.

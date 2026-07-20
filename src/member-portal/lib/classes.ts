@@ -160,8 +160,9 @@ export async function listMyWaitlistEntries(db: D1Database, householdId: string)
  * Member-waivers T5b gate (spec rule 7's amendment, "on top of the registrant's own documents"):
  * two checks, both against the SIGNED-IN actor's own household (`args.actorMemberId`, since
  * standing is a household property regardless of which member is being registered). First, the
- * household's own standing must be active (`'current'` or `'grace'`, matching the public class
- * door's own `resolveClassEligibility`) — a lapsed household reaching this far (the portal itself
+ * household's own standing must be active (`'current'` or `'overdue'` — Members pass T2's renamed
+ * vocabulary; Overdue keeps full class-access benefits, matching the public class door's own
+ * `resolveClassEligibility`) — a Former household reaching this far (the portal itself
  * gates nothing on standing today) still refuses cleanly rather than silently enrolling. Second,
  * the REGISTRANT's own current-season general release (their own signature for an adult, their
  * own Part Two for a minor) must be on file; when it is, decision 9 applies and nothing further
@@ -181,7 +182,7 @@ export async function registerForClass(
   }
 
   const standing = await getMemberStanding(db, args.actorMemberId);
-  if (!standing || (standing.status !== 'current' && standing.status !== 'grace')) {
+  if (!standing || (standing.status !== 'current' && standing.status !== 'overdue')) {
     return { error: 'Your membership needs to be current before signing up for classes.' };
   }
   const season = await getCurrentSeason(db);

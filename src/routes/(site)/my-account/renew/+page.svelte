@@ -3,7 +3,7 @@
 renewal door" ruling). The masthead's fireweed CTA links here instead of posting a hidden tier
 field, so the household sees its current tier and price plainly, and the other tiers at their real
 settings prices, before committing to a purchase. Handles every standing shape the masthead can
-send it (current-but-in-window, grace, lapsed, no-membership-on-file) by reading straight off
+send it (current-but-in-window, overdue, former, no-membership-on-file) by reading straight off
 `standing.statusLine`/`standing.tier`, the same plain-words, no-alarm-color sentence the masthead
 itself shows -- no separate per-status copy branches to keep in sync.
 

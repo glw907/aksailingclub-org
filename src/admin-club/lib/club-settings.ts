@@ -124,9 +124,16 @@ const DEFAULT_RENEWAL_GRACE_DAYS = 30;
  * How many days after a household's own renewal boundary (`memberships.paid_at` plus one year)
  * it stays in a 'grace' standing before reading as fully 'lapsed' (Geoff's 2026-07-07
  * rolling-renewal ruling: standing derives from a household's own paid date, not a season
- * boundary). `src/member-auth/lib/standing.ts`'s `getMemberStanding` is the one reader today; a
- * future renewal-reminder cadence and an asset-retention rule are both expected to key on the
- * same value, per the ruling's own reasoning, hence a Club setting rather than a constant.
+ * boundary).
+ *
+ * Members pass T2 (docs/2026-07-20-members-pass-design.md): `src/member-auth/lib/standing.ts` no
+ * longer reads this getter. Its own current/grace/lapsed vocabulary retired in favor of
+ * Current/Overdue/Former, with the Overdue-to-Former transition now driven by the reminder
+ * sequence's own fixed 30-day `30_after` touch offset and recorded on `households.former_at`
+ * (migration `0033_member_standing`), not by this per-club-configurable setting. This getter
+ * (and the `renewal_grace_days` row itself) survives for its other readers not yet migrated off
+ * the grace vocabulary — `src/admin-club/lib/segments.ts`, `households-store.ts`, and
+ * `announcements.ts` — and retires once every reader has moved.
  */
 export async function getRenewalGraceDays(db: D1Database): Promise<number> {
   const row = await db.prepare("SELECT value FROM settings WHERE key = 'renewal_grace_days'").first<{ value: string }>();

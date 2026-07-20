@@ -18,7 +18,7 @@
 // DEFERRED CONSUMERS (not wired in this worktree, both `portal-capstone`'s own work): the join/
 // renewal flow that would create an unpaid `memberships` row and immediately call
 // `createCheckout({ kind: 'dues', refId: membership.id, ... })` (the seam's natural landing spot
-// is `/my-account`, near `getMemberStanding`'s own `'grace'`/`'lapsed'` states, see that route's
+// is `/my-account`, near `getMemberStanding`'s own `'overdue'`/`'former'` states, see that route's
 // own comment), and the approved-asset-request "pay to confirm" screen that would call
 // `createCheckout({ kind: 'asset-fee', refId: assignment.id, ... })` once an `asset_requests` row
 // resolves to a real `asset_assignments` row (see `assets-store.ts`'s own header on why that

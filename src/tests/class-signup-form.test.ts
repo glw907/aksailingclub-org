@@ -45,9 +45,9 @@ const RECENT_PAID_AT = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOStri
 const STANDING_ELIGIBLE = {
   'FROM members WHERE email': { id: 'member-1', household_id: 'household-1' },
   'FROM members WHERE id': { id: 'member-1', household_id: 'household-1', name: 'Jamie Rivera' },
-  'FROM households WHERE id': { name: 'Rivera Household' },
+  'SELECT name FROM households WHERE id': { name: 'Rivera Household' },
+  'SELECT former_at, former_source FROM households WHERE id': { former_at: null, former_source: null },
   'FROM memberships WHERE household_id': { tier: 'individual', season: 2026, paid_at: RECENT_PAID_AT },
-  "'renewal_grace_days'": { value: '30' },
 };
 
 function freeCapacityDb() {
@@ -211,17 +211,23 @@ describe('the class-door standing gate (Task 4)', () => {
 
   /** A free-capacity class DB (`freeCapacityDb`'s own shape) plus the standing-gate's own lookups:
    *  a member (or not, for the no-match branch) whose household's most recently paid membership row
-   *  landed `paidAt` days ago (or never paid, for `paidAt: null`). */
-  function standingDb(opts: { memberFound: boolean; paidAt: string | null; email?: unknown | ((args: unknown[]) => unknown) }) {
+   *  landed `paidAt` days ago (or never paid, for `paidAt: null`), and whose `former_at` (Members
+   *  pass T2's recorded Former marker) is `formerAt` days ago, or unset. */
+  function standingDb(opts: {
+    memberFound: boolean;
+    paidAt: string | null;
+    formerAt?: string | null;
+    email?: unknown | ((args: unknown[]) => unknown);
+  }) {
     return fakeD1({
       firstResults: {
         'FROM classes WHERE id': CLASS_ROW,
         'FROM class_enrollments WHERE class_id': (args: unknown[]) => (args.length === 2 ? null : { n: 9 }),
         'FROM class_waitlist WHERE class_id': { n: 0 },
-        "'renewal_grace_days'": { value: '30' },
         'FROM members WHERE email': opts.email ?? (opts.memberFound ? { id: MEMBER_ROW.id, household_id: MEMBER_ROW.household_id } : null),
         'FROM members WHERE id': opts.memberFound ? MEMBER_ROW : null,
-        'FROM households WHERE id': HOUSEHOLD_ROW,
+        'SELECT name FROM households WHERE id': HOUSEHOLD_ROW,
+        'SELECT former_at, former_source FROM households WHERE id': { former_at: opts.formerAt ?? null, former_source: opts.formerAt ? 'sequence' : null },
         'FROM memberships WHERE household_id': opts.paidAt ? { tier: 'individual', season: 2025, paid_at: opts.paidAt } : null,
       },
     });
@@ -240,11 +246,12 @@ describe('the class-door standing gate (Task 4)', () => {
     expect(result).toEqual({ outcome: 'enrolled', enrollmentId: expect.any(String) });
   });
 
-  it('a member in grace standing proceeds too', async () => {
+  it('an Overdue member (past the boundary, no former_at recorded) proceeds too -- full benefits until Former', async () => {
     vi.stubGlobal('fetch', vi.fn());
-    // ~365 days past this paid_at is ~15 days ago: past the boundary, still inside the default
-    // 30-day grace window.
-    const { db } = standingDb({ memberFound: true, paidAt: isoDaysAgo(380) });
+    // Well past the one-year boundary, with no former_at marker recorded: still Overdue, not
+    // Former, no matter how many days have passed (Members pass T2: the transition is recorded,
+    // never re-derived from a time window on read).
+    const { db } = standingDb({ memberFound: true, paidAt: isoDaysAgo(450) });
 
     const result = await handleClassSignup(INPUT, { CLUB_DB: db }, '203.0.113.5');
 
@@ -266,10 +273,11 @@ describe('the class-door standing gate (Task 4)', () => {
     });
   });
 
-  it('a lapsed household gets the renewal handoff instead of the join pivot (2026-07-14 amendment)', async () => {
+  it('a Former household gets the renewal handoff instead of the join pivot (2026-07-14 amendment)', async () => {
     vi.stubGlobal('fetch', vi.fn());
-    // Well past the 1-year boundary plus the 30-day grace window.
-    const { db } = standingDb({ memberFound: true, paidAt: isoDaysAgo(450) });
+    // Well past the boundary AND recorded Former (Members pass T2: this is what actually
+    // excludes, never mere elapsed time).
+    const { db } = standingDb({ memberFound: true, paidAt: isoDaysAgo(450), formerAt: isoDaysAgo(10) });
 
     const result = await handleClassSignup({ ...INPUT, phone: '907-555-0100' }, { CLUB_DB: db }, '203.0.113.5');
 

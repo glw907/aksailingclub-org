@@ -65,10 +65,10 @@ describe('/my-account/directory load', () => {
             state: null,
             postal_code: null,
             paid_at: new Date().toISOString().slice(0, 10),
+            former_at: null,
           },
         ],
       },
-      firstResults: { "'renewal_grace_days'": { value: '30' } },
     });
     const result = (await load(eventFor(MEMBER, db))) as LoadResult;
     expect(result.entries).toHaveLength(1);

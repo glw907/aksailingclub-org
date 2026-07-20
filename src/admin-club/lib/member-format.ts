@@ -6,6 +6,7 @@
 import type { ChipStyle } from './ui';
 import type { DirectoryVisibility, MemberSegment, MembershipTier } from './member-types';
 import type { HouseholdStandingStatus } from './households-store';
+import type { HouseholdStandingStatus as MemberAuthStandingStatus } from '$member-auth/lib/standing';
 import type { LineItem, TransactionKind, TransactionSource } from './ledger';
 
 /** Segment chips, following the same vocabulary the Events/Classes screens already established
@@ -48,6 +49,25 @@ export const STANDING_CHIP: Record<HouseholdStandingStatus, ChipStyle> = {
   current: { label: 'Current', cls: 'badge-sm border-transparent bg-primary/10 font-medium text-primary' },
   grace: { label: 'Grace', cls: 'badge-sm border-transparent bg-warning/15 font-medium text-warning-content' },
   lapsed: { label: 'Lapsed', cls: 'badge-ghost badge-sm font-medium' },
+  none: { label: 'No membership', cls: 'badge-ghost badge-sm font-medium opacity-60' },
+};
+
+/**
+ * The household desk's own standing chip (`/admin/club/members/[id]`), keyed by
+ * `$member-auth/lib/standing`'s `HouseholdStandingStatus` -- the actual type `getHouseholdStanding`
+ * returns, and NOT the same type as {@link STANDING_CHIP} above despite the near-identical name:
+ * that one keys off `households-store.ts`'s own independently-derived vocabulary for the Members
+ * LIST screen (current/grace/lapsed/none, not yet migrated off the retired vocabulary -- Members
+ * pass T3's own job). This module's two standing chip maps read two genuinely different sources
+ * until T3 unifies them; do not assume they always agree mid-pass. Members pass T2's renamed
+ * three-state vocabulary: Overdue reads in the same warning language `STANDING_CHIP`'s retired
+ * `grace` used (a still-open renewal window, worth a volunteer's notice, full benefits regardless);
+ * Former reads the same quiet ghost chip `lapsed` used.
+ */
+export const HOUSEHOLD_STANDING_CHIP: Record<MemberAuthStandingStatus, ChipStyle> = {
+  current: { label: 'Current', cls: 'badge-sm border-transparent bg-primary/10 font-medium text-primary' },
+  overdue: { label: 'Overdue', cls: 'badge-sm border-transparent bg-warning/15 font-medium text-warning-content' },
+  former: { label: 'Former', cls: 'badge-ghost badge-sm font-medium' },
   none: { label: 'No membership', cls: 'badge-ghost badge-sm font-medium opacity-60' },
 };
 
