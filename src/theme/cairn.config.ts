@@ -49,12 +49,14 @@ export const navLayout: NavLayout = [
     roles: CLUB_ROLES,
     children: [
       // portal-capstone: the section's own landing, the needs-attention strip's front door
-      // (pending signup reviews, pending asset requests, offers nearing expiry). First in the
-      // list: the section's "home", not just another screen.
+      // (pending asset requests, offers nearing expiry). First in the list: the section's
+      // "home", not just another screen. The post-hoc Signups review queue retired (pass B T2:
+      // joins are automatic and self-serve, `board_join_notice` already notifies the board of
+      // every paid join, so the queue reviewed nothing); T6 folds this list into the ratified
+      // four-group tree.
       { label: 'Overview', icon: 'anchor', href: '/admin/club' },
       { label: 'Events', icon: 'calendar', href: '/admin/club/events' },
       { label: 'Classes', icon: 'clipboard-list', href: '/admin/club/classes' },
-      { label: 'Signups', icon: 'list', href: '/admin/club/signups' },
       { label: 'Members', icon: 'users', href: '/admin/club/members' },
       // Task 7 (docs/plans/2026-07-14-membership-admin.md): the season-flat Money & Renewals
       // screen. Every allowlisted icon is already claimed elsewhere in this tree (Announce's
@@ -68,8 +70,8 @@ export const navLayout: NavLayout = [
       { label: 'Committees', icon: 'users', href: '/admin/club/committees' },
       // member-waivers T6 (docs/plans/2026-07-17-member-waivers.md, spec decision 8): "is the club
       // protected" -- the per-season signed/outstanding rollup. Every allowlisted icon is already
-      // claimed by this point; reuses 'list' (Signups' own icon), the same small tradeoff
-      // Committees' reused 'users' already accepts.
+      // claimed by this point; reuses 'list' (the retired Signups screen's own icon), the same
+      // small tradeoff Committees' reused 'users' already accepts.
       { label: 'Waivers', icon: 'list', href: '/admin/club/documents' },
     ],
   },

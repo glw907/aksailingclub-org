@@ -5,8 +5,8 @@ management): how long a waitlist offer stays open before it expires, the three m
 prices, and the season rollover. All are the kind of setting an owner touches rarely, so one
 screen suits them better than several. Every write is owner-only (see the route's own header
 comment); an admin still sees every current value, just not the forms to change any of them, the
-same "sees the section, some actions still refuse" posture Signups already uses for its own
-audit-gated writes. Role management moved to cairn's own ManageEditors screen
+same "sees the section, some actions still refuse" posture other audit-gated club screens use for
+their own writes. Role management moved to cairn's own ManageEditors screen
 (`/admin/editors`), so this screen only points there rather than duplicating it.
 
 The rollover section is this screen's one DESTRUCTIVE action (per the design suite's own naming:

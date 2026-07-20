@@ -1,6 +1,6 @@
 // The Club section's "is the club protected" rollup (member-waivers T6, spec decision 8): each
 // signable document for a season, with its signed and outstanding counts, and a link into the
-// per-document drill-through ([document]/+page.server.ts). Read-only, like Signups and Money's own
+// per-document drill-through ([document]/+page.server.ts). Read-only, like Money's own
 // load: no Actions here, and `requireSession` is defense-in-depth (the `/admin/club` layout guard
 // already gates the whole section on a club role -- see club-layout-guard.test.ts).
 import type { PageServerLoad } from './$types';
