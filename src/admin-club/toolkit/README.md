@@ -125,8 +125,74 @@ Tests: `src/tests/toolkit-components.test.ts` (component rendering) and the same
 `computePageWindow`/`computeItemRange` suites (pure-function edge cases: zero/negative page count,
 a stale page past the last item, window boundaries with no needless ellipsis).
 
+## `AdminTable.svelte`
+
+**Contract:** the table shell (survey: AdminTable **confirmed**, tier C, zebra stance tier E).
+Props: `density` (`'xs' | 'sm'`, defaults `'sm'`), `zebra` (defaults `false` — the survey's zebra
+stance is preference-only, so a screen opts in rather than inheriting a house style), `header` and
+`children` (snippets — a `<tr>` of `<th>` cells and an `{#each}` of row markup respectively, so this
+component owns the table's chrome and never a row shape or a data contract), `rowCount` (switches
+the body to the `empty` snippet when `0`), and `emptyColspan` (defaults `100`, which HTML's own
+`colspan` clamps to the real column count — the standard "span whatever exists" value).
+
+Single-line enforcement is a contract, not a full mechanism: every cell gets `white-space: nowrap`
+via a `:global()` rule (a wrap can never happen even if a caller forgets), but ellipsis truncation
+of one specific long value is the calling cell's own scoped-CSS responsibility — the same
+scoped-truncation model `StatusChip`'s `.status-chip-label` already carries. This component cannot
+reach inside a snippet's own markup to add truncation there itself, since `header`/`children` are
+caller-authored and render as the caller's own template, not this component's.
+
+Headroom for a future selection column is a reserved *convention*, not a built feature (the plan's
+own wording): because `header`/`children` are snippets rather than a column schema, adding a
+leading checkbox column later is a caller-side edit to those two snippets, never a structural or
+breaking change to this component.
+
+**daisyUI assembly:** `table`, `table-xs`, `table-sm`, `table-zebra`. **Verified against the built
+`cairn-admin.css` (0.88.3):** all four compile. The wrapper's horizontal-scroll fallback
+(`overflow-x: auto`) and the empty-state cell's padding/centering are this component's own scoped
+CSS, per the compiled-CSS constraint above.
+
+**Exact class inventory:** `table`, `table-xs`, `table-sm`, `table-zebra`.
+
+Tests: `src/tests/toolkit-table.test.ts`.
+
+## `ExpandableRow.svelte`
+
+**Contract:** the expand-in-place table row (survey: ExpandableRow **confirmed**, tier C — "`table`
++ `collapse` semantics; genre exists in four systems in different shapes, pick at the Classes
+pass"; this first shape favors the plainest accessible option over a bespoke one, leaving room for
+the Classes pass to reconsider). Props: `expanded`/`onToggle` (fully controlled, matching this
+toolkit's own `Pagination` convention rather than owning internal expand state — the "one row
+expanded at a time" contract lives in the *caller* holding a single expanded-row id and deriving
+`expanded={expandedId === row.id}` for every instance, the same way a radio group's "one selected at
+a time" contract rides on `checked`, never on the input's own state), `datum` (the row's own value,
+forwarded into `panel` so it never needs a closure), `colspan` (the panel cell's span — the summary
+row's own `<td>` count including the trailing trigger cell), `summary` (the summary row's `<td>`
+cells), `panel` (a `Snippet<[T]>`, the expand region — "receives the row's datum" per the plan),
+and `triggerLabel` (an accessible name for the trigger control, since a chevron glyph alone carries
+no text).
+
+Keyboard operability rides the native `<button>` element's own Enter/Space activation — no bespoke
+`onkeydown` reinvents what the browser already does correctly for a real button. `aria-expanded`
+lives on that one button, the trigger control, per the plan's own wording, never on the `<tr>`
+itself (`aria-expanded` is not a valid attribute on a table row). The whole summary `<tr>` also
+carries a mouse-only `onclick` convenience (the design spec's "clicking a row expands it in
+place"), which is why summary cells should stay non-interactive (plain text, a `StatusChip`, and
+similar) — an interactive control nested inside the row would double-handle the click. Per-row
+actions belong in the panel, never inline in a summary cell, for the same reason.
+
+**daisyUI assembly:** `btn`, `btn-ghost`, `btn-xs` for the trigger control. **Verified against the
+built `cairn-admin.css`:** all three already compile from cairn's own admin usage (the same
+methodology `StatusChip`/`Pagination`'s own header comments explain). Row cursor affordance, the
+trigger cell's fixed width, and the panel cell's padding/line-wrap-back-on are this component's own
+scoped CSS, per the compiled-CSS constraint above.
+
+**Exact class inventory:** `btn`, `btn-ghost`, `btn-xs`.
+
+Tests: `src/tests/toolkit-table.test.ts`.
+
 ## What is not here yet
 
-`AdminTable`, `ExpandableRow` (Task 5) and `ListToolbar` (Task 6) land in later Members-pass tasks
-and extend this README with their own sections when they do. The Members screen rebuild (Task 7)
-is every component's first real consumer.
+`ListToolbar` (Task 6) lands in a later Members-pass task and extends this README with its own
+section when it does. The Members screen rebuild (Task 7) is every component's first real
+consumer.
