@@ -110,16 +110,21 @@ interface HouseholdDueRow {
   paid_at: string;
 }
 
-/** Every household with at least one paid `memberships` row, its single most recent `paid_at`:
- *  the renewal-boundary math's own input. A household that has never paid (invoiced/pending only)
- *  has nothing to derive a boundary from and is excluded here, the same as `getMemberStanding`'s
- *  own `paidRow` guard. */
+/** Every household with at least one paid, non-refunded `memberships` row, its single most
+ *  recent `paid_at`: the renewal-boundary math's own input. A household that has never paid
+ *  (invoiced/pending only) has nothing to derive a boundary from and is excluded here, the same
+ *  as `getMemberStanding`'s own `paidRow` guard. `AND m.refunded_at IS NULL` matches
+ *  `getHouseholdStanding`'s own grounding-row query and migration 0033's backfill exactly: a
+ *  refunded row (`refunds.ts` clears the money but leaves `paid_at` populated) must never ground
+ *  the boundary, or a household with an older non-refunded membership plus a newer paid-then-
+ *  refunded one would compute its boundary from the refunded row and read as 'overdue' instead of
+ *  'former'. */
 async function listHouseholdsWithPaidMembership(db: D1Database): Promise<HouseholdDueRow[]> {
   const { results } = await db
     .prepare(
       `SELECT h.id AS household_id, h.name AS household_name, MAX(m.paid_at) AS paid_at
        FROM households h JOIN memberships m ON m.household_id = h.id
-       WHERE m.paid_at IS NOT NULL
+       WHERE m.paid_at IS NOT NULL AND m.refunded_at IS NULL
        GROUP BY h.id`,
     )
     .all<HouseholdDueRow>();

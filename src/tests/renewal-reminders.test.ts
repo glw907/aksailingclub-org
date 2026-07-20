@@ -225,4 +225,22 @@ describe('renewalRemindersJob.run', () => {
     expect(summary).toEqual({ examined: 1, acted: 0, detail: expect.stringContaining('households_with_a_due_touch=0') });
     expect(calls.some((c) => c.sql.startsWith('INSERT OR IGNORE'))).toBe(false);
   });
+
+  it('the grounding query excludes refunded memberships, matching getHouseholdStanding and the 0033 backfill', async () => {
+    // Regression for the pre-live-apply review finding: `refunds.ts` clears the money but leaves
+    // `paid_at` populated, so without this filter a newer refunded row could win MAX(paid_at) and
+    // compute a boundary that never matches getHouseholdStanding's own grounding row -- corrupting
+    // migration 0033's own backfill guarantee on the sweep's first post-deploy tick.
+    const { db, calls } = fakeD1({
+      allResults: {
+        'FROM households h JOIN memberships m': [HOUSEHOLD],
+        'FROM renewal_reminders_sent WHERE household_id': [],
+      },
+    });
+
+    await renewalRemindersJob.run({}, { db, now: new Date('2026-07-07T00:00:00Z') });
+
+    const groundingCall = calls.find((c) => c.sql.includes('FROM households h JOIN memberships m'));
+    expect(groundingCall?.sql).toContain('m.paid_at IS NOT NULL AND m.refunded_at IS NULL');
+  });
 });
