@@ -88,12 +88,9 @@ library and sets cairn up as its consumer: establish the `admin-toolkit` subpath
 export structure (module layout, the contract-doc convention the toolkit READMEs
 seed, the doc-gate coverage for the new surface) and prepare the engine's own
 admin screens for adoption per the dogfooding ruling above. This is the receiving
-structure for the first harvest wave, so it precedes or opens that wave.
-
-TRANSFER OWED: this entry belongs in cairn-cms's ROADMAP. It was not filed there
-at ruling time because the principle-pages pass was approved the same afternoon
-and a live cairn executor was plausible (one-executor rule). File it into cairn's
-ROADMAP when cairn is next confirmed free, then trim this transfer note.
+structure for the first harvest wave, so it precedes or opens that wave. Filed in
+cairn-cms's ROADMAP ("Next" tier, evolving the 2026-07-15 component-kit entry) at
+ff0d3f34.
 
 ## Build findings (appended at pass close)
 
