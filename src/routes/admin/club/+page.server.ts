@@ -1,6 +1,6 @@
 // /admin/club: the section's own landing (portal-capstone's own scope item 6), carrying the
 // needs-attention strip (design doc: "pending asset requests + offers nearing expiry, each a
-// count clicking through to its inbox — the dashboard spec's every-number-drills rule"). The
+// count clicking through to its inbox -- the dashboard spec's every-number-drills rule"). The
 // signup-review card retired (pass B T2: joins are automatic and self-serve, the board is
 // notified of every paid join by `board_join_notice`, so the queue reviewed nothing). Pass B T7
 // reshapes the strip to the three ruled attention sources (design decision 7) and reads them from

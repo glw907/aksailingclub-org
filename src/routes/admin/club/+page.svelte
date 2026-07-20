@@ -1,5 +1,5 @@
 <!-- @component
-/admin/club: the section's own landing — the needs-attention strip (design doc: "pending asset
+/admin/club: the section's own landing -- the needs-attention strip (design doc: "pending asset
 requests + offers nearing expiry, each a count drilling through to its inbox"). The signup-review
 card retired (pass B T2: joins are automatic and self-serve, `board_join_notice` already notifies
 the board of every paid join). Pass B T7 reshapes the strip to the three ruled attention sources
