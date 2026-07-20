@@ -325,6 +325,47 @@ Dates are 2026-07-07/08 (the home convergence arc) unless noted.
   Events & Classes group holding that one door — kept deliberately (anyone who can send
   email sees the class-email door; no nav-only map key to hide it).
 
+- **Member standing is Current / Overdue / Former (Geoff, 2026-07-20, Members-pass
+  brainstorm; built by the Members pass)**: the reminder sequence is the boundary. Current
+  runs inside the household's rolling paid window (paid_at plus one year, never a season
+  line); Overdue begins at the boundary and keeps FULL member benefits (portal, member
+  pricing, class access) while the sequence runs; Former begins when the +30 stated-final
+  touch is sent (or its staleness window passes unsent, so dormant and imported households
+  transition too). The transition is recorded, not re-derived on read; payment clears it
+  automatically; the household desk carries an audited manual set/clear both directions.
+  Grace RETIRES (its job is exactly what Overdue means), and "renewal candidates" retires
+  with it — chasing is the reminder sequence's job, and overdue households are one standing
+  filter away.
+
+- **The Members screen optimizes for lookup (same brainstorm)**: search-first household
+  rows, cursor in search on open, a match on any member's name highlighted in its
+  household's row. The row stays one line: household, members primary-first (labeled
+  plainly — the unlabeled star retires), standing chip, phone; city and "Tier & Amount"
+  leave the row. A row expands in place to the mid-call panel (contacts, members with
+  ages, holdings and enrollments with paid state) with exactly three actions: Open
+  household, Email household, Add member. Money actions deliberately stay on the desk.
+  Default scope is members only (Current + Overdue); Former sits behind the standing
+  filter, archived behind the existing toggle; the count line always states its scope.
+
+- **The admin toolkit builds kit-first to GENERAL contracts (Geoff, 2026-07-20)**: this
+  is a general-purpose cairn admin toolkit with ASC as first consumer. For convergent
+  genres the surveyed systems' agreement IS the contract (standardization, not
+  speculation), so each component carries the convergent shape even where Members does
+  not exercise it. Generality shapes the contract; a consumer still gates publication —
+  components are born in this repo's theme layer and harvest into cairn after Members
+  shakes them.
+
+- **daisyUI-first, upgrade-friendly (Geoff, 2026-07-20)**: components compose daisy
+  class names and semantics as-is — never fork or copy daisy CSS, never restyle daisy
+  internals. The blessed-set safelist in cairn's admin CSS build is the one compile-side
+  seam; each toolkit README entry lists the exact daisy classes the component leans on,
+  so a daisy upgrade's blast radius is grep-auditable; cairn gains a scheduled daisy
+  absorption ritual (bump PRs, changelog read, blessed-set rebuild check, visual suite).
+
+- **OPEN at pass close (probe round owed)**: StatusChip's color mapping onto the admin
+  palette, and the display copy for the never-paid household standing (`'none'`). Both
+  settle via probe verdicts, not silently in the build.
+
 ## Benchmark provenance
 
 Pinned by the owner 2026-07-08 ("that's our new design benchmark"): the home page at commit
