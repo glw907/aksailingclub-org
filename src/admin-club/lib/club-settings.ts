@@ -116,31 +116,6 @@ export async function setTierPrice(db: D1Database, tier: MembershipTier, dollars
     .run();
 }
 
-/** The migration's own seed value (`migrations/asc-club/0009_member_auth`): used only if the row
- *  is ever missing, which should not happen post-migration. */
-const DEFAULT_RENEWAL_GRACE_DAYS = 30;
-
-/**
- * How many days after a household's own renewal boundary (`memberships.paid_at` plus one year)
- * it stays in a 'grace' standing before reading as fully 'lapsed' (Geoff's 2026-07-07
- * rolling-renewal ruling: standing derives from a household's own paid date, not a season
- * boundary).
- *
- * Members pass T2 (docs/2026-07-20-members-pass-design.md): `src/member-auth/lib/standing.ts` no
- * longer reads this getter. Its own current/grace/lapsed vocabulary retired in favor of
- * Current/Overdue/Former, with the Overdue-to-Former transition now driven by the reminder
- * sequence's own fixed 30-day `30_after` touch offset and recorded on `households.former_at`
- * (migration `0033_member_standing`), not by this per-club-configurable setting. This getter
- * (and the `renewal_grace_days` row itself) survives for its other readers not yet migrated off
- * the grace vocabulary — `src/admin-club/lib/segments.ts`, `households-store.ts`, and
- * `announcements.ts` — and retires once every reader has moved.
- */
-export async function getRenewalGraceDays(db: D1Database): Promise<number> {
-  const row = await db.prepare("SELECT value FROM settings WHERE key = 'renewal_grace_days'").first<{ value: string }>();
-  const parsed = row ? Number(row.value) : NaN;
-  return Number.isFinite(parsed) ? parsed : DEFAULT_RENEWAL_GRACE_DAYS;
-}
-
 /** The migration's own seed values (`migrations/asc-club/0012_class_reminders`): used only if a
  *  row is ever missing, which should not happen post-migration. */
 const DEFAULT_REFUND_WINDOW_DAYS = 14;

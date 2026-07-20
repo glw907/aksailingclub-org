@@ -170,10 +170,12 @@ export function dedupeEmails(emails: readonly string[]): string[] {
 }
 
 /**
- * Every non-archived member's email in a household with `'current'` or `'grace'` standing:
- * a thin call through {@link resolveSegment}'s own `'current'` segment, so Announce and the
- * Compose screen's segment picker (`segments.ts`) can never disagree about who counts as a
- * current member. `resolveSegment` already deduplicates case-insensitively.
+ * Every non-archived member's email in a household with `'current'` or `'overdue'` standing
+ * (Members pass T2's renamed vocabulary; Overdue keeps full benefits everywhere, this reach
+ * included, until a household is actually recorded Former): a thin call through
+ * {@link resolveSegment}'s own `'current'` segment, so Announce and the Compose screen's segment
+ * picker (`segments.ts`) can never disagree about who counts as a current member. `resolveSegment`
+ * already deduplicates case-insensitively.
  */
 export async function currentMemberEmails(db: D1Database): Promise<string[]> {
   const { recipients } = await resolveSegment(db, 'current');

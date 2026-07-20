@@ -5,8 +5,7 @@
 // records build on.
 import type { ChipStyle } from './ui';
 import type { DirectoryVisibility, MemberSegment, MembershipTier } from './member-types';
-import type { HouseholdStandingStatus } from './households-store';
-import type { HouseholdStandingStatus as MemberAuthStandingStatus } from '$member-auth/lib/standing';
+import type { HouseholdStandingStatus } from '$member-auth/lib/standing';
 import type { LineItem, TransactionKind, TransactionSource } from './ledger';
 
 /** Segment chips, following the same vocabulary the Events/Classes screens already established
@@ -36,35 +35,18 @@ export const VISIBILITY_CHIP: Record<DirectoryVisibility, ChipStyle> = {
   hidden: { label: 'Hidden', cls: 'badge-ghost badge-sm font-medium' },
 };
 
-/** The household-grouped Members list's own standing chips (Task 4, docs/plans/2026-07-14-
- *  membership-admin.md), keyed by `households-store.ts`'s `HouseholdStandingStatus` rather than
- *  the per-member `MemberSegment` above: the design doc's four-state vocabulary (current/grace/
- *  lapsed/none) replaces the fixture screen's three-state segment badge on this screen. `grace`
- *  reads in the warning language (a renewal window still open, but worth a volunteer's notice);
- *  `none` reads the quietest of all, dimmer even than `lapsed` (a household that has simply never
- *  paid is a different fact from one that used to be current). The list and the household desk
- *  both read this one map, so the two screens can never render the same status two different
- *  colors. */
-export const STANDING_CHIP: Record<HouseholdStandingStatus, ChipStyle> = {
-  current: { label: 'Current', cls: 'badge-sm border-transparent bg-primary/10 font-medium text-primary' },
-  grace: { label: 'Grace', cls: 'badge-sm border-transparent bg-warning/15 font-medium text-warning-content' },
-  lapsed: { label: 'Lapsed', cls: 'badge-ghost badge-sm font-medium' },
-  none: { label: 'No membership', cls: 'badge-ghost badge-sm font-medium opacity-60' },
-};
-
 /**
- * The household desk's own standing chip (`/admin/club/members/[id]`), keyed by
- * `$member-auth/lib/standing`'s `HouseholdStandingStatus` -- the actual type `getHouseholdStanding`
- * returns, and NOT the same type as {@link STANDING_CHIP} above despite the near-identical name:
- * that one keys off `households-store.ts`'s own independently-derived vocabulary for the Members
- * LIST screen (current/grace/lapsed/none, not yet migrated off the retired vocabulary -- Members
- * pass T3's own job). This module's two standing chip maps read two genuinely different sources
- * until T3 unifies them; do not assume they always agree mid-pass. Members pass T2's renamed
- * three-state vocabulary: Overdue reads in the same warning language `STANDING_CHIP`'s retired
- * `grace` used (a still-open renewal window, worth a volunteer's notice, full benefits regardless);
- * Former reads the same quiet ghost chip `lapsed` used.
+ * The household standing chip, shared by the Members list and the household desk
+ * (`/admin/club/members/[id]`): both screens key off `$member-auth/lib/standing`'s own
+ * `HouseholdStandingStatus` (Members pass T3 unifies what used to be two independently-derived
+ * vocabularies -- `households-store.ts`'s own list-screen standing and this module's desk-only
+ * chip -- into the one classifier every consumer now shares, so the two screens can never render
+ * the same status two different colors). `overdue` reads in the warning language (a still-open
+ * renewal window, worth a volunteer's notice, full benefits regardless); `former` reads the
+ * quietest ghost chip short of `none`, which is dimmer still (a household that has simply never
+ * paid is a different fact from one that used to be current).
  */
-export const HOUSEHOLD_STANDING_CHIP: Record<MemberAuthStandingStatus, ChipStyle> = {
+export const HOUSEHOLD_STANDING_CHIP: Record<HouseholdStandingStatus, ChipStyle> = {
   current: { label: 'Current', cls: 'badge-sm border-transparent bg-primary/10 font-medium text-primary' },
   overdue: { label: 'Overdue', cls: 'badge-sm border-transparent bg-warning/15 font-medium text-warning-content' },
   former: { label: 'Former', cls: 'badge-ghost badge-sm font-medium' },

@@ -3,9 +3,13 @@
 // successor, now with every desk action from the design doc's own household-desk section --
 // roster CRUD (add/edit/archive/unarchive, visibility, household name/city/primary), household
 // surgery (move member, merge household), a manual (check/cash/comp) payment, a membership
-// tier change, and (Task 6) the refund action. `id` in the URL is a household id; a member id
-// (any surviving link to the old per-member detail route) resolves through
-// `resolveMemberHousehold` and redirects to the household it belongs to.
+// tier change, (Task 6) the refund action, and (Members pass T3) the manual Former override in
+// both directions -- setFormer/clearFormer, each requiring a one-line reason recorded through the
+// audit sink alongside the acting editor, for edge cases the daily reminder-sequence sweep
+// (`$member-auth/lib/standing`'s own header) does not cover on its own (moved away mid-season,
+// "they called, they're renewing"). `id` in the URL is a household id; a member id (any surviving
+// link to the old per-member detail route) resolves through `resolveMemberHousehold` and
+// redirects to the household it belongs to.
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
@@ -22,7 +26,7 @@ import {
   type HouseholdDesk,
 } from '$admin-club/lib/households-store';
 import { getHouseholdTimeline, type TimelineTransaction } from '$admin-club/lib/money-store';
-import { getHouseholdStanding, type HouseholdStanding } from '$member-auth/lib/standing';
+import { clearManualFormer, getHouseholdStanding, markHouseholdFormer, type HouseholdStanding } from '$member-auth/lib/standing';
 import { addHouseholdMember, setDirectoryVisibility, type DirectoryVisibility } from '$member-portal/lib/household';
 import { buildMergePlan, buildMovePlan, isUniqueConstraintError, SEASON_CONFLICT_RACE_MESSAGE } from '$admin-club/lib/household-surgery';
 import { buildManualMembershipPayment, type ManualPaymentSource } from '$admin-club/lib/manual-payment';
@@ -284,6 +288,36 @@ export const actions: Actions = {
       return { ok: true };
     },
     { action: 'change-tier', entity: 'membership', deniedMessage: DENIED_MESSAGE },
+  ),
+
+  setFormer: clubAdminAction(
+    async ({ event, form, ctx }) => {
+      const householdId = routeId(event);
+      const reason = requiredField(form, 'reason');
+      if (!reason) {
+        ctx.audit({ action: 'mark-former', entity: 'household', entityId: householdId, detail: 'rejected: missing reason' });
+        return fail(400, { error: 'A reason is required.' });
+      }
+      await markHouseholdFormer(ctx.db, householdId, 'manual');
+      ctx.audit({ action: 'mark-former', entity: 'household', entityId: householdId, detail: reason });
+      return { ok: true };
+    },
+    { action: 'mark-former', entity: 'household', deniedMessage: DENIED_MESSAGE },
+  ),
+
+  clearFormer: clubAdminAction(
+    async ({ event, form, ctx }) => {
+      const householdId = routeId(event);
+      const reason = requiredField(form, 'reason');
+      if (!reason) {
+        ctx.audit({ action: 'clear-former', entity: 'household', entityId: householdId, detail: 'rejected: missing reason' });
+        return fail(400, { error: 'A reason is required.' });
+      }
+      await clearManualFormer(ctx.db, householdId);
+      ctx.audit({ action: 'clear-former', entity: 'household', entityId: householdId, detail: reason });
+      return { ok: true };
+    },
+    { action: 'clear-former', entity: 'household', deniedMessage: DENIED_MESSAGE },
   ),
 
   refund: clubAdminAction(

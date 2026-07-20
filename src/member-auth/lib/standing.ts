@@ -20,10 +20,9 @@
 // sweep also opportunistically clears a now-stale sequence-sourced marker (see
 // {@link clearSequenceFormer}), so the stored column stays eventually accurate too.
 //
-// This module imports `getRenewalGraceDays` from neither this file nor any function it calls: the
-// grace vocabulary retired here at the source (T2's own outcome). `renewal_grace_days` itself
-// survives in `club-settings.ts` for its other, not-yet-migrated readers (T3's own file list) —
-// see that module's own header on why.
+// The prior grace-window vocabulary and its per-club-configurable settings row retired fully in
+// T2/T3: no reader of either survives anywhere in this codebase. A household's terminal state is
+// Former, a recorded fact, never a re-derived elapsed-time window.
 import type { D1Database } from '@cloudflare/workers-types';
 import { toSqliteDatetime } from './crypto';
 import { formatMemberDate, parseMemberDate } from './format';
@@ -332,8 +331,8 @@ export async function getMemberStanding(db: D1Database, memberId: string): Promi
   // May 17, 2027."; mock D renders the identical string), not the bare "Current through {date}"
   // fragment this used to read: the masthead's greeting directly above it ("Welcome back,
   // {firstName}.") is already a complete sentence, and this line is the page's single most
-  // important one. Overdue keeps the same "renew by" nudge the retired 'grace' status carried
-  // (the sequence's own Former boundary, {@link formerBoundaryFrom}) — still the real date the
+  // important one. Overdue keeps the same "renew by" nudge the prior grace-window vocabulary
+  // carried (the sequence's own Former boundary, {@link formerBoundaryFrom}) — still the real date the
   // sweep marks Former if unpaid, even though the marking itself happens via the recorded write,
   // not by re-deriving this date on a later read.
   const statusLine =

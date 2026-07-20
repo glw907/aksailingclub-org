@@ -4,16 +4,20 @@
 // (`announcements.ts`) is a thin caller of `resolveSegment('current')` so the two screens can
 // never disagree about who counts as a current member.
 //
-// Every segment reuses this repo's own standing math (`$member-auth/lib/standing`'s
-// `renewalExpiryFrom` plus `club-settings.ts`'s `getRenewalGraceDays`) rather than re-deriving
-// current/grace/lapsed boundaries, and the guardian-aware class-contact resolver
+// Every segment reuses this repo's own standing classifier (`$member-auth/lib/standing`'s
+// `classifyHouseholdStanding`) rather than re-deriving Current/Overdue/Former boundaries (Members
+// pass T3: the segment keys themselves keep their own `'current'`/`'lapsed'` vocabulary, never
+// renamed to match `MemberStandingStatus` -- the same "local key, not the retired status name"
+// precedent `theme/class-signup-form.ts`'s own `ClassEligibilityStatus` already sets -- but the
+// standing they resolve against is now the recorded classifier, since Former is a recorded fact,
+// not a pure function of `paid_at` any more), and the guardian-aware class-contact resolver
 // (`class-contact.ts`'s `resolveClassContact`) for a class roster, the same resolver every other
 // class-related send already routes through.
 import type { D1Database } from '@cloudflare/workers-types';
-import { renewalExpiryFrom } from '$member-auth/lib/standing';
+import { classifyHouseholdStanding } from '$member-auth/lib/standing';
 import { resolveClassContact } from './class-contact';
 import { getClass, listEnrollments, type ClassRow } from './classes-store';
-import { getCurrentSeason, getRenewalGraceDays } from './club-settings';
+import { getCurrentSeason } from './club-settings';
 
 /** Every resolvable segment key: the two membership segments, instructors, or a specific class's
  *  enrollment roster (`class:<id>`, the class's own `classes.id`). */
@@ -81,16 +85,19 @@ interface HouseholdGroundingRow {
   household_id: string;
   paid_at: string;
   primary_member_id: string | null;
+  /** `households.former_at`, raw: {@link classifyHouseholdStanding}'s own recorded-Former input
+   *  (migration `0033_member_standing`). */
+  former_at: string | null;
 }
 
 /** Every household's own grounding row: its most recently paid, non-refunded `memberships` row
- *  (the same join `currentMemberEmails` used before this refactor), plus the household's
- *  `primary_member_id` for the shared-email tie-break. A household that has never had a
- *  non-refunded paid row (never-paid, or refunded-only) simply has no row here. */
+ *  (the same join `currentMemberEmails` used before this refactor), its own `former_at`, plus the
+ *  household's `primary_member_id` for the shared-email tie-break. A household that has never had
+ *  a non-refunded paid row (never-paid, or refunded-only) simply has no row here. */
 async function householdGrounding(db: D1Database): Promise<HouseholdGroundingRow[]> {
   const { results } = await db
     .prepare(
-      `SELECT h.id AS household_id, gm.paid_at, h.primary_member_id
+      `SELECT h.id AS household_id, gm.paid_at, h.primary_member_id, h.former_at
        FROM households h
        JOIN memberships gm ON gm.id = (
          SELECT id FROM memberships mm
@@ -137,25 +144,24 @@ async function membersInHouseholds(db: D1Database, householdIds: readonly string
 
 /**
  * The two membership segments: `'current'` is every non-archived member's email in a household
- * whose standing is `'current'` or `'grace'` (the same rolling boundary
- * `$member-auth/lib/standing.ts` derives, reused via `renewalExpiryFrom` and
- * `getRenewalGraceDays` rather than re-derived); `'lapsed'` is every such household past its
- * grace window. A household that has never had a non-refunded paid row (never-paid, or
+ * whose standing is `'current'` or `'overdue'` (Members pass T2's renamed vocabulary; Overdue
+ * keeps full benefits everywhere, this segment included, until a household is actually recorded
+ * Former), read through {@link classifyHouseholdStanding}; `'lapsed'` is every such household
+ * recorded `'former'`. A household that has never had a non-refunded paid row (never-paid, or
  * refunded-only) is excluded from both: "lapsed" means "was a member, isn't now", never "never
  * was one".
  */
 async function resolveMembershipSegment(db: D1Database, key: 'current' | 'lapsed'): Promise<ResolvedSegment> {
-  const [grounding, graceDays] = await Promise.all([householdGrounding(db), getRenewalGraceDays(db)]);
+  const grounding = await householdGrounding(db);
   const now = new Date();
 
   const primaryByHousehold = new Map<string, string | null>();
   const householdIds: string[] = [];
   for (const row of grounding) {
     primaryByHousehold.set(row.household_id, row.primary_member_id);
-    const expiry = renewalExpiryFrom(row.paid_at);
-    const graceEnd = new Date(expiry.getTime() + graceDays * 24 * 60 * 60 * 1000);
-    const isCurrentOrGrace = now <= graceEnd;
-    if (key === 'current' ? isCurrentOrGrace : !isCurrentOrGrace) householdIds.push(row.household_id);
+    const status = classifyHouseholdStanding(row.paid_at, row.former_at ?? null, now);
+    const isCurrentOrOverdue = status === 'current' || status === 'overdue';
+    if (key === 'current' ? isCurrentOrOverdue : !isCurrentOrOverdue) householdIds.push(row.household_id);
   }
 
   const members = await membersInHouseholds(db, householdIds);
@@ -168,7 +174,7 @@ async function resolveMembershipSegment(db: D1Database, key: 'current' | 'lapsed
     })),
   );
 
-  return { key, label: key === 'current' ? 'Current members' : 'Lapsed members', recipients };
+  return { key, label: key === 'current' ? 'Current members' : 'Former members', recipients };
 }
 
 /** Everyone in `class_instructors` for the club's current season, deduplicated. */
@@ -255,7 +261,7 @@ export async function listSegmentOptions(db: D1Database): Promise<SegmentOption[
 
   return [
     { key: 'current', label: 'Current members' },
-    { key: 'lapsed', label: 'Lapsed members' },
+    { key: 'lapsed', label: 'Former members' },
     { key: 'instructors', label: 'Instructors' },
     ...classOptions,
   ];

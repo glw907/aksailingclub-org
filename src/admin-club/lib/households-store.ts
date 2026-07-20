@@ -4,56 +4,28 @@
 // establish. No validation or audit lives here; the write paths (Task 5) and the audit emit
 // (`clubAdminAction`'s `ctx.audit`) both stay in the route/action layer.
 //
-// STANDING (current/grace/lapsed/none) is computed HERE, independently of
-// `member-auth/lib/standing.ts`, deliberately duplicating that module's rolling-year window math
-// rather than importing it: that module's own header states its one-way independence from
-// `admin-club` (`club-settings.ts`'s `getRenewalGraceDays` is its only admin-club reuse), and
-// `stripe-reconcile.ts`'s own `TIER_LABEL` constant already sets the precedent for keeping a small
-// duplicate here rather than crossing that boundary in reverse. `listHouseholds` computes every
-// household's status from ONE grounding query (a correlated subquery per household picks its own
-// most recently paid, non-refunded `memberships` row, the same "grounding row" `getHouseholdStanding`
-// reads one household at a time), never a per-row `getHouseholdStanding` call: the admin's 148-row
-// list would otherwise cost 148 round trips.
+// STANDING (Current/Overdue/Former/none) reads through `member-auth/lib/standing.ts`'s own
+// `classifyHouseholdStanding` (Members pass T3): the module's earlier independent duplication of
+// the boundary math no longer holds once Former became a RECORDED fact
+// (`households.former_at`/`former_source`, migration `0033_member_standing`) rather than a pure
+// function of a `paid_at` window, so this module now reads that same recorded column and defers to
+// the one classifier every consumer shares, rather than re-deriving a second, now-necessarily-
+// divergent notion of "Former". `listHouseholds` still computes every household's status from ONE
+// grounding query (a correlated subquery per household picks its own most recently paid,
+// non-refunded `memberships` row, the same "grounding row" `getHouseholdStanding` reads one
+// household at a time, now also carrying `former_at`), never a per-row `getHouseholdStanding`
+// call: the admin's 148-row list would otherwise cost 148 round trips.
 import type { D1Database } from '@cloudflare/workers-types';
 import type { DirectoryVisibility, MembershipTier } from './member-types';
-import { getRenewalGraceDays, getTierPrices } from './club-settings';
+import { classifyHouseholdStanding, type HouseholdStandingStatus } from '$member-auth/lib/standing';
+import { getTierPrices } from './club-settings';
 import { normalizeEmail, normalizeNameCaps, normalizePhoneE164 } from './member-normalize.js';
 
-/** A household's renewal standing: `'current'` through its rolling paid-plus-one-year boundary,
- *  `'grace'` for the settings' own grace window past it, `'lapsed'` after that, `'none'` when the
- *  household has never had a non-refunded paid `memberships` row at all. Mirrors
- *  `member-auth/lib/standing.ts`'s own `HouseholdStandingStatus` vocabulary exactly (this module's
- *  own header explains why that is a duplicate, not a shared import). */
-export type HouseholdStandingStatus = 'current' | 'grace' | 'lapsed' | 'none';
-
-/** Parse a stored `paid_at` value, accepting either a bare civil date ("YYYY-MM-DD") or the
- *  schema's full SQLite-datetime shape ("YYYY-MM-DD HH:MM:SS"), reading both as UTC. Mirrors
- *  `member-auth/lib/standing.ts`'s own `parseStoredDate`. */
-function parseStoredDate(value: string): Date {
-  const iso = value.length <= 10 ? `${value}T00:00:00Z` : `${value.replace(' ', 'T')}Z`;
-  return new Date(iso);
-}
-
-function plusOneYear(date: Date): Date {
-  const next = new Date(date);
-  next.setUTCFullYear(next.getUTCFullYear() + 1);
-  return next;
-}
-
-function plusDays(date: Date, days: number): Date {
-  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
-}
-
-/** The current/grace/lapsed/none transition off a household's grounding row: `paidAt` is `null`
- *  when the household has no non-refunded paid `memberships` row at all (`'none'`); otherwise
- *  `'current'` through `paidAt` plus one year, `'grace'` for `graceDays` past that, `'lapsed'`
- *  after. */
-function standingStatusFor(paidAt: string | null, graceDays: number, now: Date): HouseholdStandingStatus {
-  if (!paidAt) return 'none';
-  const expiry = plusOneYear(parseStoredDate(paidAt));
-  const graceEnd = plusDays(expiry, graceDays);
-  return now <= expiry ? 'current' : now <= graceEnd ? 'grace' : 'lapsed';
-}
+/** Re-exported for this module's own long-standing consumers (`member-format.ts`,
+ *  `+page.svelte`/`+page.server.ts`): `member-auth/lib/standing.ts`'s own `HouseholdStandingStatus`
+ *  is the one vocabulary this module and the household desk now share (Members pass T3 unifies
+ *  what used to be two independently-derived types). */
+export type { HouseholdStandingStatus };
 
 /** One member's display chip in a household list row: display only (all member CRUD lives on the
  *  desk), so this carries just what the row needs to render and highlight a search match. */
@@ -98,11 +70,11 @@ export interface HouseholdListRow {
 export interface ListHouseholdsOptions {
   /** Case-insensitive; matches the household's own name, or any member's name or email. */
   search?: string;
-  /** `'current'` keeps only `standing === 'current'`; `'lapsed'` keeps everything else (`grace`,
-   *  `lapsed`, and `none` all read as "not yet current" for this coarse filter, matching the
+  /** `'current'` keeps only `standing === 'current'`; `'lapsed'` keeps everything else (`overdue`,
+   *  `former`, and `none` all read as "not yet current" for this coarse filter, matching the
    *  fixture screen's own three-option `all`/`current`/`lapsed` vocabulary, which never
-   *  distinguished a grace window as its own bucket either). `'all'` (the default) applies no
-   *  standing filter. */
+   *  distinguished Overdue as its own bucket either). `'all'` (the default) applies no standing
+   *  filter. */
   segment?: 'all' | 'current' | 'lapsed';
   /** A household with at least one member, all of them archived, is hidden by default (mirrors
    *  the fixture screen's own "archived excluded unless toggled" rule); `true` shows it. A
@@ -121,11 +93,14 @@ interface HouseholdGroundingRow {
   tier: string | null;
   price_paid: number | null;
   paid_at: string | null;
+  /** `households.former_at`, raw: {@link classifyHouseholdStanding}'s own recorded-Former input
+   *  (migration `0033_member_standing`). */
+  former_at: string | null;
   active_assets: number;
 }
 
 const HOUSEHOLD_GROUNDING_SQL = `
-  SELECT h.id, h.name, h.city, h.primary_member_id,
+  SELECT h.id, h.name, h.city, h.primary_member_id, h.former_at,
          gm.season, gm.tier, gm.price_paid, gm.paid_at,
          COALESCE(assets.active_count, 0) AS active_assets
   FROM households h
@@ -162,11 +137,10 @@ interface MemberRosterRow {
  * member is archived and `opts.includeArchived` is not set.
  */
 export async function listHouseholds(db: D1Database, opts: ListHouseholdsOptions = {}): Promise<HouseholdListRow[]> {
-  const [groundingResult, memberResult, tierPrices, graceDays] = await Promise.all([
+  const [groundingResult, memberResult, tierPrices] = await Promise.all([
     db.prepare(HOUSEHOLD_GROUNDING_SQL).all<HouseholdGroundingRow>(),
     db.prepare('SELECT id, household_id, name, email, archived_at FROM members').all<MemberRosterRow>(),
     getTierPrices(db),
-    getRenewalGraceDays(db),
   ]);
 
   const membersByHousehold = new Map<string, MemberRosterRow[]>();
@@ -186,7 +160,7 @@ export async function listHouseholds(db: D1Database, opts: ListHouseholdsOptions
     const members = membersByHousehold.get(grounding.id) ?? [];
     if (members.length > 0 && !includeArchived && members.every((member) => member.archived_at !== null)) continue;
 
-    const standing = standingStatusFor(grounding.paid_at, graceDays, now);
+    const standing = classifyHouseholdStanding(grounding.paid_at, grounding.former_at ?? null, now);
     if (segment === 'current' && standing !== 'current') continue;
     if (segment === 'lapsed' && standing === 'current') continue;
 

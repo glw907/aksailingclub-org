@@ -69,7 +69,6 @@ function eligibleMemberDb(householdFixtures: { household: unknown; members: unkn
       'FROM class_waitlist WHERE class_id': { n: 0 },
       'FROM members WHERE email': { id: 'member-1', household_id: 'household-1' },
       'FROM members WHERE id': { id: 'member-1', household_id: 'household-1', name: 'Jamie Rivera' },
-      "'renewal_grace_days'": { value: '30' },
       "'current_season'": { value: '2026' },
       'FROM memberships WHERE household_id': { tier: 'individual', season: 2026, paid_at: RECENT_PAID_AT },
       'FROM households WHERE id': householdFixtures.household,

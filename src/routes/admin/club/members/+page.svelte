@@ -18,7 +18,7 @@ discounted rendered honestly), asset count (with a stale-asset warning mark), an
   import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
   import { SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
   import { HEADER_CELL, formatDollars } from '$admin-club/lib/ui';
-  import { STANDING_CHIP } from '$admin-club/lib/member-format';
+  import { HOUSEHOLD_STANDING_CHIP } from '$admin-club/lib/member-format';
   import type { HouseholdListRow } from '$admin-club/lib/households-store';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -45,7 +45,7 @@ discounted rendered honestly), asset count (with a stale-asset warning mark), an
 
   const segmentOptions = [
     { value: 'all', label: 'All active' },
-    { value: 'current', label: STANDING_CHIP.current.label },
+    { value: 'current', label: HOUSEHOLD_STANDING_CHIP.current.label },
     { value: 'lapsed', label: 'Not current' },
   ];
 
@@ -110,8 +110,8 @@ discounted rendered honestly), asset count (with a stale-asset warning mark), an
   );
 
   function standingLabel(row: HouseholdListRow): string {
-    const chip = STANDING_CHIP[row.standing];
-    return row.standing === 'lapsed' && row.lastSeason ? `${chip.label} — last ${row.lastSeason}` : chip.label;
+    const chip = HOUSEHOLD_STANDING_CHIP[row.standing];
+    return row.standing === 'former' && row.lastSeason ? `${chip.label} — last ${row.lastSeason}` : chip.label;
   }
 </script>
 
@@ -161,7 +161,7 @@ discounted rendered honestly), asset count (with a stale-asset warning mark), an
       </thead>
       <tbody>
         {#each paged as row (row.id)}
-          {@const standing = STANDING_CHIP[row.standing]}
+          {@const standing = HOUSEHOLD_STANDING_CHIP[row.standing]}
           <tr class="transition-colors hover:bg-base-200/60">
             <td>
               <a class="font-semibold hover:text-primary hover:underline" href={`/admin/club/members/${row.id}`}>

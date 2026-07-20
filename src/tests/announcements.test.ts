@@ -110,26 +110,38 @@ describe('currentMemberEmails', () => {
   it('includes a non-archived member with an email in a current household', async () => {
     const { db } = fakeD1({
       allResults: {
-        'FROM households h': [{ household_id: 'hh-larsen', paid_at: daysAgo(10), primary_member_id: null }],
+        'FROM households h': [{ household_id: 'hh-larsen', paid_at: daysAgo(10), primary_member_id: null, former_at: null }],
         'FROM members WHERE archived_at': [{ id: 'mem-erik', name: 'Erik Larsen', email: 'erik.larsen@example.com', household_id: 'hh-larsen' }],
       },
     });
     await expect(currentMemberEmails(db)).resolves.toContain('erik.larsen@example.com');
   });
 
-  it('excludes a lapsed household entirely: the members query never runs', async () => {
+  it('excludes a recorded-Former household entirely: the members query never runs', async () => {
     const { db, calls } = fakeD1({
-      allResults: { 'FROM households h': [{ household_id: 'hh-whitfield', paid_at: daysAgo(400), primary_member_id: null }] },
+      allResults: {
+        'FROM households h': [{ household_id: 'hh-whitfield', paid_at: daysAgo(400), primary_member_id: null, former_at: daysAgo(30) }],
+      },
     });
     const emails = await currentMemberEmails(db);
     expect(emails).toEqual([]);
     expect(calls.some((c) => c.sql.startsWith('SELECT id, name, email, household_id FROM members'))).toBe(false);
   });
 
+  it('a household well past its renewal boundary but never recorded Former still counts as current (Overdue keeps full benefits, announce reach included)', async () => {
+    const { db } = fakeD1({
+      allResults: {
+        'FROM households h': [{ household_id: 'hh-stale', paid_at: daysAgo(400), primary_member_id: null, former_at: null }],
+        'FROM members WHERE archived_at': [{ id: 'mem-stale', name: 'Stale Member', email: 'stale@example.com', household_id: 'hh-stale' }],
+      },
+    });
+    await expect(currentMemberEmails(db)).resolves.toEqual(['stale@example.com']);
+  });
+
   it('scopes the member query to archived_at IS NULL, so an archived member is excluded by construction', async () => {
     const { db, calls } = fakeD1({
       allResults: {
-        'FROM households h': [{ household_id: 'hh-petrov', paid_at: daysAgo(10), primary_member_id: null }],
+        'FROM households h': [{ household_id: 'hh-petrov', paid_at: daysAgo(10), primary_member_id: null, former_at: null }],
         'FROM members WHERE archived_at': [{ id: 'mem-dimitri', name: 'Dimitri Petrov', email: 'dimitri.petrov@example.com', household_id: 'hh-petrov' }],
       },
     });
@@ -155,10 +167,10 @@ describe('currentMemberEmails', () => {
     expect(new Set(emails).size).toBe(emails.length);
   });
 
-  // The grace-window widening is intentional (the conductor's ruling: "current" means "current or
-  // grace", matching resolveSegment('current')'s own definition), pinned at its exact boundary
+  // Overdue reach widening is intentional (the conductor's ruling: "current" means "Current or
+  // Overdue", matching resolveSegment('current')'s own definition), pinned at its exact boundary
   // with a fixed clock -- mirrors segments.test.ts's own convention for the identical boundary.
-  describe('the current/grace boundary', () => {
+  describe('the current/overdue boundary', () => {
     const NOW = new Date('2027-06-15T12:00:00Z');
 
     beforeEach(() => {
@@ -171,19 +183,21 @@ describe('currentMemberEmails', () => {
       return new Date(NOW.getTime() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
     }
 
-    it('includes a household past its one-year renewal boundary but still inside the default 30-day grace window', async () => {
+    it('includes a household past its one-year renewal boundary but never recorded Former (Overdue keeps full benefits)', async () => {
       const { db } = fakeD1({
         allResults: {
-          'FROM households h': [{ household_id: 'hh-grace', paid_at: paidAtDaysAgo(365 + 20), primary_member_id: null }],
-          'FROM members WHERE archived_at': [{ id: 'mem-grace', name: 'Grace Member', email: 'grace@example.com', household_id: 'hh-grace' }],
+          'FROM households h': [{ household_id: 'hh-overdue', paid_at: paidAtDaysAgo(365 + 20), primary_member_id: null, former_at: null }],
+          'FROM members WHERE archived_at': [{ id: 'mem-overdue', name: 'Overdue Member', email: 'overdue@example.com', household_id: 'hh-overdue' }],
         },
       });
-      await expect(currentMemberEmails(db)).resolves.toEqual(['grace@example.com']);
+      await expect(currentMemberEmails(db)).resolves.toEqual(['overdue@example.com']);
     });
 
-    it('excludes a household past the grace window entirely', async () => {
+    it('excludes a household once it is actually recorded Former', async () => {
       const { db, calls } = fakeD1({
-        allResults: { 'FROM households h': [{ household_id: 'hh-lapsed', paid_at: paidAtDaysAgo(365 + 40), primary_member_id: null }] },
+        allResults: {
+          'FROM households h': [{ household_id: 'hh-former', paid_at: paidAtDaysAgo(365 + 40), primary_member_id: null, former_at: paidAtDaysAgo(10) }],
+        },
       });
       const emails = await currentMemberEmails(db);
       expect(emails).toEqual([]);

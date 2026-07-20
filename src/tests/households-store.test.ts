@@ -8,9 +8,8 @@ const TIER_PRICE_ROWS = [
   { key: 'tier_price_young_adult', value: '100' },
 ];
 
-function settingsFixture(graceDays = '30') {
+function settingsFixture() {
   return {
-    firstResults: { "key = 'renewal_grace_days'": { value: graceDays } },
     allResults: { 'tier_price_individual': TIER_PRICE_ROWS },
   };
 }
@@ -109,7 +108,7 @@ describe('listHouseholds', () => {
     expect(row.amount).toBe(324);
   });
 
-  it('flags a stale membership with an active asset assignment', async () => {
+  it('flags a stale membership with an active asset assignment (Overdue with no recorded former_at, per T3s classifier)', async () => {
     const { db } = fakeD1({
       ...settingsFixture(),
       allResults: {
@@ -124,6 +123,7 @@ describe('listHouseholds', () => {
             tier: 'individual',
             price_paid: 250,
             paid_at: daysAgo(500),
+            former_at: null,
             active_assets: 1,
           },
         ],
@@ -131,8 +131,12 @@ describe('listHouseholds', () => {
       },
     });
 
+    // Well past the old fixed 30-day grace window, but never recorded Former (no sweep or manual
+    // mark has run against this fixture): classifyHouseholdStanding reads it Overdue, not Former,
+    // since Former is a recorded fact now, never re-derived from elapsed time alone. staleAssets
+    // stays true regardless -- it fires for anything short of 'current'.
     const [row] = await listHouseholds(db);
-    expect(row.standing).toBe('lapsed');
+    expect(row.standing).toBe('overdue');
     expect(row.activeAssets).toBe(1);
     expect(row.staleAssets).toBe(true);
   });
@@ -191,32 +195,34 @@ describe('listHouseholds', () => {
     expect(row.amount).toBeNull();
   });
 
-  it('reads grace then lapsed as the paid boundary and grace window pass', async () => {
+  it('reads Overdue off elapsed time alone, and Former only once the household is actually recorded so', async () => {
     const { db } = fakeD1({
-      ...settingsFixture('30'),
+      ...settingsFixture(),
       allResults: {
-        ...settingsFixture('30').allResults,
+        ...settingsFixture().allResults,
         'FROM households h': [
           {
-            id: 'hh-grace',
-            name: 'Grace Household',
+            id: 'hh-overdue',
+            name: 'Overdue Household',
             city: null,
             primary_member_id: null,
             season: 2025,
             tier: 'individual',
             price_paid: 250,
-            paid_at: daysAgo(380), // expiry = paid + 365 = 15 days ago; grace ends = +30 = 15 days from now
+            paid_at: daysAgo(380), // expiry = paid + 365 = 15 days ago; no former_at recorded
+            former_at: null,
             active_assets: 0,
           },
           {
-            id: 'hh-lapsed',
-            name: 'Lapsed Household',
+            id: 'hh-former',
+            name: 'Former Household',
             city: null,
             primary_member_id: null,
             season: 2024,
             tier: 'individual',
             price_paid: 250,
-            paid_at: daysAgo(400), // expiry = 35 days ago; grace ends = 5 days ago
+            paid_at: daysAgo(400), // expiry = 35 days ago; the sweep already recorded former_at
+            former_at: daysAgo(5),
             active_assets: 0,
           },
         ],
@@ -225,8 +231,8 @@ describe('listHouseholds', () => {
     });
 
     const rows = await listHouseholds(db);
-    expect(rows.find((r) => r.id === 'hh-grace')?.standing).toBe('grace');
-    expect(rows.find((r) => r.id === 'hh-lapsed')?.standing).toBe('lapsed');
+    expect(rows.find((r) => r.id === 'hh-overdue')?.standing).toBe('overdue');
+    expect(rows.find((r) => r.id === 'hh-former')?.standing).toBe('former');
   });
 
   it('ignores a refunded row via the grounding query itself (asserted on the SQL text)', async () => {
@@ -306,7 +312,7 @@ describe('listHouseholds', () => {
       expect(rows.map((r) => r.id)).toEqual(['hh-current']);
     });
 
-    it("'lapsed' keeps everything not current (grace, lapsed, and none alike)", async () => {
+    it("'lapsed' keeps everything not current (overdue, former, and none alike)", async () => {
       const { db } = fakeD1({ ...settingsFixture(), allResults: { ...settingsFixture().allResults, 'FROM households h': ROWS, 'FROM members': [] } });
       const rows = await listHouseholds(db, { segment: 'lapsed' });
       expect(rows.map((r) => r.id)).toEqual(['hh-lapsed']);

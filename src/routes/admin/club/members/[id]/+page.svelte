@@ -3,12 +3,14 @@
 The Club section's household desk (Task 4's read side, Task 5's write side): every action from
 the design doc's own household-desk section lands here as a `clubAdminAction` form -- roster
 CRUD (add/edit/archive/visibility), household edit (name/city/primary), move member, merge
-household, a manual (check/cash/comp) payment, a per-membership tier change, and (Task 6) the
+household, a manual (check/cash/comp) payment, a per-membership tier change, (Task 6) the
 refund action on a refundable timeline charge -- the admin picks which lines and how much of
 each to refund, the dialog states whether the refund can reach Stripe or records only, and
-submitting runs the whole thing atomically server-side. A merge or move's target household is
-entered by id (the id visible in any household desk's own URL) -- a proper household picker is a
-follow-up, out of this task's scope.
+submitting runs the whole thing atomically server-side -- and (Members pass T3) the manual
+Former override, toggling between "Mark Former" and "Clear Former" by the household's own
+current standing so only the reachable direction ever shows, each requiring a one-line reason. A
+merge or move's target household is entered by id (the id visible in any household desk's own
+URL) -- a proper household picker is a follow-up, out of this task's scope.
 -->
 <script lang="ts">
   import { untrack } from 'svelte';
@@ -84,6 +86,19 @@ follow-up, out of this task's scope.
     householdCity = data.desk.city ?? '';
     householdPrimaryId = data.desk.primaryMemberId ?? '';
     householdDialog?.showModal();
+  }
+
+  // -- manual Former override dialog (Members pass T3): a single dialog serves both directions,
+  // since only one of the two is ever reachable from a given standing (the trigger button below
+  // is the toggle, not this dialog). Each direction needs its own one-line reason, recorded
+  // through the audit sink alongside the acting editor.
+  let formerDialog: HTMLDialogElement | undefined = $state();
+  let formerDialogMode = $state<'set' | 'clear'>('set');
+  let formerReason = $state('');
+  function openFormerDialog(mode: 'set' | 'clear') {
+    formerDialogMode = mode;
+    formerReason = '';
+    formerDialog?.showModal();
   }
 
   // -- add / edit member dialog (shared) --
@@ -210,6 +225,11 @@ follow-up, out of this task's scope.
         <span class="badge {chip.cls}">
           {standing.status === 'former' && standing.lastSeason ? `${chip.label} — last ${standing.lastSeason}` : chip.label}
         </span>
+        {#if standing.status === 'former'}
+          <button type="button" class="btn btn-ghost btn-sm" onclick={() => openFormerDialog('clear')}>Clear Former&hellip;</button>
+        {:else}
+          <button type="button" class="btn btn-ghost btn-sm text-error" onclick={() => openFormerDialog('set')}>Mark Former&hellip;</button>
+        {/if}
       {/if}
       <button type="button" class="btn btn-ghost btn-sm" onclick={openHouseholdDialog}>Edit household</button>
       <button type="button" class="btn btn-ghost btn-sm" onclick={() => { mergedHouseholdId = ''; mergeDialog?.showModal(); }}>Merge in&hellip;</button>
@@ -388,6 +408,32 @@ follow-up, out of this task's scope.
         <div class="modal-action">
           <button type="button" class="btn btn-sm" onclick={() => householdDialog?.close()}>Cancel</button>
           <button type="submit" class="btn btn-primary btn-sm">Save</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog bind:this={formerDialog} class="modal" aria-labelledby="former-dialog-title">
+    <div class="modal-box">
+      <h2 id="former-dialog-title" class="text-lg font-bold">
+        {formerDialogMode === 'set' ? 'Mark this household Former' : 'Clear Former status'}
+      </h2>
+      <p class="py-2 text-sm text-muted">
+        {formerDialogMode === 'set'
+          ? 'Removes full member benefits immediately, ahead of the reminder sequence. A later payment clears it automatically.'
+          : 'Restores full member benefits with no payment on file yet. Use this when a household is renewing but has not paid yet.'}
+      </p>
+      <form
+        method="post"
+        action={formerDialogMode === 'set' ? '?/setFormer' : '?/clearFormer'}
+        class="flex flex-col gap-3"
+        use:enhance={closeDialogOnSettle(() => formerDialog)}
+      >
+        <CsrfField />
+        <TextField label="Reason" name="reason" bind:value={formerReason} />
+        <div class="modal-action">
+          <button type="button" class="btn btn-sm" onclick={() => formerDialog?.close()}>Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">{formerDialogMode === 'set' ? 'Mark Former' : 'Clear Former'}</button>
         </div>
       </form>
     </div>

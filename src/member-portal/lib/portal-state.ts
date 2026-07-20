@@ -102,7 +102,7 @@ export function isRenewalWindowStanding(standing: MemberStanding | null, today: 
 export interface PortalStateArgs {
   /** The signed-in household's own standing (`getMemberStanding`'s result); `null` only when the
    *  session resolves to no known household, a state {@link getMemberStanding} otherwise already
-   *  folds into its own `'lapsed'` for every other no-membership case. */
+   *  folds into its own `'former'` for every other no-membership case. */
   standing: MemberStanding | null;
   /** Whether the season calendar (`loadSeasonMonths`) carries at least one event or class on or
    *  after `today`; a distilled boolean rather than the full `SeasonMonth[]` shape, since that

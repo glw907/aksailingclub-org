@@ -1,15 +1,15 @@
 // segments.ts's own coverage: every segment at its standing boundaries, the shared-email
 // household-primary tie-break, and the picker's own ordering. Follows member-standing.test.ts's
 // own fixed-clock convention (vi.useFakeTimers, a synthetic NOW) since the membership segments
-// share standing.ts's own rolling boundary math.
+// share standing.ts's own classifier and its recorded-Former boundary.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { listSegmentOptions, resolveSegment, type SegmentKey } from '$admin-club/lib/segments';
 import { fakeD1 } from './_fake-d1';
 
 const NOW = new Date('2027-06-15T12:00:00Z');
 
-/** `paid_at` a fixed distance in the past from `NOW`, in the schema's own SQLite-datetime shape
- *  (mirrors `member-standing.test.ts`'s own helper). */
+/** `paid_at`/`former_at` a fixed distance in the past from `NOW`, in the schema's own
+ *  SQLite-datetime shape (mirrors `member-standing.test.ts`'s own helper). */
 function paidAtDaysAgo(days: number): string {
   return new Date(NOW.getTime() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
 }
@@ -21,20 +21,20 @@ describe("resolveSegment: the 'current' segment", () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  it('includes current and grace households, excludes a lapsed one, and gives a shared email to the household primary', async () => {
+  it('includes current and overdue households, excludes a recorded-Former one, and gives a shared email to the household primary', async () => {
     const { db, calls } = fakeD1({
       allResults: {
         'FROM households h': [
-          { household_id: 'hh-current', paid_at: paidAtDaysAgo(30), primary_member_id: 'mem-current' },
-          { household_id: 'hh-grace', paid_at: paidAtDaysAgo(365 + 20), primary_member_id: null },
-          { household_id: 'hh-lapsed', paid_at: paidAtDaysAgo(365 + 40), primary_member_id: null },
-          { household_id: 'hh-shared', paid_at: paidAtDaysAgo(10), primary_member_id: 'mem-primary' },
+          { household_id: 'hh-current', paid_at: paidAtDaysAgo(30), primary_member_id: 'mem-current', former_at: null },
+          { household_id: 'hh-overdue', paid_at: paidAtDaysAgo(365 + 20), primary_member_id: null, former_at: null },
+          { household_id: 'hh-former', paid_at: paidAtDaysAgo(365 + 40), primary_member_id: null, former_at: paidAtDaysAgo(10) },
+          { household_id: 'hh-shared', paid_at: paidAtDaysAgo(10), primary_member_id: 'mem-primary', former_at: null },
         ],
-        // hh-lapsed's id is never bound into this call: the household is filtered out before the
+        // hh-former's id is never bound into this call: the household is filtered out before the
         // members query runs at all (proven below via the bound args).
         'FROM members WHERE archived_at': [
           { id: 'mem-current', name: 'Current Member', email: 'current@example.com', household_id: 'hh-current' },
-          { id: 'mem-grace', name: 'Grace Member', email: 'grace@example.com', household_id: 'hh-grace' },
+          { id: 'mem-overdue', name: 'Overdue Member', email: 'overdue@example.com', household_id: 'hh-overdue' },
           { id: 'mem-shared-other', name: 'Not Primary', email: 'shared@example.com', household_id: 'hh-shared' },
           { id: 'mem-primary', name: 'The Primary', email: 'shared@example.com', household_id: 'hh-shared' },
         ],
@@ -46,7 +46,7 @@ describe("resolveSegment: the 'current' segment", () => {
     expect(segment.recipients).toEqual(
       expect.arrayContaining([
         { email: 'current@example.com', personName: 'Current Member', memberId: 'mem-current' },
-        { email: 'grace@example.com', personName: 'Grace Member', memberId: 'mem-grace' },
+        { email: 'overdue@example.com', personName: 'Overdue Member', memberId: 'mem-overdue' },
         { email: 'shared@example.com', personName: 'The Primary', memberId: 'mem-primary' },
       ]),
     );
@@ -54,7 +54,18 @@ describe("resolveSegment: the 'current' segment", () => {
 
     const membersCall = calls.find((c) => c.sql.includes('FROM members WHERE archived_at'));
     expect(membersCall?.sql).toContain('archived_at IS NULL');
-    expect(membersCall?.args).not.toContain('hh-lapsed');
+    expect(membersCall?.args).not.toContain('hh-former');
+  });
+
+  it('a household well past the renewal boundary but never recorded Former still reads Overdue (included), since Former is a recorded fact', async () => {
+    const { db } = fakeD1({
+      allResults: {
+        'FROM households h': [{ household_id: 'hh-stale', paid_at: paidAtDaysAgo(365 + 400), primary_member_id: null, former_at: null }],
+        'FROM members WHERE archived_at': [{ id: 'mem-stale', name: 'Stale Member', email: 'stale@example.com', household_id: 'hh-stale' }],
+      },
+    });
+    const segment = await resolveSegment(db, 'current');
+    expect(segment.recipients).toEqual([{ email: 'stale@example.com', personName: 'Stale Member', memberId: 'mem-stale' }]);
   });
 
   it('a household with no non-refunded paid row (never-paid or refunded-only) never grounds, so it never reaches the members query', async () => {
@@ -68,6 +79,7 @@ describe("resolveSegment: the 'current' segment", () => {
       household_id: `hh-${i}`,
       paid_at: paidAtDaysAgo(10),
       primary_member_id: null,
+      former_at: null,
     }));
     const { db, calls } = fakeD1({
       allResults: {
@@ -101,24 +113,26 @@ describe("resolveSegment: the 'lapsed' segment", () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  it('includes only a household past its grace window, excluding current and grace households', async () => {
+  it('includes only a household recorded Former, excluding current and overdue households', async () => {
     const { db } = fakeD1({
       allResults: {
         'FROM households h': [
-          { household_id: 'hh-current', paid_at: paidAtDaysAgo(30), primary_member_id: null },
-          { household_id: 'hh-grace', paid_at: paidAtDaysAgo(365 + 20), primary_member_id: null },
-          { household_id: 'hh-lapsed', paid_at: paidAtDaysAgo(365 + 40), primary_member_id: null },
+          { household_id: 'hh-current', paid_at: paidAtDaysAgo(30), primary_member_id: null, former_at: null },
+          { household_id: 'hh-overdue', paid_at: paidAtDaysAgo(365 + 20), primary_member_id: null, former_at: null },
+          { household_id: 'hh-former', paid_at: paidAtDaysAgo(365 + 40), primary_member_id: null, former_at: paidAtDaysAgo(10) },
         ],
-        'FROM members WHERE archived_at': [{ id: 'mem-lapsed', name: 'Lapsed Member', email: 'lapsed@example.com', household_id: 'hh-lapsed' }],
+        'FROM members WHERE archived_at': [{ id: 'mem-former', name: 'Former Member', email: 'former@example.com', household_id: 'hh-former' }],
       },
     });
     const segment = await resolveSegment(db, 'lapsed');
-    expect(segment.label).toBe('Lapsed members');
-    expect(segment.recipients).toEqual([{ email: 'lapsed@example.com', personName: 'Lapsed Member', memberId: 'mem-lapsed' }]);
+    expect(segment.label).toBe('Former members');
+    expect(segment.recipients).toEqual([{ email: 'former@example.com', personName: 'Former Member', memberId: 'mem-former' }]);
   });
 
-  it('answers no recipients when no household has ever lapsed', async () => {
-    const { db } = fakeD1({ allResults: { 'FROM households h': [{ household_id: 'hh-current', paid_at: paidAtDaysAgo(10), primary_member_id: null }] } });
+  it('answers no recipients when no household has ever been recorded Former', async () => {
+    const { db } = fakeD1({
+      allResults: { 'FROM households h': [{ household_id: 'hh-current', paid_at: paidAtDaysAgo(10), primary_member_id: null, former_at: null }] },
+    });
     const segment = await resolveSegment(db, 'lapsed');
     expect(segment.recipients).toEqual([]);
   });
@@ -238,7 +252,7 @@ describe('listSegmentOptions', () => {
     const options = await listSegmentOptions(db);
     expect(options).toEqual([
       { key: 'current', label: 'Current members' },
-      { key: 'lapsed', label: 'Lapsed members' },
+      { key: 'lapsed', label: 'Former members' },
       { key: 'instructors', label: 'Instructors' },
       { key: 'class:cls-new', label: 'Keelboat 101' },
       { key: 'class:cls-old', label: 'Dinghy Basics (2024)' },
