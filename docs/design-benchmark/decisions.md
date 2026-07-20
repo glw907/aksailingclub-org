@@ -319,7 +319,11 @@ Dates are 2026-07-07/08 (the home convergence arc) unless noted.
   idiom is filed for cairn's consumer guide (pass-B harvest). (5) **Roles-matrix
   amendment: Webmaster gains the whole Communication group** (Posts, Bulletins, Email,
   Announce, sends included) alongside Website; Publisher stays Communication-only. The
-  access map, matrix drift-guard test, and design matrix update in pass B.
+  access map, matrix drift-guard test, and design matrix update in pass B. (6) **The
+  Email-class-members spillover stays (Geoff, 2026-07-19, post-T6)**: the deep link
+  inherits the Email screen's map coverage, so Publisher and Webmaster see a collapsed
+  Events & Classes group holding that one door — kept deliberately (anyone who can send
+  email sees the class-email door; no nav-only map key to hide it).
 
 ## Benchmark provenance
 
