@@ -70,3 +70,54 @@ Members ships at `sm` (matching the plan's explicit density) accepting the small
 or `xs` for the fuller one; either is a one-line prop change on `AdminTable`, not a rebuild.
 
 **Verdict: open.** Geoff reacts asynchronously; the build continues per the plan's own note.
+
+## Task 6: `toolbar-1440-light.png` / `toolbar-1440-dark.png` / `toolbar-390-light.png` /
+`toolbar-390-dark.png` / `toolbar-overflow-open-light.png` / `toolbar-overflow-open-dark.png`
+
+Render `ListToolbar.svelte` in three states, live-shaped to the design spec's own Members filter
+set (standing, holdings, role/instructor, class -- "the Members filter set," the plan's own
+wording) plus one fabricated case exercising the overflow disclosure the plan requires "present in
+the contract even though Members promotes only four" of its own filters:
+
+1. **Default state** (149 households, no search, every filter at its own default) with
+   `autofocus` set, demonstrating the toolbar's own autofocus contract (the visible focus ring on
+   the search box in `toolbar-1440-light.png`/`toolbar-390-light.png` is the browser's real
+   default outline, not a design decision — the same native mechanism the "cursor lands in search
+   on open" contract rides on).
+2. **Search plus three applied filters** (`search="Sara"`, standing=Overdue, holdings=Holding
+   assets, role=Instructors, class left at its default), showing the applied-filter pills (neutral
+   `badge-neutral`, each with its own labeled remove control) and the count line's scope string
+   (`"12 households · Overdue · Holding assets"`, exactly `computeCountLine`'s own copy pattern).
+3. **The synthetic overflow case** (standing and holdings promoted, a fabricated Role/Committee
+   pair demoted to the overflow disclosure) — a pairing invented for this probe only, since the
+   real Members screen promotes all four of its own filters and never renders this disclosure. The
+   base four screenshots show the disclosure closed (the "More filters" trigger, plus the
+   already-applied Overdue/Race committee pills, since a filter counts as applied whether its own
+   control is promoted or hidden); `toolbar-overflow-open-light.png`/`-dark.png` click the trigger
+   open first (Playwright `getByRole('button', { name: 'More filters' }).click()`) and clip a
+   region including the opened `dropdown-content`, showing the demoted Role and Committee selects
+   with their own visible labels (the overflow disclosure is the one place `ListToolbar` renders a
+   filter's `label` as visible text rather than an `aria-label` alone, since the promoted controls'
+   own compact selects rely on the toolbar's tight horizontal band instead).
+
+All three states render in both admin themes (`cairn-admin`/`cairn-admin-dark`) and both the
+family's 390 and 1440 viewports (the overflow-open pair only at 1440, since the disclosure's own
+open/closed mechanics don't change by viewport). The first capture pass (`toolbar-*-390-*.png`
+before renaming) caught a real defect worth recording: with the toolbar band set to
+`flex-wrap: nowrap` and the primary action right-aligned only via `justify-content: space-between`,
+the fixed-width search box and the "Add household" button visibly overlapped at 390px — the width
+budget for both plus the loosely-shrinking search box was simply insufficient in one line.
+Wrap chaos, exactly the plan's own acceptance line names. Fixed by giving the band itself
+`flex-wrap: wrap` and switching the primary action to a `margin-left: auto` (which still resolves
+against a lone item's own flex line, not just a shared one), so the action cleanly drops to its own
+right-aligned line once the controls cluster's wrapped content no longer leaves room beside it —
+verified by recapturing after the fix; the four base screenshots and the overflow-open pair
+attached here are all from the *post-fix* render, not the one that caught the bug.
+
+Same probe idiom as Tasks 4 and 5: a dev-only route (`src/routes/_toolkit-toolbar-probe/+page.svelte`,
+wrapped as `<div data-theme={...}><div class="bg-base-100 text-base-content">...`, per the same
+structural note Task 5's section above already explains) rendered locally with `npm run dev`,
+captured with Playwright (`chromium.launch()` → `page.goto()` → `page.screenshot()`, never
+`toHaveScreenshot()`), then deleted before this commit.
+
+**Verdict: open.** Geoff reacts asynchronously; the build continues per the plan's own note.

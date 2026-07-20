@@ -191,8 +191,81 @@ scoped CSS, per the compiled-CSS constraint above.
 
 Tests: `src/tests/toolkit-table.test.ts`.
 
+## `ListToolbar.svelte`
+
+**Contract:** the list-header band (survey: ListToolbar **confirmed**, tier C, "a layout recipe
+over `input`, `select`, `btn`; Polaris applied-filters-as-pills is the reference detail"). Every
+prop is a controlled value plus a change callback, the same fully-controlled convention
+`Pagination`/`ExpandableRow` already establish — a search box's text, a filter's selected value,
+and which filters are promoted are all state the caller owns, never this component.
+
+Props: `search`/`onSearch` (the search box, always rendered); `searchLabel` (defaults `'Search'`,
+doubles as the box's accessible name and its placeholder — the toolbar band stays compact by never
+rendering a visible label, the same choice the fixture Members screen's own search box already
+made); `autofocus` (defaults `false` — the autofocus contract a screen opts into for "cursor lands
+in search on open"; native HTML autofocus is the mechanism, so a screen gets it for free just by
+mounting the toolbar with the flag set, no `tick()`/`.focus()` wiring of its own); `filters`
+(`ListToolbarFilter[]`, defaults `[]`) — each carries `id`, `label` (the control's accessible name,
+never rendered as visible chrome either), `options`, `value`, `onChange`, an optional
+`defaultValue` (the "no filter applied" value, defaults `'all'`), and `promoted` (defaults `true`)
+choosing whether the control renders directly in the band or behind the overflow disclosure;
+`overflowLabel` (defaults `'More filters'`, only rendered once at least one filter opts out of
+promotion — **present in the contract even when a consumer promotes every filter and never
+triggers it**, per the plan's own wording); `primaryAction` (`{ label, onClick }`, the toolbar's
+one right-aligned action — omit it for a toolbar with none, but the contract never accepts more
+than one); `count`/`itemLabel` (the count line's own scope).
+
+Two functions are exported from the module context, independently unit tested the same way
+`Pagination`'s `computePageWindow`/`computeItemRange` are:
+
+- `computeAppliedFilters(filters)` — every filter away from its own `defaultValue`, as a pill
+  `{ id, label }` where `label` reads from the matching option's own label (falling back to the
+  raw value for a stale or externally-set one, so a pill is never blank). This is also the
+  round-trip the survey's Polaris-pills detail describes: a filter's `onChange` firing with its
+  `defaultValue` (what the pill's own remove control calls) is exactly what turns its own entry
+  back off the next time this function runs.
+- `computeCountLine(count, itemLabel, appliedLabels)` — the count line's own copy pattern:
+  `"<count> <itemLabel>"`, followed by every applied-filter label joined with a middle dot
+  (`"12 households · Overdue · Holding assets"`). The line always renders, even at zero applied
+  filters or a zero count — a count line that only sometimes states its scope is the failure mode
+  the design spec's own acceptance criterion ("the count line always states its scope") rules out.
+  **This is the copy pattern's one home**: a consumer supplies `count`/`itemLabel` and the applied
+  filters' own option labels; it never re-derives or restates the join pattern itself.
+
+Applied-filter pills render in the toolkit's one neutral badge tone (`badge-neutral`), never an
+alarm color, per the survey's action-discipline standard: an applied filter is a normal state of
+the list, not a warning needing a semantic red/amber/green read. A filter's own vocabulary
+(including its casing — "Overdue" in a pill, "overdue" in prose) is entirely the options list the
+consumer supplies; this component never rewrites a label.
+
+The band itself never wraps — its two children (the controls cluster and the primary action) stay
+on one flex line, so the primary action always stays pinned at the band's top-right corner. The
+controls cluster (search plus every promoted filter) wraps its own children internally at a narrow
+viewport, so filters spill onto their own line rather than colliding with the action or the edge of
+the screen.
+
+**daisyUI assembly:** `input`/`input-sm` (search), `select`/`select-sm` (every filter, promoted or
+overflow), `btn`/`btn-sm`/`btn-primary`/`btn-outline` (the primary action and the overflow
+trigger), `dropdown`/`dropdown-content`/`menu` (the overflow disclosure — the same assembly the
+survey's RowActions entry names for a row's own overflow menu), `badge`/`badge-neutral`/`badge-sm`
+(the pills). **Verified against the built `cairn-admin.css`:** every one of these already compiles
+from cairn's own admin usage — none of it needed a safelist addition, unlike `StatusChip`'s
+`status-*` family or `Pagination`'s `join-item`. The overflow disclosure's trigger and content are
+a plain `<button>` plus a plain `<div>` (no `tabindex` on either): the trigger is already
+focusable as a real button, and the content holds only real, already-focusable controls
+(`<select>`), so nothing here needs the tabindex-on-a-non-interactive-element idiom daisyUI's own
+docs show for a menu of plain, non-native items. Pill layout, the pill's own remove control, and
+the count line's muted color (`var(--color-muted)`, matching `Pagination`'s own range line) are
+this component's own scoped CSS, per the compiled-CSS constraint above.
+
+**Exact class inventory:** `input`, `input-sm`, `select`, `select-sm`, `btn`, `btn-sm`,
+`btn-primary`, `btn-outline`, `dropdown`, `dropdown-content`, `menu`, `badge`, `badge-neutral`,
+`badge-sm`.
+
+Tests: `src/tests/toolkit-toolbar.test.ts` (component rendering) and the same file's
+`computeAppliedFilters`/`computeCountLine` suites (the applied/removed pill round-trip, the
+count-line copy pattern at zero filters/zero count, a stale filter value with no matching option).
+
 ## What is not here yet
 
-`ListToolbar` (Task 6) lands in a later Members-pass task and extends this README with its own
-section when it does. The Members screen rebuild (Task 7) is every component's first real
-consumer.
+The Members screen rebuild (Task 7) is every component's first real consumer.
