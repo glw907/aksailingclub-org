@@ -196,16 +196,21 @@ export async function listClasses(db: D1Database): Promise<ClassRow[]> {
 }
 
 /** Every class with its derived counts, one query: the triage list's own need, so the list
- *  screen never issues a per-row count query. */
-export async function listClassesWithCounts(db: D1Database): Promise<ClassWithCounts[]> {
-  const { results } = await db
-    .prepare(
-      `SELECT ${SELECT_COLUMNS},
-         (SELECT COUNT(*) FROM class_enrollments e WHERE e.class_id = classes.id) AS enrolled_count,
-         (SELECT COUNT(*) FROM class_waitlist w WHERE w.class_id = classes.id) AS waitlist_count
-       FROM classes ${ORDER_BY}`,
-    )
-    .all<ClassRawRow & { enrolled_count: number; waitlist_count: number }>();
+ *  screen never issues a per-row count query. `season`, when given, scopes the read to one
+ *  season (the list screen's own default-to-current-season, filter-for-history need); omitted,
+ *  every season reads (the original contract, unchanged -- the Members screen's own class-filter
+ *  options still read every class and scope in JS). */
+export async function listClassesWithCounts(db: D1Database, season?: number): Promise<ClassWithCounts[]> {
+  const seasonClause = season === undefined ? '' : ' WHERE classes.season = ?1';
+  const stmt = db.prepare(
+    `SELECT ${SELECT_COLUMNS},
+       (SELECT COUNT(*) FROM class_enrollments e WHERE e.class_id = classes.id) AS enrolled_count,
+       (SELECT COUNT(*) FROM class_waitlist w WHERE w.class_id = classes.id) AS waitlist_count
+     FROM classes${seasonClause} ${ORDER_BY}`,
+  );
+  const { results } = await (season === undefined ? stmt : stmt.bind(season)).all<
+    ClassRawRow & { enrolled_count: number; waitlist_count: number }
+  >();
   return results.map((row) => {
     const base = toClassRow(row);
     return {
@@ -215,6 +220,105 @@ export async function listClassesWithCounts(db: D1Database): Promise<ClassWithCo
       isFull: row.enrolled_count >= base.capacity,
     };
   });
+}
+
+/** Every season with at least one class, most recent first: the list screen's own season filter
+ *  vocabulary (the current season is always offered even with zero classes yet, via the caller's
+ *  own union with `getCurrentSeason` -- this function only ever reports what already exists). */
+export async function listClassSeasons(db: D1Database): Promise<number[]> {
+  const { results } = await db
+    .prepare('SELECT DISTINCT season FROM classes ORDER BY season DESC')
+    .all<{ season: number }>();
+  return results.map((row) => row.season);
+}
+
+/** One roster member the list screen's expand panel renders: the same trio (name, birthdate,
+ *  paid state) the detail page's `EnrollmentRow` carries, joined to `members` here since the list
+ *  screen has no per-class follow-up read of its own. `birthdate` stays raw (never pre-computed
+ *  into an age): the caller renders it through the toolkit's own `ageFromBirthdate`, the same
+ *  convention the Members screen's panel already uses. */
+export interface ClassRosterMember {
+  enrollmentId: string;
+  name: string;
+  birthdate: string | null;
+  feePaid: boolean;
+}
+
+/** Every enrolled roster member across every class in a season, one joined query for the whole
+ *  season (never a per-class loop -- the list screen's own no-N+1 requirement), grouped by class
+ *  id and ordered oldest-enrollment-first within each class, matching `listEnrollments`' own
+ *  order. A class with no enrollments simply has no key in the returned map. */
+export async function listRostersBySeason(db: D1Database, season: number): Promise<Map<string, ClassRosterMember[]>> {
+  const { results } = await db
+    .prepare(
+      `SELECT e.class_id AS class_id, e.id AS id, m.name AS name, m.birthdate AS birthdate, e.fee_paid AS fee_paid
+       FROM class_enrollments e
+       JOIN classes c ON c.id = e.class_id
+       JOIN members m ON m.id = e.member_id
+       WHERE c.season = ?1
+       ORDER BY e.class_id, e.enrolled_at ASC`,
+    )
+    .bind(season)
+    .all<{ class_id: string; id: string; name: string; birthdate: string | null; fee_paid: 0 | 1 }>();
+  const rosters = new Map<string, ClassRosterMember[]>();
+  for (const row of results) {
+    const roster = rosters.get(row.class_id) ?? [];
+    roster.push({ enrollmentId: row.id, name: row.name, birthdate: row.birthdate, feePaid: row.fee_paid === 1 });
+    rosters.set(row.class_id, roster);
+  }
+  return rosters;
+}
+
+/** One class's waitlist, reduced to what the list screen's expand panel states in a single line:
+ *  how many are queued, and who is next (a member's stored name, or an applicant's own name for a
+ *  not-yet-a-member signup). The active-offer half of that line is a separate join the route's own
+ *  load performs against `listOutstandingOffers`, not this function's concern (this module cannot
+ *  import `offers.ts`, which itself imports this module -- see this file's own header). */
+export interface ClassWaitlistSummary {
+  count: number;
+  nextName: string | null;
+}
+
+/** Every class's waitlist summary in a season, one joined query for the whole season (the same
+ *  no-N+1 requirement `listRostersBySeason` documents), position order within each class so the
+ *  first row seen per class is genuinely the head of the line. A class with an empty waitlist
+ *  simply has no key in the returned map. */
+export async function listWaitlistSummariesBySeason(db: D1Database, season: number): Promise<Map<string, ClassWaitlistSummary>> {
+  const { results } = await db
+    .prepare(
+      `SELECT w.class_id AS class_id, w.id AS id, w.position AS position, w.applicant_name AS applicant_name,
+         m.name AS member_name
+       FROM class_waitlist w
+       JOIN classes c ON c.id = w.class_id
+       LEFT JOIN members m ON m.id = w.member_id
+       WHERE c.season = ?1
+       ORDER BY w.class_id, w.position ASC`,
+    )
+    .bind(season)
+    .all<{ class_id: string; id: string; position: number; applicant_name: string | null; member_name: string | null }>();
+  const summaries = new Map<string, ClassWaitlistSummary>();
+  for (const row of results) {
+    const existing = summaries.get(row.class_id);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      summaries.set(row.class_id, { count: 1, nextName: row.member_name ?? row.applicant_name });
+    }
+  }
+  return summaries;
+}
+
+/**
+ * Whether the list screen's contextual "Offer next seat" action should show, and the exact guard
+ * `offerNext`'s own server action enforces: a free seat (never full), a nonempty waitlist, and no
+ * offer already live. The same three-way-AND shape `isPubliclyOpen` documents for the public
+ * signup gate, deliberately a separate function (a different third gate: `hasActiveOffer` here
+ * is the caller's own per-class read, `isPubliclyOpen`'s own third gate instead folds in the
+ * waitlist-empty case as the OPEN condition, not the OFFER condition) -- one fix point either way,
+ * never a screen re-deriving its own copy of the guard the action already enforces.
+ */
+export function canOfferNextSeat(cls: ClassWithCounts, hasActiveOffer: boolean): boolean {
+  return !cls.isFull && cls.waitlistCount > 0 && !hasActiveOffer;
 }
 
 /** One class by id, or `null` if no such row. */

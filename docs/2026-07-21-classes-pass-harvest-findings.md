@@ -73,3 +73,32 @@
    Members screen's every existing prop call site kept working unchanged — the swap
    was import-path-only. The one real integration point, `itemNoun`'s `string |
    ItemLabel` widening (Task 1), was exactly enough; no other reconciliation surfaced.
+
+8. **Task 3: `ListToolbar.search`/`onSearch` are mandatory props, but a filter-only
+   toolbar is a real shape.** The Classes list's own design spec calls for a season
+   filter, a primary action, and a count line -- no search (the season is small enough
+   to scan; nothing in the spec asks for a name search). `ListToolbar`'s Props type
+   has no optional form of `search`/`onSearch`, so this second consumer either drops
+   `ListToolbar` for a filter-only screen or invents a search box the design never
+   asked for. Task 3 chose the latter (a client-side name filter over the already-
+   loaded season, cheap since there is no per-row secret to leak the way Members'
+   server-side search protects), which is a legitimate feature but was added to
+   satisfy the component's contract, not the product spec. Worth a widening: `search`/
+   `onSearch` optional, the search box rendered only when both are given, mirroring how
+   `primaryAction`/`filters`/`trailing` are already all-optional on the same component.
+
+9. **Task 3: `PageHeader` has no matching bare card-shell primitive.** `OfficeList`
+   bundles the eyebrow/title/meta header AND the bordered `rounded-box` card shell in
+   one component; `PageHeader` graduated only the header half (by design, per its own
+   doc comment: "the `OfficeList` shape, generalized"). A screen that adopts
+   `PageHeader` for its header (this pass's first ASC consumer) still needs a card
+   shell around its own table/form content below it, and the only way to get the exact
+   same shell is to hand-copy `OfficeList`'s own wrapper div class string
+   (`rounded-box border border-[var(--cairn-card-border)] bg-base-100 overflow-x-auto
+   shadow-[var(--cairn-shadow)]`) verbatim -- safe (it is a literal token already
+   compiled from `OfficeList.svelte`'s own scanned template, the same trick
+   `PageHeader`'s own doc comment describes for its typography classes), but a fourth
+   copy of that exact string across the codebase is a graduation candidate of its own:
+   a bare `Card`/`AdminCardShell` primitive in the toolkit, so `PageHeader` and a card
+   shell compose independently instead of every non-`OfficeList` screen re-deriving
+   the same wrapper string.

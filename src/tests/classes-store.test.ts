@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { fakeD1 } from './_fake-d1';
 import {
   addInstructor,
+  canOfferNextSeat,
   countEnrolled,
   countWaitlist,
   createClass,
@@ -11,9 +12,12 @@ import {
   isPubliclyOpen,
   listClasses,
   listClassesWithCounts,
+  listClassSeasons,
   listEnrollments,
   listInstructors,
+  listRostersBySeason,
   listWaitlist,
+  listWaitlistSummariesBySeason,
   removeInstructor,
   updateClass,
   type ClassWithCounts,
@@ -242,6 +246,126 @@ describe('listClassesWithCounts', () => {
       expect.objectContaining({ id: '1st_adult_teen_intro', enrolledCount: 10, waitlistCount: 1, isFull: true }),
       expect.objectContaining({ id: 'fleet_tuneup', enrolledCount: 3, waitlistCount: 0, isFull: false }),
     ]);
+  });
+
+  it('season-scopes with a WHERE clause and binds it, when a season is given (the list screen\'s '
+    + 'own need)', async () => {
+    const { db, calls } = fakeD1({
+      allResults: { 'FROM classes WHERE classes.season': [{ ...RAW_ROW, enrolled_count: 1, waitlist_count: 0 }] },
+    });
+    await expect(listClassesWithCounts(db, 2026)).resolves.toEqual([
+      expect.objectContaining({ id: '1st_adult_teen_intro' }),
+    ]);
+    expect(calls[0].sql).toContain('WHERE classes.season = ?1');
+    expect(calls[0].args).toEqual([2026]);
+  });
+});
+
+describe('listClassSeasons', () => {
+  it('returns every distinct season, most recent first', async () => {
+    const { db, calls } = fakeD1({
+      allResults: { 'SELECT DISTINCT season FROM classes': [{ season: 2026 }, { season: 2025 }] },
+    });
+    await expect(listClassSeasons(db)).resolves.toEqual([2026, 2025]);
+    expect(calls[0].sql).toContain('ORDER BY season DESC');
+  });
+});
+
+describe('listRostersBySeason', () => {
+  it('groups every enrolled roster member by class, joined to members for name and birthdate, ' +
+    'one query for the whole season', async () => {
+    const { db, calls } = fakeD1({
+      allResults: {
+        'FROM class_enrollments e': [
+          { class_id: 'cls-a', id: 'enr-1', name: 'Alex Rivera', birthdate: '2015-04-01', fee_paid: 1 },
+          { class_id: 'cls-a', id: 'enr-2', name: 'Sam Lee', birthdate: null, fee_paid: 0 },
+          { class_id: 'cls-b', id: 'enr-3', name: 'Jamie Cruz', birthdate: '2010-01-01', fee_paid: 1 },
+        ],
+      },
+    });
+    const result = await listRostersBySeason(db, 2026);
+    expect(result.get('cls-a')).toEqual([
+      { enrollmentId: 'enr-1', name: 'Alex Rivera', birthdate: '2015-04-01', feePaid: true },
+      { enrollmentId: 'enr-2', name: 'Sam Lee', birthdate: null, feePaid: false },
+    ]);
+    expect(result.get('cls-b')).toEqual([{ enrollmentId: 'enr-3', name: 'Jamie Cruz', birthdate: '2010-01-01', feePaid: true }]);
+    expect(result.has('no-such-class')).toBe(false);
+    expect(calls[0].sql).toContain('WHERE c.season = ?1');
+    expect(calls[0].args).toEqual([2026]);
+  });
+
+  it('returns an empty map for a season with no enrollments', async () => {
+    const { db } = fakeD1({ allResults: { 'FROM class_enrollments e': [] } });
+    await expect(listRostersBySeason(db, 2026)).resolves.toEqual(new Map());
+  });
+});
+
+describe('listWaitlistSummariesBySeason', () => {
+  it('counts each class\'s queue and names the head of the line (member name over applicant '
+    + 'name), one query for the whole season', async () => {
+    const { db, calls } = fakeD1({
+      allResults: {
+        'FROM class_waitlist w': [
+          { class_id: 'cls-a', id: 'wait-1', position: 1, applicant_name: 'Walk-up Jamie', member_name: null },
+          { class_id: 'cls-a', id: 'wait-2', position: 2, applicant_name: null, member_name: 'Second In Line' },
+          { class_id: 'cls-b', id: 'wait-3', position: 1, applicant_name: null, member_name: 'Casey Park' },
+        ],
+      },
+    });
+    const result = await listWaitlistSummariesBySeason(db, 2026);
+    expect(result.get('cls-a')).toEqual({ count: 2, nextName: 'Walk-up Jamie' });
+    expect(result.get('cls-b')).toEqual({ count: 1, nextName: 'Casey Park' });
+    expect(result.has('no-such-class')).toBe(false);
+    expect(calls[0].sql).toContain('WHERE c.season = ?1');
+    expect(calls[0].args).toEqual([2026]);
+  });
+
+  it('returns an empty map for a season with no waitlist entries', async () => {
+    const { db } = fakeD1({ allResults: { 'FROM class_waitlist w': [] } });
+    await expect(listWaitlistSummariesBySeason(db, 2026)).resolves.toEqual(new Map());
+  });
+});
+
+describe('canOfferNextSeat', () => {
+  const OPEN: ClassWithCounts = {
+    id: 'cls-a',
+    season: 2026,
+    name: 'Fleet Tune-Up Weekend',
+    slug: 'fleet-tune-up-weekend',
+    track: 'adult-teen',
+    capacity: 10,
+    fee: 100,
+    startDate: null,
+    endDate: null,
+    location: null,
+    description: null,
+    instructorNotes: null,
+    customNote: null,
+    heroImage: null,
+    heroImageAlt: null,
+    visible: true,
+    dropIn: false,
+    createdAt: '2026-01-01 00:00:00',
+    updatedAt: '2026-01-01 00:00:00',
+    enrolledCount: 5,
+    waitlistCount: 1,
+    isFull: false,
+  };
+
+  it('is true with a free seat, a nonempty waitlist, and no active offer', () => {
+    expect(canOfferNextSeat(OPEN, false)).toBe(true);
+  });
+
+  it('is false when the class is full', () => {
+    expect(canOfferNextSeat({ ...OPEN, isFull: true }, false)).toBe(false);
+  });
+
+  it('is false when the waitlist is empty', () => {
+    expect(canOfferNextSeat({ ...OPEN, waitlistCount: 0 }, false)).toBe(false);
+  });
+
+  it('is false when an offer is already active', () => {
+    expect(canOfferNextSeat(OPEN, true)).toBe(false);
   });
 });
 
