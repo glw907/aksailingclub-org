@@ -141,5 +141,9 @@ ff0d3f34.
 9. **Graduation status (per the wave-by-graduation ruling):** all six components
    (AdminTable, ExpandableRow, ListToolbar, StatusChip, Pagination, the
    formatters) shipped their first consumer and survived the coherence rounds;
-   none graduates yet. The Classes or Assets pass is each component's second
-   consumer and the first harvest wave's gate.
+   none graduated at pass close. UPDATE (Geoff, 2026-07-20, post-close): cairn
+   itself now stands as a component consumer, which activates the engine-pull
+   trigger — the first harvest wave can open at the toolkit-organization pass,
+   with cairn's own admin screens serving as each component's second consumer,
+   rather than waiting on the Classes or Assets pass. A contract that bends
+   under cairn's screens still blocks that component's graduation, same rule.
