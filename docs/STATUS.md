@@ -66,19 +66,16 @@ published).** What shipped:
 - **ON GEOFF'S QUEUE**: the Members before/after on dev (/admin/club/members — the
   search-first screen, an expanded panel, the 390 view) and the toolkit probe pages
   above.
-- **NEXT PASS**: the second admin-screen pass — Classes or Assets, Geoff picks —
-  opening with its own functional brainstorm. Resume prompt: "Start the next
-  admin-screen pass: read ROADMAP's admin-screen-passes entry, docs/STATUS.md, and the
-  Classes and Assets stops in docs/2026-07-20-admin-toolkit-catalog.md, then open the
-  functional brainstorm with Geoff (superpowers:brainstorming) — first question: Classes
-  or Assets." Launch fresh from ~/Projects/aksailingclub-org. Conductor seat is Geoff's
-  call at session start (79% weekly spent as of this close; design brainstorms are
-  Fable-priority in-window, Opus is the fallback). SEQUENCING NOTE (2026-07-20
-  evening): Geoff's OWN cairn session is mid-flight on the toolkit-organization pass
-  (fix round, CI, admin smoke, renders, merge, then a 0.x MINOR release publishing
-  the admin-toolkit subpath) — no ASC session touches cairn-cms until it lands, and
-  once the minor is on the registry, the next pass OPENS by bumping the dep and
-  swapping the local src/admin-club/toolkit/ copies for the subpath imports.
+- **NEXT PASS — CLASSES, BRAINSTORMED AND PLANNED (2026-07-21)**: Geoff picked
+  Classes; the functional brainstorm ran and its rulings are in the spec
+  (docs/2026-07-21-classes-pass-design.md, approved); the implementation plan is
+  docs/plans/2026-07-21-classes-pass.md, AWAITING GEOFF'S PLAN APPROVAL — the one
+  human gate before execution. cairn 0.89.0 landed (toolkit-organization pass done),
+  and the plan opens with a cairn 0.89.1 patch (Task 1: graduate the itemNoun fix the
+  local toolkit carries and cairn's graduated Pagination/ListToolbar miss) before the
+  subpath swap (Task 2: delete the five local copies, keep ExpandableRow local, adopt
+  PageHeader/EmptyState). Execution is same-session orchestrate-and-verify on
+  cairn-implementer dispatches once approved.
 
 **PASS B `asc-sidebar-build` IS BUILD-COMPLETE AND SHIPPED TO DEV; GEOFF'S WALKTHROUGH
 IS THE OPEN GATE (2026-07-19, Fable-conducted: T1 probe round settled in-session, 5
