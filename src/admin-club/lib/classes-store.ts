@@ -20,8 +20,9 @@
 // (`people.ts`) before writing or matching `member_id`. This module's `ClassInstructor` type still
 // names its email field `email`, not `memberId`: the admin screen never has to know a real id
 // exists underneath, since every read here joins back to `members` for the address to show.
-import type { D1Database } from '@cloudflare/workers-types';
+import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types';
 import { ensureMember } from './people';
+import { buildTransactionStatements, type TransactionSource } from './ledger';
 
 /** The `classes.track` CHECK constraint's exact vocabulary (forward.sql). */
 export const CLASS_TRACKS = ['adult-teen', 'youth'] as const;
@@ -107,11 +108,21 @@ export interface ClassInstructor {
   name: string | null;
 }
 
-/** One `class_enrollments` row, read-only this pass (Task 8's public forms are the only write
- *  path, a later task): the roster section's own rows. */
+/** One `class_enrollments` row, joined to `members` for the roster's own display need (the
+ *  Classes pass Task 4 detail rebuild: "a real named roster with ages"). Writes still route
+ *  elsewhere (Task 8's public forms create the row; this task's own `buildClassPayment` only
+ *  flips `feePaid`); this module's own header's "read-only" note now covers only the row's
+ *  identity/enrollment columns, not `feePaid`. */
 export interface EnrollmentRow {
   id: string;
   memberId: string;
+  /** The enrolled member's own stored name, for the roster's display -- never re-derived from
+   *  `memberId` by a caller, the same join-here-not-there convention `listRostersBySeason`'s own
+   *  `ClassRosterMember` already established for the list screen. */
+  memberName: string;
+  /** Raw, never pre-computed into an age: the caller renders it through the toolkit's own
+   *  `ageFromBirthdate`, matching `ClassRosterMember`'s own field. */
+  birthdate: string | null;
   enrolledAt: string;
   feePaid: boolean;
   guardianContact: string | null;
@@ -474,18 +485,23 @@ export async function removeInstructor(db: D1Database, classId: string, email: s
     .run();
 }
 
-/** The class's enrolled roster, oldest enrollment first, read-only this pass (Task 8's public
- *  signup form is the only write path, a later task). */
+/** The class's enrolled roster, oldest enrollment first, joined to `members` for the name and
+ *  birthdate the detail screen's roster table renders (Task 4). */
 export async function listEnrollments(db: D1Database, classId: string): Promise<EnrollmentRow[]> {
   const { results } = await db
     .prepare(
-      `SELECT id, member_id, enrolled_at, fee_paid, guardian_contact, interests FROM class_enrollments
-       WHERE class_id = ?1 ORDER BY enrolled_at ASC`,
+      `SELECT e.id AS id, e.member_id AS member_id, m.name AS member_name, m.birthdate AS birthdate,
+         e.enrolled_at AS enrolled_at, e.fee_paid AS fee_paid, e.guardian_contact AS guardian_contact,
+         e.interests AS interests
+       FROM class_enrollments e JOIN members m ON m.id = e.member_id
+       WHERE e.class_id = ?1 ORDER BY e.enrolled_at ASC`,
     )
     .bind(classId)
     .all<{
       id: string;
       member_id: string;
+      member_name: string;
+      birthdate: string | null;
       enrolled_at: string;
       fee_paid: 0 | 1;
       guardian_contact: string | null;
@@ -494,11 +510,68 @@ export async function listEnrollments(db: D1Database, classId: string): Promise<
   return results.map((row) => ({
     id: row.id,
     memberId: row.member_id,
+    memberName: row.member_name,
+    birthdate: row.birthdate,
     enrolledAt: row.enrolled_at,
     feePaid: row.fee_paid === 1,
     guardianContact: row.guardian_contact,
     interests: row.interests,
   }));
+}
+
+/** Sources a manual, no-checkout class-fee payment can carry: the same trio `manual-payment.ts`'s
+ *  own `ManualPaymentSource` names for membership dues (Stripe/PayPal payments arrive through
+ *  their own reconciler, not this path). */
+export type ClassPaymentSource = Extract<TransactionSource, 'check' | 'cash' | 'comp'>;
+
+export type ClassPaymentResult =
+  | { ok: true; statements: D1PreparedStatement[]; amountCents: number }
+  | { ok: false; error: string };
+
+/**
+ * Build the enrollment's `fee_paid` flip plus the ledger `charge` transaction for the class's own
+ * fee, as unrun statements for one `db.batch()` -- the same build-only shape `manual-payment.ts`'s
+ * own `buildManualMembershipPayment` established, so the route action owns the one atomic write
+ * and its own audit call. The amount is always the class's current `fee`, never an admin-typed
+ * figure: a manual recording is rare but real (design doc's own "Manual payments" section), not a
+ * promoted flow with its own amount-entry surface. Refuses an unknown enrollment or one already
+ * marked paid, rather than double-charging it.
+ */
+export async function buildClassPayment(
+  db: D1Database,
+  input: { enrollmentId: string; source: ClassPaymentSource; memo?: string | null },
+): Promise<ClassPaymentResult> {
+  const row = await db
+    .prepare(
+      `SELECT e.fee_paid AS fee_paid, c.fee AS fee, c.name AS class_name
+       FROM class_enrollments e JOIN classes c ON c.id = e.class_id WHERE e.id = ?1`,
+    )
+    .bind(input.enrollmentId)
+    .first<{ fee_paid: 0 | 1; fee: number; class_name: string }>();
+  if (!row) return { ok: false, error: 'No such enrollment.' };
+  if (row.fee_paid === 1) return { ok: false, error: 'This enrollment is already paid.' };
+
+  const amountCents = Math.round(row.fee * 100);
+  const { statements: ledgerStatements } = buildTransactionStatements(
+    db,
+    {
+      kind: 'charge',
+      source: input.source,
+      // The same UTC-shaped-string construction `offers.ts`'s own `toSqliteDatetime` performs
+      // (member-portal/lib/classes.ts's own `now` variables use the identical inline form): this
+      // module cannot import `offers.ts`, which itself imports this module (see this file's own
+      // header), so the one-liner is inlined here rather than creating a circular import for it.
+      occurredAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      amountTotalCents: amountCents,
+      memo: input.memo ?? null,
+    },
+    [{ item: 'class-fee', description: `${row.class_name} fee`, amountCents, enrollmentId: input.enrollmentId }],
+  );
+  return {
+    ok: true,
+    statements: [db.prepare('UPDATE class_enrollments SET fee_paid = 1 WHERE id = ?1').bind(input.enrollmentId), ...ledgerStatements],
+    amountCents,
+  };
 }
 
 /** The class's waitlist, position order: the offer machine's own read of who is next in line,
@@ -533,4 +606,23 @@ export async function listWaitlist(db: D1Database, classId: string): Promise<Wai
     requestedAt: row.requested_at,
     notes: row.notes,
   }));
+}
+
+/**
+ * Every queued waitlist member's own display name, keyed by `memberId`: a small side query
+ * scoped to the caller's own `memberIds` (never more than one class's own waitlist worth of
+ * rows), so the detail screen's own "member vs applicant" distinction (Task 4) needs no
+ * structural change to `listWaitlist`'s shared `WaitlistRow` shape -- that read serves the
+ * cross-class waitlist overview, the offer machine, the public claim flow, and the reminder job
+ * as well, so widening its own `SELECT` would ripple far past this one screen's own display need.
+ * Returns an empty map for an empty input rather than issuing a query with no rows to bind.
+ */
+export async function getWaitlistMemberNames(db: D1Database, memberIds: string[]): Promise<Map<string, string>> {
+  if (memberIds.length === 0) return new Map();
+  const placeholders = memberIds.map((_, index) => `?${index + 1}`).join(', ');
+  const { results } = await db
+    .prepare(`SELECT id, name FROM members WHERE id IN (${placeholders})`)
+    .bind(...memberIds)
+    .all<{ id: string; name: string }>();
+  return new Map(results.map((row) => [row.id, row.name]));
 }

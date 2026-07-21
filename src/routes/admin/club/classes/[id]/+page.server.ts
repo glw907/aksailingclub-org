@@ -1,9 +1,12 @@
 // The Classes edit screen (Task 6): the detail form's load (class, its assigned instructors, and
-// its read-only enrolled roster), plus the update, delete, and instructor-assignment actions. A
-// miss on `id` returns an honest `class: null` rather than SvelteKit's `error(404)`, the same
-// reasoning `events/[id]/+page.server.ts`'s own header documents. Task 7 adds the waitlist section
-// and its offer machine: the load sweeps stale offers before reading anything else, so the
-// per-entry state it hands the page is never a moment behind an expiry.
+// its named-and-aged enrolled roster), plus the update, delete, and instructor-assignment
+// actions. A miss on `id` returns an honest `class: null` rather than SvelteKit's `error(404)`,
+// the same reasoning `events/[id]/+page.server.ts`'s own header documents. Task 7 adds the
+// waitlist section and its offer machine: the load sweeps stale offers before reading anything
+// else, so the per-entry state it hands the page is never a moment behind an expiry. The Classes
+// pass Task 4 rebuild (docs/2026-07-21-classes-pass-design.md) adds `recordPayment`, the roster's
+// own manual (check/cash/comp) payment action; roster ordering and section layout move to the
+// rebuilt `+page.svelte`, this file's own load/action shape is otherwise unchanged.
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
@@ -11,15 +14,18 @@ import { resolveClubDb } from '$admin-club/lib/club-db';
 import { clubAdminAction } from '$admin-club/lib/club-action';
 import {
   addInstructor,
+  buildClassPayment,
   deleteClass,
   getClass,
   getClassWithCounts,
+  getWaitlistMemberNames,
   listEnrollments,
   listInstructors,
   listWaitlist,
   removeInstructor,
   updateClass,
   type ClassInstructor,
+  type ClassPaymentSource,
   type ClassWithCounts,
   type EnrollmentRow,
   type WaitlistRow,
@@ -42,6 +48,7 @@ export const load: PageServerLoad = async (event) => {
       instructors: [] as ClassInstructor[],
       enrollments: [] as EnrollmentRow[],
       waitlist: [] as WaitlistRow[],
+      waitlistMemberNames: {} as Record<string, string>,
       offers: [] as OfferRow[],
       error: 'CLUB_DB is not bound.',
     };
@@ -55,10 +62,22 @@ export const load: PageServerLoad = async (event) => {
     listWaitlist(db, id),
     listOffersForClass(db, id),
   ]);
-  return { class: row, instructors, enrollments, waitlist, offers, error: null as string | null };
+  // A member-sourced waitlist entry (`memberId` set) carries no name of its own on `WaitlistRow`
+  // (`classes-store.ts`'s own header on why that shared shape stays untouched): one small side
+  // query, scoped to just this class's own queued members, resolves the names the roster needs
+  // to distinguish a member entry from an applicant one, serialized as a plain object (SvelteKit's
+  // own load convention, matching `announce/+page.server.ts`'s identical Map-to-array habit).
+  const memberIds = [...new Set(waitlist.map((entry) => entry.memberId).filter((id): id is string => id !== null))];
+  const waitlistMemberNames = Object.fromEntries(await getWaitlistMemberNames(db, memberIds));
+  return { class: row, instructors, enrollments, waitlist, waitlistMemberNames, offers, error: null as string | null };
 };
 
 const DENIED_MESSAGE = 'A club role is required to manage classes.';
+
+function optionalField(form: FormData, name: string): string | null {
+  const value = form.get(name);
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
 
 export const actions: Actions = {
   update: clubAdminAction(
@@ -201,5 +220,35 @@ export const actions: Actions = {
       return { ok: true, dropped: true as const };
     },
     { action: 'drop', entity: 'enrollment', deniedMessage: DENIED_MESSAGE },
+  ),
+
+  // The roster's own manual (check/cash/comp) payment action (Task 4, the design doc's own
+  // "Manual payments" section): rare but real, so the amount is always the class's current fee,
+  // never an admin-typed figure (`buildClassPayment`'s own header). Fails closed on an unknown
+  // enrollment or one already paid, rather than double-charging it.
+  recordPayment: clubAdminAction(
+    async ({ form, ctx }) => {
+      const enrollmentId = form.get('enrollmentId');
+      const source = form.get('source');
+      const memo = optionalField(form, 'memo');
+      if (typeof enrollmentId !== 'string' || !enrollmentId.trim()) {
+        ctx.audit({ action: 'record-payment', entity: 'transaction', detail: 'rejected: missing enrollmentId' });
+        return fail(400, { error: 'An enrollment is required.' });
+      }
+      const validSource = source === 'check' || source === 'cash' || source === 'comp';
+      if (!validSource) {
+        ctx.audit({ action: 'record-payment', entity: 'transaction', entityId: enrollmentId, detail: 'rejected: invalid source' });
+        return fail(400, { error: 'A payment source is required.' });
+      }
+      const result = await buildClassPayment(ctx.db, { enrollmentId, source: source as ClassPaymentSource, memo });
+      if (!result.ok) {
+        ctx.audit({ action: 'record-payment', entity: 'transaction', entityId: enrollmentId, detail: `rejected: ${result.error}` });
+        return fail(400, { error: result.error });
+      }
+      await ctx.db.batch(result.statements);
+      ctx.audit({ action: 'record-payment', entity: 'transaction', entityId: enrollmentId, detail: `amount_cents=${result.amountCents}` });
+      return { ok: true };
+    },
+    { action: 'record-payment', entity: 'transaction', deniedMessage: DENIED_MESSAGE },
   ),
 };

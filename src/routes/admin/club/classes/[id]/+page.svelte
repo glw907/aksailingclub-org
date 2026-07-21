@@ -1,42 +1,88 @@
 <!--
 @component
-The Classes edit screen (Task 6, plus Task 7's waitlist/offer section): the detail form over a
-live asc-club row, the same destructive-confirm `<dialog>` recipe `events/[id]/+page.svelte`
-already established, plus sections that screen has no equivalent of: instructor assignment (add
-by email, remove), the read-only roster, and the waitlist's own per-entry offer state. Every extra
-section posts to this route's own actions, independent of the main edit form below them.
+The Classes detail screen (Classes pass Task 4 rebuild, docs/2026-07-21-classes-pass-design.md):
+the surgery surface behind the list's own glance-and-act rows. Section order follows the design
+doc exactly -- roster, waitlist & offers, details (the edit form), instructors, danger zone --
+built on the graduated toolkit (`PageHeader`, `AdminTable`, `StatusChip`) the same way Task 3's
+list rebuild is, plus this route's own `recordPayment` action (manual cash/check/comp: always the
+class's own fee, never an admin-typed amount, see `classes-store.ts`'s `buildClassPayment`).
+Move… on a roster row is Task 5's own control; it renders disabled here, a placeholder Task 5
+wires. Every corrective action (Drop, Cancel offer, Delete) stays a quiet `btn-ghost` control with
+no alarm color, per the pass's own global constraint -- Delete in particular moves off the header
+into a demoted, confirm-gated danger zone rather than a floating top-right red link.
 -->
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { enhance } from '$app/forms';
+  import type { SubmitFunction } from '@sveltejs/kit';
   import type { ActionData, PageData } from './$types';
-  import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
+  import { CsrfField } from '@glw907/cairn-cms/components';
+  import { SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
+  import { AdminTable, PageHeader, StatusChip, ageFromBirthdate } from '@glw907/cairn-cms/admin-toolkit';
   import ClassForm from '../ClassForm.svelte';
-  import type { ClassTrack } from '$admin-club/lib/classes-store';
-  import { formatClubTimestamp } from '$admin-club/lib/ui';
+  import type { ClassTrack, EnrollmentRow } from '$admin-club/lib/classes-store';
+  import { HEADER_CELL, formatCivilDate, formatClubTimestamp, formatDollars } from '$admin-club/lib/ui';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
+  const cardCls = 'rounded-box border border-[var(--cairn-card-border)] bg-base-100 shadow-[var(--cairn-shadow)]';
+
+  /** Every dialog form's own `use:enhance` (the household desk's own `closeDialogOnSettle`
+   *  recipe): keeps the modal open with a server `fail()` message shown inline (`form?.error` at
+   *  the page top) rather than a full-page navigation that would discard it; closes once the
+   *  action settles with anything but a failure. */
+  function closeDialogOnSettle(dialog: () => HTMLDialogElement | undefined): SubmitFunction {
+    return () => {
+      return async ({ result, update }) => {
+        await update();
+        if (result.type !== 'failure') dialog()?.close();
+      };
+    };
+  }
+
+  const SOURCE_OPTIONS = [
+    { value: 'check', label: 'Check' },
+    { value: 'cash', label: 'Cash' },
+    { value: 'comp', label: 'Comp' },
+  ];
+
   let deleteDialog: HTMLDialogElement | undefined = $state();
 
-  // One resolved offer, or none, per waitlist entry: `activeOffer` is the unresolved row (the
-  // load already swept any past-expiry one to `'expired'`), `history` is every offer that entry
-  // has ever had resolved, most recent first (the detail screen's own "resolved states render as
-  // history chips" requirement). A claimed offer's own waitlist row no longer exists (`claimOffer`
-  // deletes it), so a history chip is only ever `'declined'` or `'expired'` here.
+  // -- record payment dialog --
+  let paymentDialog: HTMLDialogElement | undefined = $state();
+  let paymentTarget: EnrollmentRow | null = $state(null);
+  let paymentSource = $state<'check' | 'cash' | 'comp'>('check');
+  let paymentMemo = $state('');
+  function openPaymentDialog(enrollment: EnrollmentRow) {
+    paymentTarget = enrollment;
+    paymentSource = 'check';
+    paymentMemo = '';
+    paymentDialog?.showModal();
+  }
+
+  // One resolved offer, or none, per waitlist entry, plus the display name and member/applicant
+  // distinction the route's own load resolved separately (`waitlistMemberNames`, keyed by member
+  // id): `classes-store.ts`'s own header explains why `WaitlistRow` itself carries no name for a
+  // member-sourced entry. `activeOffer` is the unresolved row (the load already swept any
+  // past-expiry one to `'expired'`), `history` is every offer that entry has ever had resolved,
+  // most recent first.
   const waitlistView = $derived(
     data.waitlist.map((entry) => {
       const entryOffers = data.offers.filter((offer) => offer.waitlistId === entry.id);
+      const isMember = entry.memberId !== null;
       return {
         entry,
+        isMember,
+        displayName: (isMember ? data.waitlistMemberNames[entry.memberId as string] : null) ?? entry.applicantName ?? entry.applicantEmail ?? 'Unknown',
         activeOffer: entryOffers.find((offer) => offer.resolved === null) ?? null,
         history: entryOffers.filter((offer) => offer.resolved !== null),
       };
     }),
   );
 
-  // A one-time seed from the load's own current row, not a live mirror (the same `untrack`
-  // idiom `events/[id]/+page.svelte` and the Settings screen already use): the post-submit
-  // re-render must not clobber whatever the editor just typed.
+  // A one-time seed from the load's own current row, not a live mirror (the same `untrack` idiom
+  // `events/[id]/+page.svelte` and the Settings screen already use): the post-submit re-render
+  // must not clobber whatever the editor just typed.
   let name = $state(untrack(() => data.class?.name ?? ''));
   let slug = $state(untrack(() => data.class?.slug ?? ''));
   let track = $state<ClassTrack>(untrack(() => data.class?.track ?? 'adult-teen'));
@@ -53,6 +99,18 @@ section posts to this route's own actions, independent of the main edit form bel
 
   let newInstructorEmail = $state('');
   let newInstructorName = $state('');
+
+  const classMeta = $derived(
+    data.class
+      ? [
+          `Season ${data.class.season}`,
+          `${formatCivilDate(data.class.startDate, 'TBD')}${data.class.endDate ? ` – ${formatCivilDate(data.class.endDate)}` : ''}`,
+          data.class.dropIn
+            ? 'Drop-in'
+            : `${data.class.enrolledCount}/${data.class.capacity} enrolled${data.class.isFull ? ', full' : ''}`,
+        ].join(' · ')
+      : '',
+  );
 </script>
 
 <a href="/admin/club/classes" class="mb-4 inline-flex w-fit items-center gap-1 text-sm text-muted hover:text-primary">
@@ -71,83 +129,15 @@ section posts to this route's own actions, independent of the main edit form bel
        instance, and the `$state(untrack(...))` seeds above only ever run once, leaving the
        form showing the PREVIOUS class's values under the new class's own submit actions. -->
   {#key data.class.id}
-  <OfficeList
-    eyebrow="Club"
-    title={data.class.name}
-    subtitle="{data.class.enrolledCount}/{data.class.capacity} enrolled, {data.class.isFull ? 'full' : 'open'}."
-  >
-    {#snippet action()}
-      <button type="button" class="btn btn-ghost btn-sm text-error" onclick={() => deleteDialog?.showModal()}>
-        Delete
-      </button>
-    {/snippet}
-    {#if form?.error}
-      <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-error" role="alert">
-        {form.error}
-      </p>
-    {/if}
-    <form method="post" action="?/update">
-      <ClassForm
-        bind:name
-        bind:slug
-        bind:track
-        bind:capacity
-        bind:fee
-        bind:startDate
-        bind:endDate
-        bind:location
-        bind:description
-        bind:instructorNotes
-        bind:customNote
-        bind:visible
-        bind:dropIn
-        heroImage={data.class.heroImage}
-        heroImageAlt={data.class.heroImageAlt}
-      />
-      <div class="flex justify-end gap-2 border-t border-[var(--cairn-card-border)] p-6">
-        <CsrfField />
-        <button type="submit" class="btn btn-primary btn-sm">Save</button>
-      </div>
-    </form>
-  </OfficeList>
+  <PageHeader eyebrow="Club" title={data.class.name} meta={classMeta} />
 
-  <div class="mt-6 rounded-box border border-[var(--cairn-card-border)] bg-base-100 shadow-[var(--cairn-shadow)]">
-    <div class="border-b border-[var(--cairn-card-border)] p-6">
-      <h2 class="text-sm font-semibold">Instructors</h2>
-      <p class="mt-1 text-sm text-muted">Assign by email; an instructor's own account arrives in a later pass.</p>
-    </div>
-    <ul class="divide-y divide-[var(--cairn-card-border)]">
-      {#each data.instructors as instructor (instructor.email)}
-        <li class="flex items-center justify-between gap-4 px-6 py-3">
-          <span class="text-sm">
-            <span class="font-medium">{instructor.name ?? instructor.email}</span>
-            {#if instructor.name}<span class="text-muted"> &middot; {instructor.email}</span>{/if}
-          </span>
-          <form method="post" action="?/unassignInstructor">
-            <CsrfField />
-            <input type="hidden" name="email" value={instructor.email} />
-            <button type="submit" class="btn btn-ghost btn-xs text-error">Remove</button>
-          </form>
-        </li>
-      {:else}
-        <li class="px-6 py-6 text-center text-sm text-muted">No instructor assigned yet.</li>
-      {/each}
-    </ul>
-    <form method="post" action="?/assignInstructor" class="flex flex-wrap items-end gap-2 border-t border-[var(--cairn-card-border)] p-6">
-      <CsrfField />
-      <label class="flex flex-col gap-1 text-sm">
-        Email
-        <input class="input input-sm" type="email" name="email" bind:value={newInstructorEmail} required />
-      </label>
-      <label class="flex flex-col gap-1 text-sm">
-        Display name
-        <input class="input input-sm" type="text" name="name" bind:value={newInstructorName} />
-      </label>
-      <button type="submit" class="btn btn-sm">Assign</button>
-    </form>
-  </div>
+  {#if form?.error}
+    <p class="mb-4 rounded-box border border-[var(--cairn-card-border)] bg-base-100 px-6 py-3 text-sm font-medium text-error shadow-[var(--cairn-shadow)]" role="alert">
+      {form.error}
+    </p>
+  {/if}
 
-  <div class="mt-6 rounded-box border border-[var(--cairn-card-border)] bg-base-100 shadow-[var(--cairn-shadow)]">
+  <div class="{cardCls} mb-6">
     <div class="border-b border-[var(--cairn-card-border)] p-6">
       <h2 class="text-sm font-semibold">Roster</h2>
       <p class="mt-1 text-sm text-muted">
@@ -155,46 +145,63 @@ section posts to this route's own actions, independent of the main edit form bel
         enrollee frees the spot; a nonempty waitlist gets an automatic offer.
       </p>
     </div>
-    <ul class="divide-y divide-[var(--cairn-card-border)]">
+    <AdminTable density="sm" zebra rowCount={data.enrollments.length} emptyColspan={5}>
+      {#snippet header()}
+        <th class={HEADER_CELL}>Name</th>
+        <th class={HEADER_CELL}>Age</th>
+        <th class={HEADER_CELL}>Enrolled</th>
+        <th class={HEADER_CELL}>Paid</th>
+        <th class="sr-only">Actions</th>
+      {/snippet}
+      {#snippet empty()}
+        <p class="text-sm text-muted">No one is enrolled yet.</p>
+      {/snippet}
       {#each data.enrollments as enrollment (enrollment.id)}
-        <li class="flex flex-col gap-1 px-6 py-3 text-sm">
-          <div class="flex items-center justify-between gap-4">
-            <span>{enrollment.memberId}</span>
-            <span class="flex items-center gap-3">
-              <span class="text-muted">{enrollment.feePaid ? 'Paid' : 'Unpaid'}</span>
-              <form method="post" action="?/dropEnrollment">
-                <input type="hidden" name="enrollmentId" value={enrollment.id} />
-                <CsrfField />
-                <button type="submit" class="btn btn-ghost btn-xs">Drop</button>
-              </form>
-            </span>
-          </div>
-          {#if enrollment.interests}
-            <p class="m-0 text-xs text-muted">Wants to learn: {enrollment.interests}</p>
-          {/if}
-        </li>
-      {:else}
-        <li class="px-6 py-6 text-center text-sm text-muted">No one is enrolled yet.</li>
+        <tr>
+          <td class="font-medium">{enrollment.memberName}</td>
+          <td class="tabular-nums">{ageFromBirthdate(enrollment.birthdate) ?? '—'}</td>
+          <td class="text-muted">{formatCivilDate(enrollment.enrolledAt)}</td>
+          <td>
+            <StatusChip tone={enrollment.feePaid ? 'success' : 'warning'} label={enrollment.feePaid ? 'Paid' : 'Owing'} size="sm" />
+          </td>
+          <td class="flex flex-wrap justify-end gap-2">
+            {#if !enrollment.feePaid}
+              <button type="button" class="btn btn-ghost btn-xs" onclick={() => openPaymentDialog(enrollment)}>
+                Record payment
+              </button>
+            {/if}
+            <!-- Task 5 wires the transfer flow; this control renders as a placeholder here. -->
+            <button type="button" class="btn btn-ghost btn-xs" disabled title="Coming with the transfer flow">
+              Move&hellip;
+            </button>
+            <form method="post" action="?/dropEnrollment">
+              <CsrfField />
+              <input type="hidden" name="enrollmentId" value={enrollment.id} />
+              <button type="submit" class="btn btn-ghost btn-xs">Drop</button>
+            </form>
+          </td>
+        </tr>
       {/each}
-    </ul>
+    </AdminTable>
   </div>
 
-  <div class="mt-6 rounded-box border border-[var(--cairn-card-border)] bg-base-100 shadow-[var(--cairn-shadow)]">
+  <div class="{cardCls} mb-6">
     <div class="border-b border-[var(--cairn-card-border)] p-6">
-      <h2 class="text-sm font-semibold">Waitlist</h2>
+      <h2 class="text-sm font-semibold">Waitlist &amp; offers</h2>
       <p class="mt-1 text-sm text-muted">
         Position order. Offering a spot mints a one-time claim code; it appears here only once, right
         after you offer it.
       </p>
     </div>
     <ul class="divide-y divide-[var(--cairn-card-border)]">
-      {#each waitlistView as { entry, activeOffer, history } (entry.id)}
+      {#each waitlistView as { entry, isMember, displayName, activeOffer, history } (entry.id)}
         <li class="flex flex-col gap-2 px-6 py-3 text-sm">
           <div class="flex items-center justify-between gap-4">
-            <span>
-              <span class="font-medium">{entry.applicantName ?? entry.applicantEmail}</span>
-              <span class="text-muted"> &middot; #{entry.position}</span>
-            </span>
+            <div class="flex items-center gap-2">
+              <span class="font-medium">{displayName}</span>
+              <span class="badge badge-ghost badge-sm font-medium">{isMember ? 'Member' : 'Applicant'}</span>
+              <span class="text-muted">&middot; #{entry.position}</span>
+            </div>
             {#if history.length > 0 && !activeOffer}
               <span class="badge badge-ghost badge-sm font-medium capitalize">{history[0].resolved}</span>
             {/if}
@@ -210,7 +217,7 @@ section posts to this route's own actions, independent of the main edit form bel
               <form method="post" action="?/cancelOffer">
                 <CsrfField />
                 <input type="hidden" name="waitlistId" value={entry.id} />
-                <button type="submit" class="btn btn-ghost btn-xs text-error">Cancel offer</button>
+                <button type="submit" class="btn btn-ghost btn-xs">Cancel offer</button>
               </form>
             </div>
             {#if form && 'offered' in form && form.offered?.waitlistId === entry.id}
@@ -235,6 +242,104 @@ section posts to this route's own actions, independent of the main edit form bel
     </ul>
   </div>
 
+  <div class="{cardCls} mb-6">
+    <div class="border-b border-[var(--cairn-card-border)] p-6">
+      <h2 class="text-sm font-semibold">Details</h2>
+      <p class="mt-1 text-sm text-muted">Edit this class, then save.</p>
+    </div>
+    <form method="post" action="?/update">
+      <ClassForm
+        bind:name
+        bind:slug
+        bind:track
+        bind:capacity
+        bind:fee
+        bind:startDate
+        bind:endDate
+        bind:location
+        bind:description
+        bind:instructorNotes
+        bind:customNote
+        bind:visible
+        bind:dropIn
+        heroImage={data.class.heroImage}
+        heroImageAlt={data.class.heroImageAlt}
+      />
+      <div class="flex justify-end gap-2 border-t border-[var(--cairn-card-border)] p-6">
+        <CsrfField />
+        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="{cardCls} mb-6">
+    <div class="border-b border-[var(--cairn-card-border)] p-6">
+      <h2 class="text-sm font-semibold">Instructors</h2>
+      <p class="mt-1 text-sm text-muted">Assign by email; an instructor's own account arrives in a later pass.</p>
+    </div>
+    <ul class="divide-y divide-[var(--cairn-card-border)]">
+      {#each data.instructors as instructor (instructor.email)}
+        <li class="flex items-center justify-between gap-4 px-6 py-3">
+          <span class="text-sm">
+            <span class="font-medium">{instructor.name ?? instructor.email}</span>
+            {#if instructor.name}<span class="text-muted"> &middot; {instructor.email}</span>{/if}
+          </span>
+          <form method="post" action="?/unassignInstructor">
+            <CsrfField />
+            <input type="hidden" name="email" value={instructor.email} />
+            <button type="submit" class="btn btn-ghost btn-xs">Remove</button>
+          </form>
+        </li>
+      {:else}
+        <li class="px-6 py-6 text-center text-sm text-muted">No instructor assigned yet.</li>
+      {/each}
+    </ul>
+    <form method="post" action="?/assignInstructor" class="flex flex-wrap items-end gap-2 border-t border-[var(--cairn-card-border)] p-6">
+      <CsrfField />
+      <label class="flex flex-col gap-1 text-sm">
+        Email
+        <input class="input input-sm" type="email" name="email" bind:value={newInstructorEmail} required />
+      </label>
+      <label class="flex flex-col gap-1 text-sm">
+        Display name
+        <input class="input input-sm" type="text" name="name" bind:value={newInstructorName} />
+      </label>
+      <button type="submit" class="btn btn-sm">Assign</button>
+    </form>
+  </div>
+
+  <div class={cardCls}>
+    <div class="p-6">
+      <h2 class="text-sm font-semibold">Danger zone</h2>
+      <p class="mt-1 text-sm text-muted">Deleting a class removes it and its history for good. There is no undo.</p>
+      <button type="button" class="btn btn-ghost btn-sm mt-3" onclick={() => deleteDialog?.showModal()}>
+        Delete class
+      </button>
+    </div>
+  </div>
+
+  <dialog bind:this={paymentDialog} class="modal" aria-labelledby="payment-dialog-title">
+    <div class="modal-box">
+      <h2 id="payment-dialog-title" class="text-lg font-bold">Record a payment</h2>
+      {#if paymentTarget}
+        <p class="py-2 text-sm text-muted">
+          Records a {formatDollars(data.class.fee)} charge for {paymentTarget.memberName}. This does not touch
+          Stripe: use it only for a cash, check, or comp payment collected outside checkout.
+        </p>
+        <form method="post" action="?/recordPayment" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => paymentDialog)}>
+          <CsrfField />
+          <input type="hidden" name="enrollmentId" value={paymentTarget.id} />
+          <SelectField label="Source" name="source" bind:value={paymentSource} options={SOURCE_OPTIONS} />
+          <TextField label="Memo" name="memo" bind:value={paymentMemo} />
+          <div class="modal-action">
+            <button type="button" class="btn btn-sm" onclick={() => paymentDialog?.close()}>Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm">Record payment</button>
+          </div>
+        </form>
+      {/if}
+    </div>
+  </dialog>
+
   <dialog bind:this={deleteDialog} class="modal" oncancel={(event) => event.preventDefault()}>
     <div class="modal-box">
       <h2 class="text-lg font-bold">Delete {data.class.name}?</h2>
@@ -246,7 +351,7 @@ section posts to this route's own actions, independent of the main edit form bel
         <div class="modal-action">
           <!-- svelte-ignore a11y_autofocus -->
           <button type="submit" class="btn" autofocus formnovalidate>Cancel</button>
-          <button type="submit" class="btn btn-error" formmethod="post" formaction="?/delete">Delete class</button>
+          <button type="submit" class="btn btn-ghost btn-sm" formmethod="post" formaction="?/delete">Delete class</button>
         </div>
       </form>
     </div>

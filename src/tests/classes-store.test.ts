@@ -454,13 +454,15 @@ describe('listWaitlist', () => {
 });
 
 describe('listEnrollments', () => {
-  it('maps each row, feePaid as a boolean', async () => {
-    const { db } = fakeD1({
+  it('maps each row, joined to members for name/birthdate, feePaid as a boolean', async () => {
+    const { db, calls } = fakeD1({
       allResults: {
-        'guardian_contact, interests FROM class_enrollments': [
+        'FROM class_enrollments e JOIN members m': [
           {
             id: 'enr-1',
             member_id: 'member-1',
+            member_name: 'Alex Rivera',
+            birthdate: '2015-04-01',
             enrolled_at: '2026-05-01 00:00:00',
             fee_paid: 1,
             guardian_contact: null,
@@ -473,12 +475,15 @@ describe('listEnrollments', () => {
       {
         id: 'enr-1',
         memberId: 'member-1',
+        memberName: 'Alex Rivera',
+        birthdate: '2015-04-01',
         enrolledAt: '2026-05-01 00:00:00',
         feePaid: true,
         guardianContact: null,
         interests: 'Docking and reefing.',
       },
     ]);
+    expect(calls[0].sql).toContain('ORDER BY e.enrolled_at ASC');
   });
 });
 

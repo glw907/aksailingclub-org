@@ -102,3 +102,42 @@
    a bare `Card`/`AdminCardShell` primitive in the toolkit, so `PageHeader` and a card
    shell compose independently instead of every non-`OfficeList` screen re-deriving
    the same wrapper string.
+
+10. **Task 4: `EmptyState`'s own header explicitly rules out an `AdminTable` empty
+    snippet as its use case, but there is no matching small in-card primitive either.**
+    `EmptyState.svelte`'s doc comment is explicit: "never the filtered-to-zero state
+    ... that recipe stays a smaller, in-card notice inside `AdminTable`'s own `empty`
+    snippet." Both consumer screens (Task 3's list, this task's detail roster) end up
+    hand-writing the identical `<p class="text-sm text-muted">No one is ... yet.</p>`
+    for that smaller notice -- a real, if small, third copy. Worth a one-line addition
+    to the admin-toolkit reference (not necessarily a new component): name the exact
+    recipe for an `AdminTable`'s own `empty` snippet, so a future screen does not
+    independently reinvent it a fourth time.
+
+11. **Task 4: a genuine pre-existing display bug, found but left unfixed (correctly
+    out of scope).** Both waitlist screens (`classes/[id]/+page.svelte`'s own queue and
+    the cross-class `classes/waitlist/+page.svelte` pass-B overview) render
+    `entry.applicantName ?? entry.applicantEmail` for a queue entry's name -- but a
+    MEMBER-sourced `class_waitlist` row (`memberId` set) carries neither field; both are
+    `null` by the schema's own `CHECK` (exactly one of `memberId`/`applicantEmail` is
+    set). Every member-originated waitlist entry has silently rendered a blank name on
+    both screens since the waitlist ever existed. This task fixed its own surface (one
+    scoped `getWaitlistMemberNames` side query, resolved in the route's own load, kept
+    deliberately OUT of `listWaitlist`'s shared `WaitlistRow` shape since that read
+    serves ten-plus other call sites whose tests pin its exact SQL text -- widening it
+    structurally would have rippled far past this task's own file list). The cross-class
+    overview (`classes/waitlist/+page.svelte`, pass B, not in this task's own file list)
+    still carries the bug; it is a one-line follow-up (reuse the same
+    `getWaitlistMemberNames` helper this task added) that belongs to a later, dedicated
+    fix or Task 6's own coherence pass.
+
+12. **Task 4: a small, low-risk `ml-1` non-compile, found while verifying a NEW class
+    against the built sheet (the Members-pass lesson holding).** `ml-1` does not compile
+    in `cairn-admin.css` (`mr-1` and `ml-1.5` both do; `ml-1` alone is absent from
+    whatever scanned template set produced the sheet) -- cosmetic only, a missing
+    left-margin on a badge, but it is the SAME class Task 3's own list-screen "Hidden"
+    marker already uses (`badge badge-ghost badge-sm ml-1 font-medium`), so that
+    marker has likely rendered with no gap since Task 3 shipped, all gates green. This
+    task's own new instance was rewritten to a `gap-2` flex row instead (which does
+    compile) rather than perpetuating the class; Task 3's own pre-existing instance was
+    left alone (out of this task's file list) and is filed here for a future fix pass.
