@@ -7,7 +7,7 @@ import type { ChipStyle } from './ui';
 import type { DirectoryVisibility, MemberSegment, MembershipTier } from './member-types';
 import type { HouseholdStandingStatus } from '$member-auth/lib/standing';
 import type { LineItem, TransactionKind, TransactionSource } from './ledger';
-import type { StatusChipTone } from '$admin-club/toolkit/StatusChip.svelte';
+import type { StatusChipTone } from '@glw907/cairn-cms/admin-toolkit';
 
 /** Segment chips, following the same vocabulary the Events/Classes screens already established
  *  (`docs/club-admin-scaffold.md`'s chip vocabulary): the one state a volunteer can act on

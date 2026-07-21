@@ -62,3 +62,14 @@
    script (`npm run package` is the library build), so a plan or dispatch written from
    the consumer side says "build" and the executor has to map it; the gate list in
    cairn's CONTRIBUTING/README could name the canonical gate commands once.
+
+7. **Task 2 close-out: the graduated contracts needed zero caller-side reconciliation
+   (evidence the model works, keep doing this).** The plan flagged a risk ("cairn
+   re-expressed `ListToolbar` substantially — segmented filters, count presentation;
+   reconcile each caller to the graduated contract") that never materialized in
+   practice: `StatusChip`, `Pagination`, `AdminTable`, and `ListToolbar`'s graduated
+   props are a strict superset of ASC's own local contracts (`display: 'segmented'`,
+   `trailing`, `overflowLabel`, `pageSizeOptions` are all-optional additions), so the
+   Members screen's every existing prop call site kept working unchanged — the swap
+   was import-path-only. The one real integration point, `itemNoun`'s `string |
+   ItemLabel` widening (Task 1), was exactly enough; no other reconciliation surfaced.

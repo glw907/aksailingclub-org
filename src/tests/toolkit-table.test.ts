@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRawSnippet } from 'svelte';
 import { render } from 'svelte/server';
-import AdminTable from '$admin-club/toolkit/AdminTable.svelte';
 import ExpandableRow from '$admin-club/toolkit/ExpandableRow.svelte';
 
 /** A snippet with no render-time params, e.g. a header row or a fixed body. */
@@ -9,84 +8,9 @@ function staticSnippet(html: string) {
   return createRawSnippet(() => ({ render: () => html }));
 }
 
-describe('AdminTable', () => {
-  it('defaults to the sm density with no zebra stripe', () => {
-    const { body } = render(AdminTable, {
-      props: {
-        header: staticSnippet('<th>Household</th>'),
-        children: staticSnippet('<tr><td>Alvarez</td></tr>'),
-        rowCount: 1,
-      },
-    });
-    expect(body).toContain('class="table table-sm ');
-    expect(body).not.toContain('table-zebra');
-  });
-
-  it('switches to the xs density and turns on zebra on request', () => {
-    const { body } = render(AdminTable, {
-      props: {
-        density: 'xs',
-        zebra: true,
-        header: staticSnippet('<th>Household</th>'),
-        children: staticSnippet('<tr><td>Alvarez</td></tr>'),
-        rowCount: 1,
-      },
-    });
-    expect(body).toContain('table-xs');
-    expect(body).toContain('table-zebra');
-  });
-
-  it('renders the header snippet inside the thead and the body snippet inside the tbody', () => {
-    const { body } = render(AdminTable, {
-      props: {
-        header: staticSnippet('<th>Household</th><th>Standing</th>'),
-        children: staticSnippet('<tr><td>Alvarez</td><td>Current</td></tr>'),
-        rowCount: 1,
-      },
-    });
-    expect(body).toContain('<thead><tr><th>Household</th><th>Standing</th>');
-    expect(body).toContain('<tr><td>Alvarez</td><td>Current</td></tr>');
-  });
-
-  it('renders the empty-state snippet instead of the body when rowCount is 0', () => {
-    const { body } = render(AdminTable, {
-      props: {
-        header: staticSnippet('<th>Household</th>'),
-        children: staticSnippet('<tr><td>Alvarez</td></tr>'),
-        rowCount: 0,
-        empty: staticSnippet('<p>No households match.</p>'),
-        emptyColspan: 4,
-      },
-    });
-    expect(body).not.toContain('Alvarez');
-    expect(body).toContain('No households match.');
-    expect(body).toContain('colspan="4"');
-  });
-
-  it('defaults the empty-state colspan to 100 (HTML clamps it to the real column count)', () => {
-    const { body } = render(AdminTable, {
-      props: {
-        header: staticSnippet('<th>Household</th>'),
-        children: staticSnippet(''),
-        rowCount: 0,
-        empty: staticSnippet('<p>Nothing yet.</p>'),
-      },
-    });
-    expect(body).toContain('colspan="100"');
-  });
-
-  it('renders an empty tbody row with no content when rowCount is 0 and no empty snippet is given', () => {
-    const { body } = render(AdminTable, {
-      props: {
-        header: staticSnippet('<th>Household</th>'),
-        children: staticSnippet(''),
-        rowCount: 0,
-      },
-    });
-    expect(body).toMatch(/<td colspan="100"[^>]*><!--\[-1--><!--\]--><\/td>/);
-  });
-});
-
+// AdminTable itself graduated to `@glw907/cairn-cms/admin-toolkit` in cairn 0.89.0 (Classes pass
+// Task 2); its own contract tests live in cairn-cms's suite now. ExpandableRow stays local (see
+// this repo's toolkit README), so its tests stay here.
 describe('ExpandableRow', () => {
   const summary = staticSnippet('<td>Alvarez</td><td>Current</td>');
   // Svelte's generated type for a generic component (`generics="T"`) resolves T to `unknown`

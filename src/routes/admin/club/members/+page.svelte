@@ -2,14 +2,16 @@
 @component
 The Club section's Members screen (household-grouped list; Members pass T7 rebuild,
 docs/2026-07-20-members-pass-design.md): search-first household rows built entirely from the
-toolkit (`$admin-club/toolkit`) plus this route's own layout -- `ListToolbar` (search, the four
-promoted filters, the primary "Add household" action, applied-filter pills, the scope-stating
-count line), `AdminTable`/`ExpandableRow` (the compact zebra rows, one expanded household panel at
-a time), `StatusChip` (standing and paid/owing states), and `Pagination`. Any styling this screen
-needs beyond a toolkit component's own contract lives in this file's own scoped `<style>` block
-(the panel grid, cell truncation, the archived toggle) -- never a bespoke component, per the
-toolkit README's own compiled-CSS constraint (`/admin/**` loads only cairn's precompiled CSS, so
-an unverified Tailwind utility silently renders nothing there).
+graduated toolkit (`@glw907/cairn-cms/admin-toolkit`, Classes pass Task 2 swap) plus this route's
+own `ExpandableRow` (still local, `$admin-club/toolkit/ExpandableRow.svelte`) and layout --
+`ListToolbar` (search, the four promoted filters, the primary "Add household" action,
+applied-filter pills, the scope-stating count line), `AdminTable`/`ExpandableRow` (the compact
+zebra rows, one expanded household panel at a time), `StatusChip` (standing and paid/owing
+states), and `Pagination`. Any styling this screen needs beyond a toolkit component's own contract
+lives in this file's own scoped `<style>` block (the panel grid, cell truncation, the archived
+toggle) -- never a bespoke component, per the toolkit README's own compiled-CSS constraint
+(`/admin/**` loads only cairn's precompiled CSS, so an unverified Tailwind utility silently renders
+nothing there).
 
 Search/standing/holdings/role/class/archived filtering is all server-driven
 (`+page.server.ts`'s own header explains why: a matched member's own phone/name never reaches the
@@ -30,12 +32,16 @@ everything the panel renders.
   import { HOUSEHOLD_STANDING_CHIP, HOUSEHOLD_STANDING_TONE } from '$admin-club/lib/member-format';
   import type { HouseholdListRow, HouseholdMemberChip } from '$admin-club/lib/households-store';
   import type { AssetPaymentStanding } from '$admin-club/lib/assets-store';
-  import { ageFromBirthdate } from '$admin-club/toolkit/format';
-  import StatusChip, { type StatusChipTone } from '$admin-club/toolkit/StatusChip.svelte';
-  import AdminTable from '$admin-club/toolkit/AdminTable.svelte';
+  import {
+    ageFromBirthdate,
+    StatusChip,
+    type StatusChipTone,
+    AdminTable,
+    ListToolbar,
+    type ListToolbarFilter,
+    Pagination,
+  } from '@glw907/cairn-cms/admin-toolkit';
   import ExpandableRow from '$admin-club/toolkit/ExpandableRow.svelte';
-  import ListToolbar, { type ListToolbarFilter } from '$admin-club/toolkit/ListToolbar.svelte';
-  import Pagination from '$admin-club/toolkit/Pagination.svelte';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
