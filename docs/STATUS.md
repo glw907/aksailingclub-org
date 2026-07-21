@@ -73,7 +73,12 @@ published).** What shipped:
   functional brainstorm with Geoff (superpowers:brainstorming) — first question: Classes
   or Assets." Launch fresh from ~/Projects/aksailingclub-org. Conductor seat is Geoff's
   call at session start (79% weekly spent as of this close; design brainstorms are
-  Fable-priority in-window, Opus is the fallback).
+  Fable-priority in-window, Opus is the fallback). SEQUENCING NOTE (2026-07-20
+  evening): Geoff's OWN cairn session is mid-flight on the toolkit-organization pass
+  (fix round, CI, admin smoke, renders, merge, then a 0.x MINOR release publishing
+  the admin-toolkit subpath) — no ASC session touches cairn-cms until it lands, and
+  once the minor is on the registry, the next pass OPENS by bumping the dep and
+  swapping the local src/admin-club/toolkit/ copies for the subpath imports.
 
 **PASS B `asc-sidebar-build` IS BUILD-COMPLETE AND SHIPPED TO DEV; GEOFF'S WALKTHROUGH
 IS THE OPEN GATE (2026-07-19, Fable-conducted: T1 probe round settled in-session, 5
