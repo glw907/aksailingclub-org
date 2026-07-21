@@ -69,6 +69,8 @@ if one applies.
 </script>
 
 <script lang="ts">
+  import { itemNoun, type ItemLabel } from './format';
+
   interface Props {
     /** The current page, 1-based. */
     page: number;
@@ -80,11 +82,19 @@ if one applies.
     totalItems?: number;
     /** Items per page. Required alongside `totalItems` to compute the range line. */
     pageSize?: number;
-    /** The plural noun the range line names. Defaults to `'items'`. */
-    itemLabel?: string;
+    /** The range line's noun in both grammatical numbers. Defaults to
+     *  `{ one: 'item', many: 'items' }`. */
+    itemLabel?: ItemLabel;
   }
 
-  let { page, pageCount, onPageChange, totalItems, pageSize, itemLabel = 'items' }: Props = $props();
+  let {
+    page,
+    pageCount,
+    onPageChange,
+    totalItems,
+    pageSize,
+    itemLabel = { one: 'item', many: 'items' },
+  }: Props = $props();
 
   const pageWindow = $derived(computePageWindow(page, pageCount));
   const range = $derived(
@@ -95,7 +105,7 @@ if one applies.
 <div class="toolkit-pagination">
   {#if range}
     <p class="toolkit-pagination-range">
-      Showing {range.first}&ndash;{range.last} of {range.total} {itemLabel}
+      Showing {range.first}&ndash;{range.last} of {range.total} {itemNoun(range.total, itemLabel)}
     </p>
   {/if}
   {#if pageCount > 1}

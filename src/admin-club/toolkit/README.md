@@ -109,8 +109,10 @@ Tests: `src/tests/toolkit-components.test.ts`.
 
 **Contract:** page navigation plus an optional item-range line (survey: Pagination **confirmed**,
 tier C, "`join` + `btn` (daisy's own idiom)"). Props: `page` (1-based), `pageCount`,
-`onPageChange(page)`, and the optional `totalItems`/`pageSize`/`itemLabel` (defaults `'items'`)
-that add a "Showing X–Y of N `<itemLabel>`" line — general enough that a consumer with only a page
+`onPageChange(page)`, and the optional `totalItems`/`pageSize`/`itemLabel` (an
+`{ one, many }` noun pair, defaults `{ one: 'item', many: 'items' }`) that add a
+"Showing X–Y of N `<noun>`" line with the grammatical number picked by `itemNoun` (a total of
+exactly 1 reads "of 1 item", never "of 1 items") — general enough that a consumer with only a page
 count (no raw item total) still gets a working pager, and a consumer with both gets the range line
 too. A page count of 7 or fewer renders every page button; beyond that, `computePageWindow`
 (exported from the module context, independently unit tested) reduces to first, last, and a run
@@ -242,7 +244,8 @@ choosing whether the control renders directly in the band or behind the overflow
 promotion — **present in the contract even when a consumer promotes every filter and never
 triggers it**, per the plan's own wording); `primaryAction` (`{ label, onClick }`, the toolbar's
 one right-aligned action — omit it for a toolbar with none, but the contract never accepts more
-than one); `count`/`itemLabel` (the count line's own scope).
+than one); `count`/`itemLabel` (the count line's own scope; `itemLabel` is an `{ one, many }`
+noun pair so the line reads "1 household" at exactly one, per `format.ts`'s `itemNoun`).
 
 Two functions are exported from the module context, independently unit tested the same way
 `Pagination`'s `computePageWindow`/`computeItemRange` are:
@@ -254,7 +257,8 @@ Two functions are exported from the module context, independently unit tested th
   `defaultValue` (what the pill's own remove control calls) is exactly what turns its own entry
   back off the next time this function runs.
 - `computeCountLine(count, itemLabel, appliedLabels)` — the count line's own copy pattern:
-  `"<count> <itemLabel>"`, followed by every applied-filter label joined with a middle dot
+  the count plus its correctly-numbered noun (`itemNoun(count, itemLabel)`, so exactly 1 reads
+  `"1 household"`), followed by every applied-filter label joined with a middle dot
   (`"12 households · Overdue · Holding assets"`). The line always renders, even at zero applied
   filters or a zero count — a count line that only sometimes states its scope is the failure mode
   the design spec's own acceptance criterion ("the count line always states its scope") rules out.

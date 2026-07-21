@@ -45,6 +45,8 @@ viewport, where a fixed-width action sharing a line with even one shrunk-down co
 otherwise overlap it rather than wrap cleanly.
 -->
 <script module lang="ts">
+  import { itemNoun, type ItemLabel } from './format';
+
   /** One option in a `ListToolbarFilter`'s own vocabulary. */
   export interface ListToolbarFilterOption {
     value: string;
@@ -110,14 +112,15 @@ otherwise overlap it rather than wrap cleanly.
   }
 
   /**
-   * The scope-stating count line's own copy pattern: `"<count> <itemLabel>"`, followed by every
+   * The scope-stating count line's own copy pattern: the count and its correctly-numbered noun
+   * (`itemNoun`, so exactly 1 reads `"1 household"`, never `"1 households"`), followed by every
    * applied-filter label joined with a middle dot (`"12 households · Overdue · Holding assets"`).
    * With no applied filters, the line is just the bare count and item label -- the count line
    * always renders, but it only ever states a scope beyond "everything" when a filter is actually
    * applied.
    */
-  export function computeCountLine(count: number, itemLabel: string, appliedLabels: string[]): string {
-    return [`${count} ${itemLabel}`, ...appliedLabels].join(' · ');
+  export function computeCountLine(count: number, itemLabel: ItemLabel, appliedLabels: string[]): string {
+    return [`${count} ${itemNoun(count, itemLabel)}`, ...appliedLabels].join(' · ');
   }
 </script>
 
@@ -141,8 +144,9 @@ otherwise overlap it rather than wrap cleanly.
     primaryAction?: ListToolbarAction;
     /** The count line's own count (e.g. the number of households the current filters match). */
     count: number;
-    /** The count line's plural noun (e.g. `'households'`). */
-    itemLabel: string;
+    /** The count line's noun in both grammatical numbers
+     *  (e.g. `{ one: 'household', many: 'households' }`). */
+    itemLabel: ItemLabel;
   }
 
   let {

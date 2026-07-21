@@ -99,3 +99,20 @@ export function ageFromBirthdate(birthdateIso: string | null | undefined, asOf: 
   if (!hasHadBirthdayThisYear) age -= 1;
   return age;
 }
+
+/** A count-line noun in both grammatical numbers, e.g. `{ one: 'household', many: 'households' }`. */
+export interface ItemLabel {
+  /** The singular noun, used when the count is exactly 1. */
+  one: string;
+  /** The plural noun, used for every other count, zero included ("0 households"). */
+  many: string;
+}
+
+/**
+ * Pick the grammatical number for a count surface: `one` at exactly 1, `many` otherwise. The
+ * toolkit's two count surfaces (`ListToolbar`'s count line, `Pagination`'s range line) both route
+ * through this, so the "1 households" defect class has a single fix point.
+ */
+export function itemNoun(count: number, label: ItemLabel): string {
+  return count === 1 ? label.one : label.many;
+}

@@ -226,7 +226,7 @@ everything the panel renders.
         {filters}
         primaryAction={{ label: 'Add household', onClick: openAddHouseholdDialog }}
         count={data.households.length}
-        itemLabel="households"
+        itemLabel={{ one: 'household', many: 'households' }}
       />
       <!-- Reads as the toolbar's own scope line, not a separately floated afterthought: matches
            the count line's own type scale/color and sits at the same vertical rhythm ListToolbar's
@@ -350,7 +350,7 @@ everything the panel renders.
         onPageChange={(p) => (page = p)}
         totalItems={data.households.length}
         pageSize={PAGE_SIZE}
-        itemLabel="households"
+        itemLabel={{ one: 'household', many: 'households' }}
       />
     </div>
   {/if}

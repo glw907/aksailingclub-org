@@ -93,11 +93,19 @@ describe('computeItemRange', () => {
 describe('Pagination', () => {
   it('renders the range line when totalItems and pageSize are both given', () => {
     const { body } = render(Pagination, {
-      props: { page: 1, pageCount: 8, onPageChange: () => {}, totalItems: 149, pageSize: 20, itemLabel: 'households' },
+      props: { page: 1, pageCount: 8, onPageChange: () => {}, totalItems: 149, pageSize: 20, itemLabel: { one: 'household', many: 'households' } },
     });
     expect(body).toContain('Showing 1');
     expect(body).toContain('149');
     expect(body).toContain('households');
+  });
+
+  it('uses the singular noun when the total is exactly one', () => {
+    const { body } = render(Pagination, {
+      props: { page: 1, pageCount: 1, onPageChange: () => {}, totalItems: 1, pageSize: 20, itemLabel: { one: 'household', many: 'households' } },
+    });
+    expect(body).toContain('of 1 household');
+    expect(body).not.toContain('of 1 households');
   });
 
   it('omits the range line when totalItems is not given', () => {

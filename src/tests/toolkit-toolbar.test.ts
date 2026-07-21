@@ -76,24 +76,28 @@ describe('computeAppliedFilters', () => {
 
 describe('computeCountLine', () => {
   it('states the bare count and item label with no applied filters', () => {
-    expect(computeCountLine(149, 'households', [])).toBe('149 households');
+    expect(computeCountLine(149, { one: 'household', many: 'households' }, [])).toBe('149 households');
   });
 
   it('appends every applied-filter label, in order, joined by a middle dot', () => {
-    expect(computeCountLine(12, 'households', ['overdue', 'holding assets'])).toBe(
+    expect(computeCountLine(12, { one: 'household', many: 'households' }, ['overdue', 'holding assets'])).toBe(
       '12 households · overdue · holding assets',
     );
   });
 
   it('states a zero count rather than omitting the line', () => {
-    expect(computeCountLine(0, 'households', ['former'])).toBe('0 households · former');
+    expect(computeCountLine(0, { one: 'household', many: 'households' }, ['former'])).toBe('0 households · former');
+  });
+
+  it('uses the singular noun at exactly one', () => {
+    expect(computeCountLine(1, { one: 'household', many: 'households' }, [])).toBe('1 household');
   });
 });
 
 describe('ListToolbar', () => {
   it('renders the search box with its accessible name and no autofocus by default', () => {
     const { body } = render(ListToolbar, {
-      props: { search: '', onSearch: () => {}, count: 149, itemLabel: 'households' },
+      props: { search: '', onSearch: () => {}, count: 149, itemLabel: { one: 'household', many: 'households' } },
     });
     expect(body).toContain('aria-label="Search"');
     expect(body).not.toContain('autofocus');
@@ -101,7 +105,7 @@ describe('ListToolbar', () => {
 
   it('renders autofocus on the search box when asked', () => {
     const { body } = render(ListToolbar, {
-      props: { search: '', onSearch: () => {}, autofocus: true, count: 149, itemLabel: 'households' },
+      props: { search: '', onSearch: () => {}, autofocus: true, count: 149, itemLabel: { one: 'household', many: 'households' } },
     });
     expect(body).toMatch(/<input[^>]*autofocus/);
   });
@@ -113,7 +117,7 @@ describe('ListToolbar', () => {
         onSearch: () => {},
         filters: [standingFilter()],
         count: 149,
-        itemLabel: 'households',
+        itemLabel: { one: 'household', many: 'households' },
       },
     });
     expect(body).toContain('aria-label="Standing"');
@@ -127,7 +131,7 @@ describe('ListToolbar', () => {
         onSearch: () => {},
         filters: [standingFilter({ promoted: false })],
         count: 149,
-        itemLabel: 'households',
+        itemLabel: { one: 'household', many: 'households' },
       },
     });
     expect(body).toContain('More filters');
@@ -142,7 +146,7 @@ describe('ListToolbar', () => {
         onSearch: () => {},
         filters: [standingFilter({ promoted: false })],
         count: 149,
-        itemLabel: 'households',
+        itemLabel: { one: 'household', many: 'households' },
       },
     });
     const trigger = body.match(/<button[^>]*aria-controls="([^"]+)"[^>]*>More filters<\/button>/);
@@ -160,7 +164,7 @@ describe('ListToolbar', () => {
         onSearch: () => {},
         primaryAction: { label: 'Add household', onClick: () => {} },
         count: 149,
-        itemLabel: 'households',
+        itemLabel: { one: 'household', many: 'households' },
       },
     });
     const matches = body.match(/toolkit-toolbar-primary/g) ?? [];
@@ -170,7 +174,7 @@ describe('ListToolbar', () => {
 
   it('renders no primary action markup when none is given', () => {
     const { body } = render(ListToolbar, {
-      props: { search: '', onSearch: () => {}, count: 149, itemLabel: 'households' },
+      props: { search: '', onSearch: () => {}, count: 149, itemLabel: { one: 'household', many: 'households' } },
     });
     expect(body).not.toContain('toolkit-toolbar-primary');
   });
@@ -182,7 +186,7 @@ describe('ListToolbar', () => {
         onSearch: () => {},
         filters: [standingFilter({ value: 'overdue' })],
         count: 12,
-        itemLabel: 'households',
+        itemLabel: { one: 'household', many: 'households' },
       },
     });
     expect(body).toContain('badge-neutral');
@@ -197,7 +201,7 @@ describe('ListToolbar', () => {
         onSearch: () => {},
         filters: [standingFilter()],
         count: 149,
-        itemLabel: 'households',
+        itemLabel: { one: 'household', many: 'households' },
       },
     });
     expect(body).not.toContain('toolkit-toolbar-pills');
@@ -210,7 +214,7 @@ describe('ListToolbar', () => {
         onSearch: () => {},
         filters: [standingFilter({ value: 'overdue' })],
         count: 12,
-        itemLabel: 'households',
+        itemLabel: { one: 'household', many: 'households' },
       },
     });
     expect(body).toContain('12 households · Overdue');
