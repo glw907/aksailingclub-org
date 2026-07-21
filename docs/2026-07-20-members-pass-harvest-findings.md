@@ -94,6 +94,52 @@ ff0d3f34.
 
 ## Build findings (appended at pass close)
 
-Pending: which toolkit contracts proved general enough for cairn as-is, which need a
-second consuming screen first, and any engine or contract deficiencies the build
-surfaced.
+1. **The safelist idiom works and is auditable.** cairn 0.88.3's
+   `src/lib/components/admin-css-safelist.ts` sits inside the admin CSS build's
+   existing source-scan glob, so the blessed classes ride the normal pipeline with
+   a commented rationale, and a build test asserts all 21 previously-missing
+   classes compile. The pattern is the right shape for future blessed-set growth.
+2. **The class-inventory gap generalizes to utilities, and it fails silently.**
+   The safelist covers component families, but `bg-warning/15`, `text-warning`,
+   and `text-warning-content` do not compile in the packaged sheet, and markup
+   using them renders as plain unstyled text with every mechanical gate green
+   (the Overdue chip shipped invisible until the coherence round caught it).
+   Engine candidate: a check that flags class literals in site admin code with no
+   match in the packaged `cairn-admin.css`, turning this silent failure into a
+   gate. This is the pass-B harvest finding upgraded from "document the
+   inventory" to "detect the miss."
+3. **Safelist follow-up:** `stats-horizontal`/`stats-vertical` were deliberately
+   omitted; add them in the release that ships StatBand's consuming pass.
+4. **ExpandableRow's narrow-width behavior is part of the genre contract.** A
+   `<td colspan>` panel can never be narrower than the table's computed column
+   widths, and a `display: block` escape breaks table layout at every width
+   (proven empirically; documented in the component header). The working idiom:
+   pin the trigger cell sticky-right, and have the consumer hide low-priority
+   summary columns at narrow widths so the whole row fits the viewport. The
+   harvested contract must state this; it is not discoverable from the happy
+   path.
+5. **`badge-ghost` is a zebra hazard.** Ghost's fill resolves to
+   `--color-base-200`, one of the zebra stripe colors, so ghost chips melt on
+   alternating rows. StatusChip's assembly is `badge-outline` (or soft with a
+   real border); record it as chip-assembly doctrine when the chip harvests.
+6. **View transitions and in-place list updates do not mix.** Snapshot layers
+   paint as full-viewport overlays outside any container's clipping, so a
+   same-route `goto('?...')` filter update leaks the old, taller list below the
+   new card's border. Guard: skip `startViewTransition` when `route.id` is
+   unchanged. Files as a consumer-guide note for any cairn site using the
+   standard onNavigate cross-fade pattern beside admin list screens.
+7. **Contract completeness needs a probing consumer.** ListToolbar's overflow
+   disclosure shipped with CSS-only focus-within behavior and gained real
+   disclosure semantics (state toggle, aria-expanded/aria-controls) only in the
+   coherence fix round, despite Members never exercising it. Unexercised
+   contract surface should get its aria/interaction semantics at birth or be
+   cut from the first version.
+8. **Admin visual gating is probes plus coherence reads, not pixel-diff.** This
+   repo deliberately excludes admin screens from the e2e visual suite, so the
+   toolkit's visual regression story in cairn should assume the same: probe
+   pages and fresh-context reads, not baselines.
+9. **Graduation status (per the wave-by-graduation ruling):** all six components
+   (AdminTable, ExpandableRow, ListToolbar, StatusChip, Pagination, the
+   formatters) shipped their first consumer and survived the coherence rounds;
+   none graduates yet. The Classes or Assets pass is each component's second
+   consumer and the first harvest wave's gate.
