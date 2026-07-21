@@ -24,7 +24,7 @@ confirm-gated danger zone rather than a floating top-right red link.
   import { SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
   import { AdminTable, PageHeader, StatusChip, ageFromBirthdate } from '@glw907/cairn-cms/admin-toolkit';
   import ClassForm from '../ClassForm.svelte';
-  import type { ClassTrack, EnrollmentRow } from '$admin-club/lib/classes-store';
+  import type { ClassTrack, ClassWithCounts, EnrollmentRow } from '$admin-club/lib/classes-store';
   import { HEADER_CELL, formatCivilDate, formatClubTimestamp, formatDollars } from '$admin-club/lib/ui';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -76,10 +76,26 @@ confirm-gated danger zone rather than a floating top-right red link.
     transferDialog?.showModal();
   }
 
-  /** The picker's own candidates: every other class in the same season, the current one
-   *  excluded (`+page.server.ts`'s own load comment on why it reads the whole season rather
-   *  than a bespoke "every class but this one" query). */
-  const transferCandidates = $derived(data.class ? data.classesInSeason.filter((candidate) => candidate.id !== data.class!.id) : []);
+  /** The picker's own candidates for one enrollment's own member: every other class in the same
+   *  season (`+page.server.ts`'s own load comment on why it reads the whole season rather than a
+   *  bespoke "every class but this one" query), minus the current class and minus any class that
+   *  member already holds a seat in (`data.memberEnrolledClassIds`, review fix) -- offering one of
+   *  those would only get refused server-side (`class-transfer.ts`'s own duplicate-enrollment
+   *  check) with no visible reason once the picker is a modal. */
+  function transferCandidatesFor(memberId: string | null): ClassWithCounts[] {
+    if (!data.class || memberId === null) return [];
+    const alreadyEnrolled = data.memberEnrolledClassIds[memberId] ?? [];
+    return data.classesInSeason.filter((candidate) => candidate.id !== data.class!.id && !alreadyEnrolled.includes(candidate.id));
+  }
+  // A local capture, not `transferTarget === null ? null : transferTarget.memberId` inline:
+  // svelte-check's control-flow narrowing loses track of a `$state` variable read twice in one
+  // `$derived(...)` expression, reporting `transferTarget.memberId` as unreachable (`never`);
+  // capturing it once into `target` first narrows cleanly.
+  const transferTargetMemberId = $derived.by(() => {
+    const target = transferTarget;
+    return target === null ? null : target.memberId;
+  });
+  const transferCandidates = $derived(transferCandidatesFor(transferTargetMemberId));
   const transferDestination = $derived(transferCandidates.find((candidate) => candidate.id === transferDestinationId) ?? null);
   const transferFeeMismatch = $derived(
     data.class !== null && transferDestination !== null && transferDestination.fee !== data.class.fee,
@@ -138,7 +154,7 @@ confirm-gated danger zone rather than a floating top-right red link.
   );
 </script>
 
-<a href="/admin/club/classes" class="mb-4 inline-flex w-fit items-center gap-1 text-sm text-muted hover:text-primary">
+<a href="/admin/club/classes" class="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-primary">
   <span aria-hidden="true">&larr;</span> Back to Classes
 </a>
 
@@ -173,8 +189,8 @@ confirm-gated danger zone rather than a floating top-right red link.
     <AdminTable density="sm" zebra rowCount={data.enrollments.length} emptyColspan={5}>
       {#snippet header()}
         <th class={HEADER_CELL}>Name</th>
-        <th class={HEADER_CELL}>Age</th>
-        <th class={HEADER_CELL}>Enrolled</th>
+        <th class="{HEADER_CELL} roster-narrow-hide">Age</th>
+        <th class="{HEADER_CELL} roster-narrow-hide">Enrolled</th>
         <th class={HEADER_CELL}>Paid</th>
         <th class="sr-only">Actions</th>
       {/snippet}
@@ -183,9 +199,9 @@ confirm-gated danger zone rather than a floating top-right red link.
       {/snippet}
       {#each data.enrollments as enrollment (enrollment.id)}
         <tr>
-          <td class="font-medium">{enrollment.memberName}</td>
-          <td class="tabular-nums">{ageFromBirthdate(enrollment.birthdate) ?? '—'}</td>
-          <td class="text-muted">{formatCivilDate(enrollment.enrolledAt)}</td>
+          <td class="font-medium roster-name-cell">{enrollment.memberName}</td>
+          <td class="tabular-nums roster-narrow-hide">{ageFromBirthdate(enrollment.birthdate) ?? '—'}</td>
+          <td class="text-muted roster-narrow-hide">{formatCivilDate(enrollment.enrolledAt)}</td>
           <td>
             <StatusChip tone={enrollment.feePaid ? 'success' : 'warning'} label={enrollment.feePaid ? 'Paid' : 'Owing'} size="sm" />
           </td>
@@ -195,7 +211,12 @@ confirm-gated danger zone rather than a floating top-right red link.
                 Record payment
               </button>
             {/if}
-            <button type="button" class="btn btn-ghost btn-xs" onclick={() => openTransferDialog(enrollment)} disabled={transferCandidates.length === 0}>
+            <button
+              type="button"
+              class="btn btn-ghost btn-xs"
+              onclick={() => openTransferDialog(enrollment)}
+              disabled={transferCandidatesFor(enrollment.memberId).length === 0}
+            >
               Move&hellip;
             </button>
             <form method="post" action="?/dropEnrollment">
@@ -217,7 +238,7 @@ confirm-gated danger zone rather than a floating top-right red link.
         after you offer it.
       </p>
     </div>
-    <ul class="divide-y divide-[var(--cairn-card-border)]">
+    <ul class="divide-list">
       {#each waitlistView as { entry, isMember, displayName, activeOffer, history } (entry.id)}
         <li class="flex flex-col gap-2 px-6 py-3 text-sm">
           <div class="flex items-center justify-between gap-4">
@@ -301,7 +322,7 @@ confirm-gated danger zone rather than a floating top-right red link.
       <h2 class="text-sm font-semibold">Instructors</h2>
       <p class="mt-1 text-sm text-muted">Assign by email; an instructor's own account arrives in a later pass.</p>
     </div>
-    <ul class="divide-y divide-[var(--cairn-card-border)]">
+    <ul class="divide-list">
       {#each data.instructors as instructor (instructor.email)}
         <li class="flex items-center justify-between gap-4 px-6 py-3">
           <span class="text-sm">
@@ -367,6 +388,11 @@ confirm-gated danger zone rather than a floating top-right red link.
   <dialog bind:this={transferDialog} class="modal" aria-labelledby="transfer-dialog-title">
     <div class="modal-box">
       <h2 id="transfer-dialog-title" class="text-lg font-bold">Move {transferTarget?.memberName}</h2>
+      {#if form?.error}
+        <p class="rounded-box border border-[var(--cairn-card-border)] bg-base-100 px-3 py-2 text-sm font-medium text-error" role="alert">
+          {form.error}
+        </p>
+      {/if}
       {#if transferTarget}
         <form method="post" action="?/transfer" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => transferDialog)}>
           <CsrfField />
@@ -419,16 +445,18 @@ confirm-gated danger zone rather than a floating top-right red link.
     </div>
   </dialog>
 
-  <dialog bind:this={deleteDialog} class="modal" oncancel={(event) => event.preventDefault()}>
+  <dialog bind:this={deleteDialog} class="modal" aria-labelledby="delete-dialog-title">
     <div class="modal-box">
-      <h2 class="text-lg font-bold">Delete {data.class.name}?</h2>
+      <h2 id="delete-dialog-title" class="text-lg font-bold">Delete {data.class.name}?</h2>
       <p class="py-2 text-sm text-muted">
         This removes the class for good. There is no undo.
       </p>
       <form method="dialog">
         <CsrfField />
         <div class="modal-action">
-          <!-- svelte-ignore a11y_autofocus -->
+          <!-- svelte-ignore a11y_autofocus -- the safe, non-destructive choice deserves the
+               initial focus in a delete-confirmation dialog, the same reasoning any "are you
+               sure" pattern uses. -->
           <button type="submit" class="btn" autofocus formnovalidate>Cancel</button>
           <button type="submit" class="btn btn-ghost btn-sm" formmethod="post" formaction="?/delete">Delete class</button>
         </div>
@@ -437,3 +465,39 @@ confirm-gated danger zone rather than a floating top-right red link.
   </dialog>
   {/key}
 {/if}
+
+<style>
+  /* `divide-y`/`divide-[...]` compile to nothing under `/admin/**`'s precompiled cairn-admin.css
+     (the toolkit README's own compiled-CSS constraint), so the row separator has to be a scoped
+     rule on package tokens instead -- the waitlist and instructors lists' own row dividers.
+     `list-style: none` on the whole list, not just the populated rows: the populated `<li>`s are
+     `display: flex` (which already suppresses the marker on its own), but each list's own
+     empty-state `<li>` is a plain list-item, so without this rule a stray UA disc bullet renders
+     at the far left of "No one is on the waitlist." and "No instructor assigned yet." */
+  .divide-list {
+    list-style: none;
+  }
+
+  .divide-list > li:not(:last-child) {
+    border-bottom: 1px solid var(--cairn-card-border);
+  }
+
+  /* At a phone width the roster row (Name/Age/Enrolled/Paid + the Move…/Drop/Record-payment
+     actions) is wider than the viewport with nothing narrowed, which pushes the Paid chip flush
+     against the edge and every corrective action off-screen behind undiscoverable horizontal
+     scroll -- the same class of tell the Classes list's own summary row carries, and the same fix:
+     Age and the enrolled-on date are the two roster columns this screen's own actions never
+     reference, so dropping them from the table at this width is what lets the Paid state and every
+     action stay reachable without scrolling. */
+  @media (max-width: 640px) {
+    .roster-name-cell {
+      max-width: 8rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .roster-narrow-hide {
+      display: none;
+    }
+  }
+</style>

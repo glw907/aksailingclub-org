@@ -280,6 +280,32 @@ export async function listRostersBySeason(db: D1Database, season: number): Promi
   return rosters;
 }
 
+/** Every class id a member already holds a seat in within a season, keyed by member id: the
+ *  transfer picker's own need (Classes pass review fix) to exclude a destination the enrolling
+ *  member is already enrolled in. `class_enrollments` is unique per `(class_id, member_id)`, not
+ *  per season, so a member can legitimately hold seats in two different classes the same season;
+ *  offering one of those as a "Move to" destination only ever gets refused server-side
+ *  (`class-transfer.ts`'s own duplicate-enrollment check) with no visible reason once the picker
+ *  is a modal. One joined query for the whole season, the same no-per-class-loop shape
+ *  `listRostersBySeason` already established. */
+export async function listMemberEnrolledClassIdsBySeason(db: D1Database, season: number): Promise<Map<string, Set<string>>> {
+  const { results } = await db
+    .prepare(
+      `SELECT e.member_id AS member_id, e.class_id AS class_id
+       FROM class_enrollments e JOIN classes c ON c.id = e.class_id
+       WHERE c.season = ?1`,
+    )
+    .bind(season)
+    .all<{ member_id: string; class_id: string }>();
+  const byMember = new Map<string, Set<string>>();
+  for (const row of results) {
+    const classIds = byMember.get(row.member_id) ?? new Set<string>();
+    classIds.add(row.class_id);
+    byMember.set(row.member_id, classIds);
+  }
+  return byMember;
+}
+
 /** One class's waitlist, reduced to what the list screen's expand panel states in a single line:
  *  how many are queued, and who is next (a member's stored name, or an applicant's own name for a
  *  not-yet-a-member signup). The active-offer half of that line is a separate join the route's own
@@ -529,13 +555,20 @@ export type ClassPaymentResult =
   | { ok: false; error: string };
 
 /**
- * Build the enrollment's `fee_paid` flip plus the ledger `charge` transaction for the class's own
- * fee, as unrun statements for one `db.batch()` -- the same build-only shape `manual-payment.ts`'s
- * own `buildManualMembershipPayment` established, so the route action owns the one atomic write
- * and its own audit call. The amount is always the class's current `fee`, never an admin-typed
- * figure: a manual recording is rare but real (design doc's own "Manual payments" section), not a
- * promoted flow with its own amount-entry surface. Refuses an unknown enrollment or one already
- * marked paid, rather than double-charging it.
+ * Flip the enrollment's `fee_paid` with an atomic compare-and-set, then build the ledger `charge`
+ * transaction for the class's own fee as unrun statements for the caller's own `db.batch()` (the
+ * route action owns that one atomic write and its own audit call). The amount is always the
+ * class's current `fee`, never an admin-typed figure: a manual recording is rare but real (design
+ * doc's own "Manual payments" section), not a promoted flow with its own amount-entry surface.
+ *
+ * The `fee_paid` flip itself is `claimOffer`'s own atomic-compare-and-set shape (`offers.ts`'s own
+ * header on that function): run and checked (`meta.changes === 1`) BEFORE the ledger statements
+ * are even built, not folded into the caller's later `db.batch()` alongside them, since D1's
+ * `batch()` runs every statement regardless of an earlier one's own effect -- a batched
+ * conditional UPDATE gives no way to detect a lost race before a duplicate charge is already
+ * built. Two concurrent `recordPayment` submissions for the same enrollment can't both see
+ * `changes === 1` (D1 serializes writes to one SQLite file, `claimOffer`'s own reasoning again);
+ * whichever loses this refuses cleanly as "already paid" instead of charging twice.
  */
 export async function buildClassPayment(
   db: D1Database,
@@ -551,6 +584,12 @@ export async function buildClassPayment(
     .first<{ fee_paid: 0 | 1; fee: number; class_name: string; household_id: string }>();
   if (!row) return { ok: false, error: 'No such enrollment.' };
   if (row.fee_paid === 1) return { ok: false, error: 'This enrollment is already paid.' };
+
+  const flip = await db
+    .prepare('UPDATE class_enrollments SET fee_paid = 1 WHERE id = ?1 AND fee_paid = 0')
+    .bind(input.enrollmentId)
+    .run();
+  if ((flip.meta.changes ?? 0) !== 1) return { ok: false, error: 'This enrollment is already paid.' };
 
   const amountCents = Math.round(row.fee * 100);
   const { statements: ledgerStatements } = buildTransactionStatements(
@@ -571,7 +610,7 @@ export async function buildClassPayment(
   );
   return {
     ok: true,
-    statements: [db.prepare('UPDATE class_enrollments SET fee_paid = 1 WHERE id = ?1').bind(input.enrollmentId), ...ledgerStatements],
+    statements: ledgerStatements,
     amountCents,
   };
 }

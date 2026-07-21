@@ -67,6 +67,10 @@ export async function transferEnrollment(
   ]);
   if (!sourceClass) return { error: 'The source class no longer exists.' };
   if (!destinationClass) return { error: 'No such destination class.' };
+  // The design doc's own same-season invariant: the picker's own UI only ever offers same-season
+  // candidates (`+page.svelte`'s own `data.classesInSeason` read), but this store function is the
+  // one place that invariant actually holds against a crafted POST, not the UI alone.
+  if (destinationClass.season !== sourceClass.season) return { error: 'A transfer must stay within the same season.' };
 
   const duplicate = await db
     .prepare('SELECT 1 AS n FROM class_enrollments ce WHERE ce.class_id = ?1 AND ce.member_id = ?2 LIMIT 1')

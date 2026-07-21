@@ -70,6 +70,20 @@ describe('buildClassPayment', () => {
     if (!result.ok) throw new Error('expected ok');
     await expect(db.batch(result.statements)).resolves.toBeDefined();
   });
+
+  it('refuses a lost race against a concurrent payment, writing no ledger entry', async () => {
+    // Both concurrent submissions read fee_paid=0 (the SELECT above never sees the other's write);
+    // the atomic compare-and-set UPDATE is what actually closes the race, so this simulates the
+    // loser's own view of it: the same `WHERE fee_paid = 0` matches zero rows because the winner's
+    // UPDATE already flipped it first.
+    const { db, calls } = fakeD1({
+      firstResults: { 'FROM class_enrollments e JOIN classes c': { fee_paid: 0, fee: 100, class_name: 'Fleet Tune-Up Weekend' } },
+      runResults: { 'UPDATE class_enrollments SET fee_paid = 1': { changes: 0 } },
+    });
+    const result = await buildClassPayment(db, { enrollmentId: 'enr-1', source: 'cash' });
+    expect(result).toEqual({ ok: false, error: 'This enrollment is already paid.' });
+    expect(calls.some((c) => c.sql.startsWith('INSERT'))).toBe(false);
+  });
 });
 
 describe('getWaitlistMemberNames', () => {

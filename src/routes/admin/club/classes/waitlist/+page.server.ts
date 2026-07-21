@@ -14,7 +14,7 @@ import type { PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
 import { resolveClubDb } from '$admin-club/lib/club-db';
 import { getCurrentSeason } from '$admin-club/lib/club-settings';
-import { listClassesWithCounts, listWaitlist, type ClassWithCounts, type WaitlistRow } from '$admin-club/lib/classes-store';
+import { getWaitlistMemberNames, listClassesWithCounts, listWaitlist, type ClassWithCounts, type WaitlistRow } from '$admin-club/lib/classes-store';
 import { expireStaleOffers, listOutstandingOffers, type OfferRow } from '$admin-club/lib/offers';
 
 /** One queued waitlist entry paired with its active offer, if any: the same pairing the per-class
@@ -38,7 +38,7 @@ export const load: PageServerLoad = async (event) => {
   requireSession(event);
   const db = resolveClubDb(event.platform?.env);
   if (!db) {
-    return { rows: [] as ClassWaitlistOverviewRow[], error: 'CLUB_DB is not bound.' };
+    return { rows: [] as ClassWaitlistOverviewRow[], waitlistMemberNames: {} as Record<string, string>, error: 'CLUB_DB is not bound.' };
   }
   try {
     // The same lazy sweep the per-class detail page's load runs before reading anything else, so
@@ -65,9 +65,20 @@ export const load: PageServerLoad = async (event) => {
         };
       }),
     );
-    return { rows, error: null as string | null };
+    // A member-sourced waitlist entry (`memberId` set) carries no name of its own on
+    // `WaitlistRow` (`classes-store.ts`'s own header on why that shared shape stays untouched;
+    // the schema CHECK sets exactly one of `memberId`/`applicantEmail`, so `applicantName ??
+    // applicantEmail` renders blank for one) -- one side query across every class's own queued
+    // members, resolved once here rather than per class, the same `getWaitlistMemberNames`
+    // helper and Map-to-plain-object serialization `classes/[id]/+page.server.ts`'s load
+    // already uses for this exact problem on a single class.
+    const memberIds = [
+      ...new Set(rows.flatMap((row) => row.entries.map(({ entry }) => entry.memberId).filter((id): id is string => id !== null))),
+    ];
+    const waitlistMemberNames = Object.fromEntries(await getWaitlistMemberNames(db, memberIds));
+    return { rows, waitlistMemberNames, error: null as string | null };
   } catch (err) {
     console.error('admin/club/classes/waitlist: CLUB_DB read failed', err);
-    return { rows: [] as ClassWaitlistOverviewRow[], error: 'Could not read the classes/waitlist tables.' };
+    return { rows: [] as ClassWaitlistOverviewRow[], waitlistMemberNames: {} as Record<string, string>, error: 'Could not read the classes/waitlist tables.' };
   }
 };

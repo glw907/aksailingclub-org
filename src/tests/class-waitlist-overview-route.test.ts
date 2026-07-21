@@ -87,10 +87,26 @@ const WAITLIST_ENTRY = {
   notes: null,
 };
 
+// A member-sourced entry: the schema CHECK sets exactly one of `member_id`/`applicant_email`, so
+// this row carries neither `applicant_name` nor `applicant_email` (finding 11,
+// docs/2026-07-21-classes-pass-harvest-findings.md) -- its display name only ever comes from the
+// side `members` lookup below.
+const WAITLIST_ENTRY_MEMBER = {
+  id: 'wait-2',
+  class_id: OPEN_CLASS_ROW.id,
+  member_id: 'member-1',
+  applicant_name: null,
+  applicant_email: null,
+  applicant_phone: null,
+  position: 2,
+  requested_at: '2026-05-02 00:00:00',
+  notes: null,
+};
+
 describe('/admin/club/classes/waitlist load', () => {
   it('returns an honest error and no rows when CLUB_DB is not bound', async () => {
     const result = await runLoad(undefined);
-    expect(result).toEqual({ rows: [], error: 'CLUB_DB is not bound.' });
+    expect(result).toEqual({ rows: [], waitlistMemberNames: {}, error: 'CLUB_DB is not bound.' });
   });
 
   it('lists only current-season classes with a nonempty waitlist, dropping other seasons and ' +
@@ -171,5 +187,25 @@ describe('/admin/club/classes/waitlist load', () => {
         activeOffer: expect.objectContaining({ waitlistId: WAITLIST_ENTRY.id, expiresAt: '2026-07-05 00:00:00' }),
       }),
     ]);
+  });
+
+  it('resolves a member-sourced entry\'s name via the shared getWaitlistMemberNames helper, ' +
+    'across every class in one query', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: { "'current_season'": { value: '2026' } },
+      allResults: {
+        'FROM classes ORDER BY': [OPEN_CLASS_ROW],
+        'FROM class_offers WHERE resolved IS NULL': [],
+        'FROM class_waitlist WHERE class_id': [WAITLIST_ENTRY_MEMBER],
+        'SELECT id, name FROM members WHERE id IN': [{ id: 'member-1', name: 'Robin Lee' }],
+      },
+    });
+    const result = await runLoad(db);
+    expect(result.waitlistMemberNames).toEqual({ 'member-1': 'Robin Lee' });
+    expect(result.rows[0].entries).toEqual([
+      expect.objectContaining({ entry: expect.objectContaining({ id: WAITLIST_ENTRY_MEMBER.id, memberId: 'member-1' }) }),
+    ]);
+    const memberLookups = calls.filter((c) => c.sql.includes('SELECT id, name FROM members WHERE id IN'));
+    expect(memberLookups).toHaveLength(1);
   });
 });

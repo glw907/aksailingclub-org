@@ -29,6 +29,7 @@ re-filter of what already rendered.
     ageFromBirthdate,
     AdminTable,
     EmptyState,
+    itemNoun,
     ListToolbar,
     type ListToolbarFilter,
     PageHeader,
@@ -85,9 +86,9 @@ re-filter of what already rendered.
   ]);
 </script>
 
-<span class="sr-only" role="status">{filteredClasses.length} classes</span>
+<span class="sr-only" role="status">{itemNoun(filteredClasses.length, { one: 'class', many: 'classes' })}</span>
 
-<PageHeader eyebrow="Club" title="Classes" meta={`Season ${data.season}`}>
+<PageHeader eyebrow="Club" title="Classes" meta={data.error ? undefined : `Season ${data.season}`}>
   {#snippet action()}
     <a class="btn btn-primary btn-sm" href="/admin/club/classes/new">New class</a>
   {/snippet}
@@ -127,10 +128,10 @@ re-filter of what already rendered.
     <AdminTable density="sm" zebra rowCount={filteredClasses.length} emptyColspan={6}>
       {#snippet header()}
         <th class={HEADER_CELL}>Class</th>
-        <th class={HEADER_CELL}>Track</th>
-        <th class={HEADER_CELL}>Dates</th>
+        <th class="{HEADER_CELL} classes-narrow-hide">Track</th>
+        <th class="{HEADER_CELL} classes-narrow-hide">Dates</th>
         <th class={HEADER_CELL}>Enrolled</th>
-        <th class={HEADER_CELL}>Waitlist</th>
+        <th class="{HEADER_CELL} classes-narrow-hide">Waitlist</th>
         <th class="sr-only">Details</th>
       {/snippet}
       {#snippet empty()}
@@ -147,13 +148,13 @@ re-filter of what already rendered.
           {#snippet summary()}
             <td class="classes-name-cell">
               {row.name}
-              {#if !row.visible}<span class="badge badge-ghost badge-sm ml-1 font-medium">Hidden</span>{/if}
+              {#if !row.visible}<span class="badge badge-ghost badge-sm ml-1.5 font-medium">Hidden</span>{/if}
             </td>
-            <td>
+            <td class="classes-narrow-hide">
               <span class="badge badge-sm font-medium {TRACK_CHIP[row.track]}">{CLASS_TRACK_LABEL[row.track]}</span>
             </td>
-            <td class="text-sm tabular-nums text-muted">
-              {formatCivilDate(row.startDate, 'TBD')}{#if row.endDate} &ndash; {formatCivilDate(row.endDate)}{/if}
+            <td class="text-sm tabular-nums text-muted classes-narrow-hide">
+              {formatCivilDate(row.startDate, 'TBD')}{#if row.endDate}&nbsp;&ndash; {formatCivilDate(row.endDate)}{/if}
             </td>
             <td class="text-sm tabular-nums">
               {#if row.dropIn}
@@ -162,7 +163,7 @@ re-filter of what already rendered.
                 {row.enrolledCount}/{row.capacity}
               {/if}
             </td>
-            <td class="text-sm">
+            <td class="text-sm classes-narrow-hide">
               {#if row.waitlist.count > 0}
                 {row.waitlist.count} waiting
                 {#if row.activeOfferExpiresAt}<span class="text-muted"> &middot; offer sent</span>{/if}
@@ -190,7 +191,7 @@ re-filter of what already rendered.
                 <h2 class={HEADER_CELL}>Waitlist</h2>
                 {#if datum.waitlist.count > 0}
                   <p class="text-sm">
-                    {datum.waitlist.count} {datum.waitlist.count === 1 ? 'person' : 'people'} waiting{#if datum.waitlist.nextName} &middot; next: {datum.waitlist.nextName}{/if}
+                    {datum.waitlist.count} {datum.waitlist.count === 1 ? 'person' : 'people'} waiting{#if datum.waitlist.nextName}&nbsp;&middot; next: {datum.waitlist.nextName}{/if}
                   </p>
                   {#if datum.activeOfferExpiresAt}
                     <p class="text-sm text-muted">Offer sent, expires {formatClubTimestamp(datum.activeOfferExpiresAt)}.</p>
@@ -239,6 +240,28 @@ re-filter of what already rendered.
     font-weight: 600;
   }
 
+  /* At a phone width the summary row (Track/Dates/Waitlist alongside Class/Enrolled) is wider
+     than the viewport, which drags the expanded panel's own width along with it (`ExpandableRow`'s
+     own <td colspan> can never be narrower than the summary rows' widest computed column sum) --
+     the panel's roster StatusChips then render past the right edge, invisible without horizontal
+     scroll. Waitlist's own count/next-name/offer state already reappears inside the expanded
+     panel's own Waitlist section, and Track/Dates are secondary to the glance-and-act job this row
+     does (an admin opens the row for either), so dropping all three from the *summary* at this
+     width is what lets the whole row -- panel included -- fit the viewport, the same fix the
+     Members screen's own `members-narrow-hide` applies for the same reason. Class name and the
+     soft-capacity Enrolled fraction are the two data a phone admin needs at a glance and stay. */
+  @media (max-width: 640px) {
+    .classes-name-cell {
+      max-width: 10rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .classes-narrow-hide {
+      display: none;
+    }
+  }
+
   .classes-panel {
     display: flex;
     flex-direction: column;
@@ -252,6 +275,12 @@ re-filter of what already rendered.
     margin: 0.5rem 0 0;
     padding: 0;
     list-style: none;
+    /* Caps the roster's own measure -- without it a `.classes-panel-row`'s `space-between` stretches
+       to the whole panel width, and at 1440 the Paid/Owing chip ends up ~600px from the member's
+       name it describes. Members' own household panel avoids this by never spreading its list rows
+       full-width in the first place; this list keeps the space-between layout (it reads well at
+       narrower widths) and caps the container instead. */
+    max-width: 32rem;
   }
 
   .classes-panel-row {

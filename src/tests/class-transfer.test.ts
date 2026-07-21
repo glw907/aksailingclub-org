@@ -118,6 +118,15 @@ describe('transferEnrollment', () => {
     expect(txInsert?.args).toContain('Transfer: Wednesday Keelboat ($150) -> Thursday Keelboat ($200), difference confirmed and settled out-of-band');
   });
 
+  it('refuses a cross-season destination, writing nothing (the picker only ever offers same-' +
+    'season candidates, but this store function is what actually holds the invariant)', async () => {
+    const DEST_OTHER_SEASON = rawClass({ id: 'thu-keelboat', name: 'Thursday Keelboat', slug: 'thu-keelboat', fee: 150, season: 2027 });
+    const { db, calls } = fakeD1({ firstResults: baseFixture(DEST_OTHER_SEASON) });
+    const result = await transferEnrollment(db, { enrollmentId: 'enr-1', destinationClassId: DEST_OTHER_SEASON.id, actorEmail: 'admin@example.com' });
+    expect(result).toEqual({ error: 'A transfer must stay within the same season.' });
+    expect(calls.some((c) => c.sql.startsWith('UPDATE') || c.sql.startsWith('INSERT'))).toBe(false);
+  });
+
   it('refuses a duplicate (the destination already holds this member) as a friendly error, ' +
     'never a 500 from the schema\'s own UNIQUE constraint', async () => {
     const { db, calls } = fakeD1({ firstResults: { ...baseFixture(DEST_SAME_FEE), 'FROM class_enrollments ce': { n: 1 } } });

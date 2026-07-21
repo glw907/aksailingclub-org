@@ -45,7 +45,9 @@ lives on the linked class detail page, the same offer/cancel section
           {#each row.entries as { entry, activeOffer } (entry.id)}
             <li class="flex flex-wrap items-center justify-between gap-2 px-6 py-3 text-sm">
               <span>
-                <span class="font-medium">{entry.applicantName ?? entry.applicantEmail}</span>
+                <span class="font-medium">
+                  {(entry.memberId ? data.waitlistMemberNames[entry.memberId] : null) ?? entry.applicantName ?? entry.applicantEmail}
+                </span>
                 <span class="text-muted"> &middot; #{entry.position}</span>
               </span>
               {#if activeOffer}

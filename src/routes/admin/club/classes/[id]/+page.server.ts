@@ -22,6 +22,7 @@ import {
   listClassesWithCounts,
   listEnrollments,
   listInstructors,
+  listMemberEnrolledClassIdsBySeason,
   listWaitlist,
   removeInstructor,
   updateClass,
@@ -53,6 +54,7 @@ export const load: PageServerLoad = async (event) => {
       waitlistMemberNames: {} as Record<string, string>,
       offers: [] as OfferRow[],
       classesInSeason: [] as ClassWithCounts[],
+      memberEnrolledClassIds: {} as Record<string, string[]>,
       error: 'CLUB_DB is not bound.',
     };
   }
@@ -77,7 +79,24 @@ export const load: PageServerLoad = async (event) => {
   // load stays a plain, reusable season-scoped read rather than a bespoke "every class but
   // this one" query.
   const classesInSeason = row ? await listClassesWithCounts(db, row.season) : [];
-  return { class: row, instructors, enrollments, waitlist, waitlistMemberNames, offers, classesInSeason, error: null as string | null };
+  // The picker's own further exclusion (review fix): a class each candidate's own enrolling
+  // member already holds a seat in, so the template never offers a destination the server-side
+  // duplicate-enrollment check would only refuse anyway. Serialized Map-to-array-of-arrays, the
+  // same plain-object habit `waitlistMemberNames` above already uses.
+  const memberEnrolledClassIds = row
+    ? Object.fromEntries([...(await listMemberEnrolledClassIdsBySeason(db, row.season))].map(([memberId, classIds]) => [memberId, [...classIds]]))
+    : {};
+  return {
+    class: row,
+    instructors,
+    enrollments,
+    waitlist,
+    waitlistMemberNames,
+    offers,
+    classesInSeason,
+    memberEnrolledClassIds,
+    error: null as string | null,
+  };
 };
 
 const DENIED_MESSAGE = 'A club role is required to manage classes.';
