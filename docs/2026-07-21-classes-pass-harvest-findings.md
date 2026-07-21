@@ -51,4 +51,14 @@
 
 ## Filed during execution
 
-(accumulates here)
+6. **Task 1 close-out on finding 1 (2026-07-21).** The `itemNoun` graduation landed in
+   cairn as the planned additive widening (`string | ItemLabel` on both components'
+   `itemLabel`, `itemNoun`/`ItemLabel` exported from the barrel; every count and range
+   line routes through the one fix point). Cairn's port also accepts a plain string in
+   `itemNoun` itself, which ASC's original never needed — the graduated form is the more
+   general contract. The process fix stands as filed: graduation requires a diff of the
+   first consumer's live copies against the harvest-time snapshot, and the consumer's
+   newer commits win. One naming note for the friction log: cairn-cms has no `build`
+   script (`npm run package` is the library build), so a plan or dispatch written from
+   the consumer side says "build" and the executor has to map it; the gate list in
+   cairn's CONTRIBUTING/README could name the canonical gate commands once.
