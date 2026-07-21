@@ -66,16 +66,24 @@ published).** What shipped:
 - **ON GEOFF'S QUEUE**: the Members before/after on dev (/admin/club/members — the
   search-first screen, an expanded panel, the 390 view) and the toolkit probe pages
   above.
-- **NEXT PASS — CLASSES, BRAINSTORMED AND PLANNED (2026-07-21)**: Geoff picked
-  Classes; the functional brainstorm ran and its rulings are in the spec
-  (docs/2026-07-21-classes-pass-design.md, approved); the implementation plan is
-  docs/plans/2026-07-21-classes-pass.md, AWAITING GEOFF'S PLAN APPROVAL — the one
-  human gate before execution. cairn 0.89.0 landed (toolkit-organization pass done),
-  and the plan opens with a cairn 0.89.1 patch (Task 1: graduate the itemNoun fix the
-  local toolkit carries and cairn's graduated Pagination/ListToolbar miss) before the
-  subpath swap (Task 2: delete the five local copies, keep ExpandableRow local, adopt
-  PageHeader/EmptyState). Execution is same-session orchestrate-and-verify on
-  cairn-implementer dispatches once approved.
+- **NEXT PASS — CLASSES: SPEC APPROVED, PLAN APPROVED, READY TO EXECUTE IN A FRESH
+  SESSION (2026-07-21)**: spec docs/2026-07-21-classes-pass-design.md (the functional
+  rulings), plan docs/plans/2026-07-21-classes-pass.md (6 tasks). Geoff's standing
+  emphasis for the pass: the component library improves as we go (now a plan global
+  constraint; harvest file docs/2026-07-21-classes-pass-harvest-findings.md already
+  carries 5 prep findings). Key prep discovery: cairn 0.89.0's graduated
+  Pagination/ListToolbar MISS the itemNoun fix (would regress "1 households"), so
+  Task 1 patches cairn (0.89.1, additive string|ItemLabel) before Task 2 swaps the
+  subpath imports (delete 5 local copies, keep ExpandableRow local, adopt
+  PageHeader/EmptyState). ONE-EXECUTOR: at 2026-07-21 prep the cairn repo showed live
+  session signals (showcase workerd + a probe-screenshot viewer; tree clean at the
+  0.89.0 cut) — Task 1 re-runs the check before touching cairn. RESUME PROMPT:
+  "Execute the classes pass: read docs/plans/2026-07-21-classes-pass.md and
+  docs/2026-07-21-classes-pass-design.md, then execute task-by-task per the plan
+  header (cairn-implementer dispatches, diff review + full gate between tasks;
+  Task 1's one-executor check on cairn-cms first)." Launch from
+  ~/Projects/aksailingclub-org. Conductor: Opus (finished-plan execution; the
+  brainstorm/plan sitting was the Fable work and is done).
 
 **PASS B `asc-sidebar-build` IS BUILD-COMPLETE AND SHIPPED TO DEV; GEOFF'S WALKTHROUGH
 IS THE OPEN GATE (2026-07-19, Fable-conducted: T1 probe round settled in-session, 5

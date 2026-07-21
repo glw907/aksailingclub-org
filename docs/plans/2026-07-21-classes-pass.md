@@ -42,7 +42,16 @@ daisyUI 5 via cairn's built `cairn-admin.css`, D1 (`asc-club`), Vitest, Playwrig
 - Every task clears the full gate before the next dispatch: `npm run check` (0/0),
   `npm test`, `npm run build`.
 - DX findings accumulate in `docs/2026-07-21-classes-pass-harvest-findings.md` as they
-  surface (the harvest mandate).
+  surface (the harvest mandate). The file already carries five prep-time findings,
+  including the graduation-drift process fix Task 1 executes.
+- **Improving the component library is a standing objective of the pass (Geoff,
+  2026-07-21).** A rough edge found in a toolkit component while consuming it gets
+  fixed upstream when small and contract-safe (batch with Task 1's 0.89.1 when
+  possible; a later fix waits for the pass-close harvest) or filed in the harvest
+  file. Task 6 records the pass's graduation evidence: ExpandableRow's second
+  consumer, the destination picker as the move-between-containers candidate, the
+  over-capacity voice as a StatusChip extension candidate, EmptyState/PageHeader
+  adoption feedback.
 
 ---
 
