@@ -479,7 +479,10 @@ is the ops dashboard's one-button `startNewSeason` (Geoff's pointer;
 `aksailingclub-legacy/ops/src/services/settings.js`): it flips CURRENT_SEASON, resets
 active asset assignments to unpaid, clears class waitlists/applicants, and resets
 class registration state — the same inventory, though this site mints new per-season
-class rows and keeps history where ops mutates in place. Ordered beside
+class rows and keeps history where ops mutates in place. Geoff's reinforcement
+(2026-07-21): the ops dashboard carries useful year-cycling logic beyond that one
+function — sweep the legacy ops code for it as requirements evidence at the
+brainstorm, per the re-architecture doctrine (behavioral reference, never blueprint). Ordered beside
 `class-management` after `membership-admin`; the two can land as one pass if the
 design says so. First real exercise: the 2026→2027 transition.
 Fable-window ruling (Geoff, 2026-07-14): the one-operation design and its sitewide
