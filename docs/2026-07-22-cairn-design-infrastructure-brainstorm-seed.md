@@ -5,6 +5,21 @@ and this session closes. The initiative is cairn-side; the sitting launches from
 `~/Projects/cairn-cms`. This doc carries the thesis, the evidence, and the proposed
 structure so the fresh session starts grounded, not cold.
 
+## The question (Geoff, 2026-07-22, verbatim)
+
+**"Can we capture cairn's design language in such a way that an AI agent can reliably
+use and repeat it?"** Everything below serves this question. It is empirical, not
+rhetorical: the Members evidence already shows the answer is yes WHERE capture
+happened (token'd and contracted decisions repeated reliably across three
+uncoordinated build sessions) and no where it didn't (everything left as rendered
+precedent got reinvented). So the brainstorm's real subject is the capture FORMS and
+their reliability ordering — the working hypothesis, to be tested rather than
+assumed: tokens and typed contracts > canonical exemplars to imitate > written rules
+> rendered precedent, with mechanical gates catching what none of the forms carry,
+and in-context delivery (a skill loaded at build time) mattering as much as the
+capture itself. The Assets pass is the controlled trial and the success criterion is
+already defined: a first build that lands resolved without a refinement round.
+
 ## Geoff's thesis (2026-07-22, verbatim in substance)
 
 Given the rise of agentic coding, it can be much easier for a developer to make a
