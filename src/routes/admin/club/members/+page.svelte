@@ -297,7 +297,7 @@ everything the panel renders.
                   <h2 class={HEADER_CELL}>Contacts</h2>
                   <div class="household-panel-contacts">
                     <p class="text-sm">{contact?.email ?? 'No email on file'}</p>
-                    <p class="text-sm">{contact?.phone ?? 'No phone on file'}</p>
+                    <p class="text-sm">{contact?.phone ? formatPhone(contact.phone) : 'No phone on file'}</p>
                   </div>
                 </section>
                 <section>
