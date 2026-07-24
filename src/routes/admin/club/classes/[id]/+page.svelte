@@ -14,6 +14,11 @@ the submit button un-disables; the flow never charges or refunds anything itself
 action (Drop, Move…, Cancel offer, Delete) stays a quiet `btn-ghost` control with no alarm color,
 per the pass's own global constraint -- Delete in particular moves off the header into a demoted,
 confirm-gated danger zone rather than a floating top-right red link.
+
+The Members-refinement-round-1 settle's A3 verification pass found this screen's `PageHeader`
+still carrying the un-reset h1/p margins `OfficeList`'s own C1 fix never reached (a different,
+newer toolkit component); `.classes-page-header`'s scoped `<style>` rules mirror that fix, same
+as the list screen's identical patch.
 -->
 <script lang="ts">
   import { untrack } from 'svelte';
@@ -170,7 +175,9 @@ confirm-gated danger zone rather than a floating top-right red link.
        instance, and the `$state(untrack(...))` seeds above only ever run once, leaving the
        form showing the PREVIOUS class's values under the new class's own submit actions. -->
   {#key data.class.id}
-  <PageHeader eyebrow="Club" title={data.class.name} meta={classMeta} />
+  <div class="classes-page-header">
+    <PageHeader eyebrow="Club" title={data.class.name} meta={classMeta} />
+  </div>
 
   {#if form?.error}
     <p class="mb-4 rounded-box border border-[var(--cairn-card-border)] bg-base-100 px-6 py-3 text-sm font-medium text-error shadow-[var(--cairn-shadow)]" role="alert">
@@ -476,6 +483,21 @@ confirm-gated danger zone rather than a floating top-right red link.
      at the far left of "No one is on the waitlist." and "No instructor assigned yet." */
   .divide-list {
     list-style: none;
+  }
+
+  /* Members-refinement-round-1 settle (A3), mirrored from the list screen's own identical fix:
+     this route mounts the admin-toolkit's `PageHeader`, which never got the C1 header-margin fix
+     `OfficeList.svelte` carries (measured live: the h1/p leaked their un-reset ~16px/14px margins
+     through the header's own `gap-0.5` intent). No action slot here, so only the margin half of
+     the list screen's fix applies; see that file's own longer comment for the full context and
+     the upstream-harvest note. */
+  .classes-page-header :global(h1.page-h1) {
+    margin: 0;
+  }
+
+  .classes-page-header :global(header p) {
+    margin: 0;
+    margin-top: 0.25rem;
   }
 
   .divide-list > li:not(:last-child) {

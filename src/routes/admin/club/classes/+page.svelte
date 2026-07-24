@@ -16,6 +16,13 @@ Search stays client-side (the whole season's rows are already loaded eagerly wit
 Members' large household set): only the season filter reloads the server, since a different season
 is genuinely different data (every row's own roster/waitlist/offer state), not a client-side
 re-filter of what already rendered.
+
+The Members-refinement-round-1 settle's A3 verification pass found this screen's header still
+carrying two defects `PageHeader` never inherited from `OfficeList`'s own C1 fix (this screen
+mounts `PageHeader`, a different, newer toolkit component): the un-reset h1/p margins and the
+mobile action stretching full-width. `.classes-page-header`'s scoped `<style>` rules mirror
+`OfficeList`'s own recipe exactly; see that block's own comment for the measurements and the
+upstream-harvest note.
 -->
 <script lang="ts">
   import { untrack } from 'svelte';
@@ -88,11 +95,13 @@ re-filter of what already rendered.
 
 <span class="sr-only" role="status">{itemNoun(filteredClasses.length, { one: 'class', many: 'classes' })}</span>
 
-<PageHeader eyebrow="Club" title="Classes" meta={data.error ? undefined : `Season ${data.season}`}>
-  {#snippet action()}
-    <a class="btn btn-primary btn-sm" href="/admin/club/classes/new">New class</a>
-  {/snippet}
-</PageHeader>
+<div class="classes-page-header">
+  <PageHeader eyebrow="Club" title="Classes" meta={data.error ? undefined : `Season ${data.season}`}>
+    {#snippet action()}
+      <a class="btn btn-primary btn-sm classes-header-action" href="/admin/club/classes/new">New class</a>
+    {/snippet}
+  </PageHeader>
+</div>
 
 {#if data.error}
   <p class="px-6 py-10 text-center text-sm text-error">{data.error}</p>
@@ -234,6 +243,30 @@ re-filter of what already rendered.
   .classes-toolbar-band {
     display: flex;
     flex-direction: column;
+  }
+
+  /* Members-refinement-round-1 settle (A3): this route mounts the admin-toolkit's `PageHeader`,
+     not `OfficeList`, and the package's C1 header fixes (0.90.0) only ever landed inside
+     `OfficeList.svelte` -- `PageHeader.svelte` still renders a bare `h1`/`p` with the browser's
+     un-reset ~16px/14px margins (measured live: 16.08px/14px) leaking through its own
+     `gap-0.5` intent, and its bare action slot still gets pulled full-width below `sm` by the
+     header's flex-column `stretch` default (measured live: 358px at 390, matching the toolbar
+     card's own width). `:global()` reaches PageHeader's own internal markup, scoped to this
+     wrapper so no other PageHeader consumer is touched; the values mirror OfficeList's own m-0 /
+     mt-1 / self-start recipe exactly. Cairn harvest: PageHeader wants the identical fix, not a
+     second bespoke one, so a future toolkit-organization pass should port it upstream and delete
+     this site-side mirror. */
+  .classes-page-header :global(h1.page-h1) {
+    margin: 0;
+  }
+
+  .classes-page-header :global(header p) {
+    margin: 0;
+    margin-top: 0.25rem;
+  }
+
+  .classes-header-action {
+    align-self: flex-start;
   }
 
   .classes-name-cell {
