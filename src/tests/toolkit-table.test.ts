@@ -1,16 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { createRawSnippet } from 'svelte';
 import { render } from 'svelte/server';
-import ExpandableRow from '$admin-club/toolkit/ExpandableRow.svelte';
+import { ExpandableRow } from '@glw907/cairn-cms/admin-toolkit';
 
 /** A snippet with no render-time params, e.g. a header row or a fixed body. */
 function staticSnippet(html: string) {
   return createRawSnippet(() => ({ render: () => html }));
 }
 
-// AdminTable itself graduated to `@glw907/cairn-cms/admin-toolkit` in cairn 0.89.0 (Classes pass
-// Task 2); its own contract tests live in cairn-cms's suite now. ExpandableRow stays local (see
-// this repo's toolkit README), so its tests stay here.
+// AdminTable graduated to `@glw907/cairn-cms/admin-toolkit` in cairn 0.89.0 (Classes pass Task
+// 2); ExpandableRow followed in cairn 0.90.0 (the Members-refinement-round-1 settle's A1
+// pickup). Both components' own contract tests live in cairn-cms's suite now; this repo's own
+// copies here re-verify the same contract against the graduated import.
 describe('ExpandableRow', () => {
   const summary = staticSnippet('<td>Alvarez</td><td>Current</td>');
   // Svelte's generated type for a generic component (`generics="T"`) resolves T to `unknown`

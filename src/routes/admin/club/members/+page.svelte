@@ -1,17 +1,17 @@
 <!--
 @component
 The Club section's Members screen (household-grouped list; Members pass T7 rebuild,
-docs/2026-07-20-members-pass-design.md): search-first household rows built entirely from the
-graduated toolkit (`@glw907/cairn-cms/admin-toolkit`, Classes pass Task 2 swap) plus this route's
-own `ExpandableRow` (still local, `$admin-club/toolkit/ExpandableRow.svelte`) and layout --
-`ListToolbar` (search, the four promoted filters, the primary "Add household" action,
-applied-filter pills, the scope-stating count line), `AdminTable`/`ExpandableRow` (the compact
-zebra rows, one expanded household panel at a time), `StatusChip` (standing and paid/owing
-states), and `Pagination`. Any styling this screen needs beyond a toolkit component's own contract
-lives in this file's own scoped `<style>` block (the panel grid, cell truncation, the archived
-toggle) -- never a bespoke component, per the toolkit README's own compiled-CSS constraint
-(`/admin/**` loads only cairn's precompiled CSS, so an unverified Tailwind utility silently renders
-nothing there).
+docs/2026-07-20-members-pass-design.md; refined in the Members-refinement-round-1 settle,
+docs/plans/2026-07-22-members-refinement-settle.md): search-first household rows built entirely
+from the graduated toolkit (`@glw907/cairn-cms/admin-toolkit`, `ExpandableRow` included as of the
+settle's A1 pickup) and layout -- `OfficeList` (the header, its "Add household" action in the
+header's own action slot), `ListToolbar` (search, the promoted filters including the archived
+menu facet, the scope-stating count line), `AdminTable`/`ExpandableRow` (the compact zebra rows,
+one expanded household panel at a time), `StatusChip` (standing and paid/owing states), and
+`Pagination`. Any styling this screen needs beyond a toolkit component's own contract lives in
+this file's own scoped `<style>` block (the panel grid, cell truncation, type scale) -- never a
+bespoke component, per the toolkit README's own compiled-CSS constraint (`/admin/**` loads only
+cairn's precompiled CSS, so an unverified Tailwind utility silently renders nothing there).
 
 Search/standing/holdings/role/class/archived filtering is all server-driven
 (`+page.server.ts`'s own header explains why: a matched member's own phone/name never reaches the
@@ -37,11 +37,12 @@ everything the panel renders.
     StatusChip,
     type StatusChipTone,
     AdminTable,
+    ExpandableRow,
+    formatPhone,
     ListToolbar,
     type ListToolbarFilter,
     Pagination,
   } from '@glw907/cairn-cms/admin-toolkit';
-  import ExpandableRow from '$admin-club/toolkit/ExpandableRow.svelte';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -108,9 +109,9 @@ everything the panel renders.
     scheduleSearchPush();
   }
 
-  // The four promoted filters and the archived checkbox are discrete controls (no debounce
-  // needed); `skipFirstRun` keeps the initial mount (local state already matches the URL `load`
-  // produced) from firing a redundant `goto`.
+  // The five promoted filters (including the archived menu facet) are discrete controls (no
+  // debounce needed); `skipFirstRun` keeps the initial mount (local state already matches the
+  // URL `load` produced) from firing a redundant `goto`.
   let skipFirstRun = true;
   $effect(() => {
     standingFilter;
@@ -180,6 +181,18 @@ everything the panel renders.
       ],
       onChange: (value) => (classFilter = value),
     },
+    {
+      id: 'archived',
+      label: 'Archived',
+      value: includeArchived ? 'include' : 'active',
+      defaultValue: 'active',
+      display: 'menu',
+      options: [
+        { value: 'active', label: 'Active only' },
+        { value: 'include', label: 'Include archived' },
+      ],
+      onChange: (value) => (includeArchived = value === 'include'),
+    },
   ]);
 
   const totalPages = $derived(Math.max(1, Math.ceil(data.households.length / PAGE_SIZE)));
@@ -210,7 +223,10 @@ everything the panel renders.
   Showing {data.households.length === 0 ? 0 : pageStart + 1}-{Math.min(pageStart + PAGE_SIZE, data.households.length)} of {data.households.length} households
 </span>
 
-<OfficeList eyebrow="Club" title="Members" subtitle="Household roster, standing, and quick actions.">
+<OfficeList eyebrow="Club" title="Members">
+  {#snippet action()}
+    <button type="button" class="btn btn-primary btn-sm" onclick={openAddHouseholdDialog}>Add household</button>
+  {/snippet}
   {#if form?.error}
     <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-error" role="alert">
       {form.error}
@@ -223,24 +239,15 @@ everything the panel renders.
          accurate read for a failed load anyway. -->
     <p class="px-6 py-10 text-center text-sm text-error">{data.error}</p>
   {:else}
-    <div class="members-toolbar-band border-b border-[var(--cairn-card-border)] p-6">
+    <div class="border-b border-[var(--cairn-card-border)] p-6">
       <ListToolbar
         search={searchQuery}
         {onSearch}
         searchLabel="Search by name, standing, or phone"
-        autofocus
         {filters}
-        primaryAction={{ label: 'Add household', onClick: openAddHouseholdDialog }}
         count={data.households.length}
         itemLabel={{ one: 'household', many: 'households' }}
       />
-      <!-- Reads as the toolbar's own scope line, not a separately floated afterthought: matches
-           the count line's own type scale/color and sits at the same vertical rhythm ListToolbar's
-           internal `gap` uses between its own stacked lines. -->
-      <label class="members-archived-toggle">
-        <input type="checkbox" class="checkbox checkbox-sm members-archived-checkbox" bind:checked={includeArchived} />
-        <span>Include archived</span>
-      </label>
     </div>
 
     <AdminTable density="sm" zebra rowCount={paged.length} emptyColspan={5}>
@@ -268,7 +275,7 @@ everything the panel renders.
             <td class="members-cell">
               {#each row.members as member, i (member.id)}
                 {#if i > 0}<span>, </span>{/if}
-                {#if member.matchedSearch}<mark>{member.name}</mark>{:else}{member.name}{/if}<span class="text-muted">{member.isPrimary ? ' (primary)' : ''}</span>
+                {#if member.matchedSearch}<mark>{member.name}</mark>{:else}{member.name}{/if}<span class="members-primary-tag text-muted">{member.isPrimary ? ' (primary)' : ''}</span>
               {:else}
                 <span class="text-muted">No members on file</span>
               {/each}
@@ -280,7 +287,7 @@ everything the panel renders.
                 legend={row.standing === 'former' && row.lastSeason ? `Last active ${row.lastSeason}` : undefined}
               />
             </td>
-            <td class="text-sm members-narrow-hide">{primary?.phone ?? '—'}</td>
+            <td class="text-sm members-narrow-hide tabular-nums">{primary?.phone ? formatPhone(primary.phone) : '—'}</td>
           {/snippet}
           {#snippet panel(datum: HouseholdListRow)}
             {@const contact = primaryContact(datum)}
@@ -288,8 +295,10 @@ everything the panel renders.
               <div class="household-panel-grid">
                 <section>
                   <h2 class={HEADER_CELL}>Contacts</h2>
-                  <p class="text-sm">{contact?.email ?? 'No email on file'}</p>
-                  <p class="text-sm">{contact?.phone ?? 'No phone on file'}</p>
+                  <div class="household-panel-contacts">
+                    <p class="text-sm">{contact?.email ?? 'No email on file'}</p>
+                    <p class="text-sm">{contact?.phone ?? 'No phone on file'}</p>
+                  </div>
                 </section>
                 <section>
                   <h2 class={HEADER_CELL}>Members</h2>
@@ -389,33 +398,13 @@ everything the panel renders.
   /* Layout only, per the toolkit README's own compiled-CSS constraint: `/admin/**` loads only
      cairn's precompiled CSS, so an arbitrary grid/truncation utility string would render nothing
      there. Values stay literal, matching every toolkit component's own scoped block. */
-  .members-toolbar-band {
-    display: flex;
-    flex-direction: column;
-  }
 
-  .members-archived-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    /* Matches ListToolbar's own internal `gap` (0.625rem) so this reads as one more line of the
-       toolbar's own vertical rhythm, not a separately floated afterthought; the label's own type
-       scale/color below matches the count line's for the same reason. */
-    margin-top: 0.625rem;
-    width: fit-content;
-    cursor: pointer;
-    font-size: 0.8125rem;
-    color: var(--color-muted);
-  }
-
-  /* daisyUI's own `--radius-selector` renders `.checkbox` closer to a full circle than a checkbox
-     at this small size; a checkbox reads its own semantics through a visibly square (if rounded)
-     box, never a circle, which is a radio's own shape language. */
-  .members-archived-checkbox {
-    border-radius: 0.25rem;
-  }
-
+  /* 14px body cells (the Members-refinement-round-1 type scale): both cells were previously
+     unset, inheriting the table's own larger default and producing a hierarchy inversion (a
+     12px name cell under a 14px phone cell) -- pinning both explicitly here unifies the row's
+     own reading order, name weight-carried at 600. */
   .members-name-cell {
+    font-size: 0.875rem;
     font-weight: 600;
     max-width: 14rem;
     overflow: hidden;
@@ -423,9 +412,16 @@ everything the panel renders.
   }
 
   .members-cell {
+    font-size: 0.875rem;
     max-width: 22rem;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* The "(primary)" tag demotes a step below the 14px member-name text it trails, the meta-band
+     size the round's audit unified every stray label onto. */
+  .members-primary-tag {
+    font-size: 0.8125rem;
   }
 
   /* At a phone width the household-name and members cells otherwise clip mid-word at the
@@ -488,6 +484,17 @@ everything the panel renders.
     margin: 0.5rem 0 0;
     padding: 0;
     list-style: none;
+  }
+
+  /* Contacts is the panel's one section with no `<ul>` -- its two `<p>` lines carried no top
+     margin of their own, so the heading-to-content gap read as 0 against the other three
+     sections' `.household-panel-list` 8px. Same 0.5rem top margin, same 0.25rem internal rhythm,
+     so all four sections' heading gap reads identically. */
+  .household-panel-contacts {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
   }
 
   .household-panel-actions {

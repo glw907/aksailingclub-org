@@ -2,8 +2,8 @@
 @component
 The Club section's Classes list (Classes pass Task 3 rebuild, docs/2026-07-21-classes-pass-design.md):
 season-scoped rows (defaulting to the current season, history reachable behind a season filter)
-built on the graduated toolkit (`@glw907/cairn-cms/admin-toolkit`) plus this route's own
-`ExpandableRow` (`$admin-club/toolkit/ExpandableRow.svelte`) -- `PageHeader` (title, season meta,
+built entirely on the graduated toolkit (`@glw907/cairn-cms/admin-toolkit`, `ExpandableRow`
+included as of the Members-refinement-round-1 settle) -- `PageHeader` (title, season meta,
 New class as the one action), `ListToolbar` (a client-side name search, the season filter, the
 count line), `AdminTable`/`ExpandableRow` (compact zebra rows, one expanded class at a time), and
 `StatusChip` (a roster row's paid state). Two columns the prior scaffold-era screen carried die
@@ -29,13 +29,13 @@ re-filter of what already rendered.
     ageFromBirthdate,
     AdminTable,
     EmptyState,
+    ExpandableRow,
     itemNoun,
     ListToolbar,
     type ListToolbarFilter,
     PageHeader,
     StatusChip,
   } from '@glw907/cairn-cms/admin-toolkit';
-  import ExpandableRow from '$admin-club/toolkit/ExpandableRow.svelte';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
