@@ -8,6 +8,60 @@
 > entries beyond the top two or three to the archive — this file is @-imported into every
 > session's context, so its length is a per-session token tax.
 
+**MEMBERS REFINEMENT ROUND 1 IS LANDED: COHERENCE-PASSED, ON DEV, BASELINES REGENERATED;
+GEOFF'S BEFORE/AFTER AND THREE QUEUE ITEMS ARE THE OPEN GATES (2026-07-24, third session
+on the round — the 07-22 session died mid-C5 to a dead battery, its recovery session
+died 07-24 00:24 with the coherence grader mid-read; this session re-ran the read,
+ran the fix round on Geoff's workflow opt-in, and landed).** What shipped:
+
+- **cairn 0.90.0 + 0.90.1 PUBLISHED.** 0.90.0 (the recovery session): C1-C6 —
+  OfficeList header fixes, the ListToolbar flex recomposition + menu facet variant,
+  StatusChip demotion, ExpandableRow's graduation with its three fixes, formatPhone.
+  0.90.1 (this session's fix round, workflow wf_9e3dfd38-7e3 + one follow-up
+  dispatch): selects un-pinned from daisy's 320px clamp to content width (C2's
+  one-row acceptance MEASURED at 972px/326px), the facet border family unified via
+  --input-color, both dropdown disclosures gated purely on dropdown-open
+  (aria-expanded now truthful), menu options role="menuitemradio" + aria-checked
+  with roving tabindex — the two confirmed ListToolbar review findings CLOSED
+  upstream in the same patch. Full release ritual both times (registry verified).
+- **ASC A1-A4 + pickup** (5089e0c..66949bd, ca930d67): subtitle dropped, action in
+  the header slot, autofocus removed, archived folded in as a menu facet, the ruled
+  type scale, formatPhone in row and panel, render-level tests.
+- **Coherence: FAIL → cairn 0.90.1 → cold PASS.** Grader attempts 1-4 died with the
+  connection/session (never on the merits). Read #5 (fresh Opus, full 24-render
+  deck): FAIL, 3 tells, one measured root cause (the select clamp). Read #6 after
+  the fix: **PASS — no expert-visible tells on any of the 16 renders**, toolbar
+  one-row at rest measured (selects 149/115/89/96px, season select 74px). Full
+  verdicts in the ledger; the arc log is distilled into decisions.md and removed.
+- **Landed**: 9 commits pushed, deploy.yml green, dev spot-checked through Access
+  (200/303); ci.yml update_snapshots dispatched and its LOG read — 71 visual tests
+  green, exactly 4 waivers-admin-rollup baselines shifted (the one baselined admin
+  surface rendering the toolkit toolbar), commit 0105322 pulled.
+- **Round closures**: the never-paid 'none' copy (confirmed "Not billed"/"No
+  membership" in source) and the search focus ring (the ink ring is the engine
+  input idiom; autofocus was the irritant, removed as ratified V3) are CLOSED.
+  StatusChip's palette mapping stays open.
+- **NEW ON GEOFF'S QUEUE**: (1) the Members+Classes refined before/after on dev
+  (/admin/club/members and /classes — toolbar at rest, a panel expanded, a filter
+  applied, at 390 and 1440); (2) the facet-border contrast ruling —
+  --cairn-card-border as the facet controls' only boundary measures 1.11:1 light /
+  1.43:1 dark vs base-200, under WCAG 1.4.11's 3:1; it is the ratified quiet
+  hairline, so it stands unless he wants a stronger --input-color mix (one-token
+  cairn patch); (3) StatusChip palette mapping (the one surviving probe item).
+- **Process lesson banked**: gate agents (reviewers/graders/fixers) must THROW on
+  null — a dead reviewer silently filtering to "zero findings" nearly published
+  unreviewed in the crashed run; this session's workflow encoded it.
+- **NEXT: the cairn DESIGN-INFRASTRUCTURE BRAINSTORM (the Assets pass stays paused
+  as that initiative's validation trial).** Seed doc:
+  docs/2026-07-22-cairn-design-infrastructure-brainstorm-seed.md (Geoff's question:
+  "Can we capture cairn's design language so an AI agent can reliably use and
+  repeat it?"; the four-layer strategy ruling is distilled in decisions.md). RESUME
+  PROMPT: "Open the cairn design-infrastructure brainstorm: read
+  docs/2026-07-22-cairn-design-infrastructure-brainstorm-seed.md and docs/STATUS.md,
+  then run superpowers:brainstorming with Geoff before any spec or build work."
+  Launch from ~/Projects/aksailingclub-org.
+
+
 **THE CLASSES PASS IS BUILT, RELEASED TO DEV, AND COHERENCE-PASSED ("designed, not
 assembled", third cold read); GEOFF'S BEFORE/AFTER AND THE PROBE VERDICTS ARE THE
 OPEN GATES (2026-07-21, crash-recovered session, Fable-conducted on Geoff's workflow
@@ -65,65 +119,6 @@ errors + 5 direct dispatches; commits ecde24c..cbb79f5; cairn 0.89.1).** What sh
   task candidates: ExpandableRow's graduation (second consumer landed) and the
   destination-picker pattern." Launch from ~/Projects/aksailingclub-org.
 
-
-**THE MEMBERS PASS IS BUILT, COHERENCE-PASSED, AND LIVE ON DEV; GEOFF'S BEFORE/AFTER
-AND THE TOOLKIT PROBE VERDICTS ARE THE OPEN GATES (2026-07-20, Fable-conducted on
-Geoff's workflow opt-in "push all the way to release": workflow wf_4225bb28-e0f, 18
-agents 0 errors, + a coherence fix round; site commits d1f5a0d..a9a2c8d; cairn 0.88.3
-published).** What shipped:
-
-- **The standing vocabulary is live end to end**: Current / Overdue / Former via the
-  single classifier (`standing.ts`; Former RECORDED in `households.former_at` +
-  `former_source`, never re-derived; payment clears it; the daily reminder sweep marks
-  it at boundary+30 covering the unsent-touch/dormant case; the household desk has the
-  audited manual set/clear, both directions, with reason). **Migration 0033 applied
-  LIVE and verified: 149 households → 86 current / 3 overdue / 58 former / 2 none.**
-  Grace and "renewal candidates" retired from src; the inert `renewal_grace_days`
-  settings row was deliberately left (data staleness, not schema debt). The pre-apply
-  review gate caught a real refund-filter divergence in the sweep (fixed 95c1042; every
-  standing grounding now shares `AND refunded_at IS NULL`).
-- **cairn 0.88.3** (patch, re-derived at the cut): the blessed daisy safelist as a
-  documented source file (`admin-css-safelist.ts`) with a build test; ASC picked it up
-  in-range (dc2360d).
-- **The toolkit is born, general-contract** (`src/admin-club/toolkit/`): format.ts
-  (money/civil-date/Anchorage-timestamp/age + `itemNoun`), StatusChip, Pagination,
-  AdminTable, ExpandableRow, ListToolbar — contracts, daisy class inventories, and
-  survey citations in the toolkit README; probe pages committed under
-  docs/design-benchmark/probes/2026-07-20-members-toolkit/. **GEOFF'S PROBE VERDICTS
-  OWED** (open probe items ride along: StatusChip palette mapping, the never-paid
-  `'none'` display copy, the near-black search focus ring).
-- **The screen** (spec executed): search-first household rows (autofocus, any-member
-  match highlighted), expand-in-place panel (contacts, members with ages, holdings and
-  enrollments with paid state, exactly Open household / Email household / Add member),
-  default scope Current+Overdue, promoted filters standing/holdings/role/class
-  (current-season), compact zebra rows, join pagination — verified against the
-  live-data replica harness.
-- **Coherence gate**: first fresh-context read FAIL (8 tells, headlined by the 390
-  panel-in-scroll blocker), fix round 8bacfac (all 8 + the a11y reviewer's 4 warnings;
-  root causes: same-route view-transitions leak ghost rows, and `bg-warning/15`/
-  `text-warning` NEVER COMPILED in cairn-admin.css so the Overdue chip rendered as
-  plain text with all gates green), then an Opus cold re-read **PASS "designed, not
-  assembled"** — its one new tell ("1 households") fixed a9a2c8d (`itemLabel` is now an
-  `{ one, many }` pair through `itemNoun`). Full verdicts in the ledger.
-- **Gates**: check 0/0, 2015 tests, build; reviewers pass (auth-security, svelte,
-  daisy-a11y); design-probe clean for this pass (5 pre-existing site findings traced
-  and left); CI-canonical baselines regenerated via the ci.yml dispatch (bb56783, log
-  read); all deploys green.
-- **Records**: brainstorm rulings distilled into decisions.md (ef5c43a); the harvest
-  note docs/2026-07-20-members-pass-harvest-findings.md carries the subpath-export,
-  wave-by-graduation, and cairn-dogfoods rulings, the daisy absorption ritual, and 9
-  build findings (biggest: the silent non-compiling-class failure mode wants a cairn
-  detection gate); cairn's ROADMAP carries the queued toolkit-organization pass
-  (ff0d3f34). No component graduates to cairn yet — the next screen pass is each
-  component's second consumer.
-- **Budgets**: ~3.4M subagent tokens (workflow 2.72M, fix round 0.36M, Opus re-read
-  0.14M); conductor questions to Geoff: 0 (one coordination note he answered). One
-  unintended Fable-priced agent: the workflow's first coherence read (the Opus repin
-  missed because the default workflow subagent stamps its own agentType — watcher
-  fingerprint lesson recorded here).
-- **ON GEOFF'S QUEUE**: the Members before/after on dev (/admin/club/members — the
-  search-first screen, an expanded panel, the 390 view) and the toolkit probe pages
-  above.
 
 **STILL OPEN ON GEOFF'S QUEUE (pointers; full entries in docs/status-archive.md):**
 the pass-B sidebar walkthrough per role (four-group tree, badges, the two class

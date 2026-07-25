@@ -4,6 +4,67 @@
 > STATUS.md's preamble). History only: nothing here is a live instruction, and entries
 > reflect what was true when written. The live rolling status is docs/STATUS.md.
 
+**[Trimmed 2026-07-24 at the Members-refinement round-1 close.]**
+
+**THE MEMBERS PASS IS BUILT, COHERENCE-PASSED, AND LIVE ON DEV; GEOFF'S BEFORE/AFTER
+AND THE TOOLKIT PROBE VERDICTS ARE THE OPEN GATES (2026-07-20, Fable-conducted on
+Geoff's workflow opt-in "push all the way to release": workflow wf_4225bb28-e0f, 18
+agents 0 errors, + a coherence fix round; site commits d1f5a0d..a9a2c8d; cairn 0.88.3
+published).** What shipped:
+
+- **The standing vocabulary is live end to end**: Current / Overdue / Former via the
+  single classifier (`standing.ts`; Former RECORDED in `households.former_at` +
+  `former_source`, never re-derived; payment clears it; the daily reminder sweep marks
+  it at boundary+30 covering the unsent-touch/dormant case; the household desk has the
+  audited manual set/clear, both directions, with reason). **Migration 0033 applied
+  LIVE and verified: 149 households → 86 current / 3 overdue / 58 former / 2 none.**
+  Grace and "renewal candidates" retired from src; the inert `renewal_grace_days`
+  settings row was deliberately left (data staleness, not schema debt). The pre-apply
+  review gate caught a real refund-filter divergence in the sweep (fixed 95c1042; every
+  standing grounding now shares `AND refunded_at IS NULL`).
+- **cairn 0.88.3** (patch, re-derived at the cut): the blessed daisy safelist as a
+  documented source file (`admin-css-safelist.ts`) with a build test; ASC picked it up
+  in-range (dc2360d).
+- **The toolkit is born, general-contract** (`src/admin-club/toolkit/`): format.ts
+  (money/civil-date/Anchorage-timestamp/age + `itemNoun`), StatusChip, Pagination,
+  AdminTable, ExpandableRow, ListToolbar — contracts, daisy class inventories, and
+  survey citations in the toolkit README; probe pages committed under
+  docs/design-benchmark/probes/2026-07-20-members-toolkit/. **GEOFF'S PROBE VERDICTS
+  OWED** (open probe items ride along: StatusChip palette mapping, the never-paid
+  `'none'` display copy, the near-black search focus ring).
+- **The screen** (spec executed): search-first household rows (autofocus, any-member
+  match highlighted), expand-in-place panel (contacts, members with ages, holdings and
+  enrollments with paid state, exactly Open household / Email household / Add member),
+  default scope Current+Overdue, promoted filters standing/holdings/role/class
+  (current-season), compact zebra rows, join pagination — verified against the
+  live-data replica harness.
+- **Coherence gate**: first fresh-context read FAIL (8 tells, headlined by the 390
+  panel-in-scroll blocker), fix round 8bacfac (all 8 + the a11y reviewer's 4 warnings;
+  root causes: same-route view-transitions leak ghost rows, and `bg-warning/15`/
+  `text-warning` NEVER COMPILED in cairn-admin.css so the Overdue chip rendered as
+  plain text with all gates green), then an Opus cold re-read **PASS "designed, not
+  assembled"** — its one new tell ("1 households") fixed a9a2c8d (`itemLabel` is now an
+  `{ one, many }` pair through `itemNoun`). Full verdicts in the ledger.
+- **Gates**: check 0/0, 2015 tests, build; reviewers pass (auth-security, svelte,
+  daisy-a11y); design-probe clean for this pass (5 pre-existing site findings traced
+  and left); CI-canonical baselines regenerated via the ci.yml dispatch (bb56783, log
+  read); all deploys green.
+- **Records**: brainstorm rulings distilled into decisions.md (ef5c43a); the harvest
+  note docs/2026-07-20-members-pass-harvest-findings.md carries the subpath-export,
+  wave-by-graduation, and cairn-dogfoods rulings, the daisy absorption ritual, and 9
+  build findings (biggest: the silent non-compiling-class failure mode wants a cairn
+  detection gate); cairn's ROADMAP carries the queued toolkit-organization pass
+  (ff0d3f34). No component graduates to cairn yet — the next screen pass is each
+  component's second consumer.
+- **Budgets**: ~3.4M subagent tokens (workflow 2.72M, fix round 0.36M, Opus re-read
+  0.14M); conductor questions to Geoff: 0 (one coordination note he answered). One
+  unintended Fable-priced agent: the workflow's first coherence read (the Opus repin
+  missed because the default workflow subagent stamps its own agentType — watcher
+  fingerprint lesson recorded here).
+- **ON GEOFF'S QUEUE**: the Members before/after on dev (/admin/club/members — the
+  search-first screen, an expanded panel, the 390 view) and the toolkit probe pages
+  above.
+
 **[Trimmed 2026-07-20 at the Members pass close.]**
 
 **PASS B `asc-sidebar-build` IS BUILD-COMPLETE AND SHIPPED TO DEV; GEOFF'S WALKTHROUGH

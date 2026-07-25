@@ -362,9 +362,50 @@ Dates are 2026-07-07/08 (the home convergence arc) unless noted.
   so a daisy upgrade's blast radius is grep-auditable; cairn gains a scheduled daisy
   absorption ritual (bump PRs, changelog read, blessed-set rebuild check, visual suite).
 
-- **OPEN at pass close (probe round owed)**: StatusChip's color mapping onto the admin
-  palette, and the display copy for the never-paid household standing (`'none'`). Both
-  settle via probe verdicts, not silently in the build.
+- **Members refinement round 1 ratified (Geoff, 2026-07-22; arc distilled at settle)**:
+  V1 the Members subtitle drops (an earned scope line like Classes' "Season 2026"
+  stays); V2 the primary action lives in the header slot, intrinsic-width on mobile
+  (the OfficeList margin-leak and action-stretch defects fixed upstream); V3 search
+  autofocus removed — the near-black ring was the engine's own ink input idiom made
+  permanent by autofocus, so the ring stays and the autofocus goes (this closes the
+  Members-pass "search focus ring" open item); V4 the one-card anatomy (toolbar and
+  table in one card) is the club standard; the engine's bare-toolbar anatomy is
+  upstream harvest work. Calibration words: "native, polished and balanced."
+
+- **The ratified filter grammar (same round)**: facets are quiet menu-buttons with the
+  applied state in-control ("Standing: Overdue ×", 14rem ellipsis cap, separate clear
+  hit area) or content-sized selects restyled to the same 30px/13px family; the
+  archived toggle joins the facet family; the applied-pills row retires; the primary
+  action is the row's only filled control; the count line sits beneath and always
+  states its scope. The coherence coda (2026-07-24): selects must size to content —
+  daisyUI's default 20rem select clamp pinned them to 320px and wrapped the toolbar
+  into a filter form; fixed upstream in cairn 0.90.1.
+
+- **Refuter-proven component treatments (2026-07-22, live-CSS adversarial rounds)**:
+  StatusChip border softens to ~35% currentColor but keeps its 5rem min-width (the hug
+  was refuted: ragged column); the expand panel recesses on base-300 with an inset
+  hairline (base-200 refuted: it is the zebra color and the panel merged with
+  stripes); row hover is a base-content 5% wash including the sticky trigger cell
+  (base-200/60 refuted as invisible on stripes, primary-tint refuted as off-idiom);
+  the admin content region runs a ruled 6-role type scale (24 title / 14-15 subtitle /
+  14 body / 13 meta / 11 label / 10 chip) with tabular-nums on phone and count lines.
+
+- **The design-infrastructure architecture (Geoff's strategy ruling, 2026-07-22)**: the
+  long-term goal is that others can build admin components visually in line with the
+  interface. Four layers: tokens as the only styling contract (a ruled type + spacing
+  scale joins the `--cairn-*` roles; sites re-tune palette tokens, never grammar
+  tokens); toolkit primitives covering the recurring screen anatomy; the standard
+  living in cairn docs as exemplar-plus-rules (post-round Members is the annotated
+  canonical screen); and a shipped `cairn audit`-style mechanical gate. This ruling
+  seeds the design-infrastructure brainstorm (its seed doc is in docs/).
+
+- **OPEN**: StatusChip's color mapping onto the admin palette (the never-paid `'none'`
+  copy closed during the refinement audit — "Not billed"/"No membership" confirmed in
+  source; the focus-ring item closed via V3 above). NEW (measured 2026-07-24, on
+  Geoff's queue): `--cairn-card-border` as the facet controls' only boundary is 1.11:1
+  light / 1.43:1 dark against base-200, under WCAG 1.4.11's 3:1 — it is the ratified
+  quiet hairline, so it stands pending his ruling; a stronger `--input-color` mix in a
+  cairn patch would clear it.
 
 ## Benchmark provenance
 

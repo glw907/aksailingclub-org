@@ -219,3 +219,30 @@ column wraps at 1440 (out of the rebuilt scope; a future Events/forms pass owns 
 ExpandableRow sticky-cell zebra seam at 390 (inherited, documented intentional); the
 Hidden badge clips under the 10rem name ellipsis at 390 (row opens to reveal state); the
 1440 name-to-chip gap is bounded and reads as column pairing.
+
+## Members refinement round 1 — coherence reads (2026-07-23/24)
+
+Grader recipe: fresh-context Opus, local build + fixture harness, Members + Classes at
+390/1440, light and dark, default / expanded / filter-applied, read with its own eyes
+against the settle plan's promises. Attempts 1-4 (2026-07-23) died with the connection
+or the session crash, never reaching a verdict — no partial evidence was graded.
+
+**Fifth read (cold, Opus, 2026-07-24): FAIL** (3 tells, one measured root cause):
+`.toolkit-toolbar-select` never overrode daisyUI's `.select` `width: clamp(3rem, 20rem,
+100%)`, whose middle value is fixed, so every facet select pinned to 320px — the Members
+toolbar wrapped into a 3×2 filter-form grid at 1440 (against C2's own one-row
+acceptance), the quiet menu facet sat orphaned beside the bulky selects (two control
+vocabularies in one toolbar), and Classes' season select held "2026" in a 320px field.
+Every other settle promise read MET, including the 390 stacking. Fixed upstream in cairn
+0.90.1: selects size to content with the menu facet's border family (plus the bundled
+disclosure-gating and menuitemradio/aria-checked findings).
+
+**Sixth read (cold, Opus, 2026-07-24): PASS — no expert-visible tells on any of the 16
+renders.** Measured: Members toolbar one row at rest at 1440 (search 353px flex + selects
+149/115/89/96px + menu facet 83px); Classes one row (search 842px + season select 74px);
+header gaps inside 0-6px; actions intrinsic-width both viewports; panel base-300 recess
+distinct from zebra in both themes; applied state renders the ratified in-control
+treatment. Sub-threshold observation recorded, not a tell: the menu facet's disclosure
+caret differs from native select carets at ~4x zoom (a consequence of the ratified
+two-variant grammar). Excluded per triage: the facet-border 3:1 contrast question, on
+the owner's queue.
