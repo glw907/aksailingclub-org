@@ -88,3 +88,72 @@ RESUME PROMPT for the fresh session (launch directory ~/Projects/cairn-cms):
 and cairn's ROADMAP entry, then open the brainstorm with Geoff
 (superpowers:brainstorming) on the five-layer structure. The ASC Assets pass is the
 validation trial and stays paused until the structure exists."
+
+## Brainstorm state (2026-07-24, banked from the ASC sitting before the move to cairn-cms)
+
+The brainstorm opened in the ASC repo (STATUS.md's resume prompt pointed there); Geoff
+moved it to cairn-cms mid-flight. Everything below is SETTLED with Geoff in that
+sitting — the cairn session resumes at design section 3 of 3 and does not re-ask these.
+
+- **Audience**: package-shipped from day one. The standard, exemplar, skill, and audit
+  all live in the cairn-cms package where any consumer's agent can load them; no
+  workstation-first detour.
+- **Sequencing**: full structure before the Assets trial, so a trial failure indicts
+  the idea rather than a half-built implementation.
+- **Surface scope**: admin only. Public-facing pages should share the design cues, as
+  a later initiative.
+- **Composition** (approved): mechanics-forward minus the scaffold. Grammar tokens;
+  the standard doc plus annotated Members exemplar; a packaged skill (SKILL.md under
+  the package's `skills/`, installed and freshness-checked by `cairn-doctor`); and a
+  two-mode `cairn-audit` bin (static lint over source and built CSS, plus a rendered
+  mode for the checks only a live page can carry: one filled action per surface,
+  focus-visible coverage). The new-screen scaffold is deferred until the trial shows
+  an anatomy-shaped miss. Cairn's per-command bin pattern (cairn-manifest/-doctor/
+  -media-seed) is the precedent `cairn-audit` follows.
+- **Narrative layer is a deliverable**: a rationale doc in cairn's docs stating the
+  bet (agentic coding inside a capture-complete system beats stringing hosted tools
+  for any org needing a "CMS Plus"; ASC is the proof case) and the condition (an
+  agent composes from what is legible at build time). README positioning distills
+  from it, and a front-page treatment on cairn's public face rides as an explicit
+  deliverable.
+- **Design section 1 approved**: type roles AND relational spacing roles ship as
+  engine grammar tokens (`--cairn-type-*`, `--cairn-gap-control/-label/-group/
+  -section`, indentation roles) — builders pick relationships by name, never pixel
+  values. Toolkit components migrate to the tokens pixel-identically (existing visual
+  baselines as no-drift proof). The palette/grammar token boundary is written and
+  audit-enforced: sites re-tune palette tokens, never grammar tokens.
+- **Design section 2 approved, with two additions**: primitives gap-closure
+  (destination-picker, EmptyState, PageHeader adoption — nothing speculative); the
+  standard doc written for an agent's context window with the annotated exemplar as
+  its load-bearing half; PLUS the extension grammar (the derivation ladder for
+  when no primitive fits, one worked derivation shown step by step, the
+  coherence-read gate shipped as a grader prompt in the skill, and the
+  graduation feedback loop so consumer inventions flow back to the toolkit).
+- **THE CENTRAL QUESTION (Geoff, verbatim in substance)**: whether the invisible
+  feel — spacing rhythm, font treatment, color tinting, indentation, optical
+  alignment — can be captured systematically enough that a fresh agent reliably
+  applies it to cairn admin work. It is an honest open question, not assumed
+  answerable. The ratified capture translation for the craft chapter: tokenize where
+  tokenizable; numeric rule where measurable but not tokenizable (two weights max
+  per surface, tabular-nums on numeric columns, optical-alignment offsets as
+  numbers, neutrals always derived from the palette's neutral role); before/after
+  paired renders where only demonstrable (assembled vs resolved, one line naming
+  the difference); audit rule where mechanical. Acceptance test for the chapter: an
+  agent that has never seen a cairn screen, given a plain daisy component and the
+  chapter, moves it measurably toward the cairn feel without human art direction.
+  The invisible-polish catalogue (ASC's 2026-07-15 brief) graduates into the cairn
+  standard as this chapter's source material.
+
+**Remaining for the cairn sitting**: design section 3 (the audit rule inventory and
+rendered-mode mechanics, the Assets proof-loop measurement design, initiative
+sequencing and versioning), then the spec to cairn-cms
+`docs/superpowers/specs/`, spec self-review, Geoff's review, writing-plans.
+
+UPDATED RESUME PROMPT (launch directory ~/Projects/cairn-cms): "Resume the cairn
+design-infrastructure brainstorm mid-flight: read
+~/Projects/aksailingclub-org/docs/2026-07-22-cairn-design-infrastructure-brainstorm-seed.md
+INCLUDING its 'Brainstorm state (2026-07-24)' section — audience, sequencing, scope,
+composition, and the craft-capture chapter are settled there; do not re-ask them.
+Continue superpowers:brainstorming with Geoff at design section 3 of 3 (cairn-audit
+mechanics, the Assets proof loop, sequencing), then write the spec to
+docs/superpowers/specs/."

@@ -51,15 +51,15 @@ ran the fix round on Geoff's workflow opt-in, and landed).** What shipped:
 - **Process lesson banked**: gate agents (reviewers/graders/fixers) must THROW on
   null — a dead reviewer silently filtering to "zero findings" nearly published
   unreviewed in the crashed run; this session's workflow encoded it.
-- **NEXT: the cairn DESIGN-INFRASTRUCTURE BRAINSTORM (the Assets pass stays paused
-  as that initiative's validation trial).** Seed doc:
-  docs/2026-07-22-cairn-design-infrastructure-brainstorm-seed.md (Geoff's question:
-  "Can we capture cairn's design language so an AI agent can reliably use and
-  repeat it?"; the four-layer strategy ruling is distilled in decisions.md). RESUME
-  PROMPT: "Open the cairn design-infrastructure brainstorm: read
-  docs/2026-07-22-cairn-design-infrastructure-brainstorm-seed.md and docs/STATUS.md,
-  then run superpowers:brainstorming with Geoff before any spec or build work."
-  Launch from ~/Projects/aksailingclub-org.
+- **NEXT: the cairn DESIGN-INFRASTRUCTURE BRAINSTORM, mid-flight, moved to the
+  cairn-cms project (the Assets pass stays paused as that initiative's validation
+  trial).** The 2026-07-24 ASC sitting settled audience (package-shipped day one),
+  sequencing (full structure before the trial), scope (admin only), the composition
+  (mechanics-forward minus scaffold), and the craft-capture chapter as the
+  initiative's center; all banked in the seed doc's "Brainstorm state (2026-07-24)"
+  section, which also carries the exact resume prompt. Launch from
+  ~/Projects/cairn-cms and resume at design section 3 of 3; this repo's next own
+  action remains Geoff's Members before/after and the three queue items above.
 
 
 **THE CLASSES PASS IS BUILT, RELEASED TO DEV, AND COHERENCE-PASSED ("designed, not
