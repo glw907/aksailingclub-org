@@ -144,6 +144,22 @@ sitting — the cairn session resumes at design section 3 of 3 and does not re-a
   The invisible-polish catalogue (ASC's 2026-07-15 brief) graduates into the cairn
   standard as this chapter's source material.
 
+- **The ASC experience is the initiative's DATA (Geoff, 2026-07-24)**: the failure
+  mode this structure exists to kill is documented in this repo, and the cairn
+  sitting should mine it as evidence, not re-summarize it. The corpus:
+  `docs/design-benchmark/decisions.md` (every ratified ruling with its refuted
+  alternatives — the raw material for the standard's rules and the worked
+  derivation); `docs/design-benchmark/ledger.md` (the coherence reads, including
+  the FAIL verdicts whose tells name exactly what precedent-only capture missed);
+  the harvest findings docs (`docs/2026-07-2*-harvest-findings.md` — the
+  non-compiling-class trap three times under green gates, the ExpandableRow width
+  contract recurring at its second consumer); the Members refinement history
+  itself (seven unrelated type sizes, the buried primary action, sibling screens
+  disagreeing — each a capture-form gap, each now a named audit or token
+  candidate); and `docs/2026-07-15-asc-invisible-polish-brief.md` as the craft
+  chapter's source. Members and Classes each needed a build pass PLUS a refinement
+  round; that two-round cost is the baseline the Assets trial measures against.
+
 **Remaining for the cairn sitting**: design section 3 (the audit rule inventory and
 rendered-mode mechanics, the Assets proof-loop measurement design, initiative
 sequencing and versioning), then the spec to cairn-cms
