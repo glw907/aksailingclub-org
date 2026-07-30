@@ -406,20 +406,20 @@ interface MembershipRawRow {
   refunded_at: string | null;
 }
 
-/** The household desk's full read (this module's own header): one `households` lookup, then the
- * roster/memberships/assets in parallel, each a single set-based query keyed by `householdId`.
- * The assets read is `assets-store.ts`'s own shared `listAssignments` (Task 3), scoped to this one
- * household and both statuses -- the desk's own deliberate departure from the active-only lens
- * the other two "who holds what" consumers use.
+/** The household desk's full read (this module's own header): the `households` lookup and the
+ * current season in one round trip (neither depends on the other), then the roster/memberships/
+ * assets in a second, each a single set-based query keyed by `householdId`. The assets read is
+ * `assets-store.ts`'s own shared `listAssignments` (Task 3), scoped to this one household and
+ * both statuses -- the desk's own deliberate departure from the active-only lens the other two
+ * "who holds what" consumers use; it needs `currentSeason` resolved first, which is why the
+ * season read rides the FIRST batch rather than the second.
  */
 export async function getHouseholdDesk(db: D1Database, householdId: string): Promise<HouseholdDesk | null> {
-  const household = await db
-    .prepare('SELECT id, name, city, primary_member_id FROM households WHERE id = ?1')
-    .bind(householdId)
-    .first<HouseholdRow>();
+  const [household, currentSeason] = await Promise.all([
+    db.prepare('SELECT id, name, city, primary_member_id FROM households WHERE id = ?1').bind(householdId).first<HouseholdRow>(),
+    getCurrentSeason(db),
+  ]);
   if (!household) return null;
-
-  const currentSeason = await getCurrentSeason(db);
 
   const [rosterResult, membershipResult, assetRows] = await Promise.all([
     db
