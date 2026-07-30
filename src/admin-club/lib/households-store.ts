@@ -27,7 +27,7 @@
 // payload is small; a future scale where that stops holding is the point to revisit this call
 // into a lazy per-row read.
 import type { D1Database } from '@cloudflare/workers-types';
-import type { AssetPaymentStanding } from './assets-store';
+import { listAssignments, type AssetPaymentStanding } from './assets-store';
 import type { DirectoryVisibility, MembershipTier } from './member-types';
 import { classifyHouseholdStanding, type HouseholdStandingStatus } from '$member-auth/lib/standing';
 import { getCurrentSeason } from './club-settings';
@@ -171,27 +171,6 @@ interface MemberRosterRow {
   archived_at: string | null;
 }
 
-interface HoldingRow {
-  id: string;
-  household_id: string;
-  asset_type_name: string;
-  description: string | null;
-  season: number;
-  payment_id: string | null;
-  paid_at: string | null;
-}
-
-const HOLDINGS_SQL = `
-  SELECT aa.id, ms.household_id, at.name AS asset_type_name, aa.description, ms.season,
-         ap.id AS payment_id, ap.paid_at
-  FROM asset_assignments aa
-  JOIN asset_types at ON at.id = aa.asset_type
-  JOIN memberships ms ON ms.id = aa.membership_id
-  LEFT JOIN asset_payments ap ON ap.assignment_id = aa.id AND ap.season = ?1
-  WHERE aa.status = 'active'
-  ORDER BY at.sort_order, at.name
-`;
-
 interface EnrollmentRow {
   id: string;
   household_id: string;
@@ -259,10 +238,10 @@ export async function listHouseholds(db: D1Database, opts: ListHouseholdsOptions
 
   const currentSeason = await getCurrentSeason(db);
 
-  const [groundingResult, memberResult, holdingsResult, enrollmentsResult] = await Promise.all([
+  const [groundingResult, memberResult, holdingsRows, enrollmentsResult] = await Promise.all([
     db.prepare(HOUSEHOLD_GROUNDING_SQL).all<HouseholdGroundingRow>(),
     db.prepare('SELECT id, household_id, name, email, phone, birthdate, archived_at FROM members').all<MemberRosterRow>(),
-    db.prepare(HOLDINGS_SQL).bind(currentSeason).all<HoldingRow>(),
+    listAssignments(db, currentSeason, { statuses: ['active'], orderBy: 'type-name' }),
     db.prepare(ENROLLMENTS_SQL).all<EnrollmentRow>(),
   ]);
 
@@ -278,7 +257,7 @@ export async function listHouseholds(db: D1Database, opts: ListHouseholdsOptions
   const classMemberIdSet = classMemberIds ? new Set(classMemberIds.results.map((r) => r.member_id)) : null;
 
   const membersByHousehold = groupBy(memberResult.results, (r) => r.household_id);
-  const holdingsByHousehold = groupBy(holdingsResult.results, (r) => r.household_id);
+  const holdingsByHousehold = groupBy(holdingsRows, (r) => r.householdId);
   const enrollmentsByHousehold = groupBy(enrollmentsResult.results, (r) => r.household_id);
 
   const now = new Date();
@@ -336,10 +315,10 @@ export async function listHouseholds(db: D1Database, opts: ListHouseholdsOptions
       members: memberChips,
       holdings: holdings.map((holding) => ({
         id: holding.id,
-        assetTypeName: holding.asset_type_name,
+        assetTypeName: holding.assetTypeName,
         description: holding.description,
         season: holding.season,
-        paymentStanding: !holding.payment_id ? 'not-billed' : holding.paid_at ? 'paid' : 'outstanding',
+        paymentStanding: holding.paymentStanding,
       })),
       enrollments: (enrollmentsByHousehold.get(grounding.id) ?? []).map((enrollment) => ({
         id: enrollment.id,
@@ -383,7 +362,9 @@ export interface HouseholdMembershipRow {
 }
 
 /** One asset assignment on the household desk, active or released (read-only here; asset
- *  management keeps its own screen, per the design doc). */
+ *  management keeps its own screen, per the design doc). Unlike the by-asset/by-person lenses,
+ *  the desk deliberately keeps released rows alongside active ones (Task 3's own constraint on
+ *  the shared query this now reads from). */
 export interface HouseholdAssetRow {
   id: string;
   assetType: string;
@@ -393,6 +374,7 @@ export interface HouseholdAssetRow {
   season: number;
   description: string | null;
   status: 'active' | 'released';
+  paymentStanding: AssetPaymentStanding;
 }
 
 /** The household desk's full read: household info, roster, memberships, and assets. `null` when
@@ -424,18 +406,11 @@ interface MembershipRawRow {
   refunded_at: string | null;
 }
 
-interface AssetRawRow {
-  id: string;
-  asset_type: string;
-  asset_type_name: string;
-  membership_id: string;
-  season: number;
-  description: string | null;
-  status: string;
-}
-
 /** The household desk's full read (this module's own header): one `households` lookup, then the
  * roster/memberships/assets in parallel, each a single set-based query keyed by `householdId`.
+ * The assets read is `assets-store.ts`'s own shared `listAssignments` (Task 3), scoped to this one
+ * household and both statuses -- the desk's own deliberate departure from the active-only lens
+ * the other two "who holds what" consumers use.
  */
 export async function getHouseholdDesk(db: D1Database, householdId: string): Promise<HouseholdDesk | null> {
   const household = await db
@@ -444,7 +419,9 @@ export async function getHouseholdDesk(db: D1Database, householdId: string): Pro
     .first<HouseholdRow>();
   if (!household) return null;
 
-  const [rosterResult, membershipResult, assetResult] = await Promise.all([
+  const currentSeason = await getCurrentSeason(db);
+
+  const [rosterResult, membershipResult, assetRows] = await Promise.all([
     db
       .prepare(
         'SELECT id, name, email, phone, birthdate, directory_visibility, archived_at FROM members WHERE household_id = ?1 ORDER BY name',
@@ -463,17 +440,7 @@ export async function getHouseholdDesk(db: D1Database, householdId: string): Pro
       .prepare('SELECT id, season, tier, price_paid, paid_at, stripe_ref, refunded_at FROM memberships WHERE household_id = ?1 ORDER BY season DESC')
       .bind(householdId)
       .all<MembershipRawRow>(),
-    db
-      .prepare(
-        `SELECT aa.id, aa.asset_type, at.name AS asset_type_name, aa.membership_id, ms.season, aa.description, aa.status
-         FROM asset_assignments aa
-         JOIN asset_types at ON at.id = aa.asset_type
-         JOIN memberships ms ON ms.id = aa.membership_id
-         WHERE ms.household_id = ?1
-         ORDER BY aa.status ASC, ms.season DESC`,
-      )
-      .bind(householdId)
-      .all<AssetRawRow>(),
+    listAssignments(db, currentSeason, { statuses: ['active', 'released'], householdId, orderBy: 'status-season' }),
   ]);
 
   return {
@@ -500,14 +467,15 @@ export async function getHouseholdDesk(db: D1Database, householdId: string): Pro
       stripeRef: row.stripe_ref,
       refundedAt: row.refunded_at,
     })),
-    assets: assetResult.results.map((row) => ({
+    assets: assetRows.map((row) => ({
       id: row.id,
-      assetType: row.asset_type,
-      assetTypeName: row.asset_type_name,
-      membershipId: row.membership_id,
+      assetType: row.assetType,
+      assetTypeName: row.assetTypeName,
+      membershipId: row.membershipId,
       season: row.season,
       description: row.description,
-      status: row.status === 'active' ? 'active' : 'released',
+      status: row.status,
+      paymentStanding: row.paymentStanding,
     })),
   };
 }

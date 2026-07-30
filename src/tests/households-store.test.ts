@@ -316,7 +316,16 @@ describe('getHouseholdDesk', () => {
       { id: 'ms-1', season: 2026, tier: 'family', pricePaid: 500, paidAt: '2026-01-01', stripeRef: 'cs_test_1', refundedAt: null },
     ]);
     expect(desk?.assets).toEqual([
-      { id: 'aa-1', assetType: 'mooring', assetTypeName: 'Mooring', membershipId: 'ms-1', season: 2026, description: 'Buoy M-14', status: 'active' },
+      {
+        id: 'aa-1',
+        assetType: 'mooring',
+        assetTypeName: 'Mooring',
+        membershipId: 'ms-1',
+        season: 2026,
+        description: 'Buoy M-14',
+        status: 'active',
+        paymentStanding: 'not-billed',
+      },
     ]);
   });
 });

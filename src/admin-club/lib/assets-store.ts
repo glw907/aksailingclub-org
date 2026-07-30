@@ -10,6 +10,12 @@
 // display. The by-asset and by-person lenses read the exact same underlying rows
 // (`listActiveAssignments`); the two admin screens differ only in how they GROUP the same list,
 // never in what they query.
+//
+// `listAssignments` (Task 3) is THE single "who holds what" lens the whole admin surface shares:
+// the Assets screen's own `listActiveAssignments` below, the Members list's holding chips, and
+// the household desk's Assets panel (both in `households-store.ts`) all read through it, scoped
+// by `opts.statuses`/`opts.householdId` rather than each carrying its own drifting SELECT.
+// `households-store.ts` imports from this module, never the reverse.
 import type { D1Database } from '@cloudflare/workers-types';
 
 /** One `asset_types` row, camelCased. */
@@ -28,9 +34,17 @@ export interface AssetTypeRow {
  *  set. */
 export type AssetPaymentStanding = 'not-billed' | 'outstanding' | 'paid';
 
-/** One `asset_assignments` row, joined out to everything the admin screens display: the asset
- *  type's own name, and the household/primary-member names a membership resolves to (never the
- *  bare ids an editor would otherwise have to look up separately). */
+// COEXISTENCE: during coexistence with the legacy ops dashboard, an asset fee collected through
+// the legacy ops worker's own POST /api/assignments/:id/send-payment Stripe payment-link route
+// never reaches asset_payments, so the payment-standing badge above is only as current as the
+// manual habit of recording those payments here with recordPayment. The replacement belongs to
+// the phase-2 ops absorption.
+
+/** One `asset_assignments` row, joined out to everything any of the three "who holds what" admin
+ *  lenses display: the asset type's own name, the household/primary-member names a membership
+ *  resolves to (never the bare ids an editor would otherwise have to look up separately), and the
+ *  grounding membership's own `season` (display only -- never `listAssignments`' own
+ *  `currentSeason` argument, which only scopes the payment-standing join). */
 export interface AssignmentDisplayRow {
   id: string;
   assetType: string;
@@ -39,11 +53,29 @@ export interface AssignmentDisplayRow {
   householdId: string;
   householdName: string;
   primaryMemberName: string | null;
+  season: number;
   description: string | null;
   status: 'active' | 'released';
   createdAt: string;
   paymentStanding: AssetPaymentStanding;
   paymentId: string | null;
+}
+
+/** One `asset_assignments.status` value. */
+export type AssignmentStatus = 'active' | 'released';
+
+/** Which rows {@link listAssignments} returns and how it orders them: `statuses` scopes the
+ *  three lenses' differing "which rows" answer (active only for the Assets screen and the
+ *  Members-list holding chips; active and released for the household desk, which deliberately
+ *  keeps released rows alongside active ones); `householdId` scopes the desk's own one-household
+ *  read (omitted for the other two, whose set-based reads span every household in one query, per
+ *  this module's own header on why no per-household loop is introduced); `orderBy` reproduces
+ *  each lens's own pre-consolidation ordering exactly, since the three differ in what they sort
+ *  by. */
+export interface ListAssignmentsOptions {
+  statuses: readonly AssignmentStatus[];
+  householdId?: string;
+  orderBy: 'type-household' | 'type-name' | 'status-season';
 }
 
 /** One `asset_waitlist` row, joined out to the asset type's name and the waitlisted member's
@@ -103,26 +135,38 @@ export async function listAssetTypes(db: D1Database): Promise<AssetTypeRow[]> {
   return results.map((r) => ({ id: r.id, name: r.name, fee: r.fee, capacity: r.capacity, sortOrder: r.sort_order }));
 }
 
-/** Every ACTIVE assignment (the "who holds what now" lens both `listAssetTypes` groupings share),
- *  joined out for display, with its current-season payment standing. A released assignment is
- *  never returned here: it stays in the table as history (`scripts/import/ops-assets.mjs`'s own
- *  header on why released rows are imported at all), but neither admin lens surfaces it. */
-export async function listActiveAssignments(db: D1Database, currentSeason: number): Promise<AssignmentDisplayRow[]> {
+/** Which literal `ORDER BY` clause reproduces one lens's own pre-consolidation ordering. Built
+ *  from `opts.orderBy`'s own closed union, never from anything a caller could pass free-form, so
+ *  interpolating it directly into the query text below carries no injection risk. */
+function assignmentOrderClause(orderBy: ListAssignmentsOptions['orderBy']): string {
+  if (orderBy === 'type-household') return 'at.sort_order, h.name';
+  if (orderBy === 'type-name') return 'at.sort_order, at.name';
+  return 'aa.status ASC, m.season DESC';
+}
+
+/** THE single "who holds what" lens (Task 3): every consumer of an assignment's display row,
+ *  across both `assets-store.ts` and `households-store.ts`, reads through this one query, scoped
+ *  by {@link ListAssignmentsOptions}. `opts.statuses` is interpolated the same injection-free way
+ *  as `opts.orderBy` (a closed union, never caller-free-form text). */
+export async function listAssignments(db: D1Database, currentSeason: number, opts: ListAssignmentsOptions): Promise<AssignmentDisplayRow[]> {
+  const statusList = opts.statuses.map((status) => `'${status}'`).join(', ');
+  const householdClause = opts.householdId ? 'AND h.id = ?2' : '';
+  const binds = opts.householdId ? [currentSeason, opts.householdId] : [currentSeason];
   const { results } = await db
     .prepare(
       `SELECT aa.id, aa.asset_type, at.name AS asset_type_name, aa.membership_id, h.id AS household_id,
-              h.name AS household_name, pm.name AS primary_member_name, aa.description, aa.status,
-              aa.created_at, ap.id AS payment_id, ap.paid_at
+              h.name AS household_name, pm.name AS primary_member_name, m.season,
+              aa.description, aa.status, aa.created_at, ap.id AS payment_id, ap.paid_at
        FROM asset_assignments aa
        JOIN asset_types at ON at.id = aa.asset_type
        JOIN memberships m ON m.id = aa.membership_id
        JOIN households h ON h.id = m.household_id
        LEFT JOIN members pm ON pm.id = h.primary_member_id
        LEFT JOIN asset_payments ap ON ap.assignment_id = aa.id AND ap.season = ?1
-       WHERE aa.status = 'active'
-       ORDER BY at.sort_order, h.name`,
+       WHERE aa.status IN (${statusList}) ${householdClause}
+       ORDER BY ${assignmentOrderClause(opts.orderBy)}`,
     )
-    .bind(currentSeason)
+    .bind(...binds)
     .all<{
       id: string;
       asset_type: string;
@@ -131,6 +175,7 @@ export async function listActiveAssignments(db: D1Database, currentSeason: numbe
       household_id: string;
       household_name: string;
       primary_member_name: string | null;
+      season: number;
       description: string | null;
       status: string;
       created_at: string;
@@ -145,12 +190,22 @@ export async function listActiveAssignments(db: D1Database, currentSeason: numbe
     householdId: r.household_id,
     householdName: r.household_name,
     primaryMemberName: r.primary_member_name,
+    season: r.season,
     description: r.description,
     status: r.status === 'active' ? 'active' : 'released',
     createdAt: r.created_at,
     paymentId: r.payment_id,
     paymentStanding: !r.payment_id ? 'not-billed' : r.paid_at ? 'paid' : 'outstanding',
   }));
+}
+
+/** Every ACTIVE assignment (the "who holds what now" lens both `listAssetTypes` groupings share),
+ *  joined out for display, with its current-season payment standing. A released assignment is
+ *  never returned here: it stays in the table as history (`scripts/import/ops-assets.mjs`'s own
+ *  header on why released rows are imported at all), but neither admin lens surfaces it. Thin
+ *  wrapper over {@link listAssignments}, the Assets screen's own scope and ordering. */
+export async function listActiveAssignments(db: D1Database, currentSeason: number): Promise<AssignmentDisplayRow[]> {
+  return listAssignments(db, currentSeason, { statuses: ['active'], orderBy: 'type-household' });
 }
 
 /** One assignment by id, or `null`: the release and payment-recording actions' own precondition
