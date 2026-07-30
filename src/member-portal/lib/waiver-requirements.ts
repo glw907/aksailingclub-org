@@ -31,13 +31,12 @@ import { householdSignatureGate } from './household-signature-gate';
  *  audience vocabulary minus the three non-asset audiences. */
 export type AssetKind = Exclude<DocumentAudience, 'all-members' | 'dry-storage' | 'youth-class'>;
 
-/** The runtime counterpart of {@link AssetKind} (Task 2, `docs/plans/2026-07-29-assets-substrate.md`):
- *  `AssetKind` is a pure type-level derivation with no expression that can produce its members, so
- *  {@link parseAssetKind} needs a real array to check a raw `asset_types.id` value against.
- *  `satisfies` checks this array carries no string `AssetKind` disallows; the exhaustiveness
- *  assertion right below checks the other direction, that it is missing none. Together the two
- *  catch a kind added to or removed from `AssetKind` without a matching edit here at compile time,
- *  rather than letting it drift silently past `npm run check`. */
+/** The runtime counterpart of {@link AssetKind} (Task 2): a type has no expression that can
+ *  produce its own members, so {@link parseAssetKind} needs a real array to check a raw
+ *  `asset_types.id` value against. `satisfies` checks this array carries no string `AssetKind`
+ *  disallows; the exhaustiveness assertion below checks the reverse, that it is missing none --
+ *  together they catch a kind added to or removed from `AssetKind` without a matching edit here,
+ *  at compile time rather than a silent drift past `npm run check`. */
 export const ASSET_KINDS = ['mooring', 'rv-parking', 'boat-parking', 'small-boat-rack'] as const satisfies readonly AssetKind[];
 
 /** Every `AssetKind` member {@link ASSET_KINDS} fails to list; `never` when the list is complete.

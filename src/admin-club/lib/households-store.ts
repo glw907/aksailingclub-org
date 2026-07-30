@@ -363,8 +363,8 @@ export interface HouseholdMembershipRow {
 
 /** One asset assignment on the household desk, active or released (read-only here; asset
  *  management keeps its own screen, per the design doc). Unlike the by-asset/by-person lenses,
- *  the desk deliberately keeps released rows alongside active ones (Task 3's own constraint on
- *  the shared query this now reads from). */
+ *  the desk deliberately keeps released rows alongside active ones -- Task 3's own
+ *  `listAssignments` constraint. */
 export interface HouseholdAssetRow {
   id: string;
   assetType: string;
@@ -406,13 +406,13 @@ interface MembershipRawRow {
   refunded_at: string | null;
 }
 
-/** The household desk's full read (this module's own header): the `households` lookup and the
- * current season in one round trip (neither depends on the other), then the roster/memberships/
- * assets in a second, each a single set-based query keyed by `householdId`. The assets read is
- * `assets-store.ts`'s own shared `listAssignments` (Task 3), scoped to this one household and
- * both statuses -- the desk's own deliberate departure from the active-only lens the other two
- * "who holds what" consumers use; it needs `currentSeason` resolved first, which is why the
- * season read rides the FIRST batch rather than the second.
+/** The household desk's full read (this module's own header): `households` and the current
+ * season load together in one round trip (neither depends on the other), then roster,
+ * memberships, and assets load in a second, each a single set-based query keyed by
+ * `householdId`. Assets read through `assets-store.ts`'s own shared `listAssignments` (Task 3),
+ * scoped to this one household and both statuses -- the desk's own deliberate departure from the
+ * active-only lens the other two "who holds what" consumers use. That read needs `currentSeason`
+ * resolved first, which is why the season load rides the first batch rather than the second.
  */
 export async function getHouseholdDesk(db: D1Database, householdId: string): Promise<HouseholdDesk | null> {
   const [household, currentSeason] = await Promise.all([

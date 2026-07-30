@@ -11,11 +11,9 @@
 // (`listActiveAssignments`); the two admin screens differ only in how they GROUP the same list,
 // never in what they query.
 //
-// `listAssignments` (Task 3) is THE single "who holds what" lens the whole admin surface shares:
-// the Assets screen's own `listActiveAssignments` below, the Members list's holding chips, and
-// the household desk's Assets panel (both in `households-store.ts`) all read through it, scoped
-// by `opts.statuses`/`opts.householdId` rather than each carrying its own drifting SELECT.
-// `households-store.ts` imports from this module, never the reverse.
+// `listAssignments` below (Task 3) is the single "who holds what" query every admin lens shares:
+// this file's own `listActiveAssignments`, and the Members-list/household-desk reads in
+// `households-store.ts`, which imports from here, never the reverse.
 import type { D1Database } from '@cloudflare/workers-types';
 
 /** One `asset_types` row, camelCased. */
@@ -40,11 +38,11 @@ export type AssetPaymentStanding = 'not-billed' | 'outstanding' | 'paid';
 // manual habit of recording those payments here with recordPayment. The replacement belongs to
 // the phase-2 ops absorption.
 
-/** One `asset_assignments` row, joined out to everything any of the three "who holds what" admin
- *  lenses display: the asset type's own name, the household/primary-member names a membership
- *  resolves to (never the bare ids an editor would otherwise have to look up separately), and the
- *  grounding membership's own `season` (display only -- never `listAssignments`' own
- *  `currentSeason` argument, which only scopes the payment-standing join). */
+/** One `asset_assignments` row, joined out for display: the asset type's name, the
+ *  household/primary-member names a membership resolves to (never the bare ids an editor would
+ *  otherwise have to look up separately), and the grounding membership's own `season` -- display
+ *  only, never `listAssignments`'s `currentSeason` argument, which only scopes the
+ *  payment-standing join. */
 export interface AssignmentDisplayRow {
   id: string;
   assetType: string;
@@ -64,17 +62,17 @@ export interface AssignmentDisplayRow {
 /** One `asset_assignments.status` value. */
 export type AssignmentStatus = 'active' | 'released';
 
-/** Which rows {@link listAssignments} returns and how it orders them: `statuses` scopes the
- *  three lenses' differing "which rows" answer (active only for the Assets screen and the
- *  Members-list holding chips; active and released for the household desk, which deliberately
- *  keeps released rows alongside active ones); `householdId` scopes the desk's own one-household
- *  read (omitted for the other two, whose set-based reads span every household in one query, per
- *  this module's own header on why no per-household loop is introduced); `orderBy` reproduces
- *  each lens's own pre-consolidation ordering exactly, since the three differ in what they sort
- *  by. */
+/** Which rows {@link listAssignments} returns, in what order, optionally scoped to one
+ *  household. */
 export interface ListAssignmentsOptions {
+  /** Active-only for the Assets screen and the Members-list holding chips; active and released
+   *  for the household desk, which deliberately keeps released rows alongside active ones. */
   statuses: readonly AssignmentStatus[];
+  /** The household desk's own one-household read. Omitted for the other two lenses, whose
+   *  set-based reads span every household in one query. */
   householdId?: string;
+  /** Reproduces each lens's own pre-consolidation ordering; the three differ in what they sort
+   *  by. */
   orderBy: 'type-household' | 'type-name' | 'status-season';
 }
 
@@ -144,21 +142,20 @@ function assignmentOrderClause(orderBy: ListAssignmentsOptions['orderBy']): stri
   return 'aa.status ASC, m.season DESC';
 }
 
-/** THE single "who holds what" lens (Task 3): every consumer of an assignment's display row,
- *  across both `assets-store.ts` and `households-store.ts`, reads through this one query, scoped
- *  by {@link ListAssignmentsOptions}. `opts.statuses` binds as ordinary placeholders, never
- *  interpolated -- only `opts.orderBy` is interpolated, and only because
- *  {@link assignmentOrderClause} maps it to a fixed literal from its own closed union first, never
- *  caller text. An empty `opts.statuses` returns `[]` without querying: `WHERE aa.status IN ()`
- *  is a SQLite syntax error, and no caller means "match nothing" any other way.
+/**
+ * The shared "who holds what" query (Task 3), scoped by {@link ListAssignmentsOptions}.
  *
- *  For a released row, payment standing derives from the assignment's OWN season (`m.season`,
- *  the grounding membership it was held under) rather than `currentSeason`: the household desk is
- *  the one lens that returns released rows, which can predate the current season, and asking
- *  "was this billed for a season that already ended and isn't the one it was held in" is never a
- *  meaningful question. Active rows keep checking against `currentSeason`, exactly as before --
- *  the other two lenses only ever request `statuses: ['active']`, so this change is invisible to
- *  them. */
+ * `opts.orderBy` is interpolated directly into the query text, but only after
+ * {@link assignmentOrderClause} maps it to a fixed literal from its own closed union -- never
+ * caller text, so this carries no injection risk. `opts.statuses` binds as ordinary placeholders;
+ * an empty array short-circuits to `[]`, since `WHERE aa.status IN ()` is a SQLite syntax error.
+ *
+ * A released row's payment standing derives from its own grounding season (`m.season`), not
+ * `currentSeason`: the household desk is the only lens that returns released rows, which can
+ * predate the current season, so checking them against `currentSeason` would be meaningless.
+ * Active rows still check `currentSeason`, invisible to the other two lenses since they only ever
+ * request `statuses: ['active']`.
+ */
 export async function listAssignments(db: D1Database, currentSeason: number, opts: ListAssignmentsOptions): Promise<AssignmentDisplayRow[]> {
   if (opts.statuses.length === 0) return [];
   const statusPlaceholders = opts.statuses.map((_, index) => `?${index + 2}`).join(', ');
@@ -216,11 +213,9 @@ export async function listAssignments(db: D1Database, currentSeason: number, opt
   }));
 }
 
-/** Every ACTIVE assignment (the "who holds what now" lens both `listAssetTypes` groupings share),
- *  joined out for display, with its current-season payment standing. A released assignment is
- *  never returned here: it stays in the table as history (`scripts/import/ops-assets.mjs`'s own
- *  header on why released rows are imported at all), but neither admin lens surfaces it. Thin
- *  wrapper over {@link listAssignments}, the Assets screen's own scope and ordering. */
+/** Every ACTIVE assignment, the "who holds what now" lens both `listAssetTypes` groupings share:
+ *  a thin wrapper over {@link listAssignments}, active-only, ordered by asset type then
+ *  household. */
 export async function listActiveAssignments(db: D1Database, currentSeason: number): Promise<AssignmentDisplayRow[]> {
   return listAssignments(db, currentSeason, { statuses: ['active'], orderBy: 'type-household' });
 }

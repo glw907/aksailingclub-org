@@ -14,10 +14,10 @@ import { sendAssetDecisionEmail, type AssetDecisionKind } from './asset-decision
 
 /**
  * Fire the decision email for `requestId` best-effort (Assets substrate T5b): a failed or
- * unbound send never fails the admin action that already committed, matching
- * `offers.ts`'s own `try`/`catch`-around-`sendClubEmail` precedent, since
- * `sendAssetDecisionEmail` itself only degrades to `{ ok: false }` for an expected refusal
- * (no recipient, an unbound `EMAIL`), not for an unexpected error mid-lookup.
+ * unbound send never fails the admin action that already committed, matching `offers.ts`'s own
+ * `try`/`catch`-around-`sendClubEmail` precedent. `sendAssetDecisionEmail` already degrades every
+ * failure -- expected refusal or unexpected error mid-lookup -- to `{ ok: false }`, so this
+ * `try`/`catch` is defense in depth, not a bridge over a gap.
  */
 async function notifyDecision(
   db: D1Database,
@@ -372,9 +372,9 @@ export async function approveNewRequest(
 
 /**
  * Approve a 'retention' request: opens the pay task, never assigns outright (the design doc's
- * own merit-gate-then-pay sequence — "the approval moment is leadership's merit gate... before
+ * own merit-gate-then-pay sequence -- "the approval moment is leadership's merit gate... before
  * money changes hands"). The member's landing task list then reads `status ===
- * 'approved_awaiting_payment'` as "Pay for your <asset> — $<fee>". Refuses a request that is not
+ * 'approved_awaiting_payment'` as "Pay for your <asset> -- $<fee>". Refuses a request that is not
  * pending or not a 'retention' request. Fires the retention-approved decision email (Assets
  * substrate T5b): `approved_awaiting_payment` is a state the member must still act on, unlike a
  * plain assignment.
