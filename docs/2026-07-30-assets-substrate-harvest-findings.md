@@ -60,7 +60,37 @@
    keeping those mechanics. Filed as an observation, not a request: lift it when a second
    surface needs the behaviour.
 
-3. **`asset_types.id` renames are a foreign-key event, and the migration recipe should say
+3. **The label-and-value row wants an engine primitive with an explicit wrap contract, plus a
+   sibling-consistency check (Geoff, 2026-07-30).** Geoff's second observation was that the row
+   wrapping he reported should also be an engine-level fix. The pattern is family-wide and the
+   primitive belongs in cairn; the automatic part does not.
+
+   The recurring construction is a row with a label on one side and a value on the other,
+   usually a wrapping flex with `justify-content: space-between`. When the content exceeds the
+   line, whichever element loses the race drops, and sibling rows in the same list end up with
+   different shapes. ASC hit it twice in one file on this pass: on `/my-account/renew` the
+   membership-tier row drops its price to a second line, but only on the selected tier, because
+   that row alone carries a `CURRENT PLAN` chip; and the retention rows below drop their control
+   for the longer asset-type names but not the shorter ones. Both read to the owner as the same
+   defect. The same construction appears in ASC's gear, directory and spine rows.
+
+   **A silent default is the wrong answer here, unlike finding 1.** Which element should hold
+   its slot and which should yield is a statement about what the row means, and a primitive that
+   guesses will be wrong somewhere without saying so. What cairn should ship is a row primitive
+   whose contract makes the choice explicit at the call site, so a consumer declares that the
+   price holds and the chip wraps rather than discovering it at 390.
+
+   **The mechanical half is the sibling-consistency check, and it is the stronger half.** Rows
+   in one list having different heights or different structure at a given viewport needs no
+   judgment about intent to detect, and it is exactly what both of Geoff's reports are. It
+   belongs in `cairn-audit` beside finding 1's centering check, run across the tested viewport
+   set, so a row that reshapes itself for one item's content length is caught where it happens
+   rather than when someone reads a screenshot.
+
+   ASC fixes its own two instances site-side in this pass rather than waiting on a cairn
+   release, and drops that local handling when the primitive ships.
+
+4. **`asset_types.id` renames are a foreign-key event, and the migration recipe should say
    so.** ASC's 0034 migration renamed three `asset_types` primary keys. Three tables declare
    `REFERENCES asset_types(id)` with no `ON UPDATE CASCADE`, and remote D1 enforces foreign
    keys, so a plain `UPDATE` of the referenced key fails while child rows still hold the old
