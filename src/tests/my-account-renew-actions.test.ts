@@ -196,3 +196,116 @@ describe('?/renew', () => {
     expect(calls.some((c) => c.sql.startsWith('INSERT INTO memberships') || c.sql.startsWith('UPDATE memberships'))).toBe(false);
   });
 });
+
+// The retention step (design spec ruling 3, task 4): a household holding gear or moorings is
+// asked, per asset, whether it wants that same asset for the coming season. A "yes" posts this
+// action; a "no" is simply never submitting it, so `createAssetRequest`'s own behavior (tested in
+// `member-portal-assets.test.ts`) needs no re-proof here -- only this route's own wiring: which
+// asset types it will and won't create a request for, the duplicate guard, and the sign gate.
+describe('?/retainAsset', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('creates exactly one pending retention request for an asset the household holds', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: {
+        'FROM member_sessions': MEMBER_ROW,
+        'FROM households WHERE id': { primary_member_id: 'mem-1' },
+        "'current_season'": { value: '2026' },
+      },
+      allResults: {
+        'FROM asset_assignments aa': [
+          { id: 'aa-1', asset_type: 'mooring', asset_type_name: 'Mooring', description: null, payment_id: null, paid_at: null, fee_amount: null },
+        ],
+        'FROM asset_requests r JOIN asset_types at': [],
+      },
+    });
+
+    const result = await actions.retainAsset(fakeEvent({ assetType: 'mooring' }, db) as never);
+    expect(result).toEqual({ retained: true });
+
+    const inserts = calls.filter((c) => c.sql.startsWith('INSERT INTO asset_requests'));
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0].args).toEqual([expect.any(String), 'mooring', 'hh-1', 'mem-1', 'retention', null]);
+  });
+
+  it('a "no" (an asset the household holds but never submits) creates nothing for that asset', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: {
+        'FROM member_sessions': MEMBER_ROW,
+        'FROM households WHERE id': { primary_member_id: 'mem-1' },
+        "'current_season'": { value: '2026' },
+      },
+      allResults: {
+        'FROM asset_assignments aa': [
+          { id: 'aa-1', asset_type: 'mooring', asset_type_name: 'Mooring', description: null, payment_id: null, paid_at: null, fee_amount: null },
+          { id: 'aa-2', asset_type: 'rv-parking', asset_type_name: 'RV Parking', description: null, payment_id: null, paid_at: null, fee_amount: null },
+        ],
+        'FROM asset_requests r JOIN asset_types at': [],
+      },
+    });
+
+    // Only 'mooring' is submitted; 'rv-parking' is the "no" the household never clicked.
+    await actions.retainAsset(fakeEvent({ assetType: 'mooring' }, db) as never);
+
+    const inserts = calls.filter((c) => c.sql.startsWith('INSERT INTO asset_requests'));
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0].args[1]).toBe('mooring');
+  });
+
+  it('does not create a duplicate when a pending retention request for the same asset already exists', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: {
+        'FROM member_sessions': MEMBER_ROW,
+        'FROM households WHERE id': { primary_member_id: 'mem-1' },
+        "'current_season'": { value: '2026' },
+      },
+      allResults: {
+        'FROM asset_assignments aa': [
+          { id: 'aa-1', asset_type: 'mooring', asset_type_name: 'Mooring', description: null, payment_id: null, paid_at: null, fee_amount: null },
+        ],
+        'FROM asset_requests r JOIN asset_types at': [
+          { id: 'req-1', asset_type: 'mooring', asset_type_name: 'Mooring', kind: 'retention', status: 'pending', note: null, deny_reason: null, fee: 300, created_at: '2026-01-01 00:00:00' },
+        ],
+      },
+    });
+
+    const result = await actions.retainAsset(fakeEvent({ assetType: 'mooring' }, db) as never);
+    expect(result).toEqual({ retained: true });
+    expect(calls.some((c) => c.sql.startsWith('INSERT INTO asset_requests'))).toBe(false);
+  });
+
+  it('a household with zero active assignments gets no rows for any submitted asset type', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: {
+        'FROM member_sessions': MEMBER_ROW,
+        'FROM households WHERE id': { primary_member_id: 'mem-1' },
+        "'current_season'": { value: '2026' },
+      },
+      allResults: { 'FROM asset_assignments aa': [] },
+    });
+
+    const result = await actions.retainAsset(fakeEvent({ assetType: 'mooring' }, db) as never);
+    expect(result).toEqual(expect.objectContaining({ status: 400 }));
+    expect(calls.some((c) => c.sql.startsWith('INSERT INTO asset_requests'))).toBe(false);
+  });
+
+  it('hard-gates on the household-complete signature check the same way ?/renew does: redirects and creates nothing', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: {
+        'FROM member_sessions': MEMBER_ROW,
+        'FROM households WHERE id': { primary_member_id: 'mem-1' },
+        "'current_season'": { value: '2026' },
+      },
+      allResults: {
+        'FROM members WHERE household_id = ?1 ORDER BY name': [ACTIVE_ADULT_MEMBER],
+      },
+    });
+
+    const caught = await catchThrown(actions.retainAsset(fakeEvent({ assetType: 'mooring' }, db) as never));
+    expect(isRedirect(caught)).toBe(true);
+    expect((caught as Redirect).location).toBe('/my-account/sign?context=renewal&next=%2Fmy-account%2Frenew');
+    expect(calls.some((c) => c.sql.startsWith('INSERT INTO asset_requests'))).toBe(false);
+  });
+});

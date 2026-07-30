@@ -21,14 +21,16 @@ money-committing step here reads the same as every other portal payment action
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
   // `load`'s full branch (a real session AND a resolved CLUB_DB binding) sets `standing`,
-  // `currentSeason`, and `tiers` together; the db-missing branch sets none of them. The generated
-  // `PageData` union loses that correlation per field (this repo's own established lesson, see
-  // `/my-account/+page.svelte`'s own `isFullPortalData`), so one type predicate re-asserts it here.
+  // `currentSeason`, `tiers`, and `heldAssets` together; the db-missing branch sets none of them.
+  // The generated `PageData` union loses that correlation per field (this repo's own established
+  // lesson, see `/my-account/+page.svelte`'s own `isFullPortalData`), so one type predicate
+  // re-asserts it here.
   type FullRenewData = PageData & {
     standing: NonNullable<PageData['standing']>;
     currentSeason: NonNullable<PageData['currentSeason']>;
     renewalSeason: NonNullable<PageData['renewalSeason']>;
     tiers: NonNullable<PageData['tiers']>;
+    heldAssets: NonNullable<PageData['heldAssets']>;
   };
   function isFullRenewData(d: PageData): d is FullRenewData {
     return d.tiers !== null;
@@ -62,6 +64,10 @@ money-committing step here reads the same as every other portal payment action
     This isn't available right now. Please try again shortly.
   </p>
 {:else}
+  {#if form && 'error' in form && form.error}
+    <p class="mt-s max-w-measure-wide rounded-field border border-error bg-error/10 px-s py-xs text-step--1 text-error">{form.error}</p>
+  {/if}
+
   <form method="POST" action="?/renew" class="mt-l max-w-measure-wide">
     <input type="hidden" name="csrf" value={data.csrf} />
 
@@ -97,10 +103,36 @@ money-committing step here reads the same as every other portal payment action
         Online payment isn't available yet; the club will follow up by email with how to pay.
       </p>
     {/if}
-    {#if form && 'error' in form && form.error}
-      <p class="mt-xs mb-0 text-step--1 text-error">{form.error}</p>
-    {/if}
   </form>
+
+  {#if data.heldAssets.length > 0}
+    <!-- The retention step (design spec ruling 3): a household holding gear or moorings today is
+         asked, per asset, whether it wants that same asset for {data.renewalSeason} -- a "yes"
+         posts `?/retainAsset`; a "no" is simply not clicking, which creates nothing. Reuses
+         `/my-account/household`'s own bordered-row list idiom, not a new component. -->
+    <section class="mt-l max-w-measure-wide">
+      <h2 class="m-0 text-step-1 font-semibold text-base-content">Your gear and moorings</h2>
+      <p class="mt-2xs mb-0 text-step--1 text-muted">Request the same asset again for {data.renewalSeason}, or leave it for now.</p>
+      <ul class="mt-xs flex flex-col gap-xs">
+        {#each data.heldAssets as asset (asset.assetType)}
+          <li class="rounded-box border border-card-border bg-base-100 p-s text-step--1">
+            <div class="flex flex-wrap items-center justify-between gap-xs">
+              <span class="text-base-content">{asset.assetTypeName}</span>
+              {#if asset.alreadyRequested}
+                <span class="asc-availability-chip">Requested</span>
+              {:else}
+                <form method="POST" action="?/retainAsset">
+                  <input type="hidden" name="csrf" value={data.csrf} />
+                  <input type="hidden" name="assetType" value={asset.assetType} />
+                  <button type="submit" class="btn btn-primary btn-sm portal-touch-btn">Request again for {data.renewalSeason}</button>
+                </form>
+              {/if}
+            </div>
+          </li>
+        {/each}
+      </ul>
+    </section>
+  {/if}
 {/if}
 
 <style>

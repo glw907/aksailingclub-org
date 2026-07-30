@@ -18,6 +18,7 @@ import { resolveMemberDb } from '$member-auth/lib/db';
 import { getMemberStanding, MEMBERSHIP_TIER_LABEL, type MembershipTier } from '$member-auth/lib/standing';
 import { getCurrentSeason, getTierPrices } from '$admin-club/lib/club-settings';
 import { mintOrReuseRenewalMembership, nextUnclaimedRenewalSeason } from '$member-portal/lib/renewal';
+import { createAssetRequest, listHouseholdAssignments, listHouseholdRequests } from '$member-portal/lib/assets';
 import { portalAction } from '$member-portal/lib/portal-action';
 import { checkoutOrStub } from '$member-portal/lib/checkout';
 import { documents } from '$chassis/content';
@@ -49,13 +50,23 @@ export interface RenewTierOption {
   priceDollars: number;
 }
 
+/** One of the household's own currently-held assets, offered as the retention step's own
+ *  "request this again" choice (design spec ruling 3). `alreadyRequested` is a pending
+ *  `kind: 'retention'` row already on file for this type, so the template renders the row as done
+ *  instead of re-offering a button `?/retainAsset`'s own duplicate guard would refuse anyway. */
+export interface RenewHeldAssetOption {
+  assetType: string;
+  assetTypeName: string;
+  alreadyRequested: boolean;
+}
+
 export const load: PageServerLoad = async (event) => {
   const csrf = issueMemberCsrfToken(event);
   const { member } = await event.parent();
   if (!member) redirect(303, '/my-account');
 
   const db = resolveMemberDb(event.platform?.env);
-  if (!db) return { csrf, standing: null, currentSeason: null, renewalSeason: null, tiers: null };
+  if (!db) return { csrf, standing: null, currentSeason: null, renewalSeason: null, tiers: null, heldAssets: null };
 
   const [standing, currentSeason, prices] = await Promise.all([getMemberStanding(db, member.id), getCurrentSeason(db), getTierPrices(db)]);
 
@@ -79,7 +90,18 @@ export const load: PageServerLoad = async (event) => {
 
   const tiers: RenewTierOption[] = MEMBERSHIP_TIERS.map((tier) => ({ tier, label: MEMBERSHIP_TIER_LABEL[tier], priceDollars: prices[tier] }));
 
-  return { csrf, standing, currentSeason, renewalSeason, tiers };
+  // The retention step (design spec ruling 3, task 4): every asset the household holds today,
+  // read through the same `listHouseholdAssignments`/`listHouseholdRequests` `/my-account/gear`
+  // already uses, never a new query. A household with no active assignments gets an empty array,
+  // which the template reads as "no step at all".
+  const [assignments, requests] = await Promise.all([listHouseholdAssignments(db, member.householdId, currentSeason), listHouseholdRequests(db, member.householdId)]);
+  const heldAssets: RenewHeldAssetOption[] = assignments.map((assignment) => ({
+    assetType: assignment.assetType,
+    assetTypeName: assignment.assetTypeName,
+    alreadyRequested: requests.some((request) => request.assetType === assignment.assetType && request.kind === 'retention' && request.status === 'pending'),
+  }));
+
+  return { csrf, standing, currentSeason, renewalSeason, tiers, heldAssets };
 };
 
 export const actions: Actions = {
@@ -109,5 +131,37 @@ export const actions: Actions = {
       amountCents: Math.round(priceDollars * 100),
       description: `${MEMBERSHIP_TIER_LABEL[tierRaw]} Membership dues`,
     });
+  }),
+
+  // The retention step's own create action (design spec ruling 3, task 4): one row, one button, a
+  // "yes" per held asset (`/my-account/gear`'s own per-row action shape). A "no" is simply never
+  // submitting this action, so it creates nothing by construction -- releasing a held asset stays
+  // the separate, deliberate action on `/my-account/gear`, never reachable from here.
+  retainAsset: portalAction(async ({ form, ctx }) => {
+    const currentSeason = await getCurrentSeason(ctx.db);
+    // The same defense-in-depth re-check `?/renew` above carries: the retention step never offers
+    // a way around the household-complete signing gate, whether or not the page that rendered its
+    // button is the one still open in the browser.
+    if (!(await householdSignaturesComplete(ctx.db, loadPublishedDocuments(documents, currentSeason), ctx.member.householdId, currentSeason))) {
+      redirect(303, SIGN_REDIRECT);
+    }
+
+    const assetType = String(form.get('assetType') ?? '').trim();
+    if (!assetType) return fail(400, { error: 'Missing asset type.' });
+
+    const assignments = await listHouseholdAssignments(ctx.db, ctx.member.householdId, currentSeason);
+    if (!assignments.some((assignment) => assignment.assetType === assetType)) {
+      return fail(400, { error: 'Your household does not hold this asset.' });
+    }
+
+    // The duplicate guard: a second submission for the same asset type must not create a second
+    // pending row, so this checks the household's own existing requests before inserting.
+    const requests = await listHouseholdRequests(ctx.db, ctx.member.householdId);
+    const alreadyPending = requests.some((request) => request.assetType === assetType && request.kind === 'retention' && request.status === 'pending');
+    if (!alreadyPending) {
+      await createAssetRequest(ctx.db, { assetType, householdId: ctx.member.householdId, requestedBy: ctx.member.id, kind: 'retention', note: null });
+    }
+
+    return { retained: true as const };
   }),
 };
