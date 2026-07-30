@@ -95,3 +95,22 @@ for (const width of WIDTHS) {
     });
   }
 }
+
+// The retention step (assets substrate task 4): /my-account/renew has no baseline today. The
+// Wright household (this suite's default `mintMemberSession()` id) already holds an active
+// mooring assignment and already carries season-2026 signature rows (`portal-seed.sql`'s own
+// header), so it clears `SIGN_REDIRECT` and reaches the retention step with a real held asset to
+// render, rather than the route's own "no step at all" empty case.
+for (const width of WIDTHS) {
+  for (const colorScheme of ['light', 'dark'] as const) {
+    test(`my-account renew signed in — ${colorScheme} — ${width}px`, async ({ page, context }) => {
+      await mintMemberSession(context);
+      await page.setViewportSize({ width, height: 900 });
+      await page.emulateMedia({ colorScheme });
+      await page.goto('/my-account/renew');
+      await expect(page.getByRole('heading', { level: 1, name: 'Renew your membership' })).toBeVisible();
+      await expect(page.getByText('Your gear and moorings', { exact: false }).first()).toBeVisible();
+      await expect(page).toHaveScreenshot(`my-account-renew-${colorScheme}-${width}.png`, { fullPage: true });
+    });
+  }
+}
