@@ -31,7 +31,7 @@ lives on the linked class detail page, the same offer/cancel section
             <a class="font-semibold hover:text-primary hover:underline" href={`/admin/club/classes/${row.cls.id}`}>
               {row.cls.name}
             </a>
-            <span class="ml-2 text-sm text-muted">
+            <span class="ml-2 type-body text-muted">
               {row.cls.enrolledCount}/{row.cls.capacity} enrolled, {row.entries.length} on the waitlist
             </span>
           </div>
@@ -43,7 +43,7 @@ lives on the linked class detail page, the same offer/cancel section
         </div>
         <ul class="divide-y divide-[var(--cairn-card-border)]">
           {#each row.entries as { entry, activeOffer } (entry.id)}
-            <li class="flex flex-wrap items-center justify-between gap-2 px-6 py-3 text-sm">
+            <li class="flex flex-wrap items-center justify-between gap-2 px-6 py-3 type-body">
               <span>
                 <span class="font-medium">
                   {(entry.memberId ? data.waitlistMemberNames[entry.memberId] : null) ?? entry.applicantName ?? entry.applicantEmail}
@@ -60,7 +60,7 @@ lives on the linked class detail page, the same offer/cancel section
         </ul>
       </div>
     {:else}
-      <p class="px-6 py-10 text-center text-sm text-muted">
+      <p class="px-6 py-10 text-center type-body text-muted">
         {data.error ?? 'No current-season class has an outstanding waitlist right now.'}
       </p>
     {/each}

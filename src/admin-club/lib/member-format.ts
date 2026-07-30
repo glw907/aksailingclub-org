@@ -17,8 +17,8 @@ import type { StatusChipTone } from '@glw907/cairn-cms/admin-toolkit';
  *  contacts, and the dimmer treatment should read as "put away," not "needs attention." */
 export const SEGMENT_CHIP: Record<MemberSegment, ChipStyle> = {
   current: { label: 'Current', cls: 'badge-sm border-transparent bg-primary/10 font-medium text-primary' },
-  lapsed: { label: 'Lapsed', cls: 'badge-ghost badge-sm font-medium' },
-  archived: { label: 'Archived', cls: 'badge-ghost badge-sm font-medium opacity-60' },
+  lapsed: { label: 'Lapsed', cls: 'cairn-chip-quiet badge-sm font-medium' },
+  archived: { label: 'Archived', cls: 'cairn-chip-quiet badge-sm font-medium opacity-60' },
 };
 
 /** Display labels for the three membership tiers (a household's own membership tier, not a
@@ -32,8 +32,8 @@ export const TIER_LABEL: Record<MembershipTier, string> = {
 /** Directory-visibility chips, mirroring MembershipWorks's own three states. */
 export const VISIBILITY_CHIP: Record<DirectoryVisibility, ChipStyle> = {
   visible: { label: 'Visible', cls: 'badge-sm border-transparent bg-primary/10 font-medium text-primary' },
-  partial: { label: 'Partial', cls: 'badge-ghost badge-sm font-medium' },
-  hidden: { label: 'Hidden', cls: 'badge-ghost badge-sm font-medium' },
+  partial: { label: 'Partial', cls: 'cairn-chip-quiet badge-sm font-medium' },
+  hidden: { label: 'Hidden', cls: 'cairn-chip-quiet badge-sm font-medium' },
 };
 
 /**
@@ -57,8 +57,8 @@ export const VISIBILITY_CHIP: Record<DirectoryVisibility, ChipStyle> = {
 export const HOUSEHOLD_STANDING_CHIP: Record<HouseholdStandingStatus, ChipStyle> = {
   current: { label: 'Current', cls: 'badge-sm border-transparent bg-primary/10 font-medium text-primary' },
   overdue: { label: 'Overdue', cls: 'badge-warning badge-sm font-medium' },
-  former: { label: 'Former', cls: 'badge-ghost badge-sm font-medium' },
-  none: { label: 'No membership', cls: 'badge-ghost badge-sm font-medium opacity-60' },
+  former: { label: 'Former', cls: 'cairn-chip-quiet badge-sm font-medium' },
+  none: { label: 'No membership', cls: 'cairn-chip-quiet badge-sm font-medium opacity-60' },
 };
 
 /** The same household standing, as a `StatusChip` tone (Members pass T7, the toolkit's first

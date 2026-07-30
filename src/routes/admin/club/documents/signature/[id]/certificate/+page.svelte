@@ -37,68 +37,68 @@ so printing shows the plain certificate alone, per the task's own "no admin chro
 
 {#if !data.detail}
   <div class="rounded-box border border-[var(--cairn-card-border)] bg-base-100 py-10 text-center">
-    <p class="text-sm text-muted">{data.error}</p>
-    <a class="mt-2 inline-block text-sm text-primary hover:underline" href="/admin/club/documents">&larr; Back to the season rollup</a>
+    <p class="type-body text-muted">{data.error}</p>
+    <a class="mt-2 inline-block type-body text-primary hover:underline" href="/admin/club/documents">&larr; Back to the season rollup</a>
   </div>
 {:else}
   <div class="certificate mx-auto max-w-3xl">
     <div class="mb-4 flex items-center justify-between print:hidden">
-      <a class="text-sm text-muted hover:text-primary hover:underline" href="/admin/club/documents/signature/{data.detail.id}">&larr; Back to the signed text</a>
+      <a class="type-body text-muted hover:text-primary hover:underline" href="/admin/club/documents/signature/{data.detail.id}">&larr; Back to the signed text</a>
       <button type="button" class="btn btn-sm" onclick={() => window.print()}>Print</button>
     </div>
 
     <div class="rounded-box border border-[var(--cairn-card-border)] bg-base-100 p-8 print:border-0 print:p-0 print:shadow-none">
-      <h1 class="text-lg font-semibold">Certificate of completion</h1>
-      <p class="text-sm text-muted">{data.documentTitle} &middot; version {data.detail.version} &middot; {data.detail.season} season</p>
+      <h1 class="type-heading font-semibold">Certificate of completion</h1>
+      <p class="type-body text-muted">{data.documentTitle} &middot; version {data.detail.version} &middot; {data.detail.season} season</p>
 
       <dl class="mt-6 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
         <div>
-          <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Signed by</dt>
-          <dd class="text-sm">{data.detail.personName} &lt;{data.detail.personEmail}&gt;</dd>
+          <dt class="type-label font-semibold uppercase tracking-[0.08em] text-muted">Signed by</dt>
+          <dd class="type-body">{data.detail.personName} &lt;{data.detail.personEmail}&gt;</dd>
         </div>
         <div>
-          <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Context</dt>
-          <dd class="text-sm capitalize">{data.detail.context.replace('-', ' ')}</dd>
+          <dt class="type-label font-semibold uppercase tracking-[0.08em] text-muted">Context</dt>
+          <dd class="type-body capitalize">{data.detail.context.replace('-', ' ')}</dd>
         </div>
         <div>
-          <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Signed at</dt>
-          <dd class="text-sm">{formatInstant(data.detail.signedAt)}</dd>
+          <dt class="type-label font-semibold uppercase tracking-[0.08em] text-muted">Signed at</dt>
+          <dd class="type-body">{formatInstant(data.detail.signedAt)}</dd>
         </div>
         <div>
-          <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted">IP address</dt>
-          <dd class="text-sm">{data.detail.ipAddress ?? '—'}</dd>
+          <dt class="type-label font-semibold uppercase tracking-[0.08em] text-muted">IP address</dt>
+          <dd class="type-body">{data.detail.ipAddress ?? '—'}</dd>
         </div>
         {#if data.detail.minorName}
           <div>
-            <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Signed on behalf of</dt>
-            <dd class="text-sm">{data.detail.minorName}</dd>
+            <dt class="type-label font-semibold uppercase tracking-[0.08em] text-muted">Signed on behalf of</dt>
+            <dd class="type-body">{data.detail.minorName}</dd>
           </div>
           <div>
-            <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Attested relationship</dt>
-            <dd class="text-sm">{data.relationshipLabel ?? '—'}</dd>
+            <dt class="type-label font-semibold uppercase tracking-[0.08em] text-muted">Attested relationship</dt>
+            <dd class="type-body">{data.relationshipLabel ?? '—'}</dd>
           </div>
         {/if}
         <div>
-          <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Auth token</dt>
-          <dd class="text-sm">{data.detail.authTokenId ?? '—'}</dd>
+          <dt class="type-label font-semibold uppercase tracking-[0.08em] text-muted">Auth token</dt>
+          <dd class="type-body">{data.detail.authTokenId ?? '—'}</dd>
         </div>
         <div>
-          <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Auth issued / consumed</dt>
-          <dd class="text-sm">{formatInstant(data.detail.authIssuedAt)} &rarr; {formatInstant(data.detail.authConsumedAt)}</dd>
+          <dt class="type-label font-semibold uppercase tracking-[0.08em] text-muted">Auth issued / consumed</dt>
+          <dd class="type-body">{formatInstant(data.detail.authIssuedAt)} &rarr; {formatInstant(data.detail.authConsumedAt)}</dd>
         </div>
         <div>
-          <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Frontend build</dt>
-          <dd class="text-sm">{data.detail.buildHash ?? '—'}</dd>
+          <dt class="type-label font-semibold uppercase tracking-[0.08em] text-muted">Frontend build</dt>
+          <dd class="type-body">{data.detail.buildHash ?? '—'}</dd>
         </div>
         <div class="sm:col-span-2">
-          <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted">SHA-256 of the signed text</dt>
-          <dd class="break-all font-mono text-sm">{data.detail.contentHash ?? '—'}</dd>
+          <dt class="type-label font-semibold uppercase tracking-[0.08em] text-muted">SHA-256 of the signed text</dt>
+          <dd class="break-all font-mono type-body">{data.detail.contentHash ?? '—'}</dd>
         </div>
       </dl>
 
       <div class="mt-6">
-        <p class="text-xs font-semibold uppercase tracking-[0.08em] text-muted">The signed text</p>
-        <pre class="mt-2 max-h-[32rem] overflow-y-auto whitespace-pre-wrap rounded-box border border-[var(--cairn-card-border)] bg-base-200/50 p-4 text-xs print:max-h-none print:overflow-visible print:border-0 print:bg-transparent print:p-0">{data.detail.contentSnapshot ?? 'No text was snapshotted with this record.'}</pre>
+        <p class="type-label font-semibold uppercase tracking-[0.08em] text-muted">The signed text</p>
+        <pre class="mt-2 max-h-[32rem] overflow-y-auto whitespace-pre-wrap rounded-box border border-[var(--cairn-card-border)] bg-base-200/50 p-4 type-body print:max-h-none print:overflow-visible print:border-0 print:bg-transparent print:p-0">{data.detail.contentSnapshot ?? 'No text was snapshotted with this record.'}</pre>
       </div>
     </div>
   </div>

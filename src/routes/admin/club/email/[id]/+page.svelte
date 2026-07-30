@@ -54,13 +54,13 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
   }
 </script>
 
-<a href="/admin/club/email" class="mb-4 inline-flex w-fit items-center gap-1 text-sm text-muted hover:text-primary">
+<a href="/admin/club/email" class="mb-4 inline-flex w-fit items-center gap-1 type-body text-muted hover:text-primary">
   <span aria-hidden="true">&larr;</span> Back to Email
 </a>
 
 {#if !data.template}
   <div class="rounded-box border border-[var(--cairn-card-border)] bg-base-100 p-6 py-10 text-center shadow-[var(--cairn-shadow)]">
-    <p class="text-sm text-muted">{data.error ?? 'No such template.'}</p>
+    <p class="type-body text-muted">{data.error ?? 'No such template.'}</p>
   </div>
 {:else}
   <!-- Keyed on the template's own id, the same reasoning `classes/[id]/+page.svelte`'s own
@@ -79,17 +79,17 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
     {/snippet}
 
     {#if form?.error}
-      <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-error" role="alert">
+      <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-error" role="alert">
         {form.error}
       </p>
     {/if}
     {#if form && 'warning' in form && form.warning}
-      <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-warning" role="alert">
+      <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-warning" role="alert">
         {form.warning}
       </p>
     {/if}
     {#if form && 'reset' in form && form.reset}
-      <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-success" role="status">
+      <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-success" role="status">
         Restored to the shipped default.
       </p>
     {/if}
@@ -97,7 +97,7 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
     <div class="border-b border-[var(--cairn-card-border)] p-6">
       <h2 class={HEADER_CELL}>Variables this template supports</h2>
       {#if data.knownVariables.length > 0}
-        <p class="mt-1 text-xs text-muted">Click one to insert it into the body at your cursor.</p>
+        <p class="mt-1 type-meta text-muted">Click one to insert it into the body at your cursor.</p>
         <ul class="mt-2 flex list-none flex-wrap gap-2">
           {#each data.knownVariables as token (token)}
             <li>
@@ -108,12 +108,12 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
           {/each}
         </ul>
       {:else}
-        <p class="mt-1 text-xs text-muted">No known variable vocabulary is recorded for this template.</p>
+        <p class="mt-1 type-meta text-muted">No known variable vocabulary is recorded for this template.</p>
       {/if}
     </div>
 
     <form method="post" action="?/save">
-      <div class="grid gap-6 p-6 lg:grid-cols-2">
+      <div class="grid gap-section p-6 lg:grid-cols-2">
         <section class="flex flex-col gap-4">
           <TextField label="Subject" name="subject" bind:value={subject} />
           <FieldLabel label="Body (markdown)">
@@ -129,11 +129,11 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
 
         <section>
           <h2 class={HEADER_CELL}>Sample-data preview</h2>
-          <p class="mt-1 text-xs text-muted">
+          <p class="mt-1 type-meta text-muted">
             Rendered with placeholder sample values, through the same render a real send uses.
           </p>
-          <p class="mt-2 text-sm font-medium">{preview.subject}</p>
-          <div class="prose mt-2 max-w-none rounded-box border border-[var(--cairn-card-border)] p-4 text-sm">
+          <p class="mt-2 type-body font-medium">{preview.subject}</p>
+          <div class="prose mt-2 max-w-none rounded-box border border-[var(--cairn-card-border)] p-4 type-body">
             {@html preview.html}
           </div>
         </section>
@@ -148,8 +148,8 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
 
   <dialog bind:this={resetDialog} class="modal" oncancel={(event) => event.preventDefault()}>
     <div class="modal-box">
-      <h2 class="text-lg font-bold">Reset {data.template.id} to its shipped default?</h2>
-      <p class="py-2 text-sm text-muted">
+      <h2 class="type-heading font-bold">Reset {data.template.id} to its shipped default?</h2>
+      <p class="py-2 type-body text-muted">
         This replaces the current subject and body. There is no undo beyond re-typing them.
       </p>
       <form method="dialog">

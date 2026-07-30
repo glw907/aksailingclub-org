@@ -104,7 +104,7 @@ upstream-harvest note.
 </div>
 
 {#if data.error}
-  <p class="px-6 py-10 text-center text-sm text-error">{data.error}</p>
+  <p class="px-6 py-10 text-center type-body text-error">{data.error}</p>
 {:else if data.classes.length === 0}
   <div class="rounded-box border border-[var(--cairn-card-border)] bg-base-100 shadow-[var(--cairn-shadow)]">
     <EmptyState
@@ -119,7 +119,7 @@ upstream-harvest note.
 {:else}
   <div class="rounded-box border border-[var(--cairn-card-border)] bg-base-100 overflow-x-auto shadow-[var(--cairn-shadow)]">
     {#if form?.error}
-      <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-error" role="alert">
+      <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-error" role="alert">
         {form.error}
       </p>
     {/if}
@@ -157,22 +157,22 @@ upstream-harvest note.
           {#snippet summary()}
             <td class="classes-name-cell">
               {row.name}
-              {#if !row.visible}<span class="badge badge-ghost badge-sm ml-1.5 font-medium">Hidden</span>{/if}
+              {#if !row.visible}<span class="badge cairn-chip-quiet badge-sm ml-1.5 font-medium">Hidden</span>{/if}
             </td>
             <td class="classes-narrow-hide">
               <span class="badge badge-sm font-medium {TRACK_CHIP[row.track]}">{CLASS_TRACK_LABEL[row.track]}</span>
             </td>
-            <td class="text-sm tabular-nums text-muted classes-narrow-hide">
+            <td class="type-body tabular-nums text-muted classes-narrow-hide">
               {formatCivilDate(row.startDate, 'TBD')}{#if row.endDate}&nbsp;&ndash; {formatCivilDate(row.endDate)}{/if}
             </td>
-            <td class="text-sm tabular-nums">
+            <td class="type-body tabular-nums">
               {#if row.dropIn}
                 <span class="text-muted">Drop-in</span>
               {:else}
                 {row.enrolledCount}/{row.capacity}
               {/if}
             </td>
-            <td class="text-sm classes-narrow-hide">
+            <td class="type-body classes-narrow-hide">
               {#if row.waitlist.count > 0}
                 {row.waitlist.count} waiting
                 {#if row.activeOfferExpiresAt}<span class="text-muted"> &middot; offer sent</span>{/if}
@@ -187,31 +187,31 @@ upstream-harvest note.
                 <h2 class={HEADER_CELL}>Roster</h2>
                 <ul class="classes-panel-list">
                   {#each datum.roster as member (member.enrollmentId)}
-                    <li class="classes-panel-row text-sm">
+                    <li class="classes-panel-row type-body">
                       <span>{member.name} &middot; Age {ageFromBirthdate(member.birthdate) ?? '—'}</span>
                       <StatusChip tone={member.feePaid ? 'success' : 'warning'} label={member.feePaid ? 'Paid' : 'Owing'} size="xs" />
                     </li>
                   {:else}
-                    <li class="text-sm text-muted">No one is enrolled yet.</li>
+                    <li class="type-body text-muted">No one is enrolled yet.</li>
                   {/each}
                 </ul>
               </section>
               <section>
                 <h2 class={HEADER_CELL}>Waitlist</h2>
                 {#if datum.waitlist.count > 0}
-                  <p class="text-sm">
+                  <p class="type-body">
                     {datum.waitlist.count} {datum.waitlist.count === 1 ? 'person' : 'people'} waiting{#if datum.waitlist.nextName}&nbsp;&middot; next: {datum.waitlist.nextName}{/if}
                   </p>
                   {#if datum.activeOfferExpiresAt}
-                    <p class="text-sm text-muted">Offer sent, expires {formatClubTimestamp(datum.activeOfferExpiresAt)}.</p>
+                    <p class="type-body text-muted">Offer sent, expires {formatClubTimestamp(datum.activeOfferExpiresAt)}.</p>
                   {/if}
                 {:else}
-                  <p class="text-sm text-muted">No one is on the waitlist.</p>
+                  <p class="type-body text-muted">No one is on the waitlist.</p>
                 {/if}
               </section>
               {#if form && 'offered' in form && form.offered?.classId === datum.id}
                 <section>
-                  <label class="flex flex-col gap-1 text-sm" for={`claim-code-${datum.id}`}>
+                  <label class="flex flex-col gap-1 type-body" for={`claim-code-${datum.id}`}>
                     Claim code (copy it now; it will not show again)
                     <input id={`claim-code-${datum.id}`} class="input input-sm font-mono" readonly value={form.offered.token} />
                   </label>

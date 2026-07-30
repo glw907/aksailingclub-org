@@ -141,12 +141,12 @@ gate; nothing here trusts a count this component computed on its own.
   const VARIABLE_TOKENS = ['person_name', 'portal_url', 'committee_email'];
 </script>
 
-<a href="/admin/club/email" class="mb-4 inline-flex w-fit items-center gap-1 text-sm text-muted hover:text-primary">
+<a href="/admin/club/email" class="mb-4 inline-flex w-fit items-center gap-1 type-body text-muted hover:text-primary">
   <span aria-hidden="true">&larr;</span> Back to Email
 </a>
 
 <p
-  class="text-sm font-medium text-error {composeError ? 'mb-4 rounded-box border border-[var(--cairn-card-border)] px-4 py-3' : ''}"
+  class="type-body font-medium text-error {composeError ? 'mb-4 rounded-box border border-[var(--cairn-card-border)] px-4 py-3' : ''}"
   role="alert"
 >{composeError ?? ''}</p>
 
@@ -157,7 +157,7 @@ gate; nothing here trusts a count this component computed on its own.
     {/snippet}
 
     <p
-      class="text-sm font-medium text-success {sendResult ? 'border-b border-[var(--cairn-card-border)] px-6 py-3' : ''}"
+      class="type-body font-medium text-success {sendResult ? 'border-b border-[var(--cairn-card-border)] px-6 py-3' : ''}"
       role="status"
     >{sendResult ? `Sent to ${sendResult.segmentLabel}: ${sendResult.sentCount} delivered${sendResult.failedCount > 0 ? `, ${sendResult.failedCount} failed` : ''}.` : ''}</p>
 
@@ -175,20 +175,20 @@ gate; nothing here trusts a count this component computed on its own.
       <tbody>
         {#each data.blasts as blast (blast.id)}
           <tr class="transition-colors hover:bg-base-200/60">
-            <td class="text-sm">{blast.segmentLabel}</td>
-            <td class="text-sm text-muted">{blast.subject}</td>
-            <td class="text-sm tabular-nums text-muted">
+            <td class="type-body">{blast.segmentLabel}</td>
+            <td class="type-body text-muted">{blast.subject}</td>
+            <td class="type-body tabular-nums text-muted">
               {blast.sentCount} / {blast.recipientCount}
               {#if blast.failedCount > 0}
                 <span class="badge badge-error badge-sm ml-1">{blast.failedCount} failed</span>
               {/if}
             </td>
-            <td class="text-sm text-muted">{blast.actor}</td>
-            <td class="whitespace-nowrap text-sm tabular-nums text-muted">{formatClubTimestamp(blast.createdAt)}</td>
+            <td class="type-body text-muted">{blast.actor}</td>
+            <td class="whitespace-nowrap type-body tabular-nums text-muted">{formatClubTimestamp(blast.createdAt)}</td>
           </tr>
         {:else}
           <tr>
-            <td colspan="5" class="px-6 py-10 text-center text-sm text-muted">No blasts sent yet.</td>
+            <td colspan="5" class="px-6 py-10 text-center type-body text-muted">No blasts sent yet.</td>
           </tr>
         {/each}
       </tbody>
@@ -197,7 +197,7 @@ gate; nothing here trusts a count this component computed on its own.
 {:else if step === 'compose'}
   <OfficeList eyebrow="Club" title="Compose" subtitle="Pick a segment, write the email, then review who it reaches.">
     <form method="post" action="?/review" use:enhance={onSettle()}>
-      <div class="grid gap-6 p-6 lg:grid-cols-2">
+      <div class="grid gap-section p-6 lg:grid-cols-2">
         <section class="flex flex-col gap-4">
           <SelectField
             label="Segment"
@@ -212,7 +212,7 @@ gate; nothing here trusts a count this component computed on its own.
           </FieldLabel>
           <div>
             <h2 class={HEADER_CELL}>Variables</h2>
-            <p class="mt-1 text-xs text-muted">Click one to insert it into the body at your cursor.</p>
+            <p class="mt-1 type-meta text-muted">Click one to insert it into the body at your cursor.</p>
             <ul class="mt-2 flex list-none flex-wrap gap-2">
               {#each VARIABLE_TOKENS as token (token)}
                 <li>
@@ -227,9 +227,9 @@ gate; nothing here trusts a count this component computed on its own.
 
         <section>
           <h2 class={HEADER_CELL}>Sample-data preview</h2>
-          <p class="mt-1 text-xs text-muted">Rendered with placeholder values, through the same render a real send uses.</p>
-          <p class="mt-2 text-sm font-medium">{preview.subject}</p>
-          <div class="prose mt-2 max-w-none rounded-box border border-[var(--cairn-card-border)] p-4 text-sm">
+          <p class="mt-1 type-meta text-muted">Rendered with placeholder values, through the same render a real send uses.</p>
+          <p class="mt-2 type-body font-medium">{preview.subject}</p>
+          <div class="prose mt-2 max-w-none rounded-box border border-[var(--cairn-card-border)] p-4 type-body">
             {@html preview.html}
           </div>
         </section>
@@ -249,14 +249,14 @@ gate; nothing here trusts a count this component computed on its own.
 {:else if step === 'review' && review}
   <OfficeList eyebrow="Club" title="Review" subtitle="{review.segmentLabel}: {recipientCountLabel}.">
     <p
-      class="text-sm font-medium {testStatus ? (testStatus.ok ? 'border-b border-[var(--cairn-card-border)] px-6 py-3 text-success' : 'border-b border-[var(--cairn-card-border)] px-6 py-3 text-error') : ''}"
+      class="type-body font-medium {testStatus ? (testStatus.ok ? 'border-b border-[var(--cairn-card-border)] px-6 py-3 text-success' : 'border-b border-[var(--cairn-card-border)] px-6 py-3 text-error') : ''}"
       role="status"
     >{testStatus ? (testStatus.ok ? `Test sent to ${data.editorEmail}.` : `Test failed: ${testStatus.error}`) : ''}</p>
 
-    <div class="grid gap-6 p-6 lg:grid-cols-2">
+    <div class="grid gap-section p-6 lg:grid-cols-2">
       <section>
         <h2 class={HEADER_CELL}>Sample of {review.sample.length} of {review.recipientCount} recipients</h2>
-        <ul class="mt-2 flex flex-col gap-1 text-sm">
+        <ul class="mt-2 flex flex-col gap-1 type-body">
           {#each review.sample as recipient (recipient.memberId)}
             <li>{recipient.personName} &lt;{recipient.email}&gt;</li>
           {:else}
@@ -267,15 +267,15 @@ gate; nothing here trusts a count this component computed on its own.
 
       <section>
         <h2 class={HEADER_CELL}>Rendered email</h2>
-        <p class="mt-2 text-sm font-medium">{preview.subject}</p>
-        <div class="prose mt-2 max-w-none rounded-box border border-[var(--cairn-card-border)] p-4 text-sm">
+        <p class="mt-2 type-body font-medium">{preview.subject}</p>
+        <div class="prose mt-2 max-w-none rounded-box border border-[var(--cairn-card-border)] p-4 type-body">
           {@html preview.html}
         </div>
       </section>
     </div>
 
     <p
-      class="text-sm font-medium text-error {sendError ? 'border-b border-[var(--cairn-card-border)] px-6 py-3' : ''}"
+      class="type-body font-medium text-error {sendError ? 'border-b border-[var(--cairn-card-border)] px-6 py-3' : ''}"
       role="alert"
     >{sendError ?? ''}</p>
 
@@ -297,8 +297,8 @@ gate; nothing here trusts a count this component computed on its own.
 
   <dialog bind:this={sendDialog} class="modal">
     <div class="modal-box">
-      <h2 class="text-lg font-bold">Send to {recipientCountLabel}?</h2>
-      <p class="py-2 text-sm text-muted">{review.segmentLabel}. This cannot be undone.</p>
+      <h2 class="type-heading font-bold">Send to {recipientCountLabel}?</h2>
+      <p class="py-2 type-body text-muted">{review.segmentLabel}. This cannot be undone.</p>
       <form method="post" action="?/send" use:enhance={onSendSubmit()}>
         <CsrfField />
         <input type="hidden" name="segmentKey" value={review.segmentKey} />

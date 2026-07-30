@@ -36,13 +36,13 @@ a per-row trash icon on the list.
   let visible = $state(untrack(() => data.event?.visible ?? true));
 </script>
 
-<a href="/admin/club/events" class="mb-4 inline-flex w-fit items-center gap-1 text-sm text-muted hover:text-primary">
+<a href="/admin/club/events" class="mb-4 inline-flex w-fit items-center gap-1 type-body text-muted hover:text-primary">
   <span aria-hidden="true">&larr;</span> Back to Events
 </a>
 
 {#if !data.event}
   <div class="rounded-box border border-[var(--cairn-card-border)] bg-base-100 p-6 py-10 text-center shadow-[var(--cairn-shadow)]">
-    <p class="text-sm text-muted">
+    <p class="type-body text-muted">
       {data.error ?? 'No such event. It may have been deleted, or this link is stale.'}
     </p>
   </div>
@@ -59,7 +59,7 @@ a per-row trash icon on the list.
         </button>
       {/snippet}
       {#if form?.error}
-        <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-error" role="alert">
+        <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-error" role="alert">
           {form.error}
         </p>
       {/if}
@@ -88,8 +88,8 @@ a per-row trash icon on the list.
 
     <dialog bind:this={deleteDialog} class="modal" oncancel={(event) => event.preventDefault()}>
       <div class="modal-box">
-        <h2 class="text-lg font-bold">Delete {data.event.title}?</h2>
-        <p class="py-2 text-sm text-muted">
+        <h2 class="type-heading font-bold">Delete {data.event.title}?</h2>
+        <p class="py-2 type-body text-muted">
           This removes the event from the calendar for good. There is no undo.
         </p>
         <form method="dialog">

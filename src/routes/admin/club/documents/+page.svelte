@@ -18,8 +18,8 @@ per-document member-list drill-through. A plain GET season picker, matching Mone
 
 <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
   <div>
-    <h1 class="text-xl font-semibold">Waivers &amp; acknowledgements</h1>
-    <p class="text-sm text-muted">Every signable document for {data.selectedSeason}, and who has signed it.</p>
+    <h1 class="type-title font-bold">Waivers &amp; acknowledgements</h1>
+    <p class="type-body text-muted">Every signable document for {data.selectedSeason}, and who has signed it.</p>
   </div>
   <form method="get" class="flex items-center gap-2">
     <FieldLabel label="Season">
@@ -30,11 +30,11 @@ per-document member-list drill-through. A plain GET season picker, matching Mone
 </div>
 
 {#if data.error}
-  <p class="rounded-box border border-error/30 bg-error/5 px-4 py-3 text-sm font-medium text-error" role="alert">{data.error}</p>
+  <p class="rounded-box border border-error/30 bg-error/5 px-4 py-3 type-body font-medium text-error" role="alert">{data.error}</p>
 {:else}
   <OfficeList eyebrow="Club" title="Season rollup" subtitle="{data.summaries.length} document{data.summaries.length === 1 ? '' : 's'} published for {data.selectedSeason}.">
     {#if data.summaries.length === 0}
-      <p class="px-6 py-6 text-sm text-muted">No document is published for {data.selectedSeason} yet.</p>
+      <p class="px-6 py-6 type-body text-muted">No document is published for {data.selectedSeason} yet.</p>
     {:else}
       <table class="table">
         <thead>
@@ -61,13 +61,13 @@ per-document member-list drill-through. A plain GET season picker, matching Mone
                 >
                   {summary.title}
                 </a>
-                <span class="ml-1 text-xs text-muted">v{summary.version}</span>
+                <span class="ml-1 type-meta text-muted">v{summary.version}</span>
               </td>
               <td>
                 {#if summary.outstanding.length > 0}
                   <span class="badge badge-sm border-transparent bg-warning font-medium text-warning-content">{summary.outstanding.length}</span>
                 {:else}
-                  <span class="badge badge-ghost badge-sm font-medium">0</span>
+                  <span class="badge cairn-chip-quiet badge-sm font-medium">0</span>
                 {/if}
               </td>
               <td>
@@ -81,7 +81,7 @@ per-document member-list drill-through. A plain GET season picker, matching Mone
                      is dark; the mirror wouldn't hold for success's own light content color. -->
                 <span class="badge badge-sm border-transparent bg-success font-medium text-success-content">{summary.signed.length}</span>
               </td>
-              <td class="text-sm text-muted">{KIND_LABEL[summary.kind] ?? summary.kind}</td>
+              <td class="type-body text-muted">{KIND_LABEL[summary.kind] ?? summary.kind}</td>
             </tr>
           {/each}
         </tbody>

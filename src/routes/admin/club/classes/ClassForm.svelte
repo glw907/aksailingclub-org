@@ -55,16 +55,16 @@ carried.
   <TextField label="Name" name="name" bind:value={name} />
   <TextField label="Slug" name="slug" bind:value={slug} />
   <SelectField label="Track" name="track" bind:value={track} options={trackOptions} />
-  <label class="flex items-center gap-1.5 text-sm">
+  <label class="flex items-center gap-1.5 type-body">
     <input type="checkbox" class="checkbox checkbox-sm" name="visible" bind:checked={visible} />
     Visible on the public calendar
   </label>
   <div>
-    <label class="flex items-center gap-1.5 text-sm">
+    <label class="flex items-center gap-1.5 type-body">
       <input type="checkbox" class="checkbox checkbox-sm" name="dropIn" bind:checked={dropIn} />
       Drop-in
     </label>
-    <p class="mt-1 text-xs text-muted">
+    <p class="mt-1 type-meta text-muted">
       No registration. The public schedule shows "Just show up!" instead of a Register link.
     </p>
   </div>
@@ -96,7 +96,7 @@ carried.
     <textarea class="textarea textarea-sm w-full" name="customNote" rows="2" bind:value={customNote}
     ></textarea>
   </FieldLabel>
-  <p class="text-xs text-muted">
+  <p class="type-meta text-muted">
     A member-facing aside this class's own reminder email includes ("bring your own PFD"). Blank
     sends no override.
   </p>
@@ -107,7 +107,7 @@ carried.
        wired for a custom /admin/club screen yet, so the hero image only displays what migration
        0003's backfill carried. Replacing or clearing it needs the picker seam, a later pass's
        work (the same recipe EventForm.svelte's own comment documents). -->
-  <div class="flex flex-wrap items-center gap-2 border-t border-[var(--cairn-card-border)] p-6 text-sm">
+  <div class="flex flex-wrap items-center gap-2 border-t border-[var(--cairn-card-border)] p-6 type-body">
     <span class="font-medium text-muted">Hero image (read-only):</span>
     <span>{heroImage}</span>
     {#if heroImageAlt}<span class="text-muted">&middot; {heroImageAlt}</span>{/if}

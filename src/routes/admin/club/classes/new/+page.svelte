@@ -26,13 +26,13 @@ a bare form over `ClassForm`'s shared fields, posting to this route's own `creat
   let dropIn = $state(false);
 </script>
 
-<a href="/admin/club/classes" class="mb-4 inline-flex w-fit items-center gap-1 text-sm text-muted hover:text-primary">
+<a href="/admin/club/classes" class="mb-4 inline-flex w-fit items-center gap-1 type-body text-muted hover:text-primary">
   <span aria-hidden="true">&larr;</span> Back to Classes
 </a>
 
 <OfficeList eyebrow="Club" title="New class" subtitle="Add a class to the current season.">
   {#if form?.error}
-    <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-error" role="alert">
+    <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-error" role="alert">
       {form.error}
     </p>
   {/if}

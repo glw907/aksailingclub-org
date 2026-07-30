@@ -25,13 +25,13 @@ screen carries no confirm dialog, unlike the edit screen.
   let visible = $state(true);
 </script>
 
-<a href="/admin/club/events" class="mb-4 inline-flex w-fit items-center gap-1 text-sm text-muted hover:text-primary">
+<a href="/admin/club/events" class="mb-4 inline-flex w-fit items-center gap-1 type-body text-muted hover:text-primary">
   <span aria-hidden="true">&larr;</span> Back to Events
 </a>
 
 <OfficeList eyebrow="Club" title="New event" subtitle="Fill in the details, then save.">
   {#if form?.error}
-    <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-error" role="alert">
+    <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-error" role="alert">
       {form.error}
     </p>
   {/if}

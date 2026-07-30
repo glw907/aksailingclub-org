@@ -211,14 +211,14 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
 
 <a
   href="/admin/club/members"
-  class="mb-4 inline-flex w-fit items-center gap-1 text-sm text-muted hover:text-primary"
+  class="mb-4 inline-flex w-fit items-center gap-1 type-body text-muted hover:text-primary"
 >
   <span aria-hidden="true">&larr;</span> Back to Members
 </a>
 
 {#if !data.desk}
   <div class="{cardCls} py-10 text-center">
-    <p class="text-sm text-muted">
+    <p class="type-body text-muted">
       {data.error ?? 'No such household. It may have merged into another, or this link is stale.'}
     </p>
   </div>
@@ -229,8 +229,8 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
   <header class="mb-6 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
     <div class="flex flex-col gap-0.5">
       <span class={HEADER_CELL}>Club</span>
-      <h1 class="text-2xl font-bold tracking-tight font-[family-name:var(--font-display)]">{desk.name}</h1>
-      {#if desk.city}<p class="text-sm text-muted">{desk.city}</p>{/if}
+      <h1 class="type-title font-bold font-[family-name:var(--font-display)]">{desk.name}</h1>
+      {#if desk.city}<p class="type-body text-muted">{desk.city}</p>{/if}
     </div>
     <div class="flex items-center gap-2">
       {#if standing}
@@ -250,12 +250,12 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
   </header>
 
   {#if form?.error}
-    <p class="mb-4 rounded-box border border-error/30 bg-error/5 px-4 py-3 text-sm font-medium text-error" role="alert">
+    <p class="mb-4 rounded-box border border-error/30 bg-error/5 px-4 py-3 type-body font-medium text-error" role="alert">
       {form.error}
     </p>
   {/if}
 
-  <div class="flex flex-col gap-6">
+  <div class="flex flex-col gap-section">
     <!-- Roster: contact fields, visibility, archive/primary state, plus add/edit/move/archive. -->
     <div class={cardCls}>
       <div class="flex items-center justify-between">
@@ -271,14 +271,14 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
                 <p class="font-semibold {member.archived ? 'opacity-50' : ''}">
                   {member.name}{member.isPrimary ? ' · Primary' : ''}
                 </p>
-                <p class="text-sm text-muted">
+                <p class="type-body text-muted">
                   {member.email ?? 'No email on file'} &middot; {member.phone ?? 'No phone on file'}
                   {#if member.birthdate}&middot; {formatCivilDate(member.birthdate)}{/if}
                 </p>
               </div>
               <div class="flex items-center gap-2">
                 <span class="badge {visibility.cls}">{visibility.label}</span>
-                {#if member.archived}<span class="badge badge-ghost badge-sm font-medium opacity-60">Archived</span>{/if}
+                {#if member.archived}<span class="badge cairn-chip-quiet badge-sm font-medium opacity-60">Archived</span>{/if}
                 <a class="btn btn-ghost btn-xs" href="/admin/club/documents/member/{member.id}">Signatures</a>
                 <button type="button" class="btn btn-ghost btn-xs" onclick={() => openEditMemberDialog(member)}>Edit</button>
                 <button type="button" class="btn btn-ghost btn-xs" onclick={() => openMoveDialog(member)}>Move&hellip;</button>
@@ -295,7 +295,7 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
           {/each}
         </ul>
       {:else}
-        <p class="mt-2 text-sm text-muted">No members on file yet.</p>
+        <p class="mt-2 type-body text-muted">No members on file yet.</p>
       {/if}
     </div>
 
@@ -323,10 +323,10 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
                 <td>{TIER_LABEL[membership.tier]}</td>
                 <td>{formatDollars(membership.pricePaid)}</td>
                 <td>{formatCivilDate(membership.paidAt, 'Not paid')}</td>
-                <td class="text-sm text-muted">{source ? TRANSACTION_SOURCE_LABEL[source] : '—'}</td>
+                <td class="type-body text-muted">{source ? TRANSACTION_SOURCE_LABEL[source] : '—'}</td>
                 <td>
                   {#if membership.refundedAt}
-                    <span class="badge badge-ghost badge-sm font-medium">Refunded {formatCivilDate(membership.refundedAt)}</span>
+                    <span class="badge cairn-chip-quiet badge-sm font-medium">Refunded {formatCivilDate(membership.refundedAt)}</span>
                   {/if}
                 </td>
                 <td>
@@ -337,7 +337,7 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
           </tbody>
         </table>
       {:else}
-        <p class="mt-2 text-sm text-muted">No membership history on file yet.</p>
+        <p class="mt-2 type-body text-muted">No membership history on file yet.</p>
       {/if}
     </div>
 
@@ -363,8 +363,8 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
                   {/if}
                 </div>
               </div>
-              {#if tx.memo}<p class="text-sm text-muted">{tx.memo}</p>{/if}
-              <ul class="mt-1 flex flex-col gap-0.5 pl-4 text-sm text-muted">
+              {#if tx.memo}<p class="type-body text-muted">{tx.memo}</p>{/if}
+              <ul class="mt-1 flex flex-col gap-0.5 pl-4 type-body text-muted">
                 {#each tx.lines as line (line.id)}
                   <li class="flex justify-between gap-2">
                     <span>{LINE_ITEM_LABEL[line.item]} &middot; {line.description}</span>
@@ -376,7 +376,7 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
           {/each}
         </ul>
       {:else}
-        <p class="mt-2 text-sm text-muted">No ledger transactions on file yet.</p>
+        <p class="mt-2 type-body text-muted">No ledger transactions on file yet.</p>
       {/if}
     </div>
 
@@ -389,25 +389,25 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
             <li class="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0">
               <div>
                 <p class="font-semibold">{asset.assetTypeName}</p>
-                <p class="text-sm text-muted">
+                <p class="type-body text-muted">
                   {asset.season} season{#if asset.description}&middot; {asset.description}{/if}
                 </p>
               </div>
-              <span class="badge badge-sm {asset.status === 'active' ? 'border-transparent bg-primary/10 font-medium text-primary' : 'badge-ghost font-medium'}">
+              <span class="badge badge-sm {asset.status === 'active' ? 'border-transparent bg-primary/10 font-medium text-primary' : 'cairn-chip-quiet font-medium'}">
                 {asset.status === 'active' ? 'Active' : 'Released'}
               </span>
             </li>
           {/each}
         </ul>
       {:else}
-        <p class="mt-2 text-sm text-muted">No asset assignments on file.</p>
+        <p class="mt-2 type-body text-muted">No asset assignments on file.</p>
       {/if}
     </div>
   </div>
 
   <dialog bind:this={householdDialog} class="modal" aria-labelledby="household-dialog-title">
     <div class="modal-box">
-      <h2 id="household-dialog-title" class="text-lg font-bold">Edit household</h2>
+      <h2 id="household-dialog-title" class="type-heading font-bold">Edit household</h2>
       <form method="post" action="?/updateHousehold" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => householdDialog)}>
         <CsrfField />
         <TextField label="Household name" name="name" bind:value={householdName} />
@@ -428,10 +428,10 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
 
   <dialog bind:this={formerDialog} class="modal" aria-labelledby="former-dialog-title">
     <div class="modal-box">
-      <h2 id="former-dialog-title" class="text-lg font-bold">
+      <h2 id="former-dialog-title" class="type-heading font-bold">
         {formerDialogMode === 'set' ? 'Mark this household Former' : 'Clear Former status'}
       </h2>
-      <p class="py-2 text-sm text-muted">
+      <p class="py-2 type-body text-muted">
         {formerDialogMode === 'set'
           ? 'Removes full member benefits immediately, ahead of the reminder sequence. A later payment clears it automatically.'
           : 'Restores full member benefits with no payment on file yet. Use this when a household is renewing but has not paid yet.'}
@@ -454,7 +454,7 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
 
   <dialog bind:this={memberDialog} class="modal" aria-labelledby="member-dialog-title">
     <div class="modal-box">
-      <h2 id="member-dialog-title" class="text-lg font-bold">{memberDialogMode === 'add' ? 'Add member' : 'Edit member'}</h2>
+      <h2 id="member-dialog-title" class="type-heading font-bold">{memberDialogMode === 'add' ? 'Add member' : 'Edit member'}</h2>
       <form
         method="post"
         action={memberDialogMode === 'add' ? '?/addMember' : '?/updateMember'}
@@ -479,8 +479,8 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
 
   <dialog bind:this={moveDialog} class="modal" aria-labelledby="move-dialog-title">
     <div class="modal-box">
-      <h2 id="move-dialog-title" class="text-lg font-bold">Move {moveMemberName}</h2>
-      <p class="py-2 text-sm text-muted">
+      <h2 id="move-dialog-title" class="type-heading font-bold">Move {moveMemberName}</h2>
+      <p class="py-2 type-body text-muted">
         Re-parents this member to another household. Moving the household's own primary needs a new
         primary named first.
       </p>
@@ -504,8 +504,8 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
 
   <dialog bind:this={mergeDialog} class="modal" aria-labelledby="merge-dialog-title">
     <div class="modal-box">
-      <h2 id="merge-dialog-title" class="text-lg font-bold">Merge a household into {desk.name}</h2>
-      <p class="py-2 text-sm text-muted">
+      <h2 id="merge-dialog-title" class="type-heading font-bold">Merge a household into {desk.name}</h2>
+      <p class="py-2 type-body text-muted">
         Members, memberships, and ledger transactions move here; the other household is marked left.
         Refused when both hold a membership for the same season.
       </p>
@@ -522,8 +522,8 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
 
   <dialog bind:this={tierDialog} class="modal" aria-labelledby="tier-dialog-title">
     <div class="modal-box">
-      <h2 id="tier-dialog-title" class="text-lg font-bold">Change tier &middot; {tierMembershipLabel}</h2>
-      <p class="py-2 text-sm text-muted">Edits the tier label only. Trueing up money happens through a manual payment or refund.</p>
+      <h2 id="tier-dialog-title" class="type-heading font-bold">Change tier &middot; {tierMembershipLabel}</h2>
+      <p class="py-2 type-body text-muted">Edits the tier label only. Trueing up money happens through a manual payment or refund.</p>
       <form method="post" action="?/changeTier" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => tierDialog)}>
         <CsrfField />
         <input type="hidden" name="membershipId" value={tierMembershipId} />
@@ -538,8 +538,8 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
 
   <dialog bind:this={paymentDialog} class="modal" aria-labelledby="payment-dialog-title">
     <div class="modal-box">
-      <h2 id="payment-dialog-title" class="text-lg font-bold">Record a manual payment</h2>
-      <p class="py-2 text-sm text-muted">A check, cash, or comp payment; creates the membership and the ledger entry together.</p>
+      <h2 id="payment-dialog-title" class="type-heading font-bold">Record a manual payment</h2>
+      <p class="py-2 type-body text-muted">A check, cash, or comp payment; creates the membership and the ledger entry together.</p>
       <form method="post" action="?/recordPayment" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => paymentDialog)}>
         <CsrfField />
         <FieldLabel label="Season">
@@ -561,10 +561,10 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
 
   <dialog bind:this={refundDialog} class="modal" aria-labelledby="refund-dialog-title">
     <div class="modal-box">
-      <h2 id="refund-dialog-title" class="text-lg font-bold">Refund</h2>
+      <h2 id="refund-dialog-title" class="type-heading font-bold">Refund</h2>
       {#if refundTx}
         {@const tx = refundTx}
-        <p class="py-2 text-sm text-muted">
+        <p class="py-2 type-body text-muted">
           {tx.apiEligible
             ? 'This charge went through Stripe checkout: the refund issues through Stripe automatically.'
             : 'This charge did not go through Stripe checkout (an imported, PayPal, or check/cash payment): the refund records here only.'}
@@ -587,7 +587,7 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
                     aria-label={`Refund ${LINE_ITEM_LABEL[line.item]} -- ${line.description}`}
                   />
                 </label>
-                <span class="flex-1 text-sm">
+                <span class="flex-1 type-body">
                   {LINE_ITEM_LABEL[line.item]} &middot; {line.description}
                   {#if line.refundedCents > 0}
                     <span class="text-muted">({formatCents(line.refundedCents)} already refunded)</span>

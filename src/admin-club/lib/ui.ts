@@ -11,8 +11,16 @@ export interface ChipStyle {
 }
 
 /** The uppercase micro-label the screens share for an eyebrow and every table column header:
- *  one design token so a header can't drift a screen at a time. */
-export const HEADER_CELL = 'text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted';
+ *  one design token so a header can't drift a screen at a time.
+ *
+ *  On `type-label` rather than the `text-[0.6875rem]` literal it carried until 2026-07-29. The
+ *  literal resolved to the same 11px but never compiled into the precompiled `cairn-admin.css`
+ *  these screens render against, so every header rendered at the inherited size instead. Living
+ *  in a `.ts` module, it was also invisible to `cairn-audit`, whose static substrate reads markup
+ *  through `svelte/compiler` and so never sees a class string a plain module exports.
+ *  `tracking-[0.08em]` stays: unlike the size literal, that one does compile into the shipped
+ *  sheet, so it has been doing its work all along. */
+export const HEADER_CELL = 'type-label font-semibold uppercase tracking-[0.08em] text-muted';
 
 /** The two-state ops visibility badge the Events and Classes rows both render off a SQLite
  *  `visible` boolean: the shown state gets the filled primary tint, hidden stays a ghost chip.
@@ -20,7 +28,7 @@ export const HEADER_CELL = 'text-[0.6875rem] font-semibold uppercase tracking-[0
  *  different question (how a member appears in the public directory). */
 export const OPS_VISIBILITY_CHIP: Record<'visible' | 'hidden', ChipStyle> = {
   visible: { label: 'Visible', cls: 'badge-sm border-transparent bg-primary/10 font-medium text-primary' },
-  hidden: { label: 'Hidden', cls: 'badge-ghost badge-sm font-medium' },
+  hidden: { label: 'Hidden', cls: 'cairn-chip-quiet badge-sm font-medium' },
 };
 
 const civilDateFmt = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' });

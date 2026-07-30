@@ -8,6 +8,55 @@
 > entries beyond the top two or three to the archive — this file is @-imported into every
 > session's context, so its length is a per-session token tax.
 
+**THE ASSETS PASS IS OPEN AS THE CAIRN DESIGN-CAPTURE TRIAL; THE PRE-TRIAL CHORES ARE
+DONE AND THEY TURNED UP A CAIRN 0.91.0 REGRESSION, SO NO MEASUREMENT HAS RUN YET
+(2026-07-29, Opus 5 conducting, plan docs/plans/2026-07-29-cairn-design-trial-assets.md).**
+What happened:
+
+- **THE HEADLINE FINDING: cairn 0.91.0 silently killed 300 ASC admin markup sites and
+  shipped as non-breaking.** Its grammar migration moved cairn's own screens onto
+  `type-*` roles, so Tailwind stopped emitting the named size steps into the shipped
+  `cairn-admin.css` — and ASC's admin loads only that sheet. `text-sm` x239, `text-xs`
+  x24, `text-lg` x23, `gap-6` x9, `text-2xl` x3, `tracking-tight` x2 all went dead on
+  the bump, while the upgrade guide promises "your custom admin screens keep rendering
+  exactly as they did." Cairn applied the safelist reasoning to the names it ADDED and
+  not to the ones it retired. Measured off both shipped sheets and confirmed by the
+  audit's own before/after; corpus C's 99-dead-token count corroborates the split.
+- **Geoff's two rulings (2026-07-29):** repair ASC forward onto the roles and file the
+  cairn defect rather than pause for a 0.91.1; resolve the twelve-pixel sites per
+  relationship rather than by a blanket rule.
+- **Chores 1-4 landed.** cairn ^0.91.0; the `cairn-admin-screens` skill installed via
+  `cairn-doctor --fix` with `.claude` excluded from Tailwind scanning; 274
+  pixel-identical renames onto the grammar roles across 27 files; 24 twelve-pixel sites
+  split `type-label`/`type-meta` by relationship; `tracking-tight` dropped against the
+  measured `page-title` norm; 21 `badge-ghost` sites onto the quiet register (the
+  `base-300` hazard checked, not assumed — ASC rows hover at `bg-base-200/60`, no
+  zebra); 4 off-scale documents h1s onto `type-title`; 5 counted suppressions on stat
+  values whose own passes decide them. **Audit 434 errors -> 96, and the Assets pass's
+  own surfaces are error-clean.**
+- **The 94 remaining dead classes are ROUTED, not absorbed** — they sit on 17 other
+  screens (Money 18, Members detail 18, the signature certificate 15, ...) and go to
+  each screen's own pass, per the discovered-work rule. Only 5 of 99 were ever on the
+  Assets perimeter.
+- **Gates**: check 0/0 (1003 files), 2003 tests exit 0, build green. Full record in
+  `docs/design-benchmark/2026-07-29-assets-trial-log.md`; six cairn findings staged in
+  `docs/2026-07-29-assets-trial-harvest-findings.md` (paste into cairn's friction log
+  when that repo is free — a `design-infra-pass-2` worktree still had live workerd).
+- **PASS-SIZE FLAG (Geoff): the "mechanical" pre-trial chores became a pass of their
+  own** — a substrate defect, ~400 repaired sites, and a six-item harvest, before any
+  measurement. The trial itself has not started.
+- **NEXT, in order**: (1) the rendered audit baseline, which needs local `wrangler dev`
+  + a seeded D1 session row + `CAIRN_AUDIT_COOKIES` — the same door the edit-desk
+  hydration defect must be diagnosed through, so do both together; (2) regenerate the
+  visual baselines via `gh workflow run ci.yml -f update_snapshots=true` and READ the
+  log (0.91.0's `PageHeader` margin fix plus the h1 and chip changes all move
+  rendering); (3) Geoff's before/after on the changed admin screens; (4) THEN the trial
+  proper, opening with the Assets functional brainstorm. RESUME PROMPT: "Continue the
+  Assets design-capture trial: read docs/design-benchmark/2026-07-29-assets-trial-log.md
+  and the plan, then run the rendered audit baseline and diagnose the edit-desk
+  hydration defect against local wrangler dev." Launch from ~/Projects/aksailingclub-org.
+
+
 **MEMBERS REFINEMENT ROUND 1 IS LANDED: COHERENCE-PASSED, ON DEV, BASELINES REGENERATED;
 GEOFF'S BEFORE/AFTER AND THREE QUEUE ITEMS ARE THE OPEN GATES (2026-07-24, third session
 on the round — the 07-22 session died mid-C5 to a dead battery, its recovery session
@@ -62,65 +111,10 @@ ran the fix round on Geoff's workflow opt-in, and landed).** What shipped:
   action remains Geoff's Members before/after and the three queue items above.
 
 
-**THE CLASSES PASS IS BUILT, RELEASED TO DEV, AND COHERENCE-PASSED ("designed, not
-assembled", third cold read); GEOFF'S BEFORE/AFTER AND THE PROBE VERDICTS ARE THE
-OPEN GATES (2026-07-21, crash-recovered session, Fable-conducted on Geoff's workflow
-opt-in "continue with a workflow to release"; workflow wf_297581a0-a05 13 agents 0
-errors + 5 direct dispatches; commits ecde24c..cbb79f5; cairn 0.89.1).** What shipped:
-
-- **Tasks 1–5** (the crashed session had executed 1–4 and left Task 5 warm,
-  complete, and gate-green — recovery lost nothing): cairn 0.89.1 (itemNoun/
-  ItemLabel graduated), the toolkit subpath swap (five local copies deleted,
-  ExpandableRow kept local), the season-scoped list rebuild (roster expand panels,
-  offerNext with its three guards), the detail rebuild (roster, waitlist & offers,
-  edit form on the event-detail idiom, instructors, demoted danger zone,
-  recordPayment), and the transfer flow (transferEnrollment on the shared
-  triggerFreedSpotOffer — same-price moves the payment, mismatch warns + explicit
-  confirm, no Stripe surgery; the portal withdrawal path now shares the same
-  freed-spot function).
-- **The release round**: 13 findings, every medium adversarially verified (0
-  refuted); 3 confirmed mediums fixed — the recordPayment DOUBLE-CHARGE race (now
-  claimOffer's compare-and-set; accepted-at-club-scale residual: a D1 failure
-  between the flip and the ledger batch leaves paid-without-ledger, the far-rarer
-  inverse of the double-click it kills), the transfer picker offering
-  already-enrolled destinations with the server refusal invisible behind the modal,
-  and dead divide-y utilities (the silent-non-compile trap AGAIN — two more
-  instances this pass, harvest finding 14). 7 lows fixed, 3 skipped with reasons.
-  The cross-class waitlist's blank member names fixed (finding 11's follow-up).
-- **Coherence: FAIL (4 tells) → fix → cold FAIL (2 tells) → fix → cold PASS** —
-  full verdicts in the ledger. Carry-worthy root causes: ExpandableRow's
-  panel-follows-summary-width contract recurred at its second consumer (harvest
-  13); Svelte trims a literal leading space at an {#if} boundary (harvest 15).
-- **Probes committed** (docs/design-benchmark/probes/2026-07-21-classes/): list row
-  anatomy/density, the over-capacity voice x3, expand-panel composition, and the
-  riders page carrying the three open Members items (StatusChip palette, the
-  never-paid 'none' copy, the search focus ring). **GEOFF'S VERDICTS OWED.**
-- **Gates**: check 0/0, 2000 tests, build green; design-probe clean (the same 5
-  pre-existing site findings, none from this pass); CI green INCLUDING the visual
-  suite against the EXISTING baselines — baselined rendering provably unchanged,
-  so no update_snapshots dispatch (the regen rule binds only when rendering
-  changes); deploy green, dev live.
-- **Series ruling (Geoff, mid-pass)**: admin-screen-passes covers the ENTIRE admin
-  surface until fully polished, order flexible — ROADMAP's entry now carries the
-  remaining-screen map; season-rollover gained the sweep-the-ops-dashboard's-
-  year-cycling-logic note.
-- **Budgets**: ~1.9M subagent tokens (workflow 1.32M + five direct dispatches);
-  conductor questions to Geoff: 0. Guard lesson reconfirmed: the bytes-based
-  runaway alarm false-fired on the probe agent (embedded CSS + screenshots);
-  stall-only detection is the right shape.
-- **ON GEOFF'S QUEUE**: the Classes before/after on dev (/admin/club/classes — the
-  list with a panel expanded, a detail page, the Move… dialog, at 390 and 1440)
-  and the probe verdicts above.
-- **NEXT PASS — ASSETS (first under the whole-surface series ruling)**: opens with
-  the functional brainstorm. RESUME PROMPT: "Start the Assets pass: read
-  ROADMAP.md's admin-screen-passes entry and docs/STATUS.md, then open the
-  functional brainstorm with Geoff (superpowers:brainstorming) before any visual
-  work. The asset_types underscore-vs-hyphen defect rides the pass; opening cairn
-  task candidates: ExpandableRow's graduation (second consumer landed) and the
-  destination-picker pattern." Launch from ~/Projects/aksailingclub-org.
-
-
 **STILL OPEN ON GEOFF'S QUEUE (pointers; full entries in docs/status-archive.md):**
+the Classes before/after on dev (/admin/club/classes) and the 2026-07-21 probe
+verdicts, including the three riders (StatusChip palette, the never-paid 'none'
+copy, the search focus ring — the latter two since CLOSED; full entry archived);
 the pass-B sidebar walkthrough per role (four-group tree, badges, the two class
 surfaces, Help in the foot; full entry moved to the archive);
 the attorney packet send (docs/waivers/, all DRAFTs; the sitting's full entry is in

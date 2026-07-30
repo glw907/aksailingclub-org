@@ -1,0 +1,8 @@
+{
+  "static": {
+    "paletteFiles": [
+      "src/theme/theme.css",
+      "src/chassis/tokens.css"
+    ]
+  }
+}

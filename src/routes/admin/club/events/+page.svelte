@@ -23,13 +23,13 @@ cheap, else omit and say so") for this same reason.
 
   /** The category chip's color, following the ratified mockup's own TYPE_CHIP palette by way of
    *  the ops-import's category mapping (regatta -> racing = the filled primary chip, work_party ->
-   *  operations = warning, social -> social = ghost, meeting -> governance = neutral); 'class'
+   *  operations = warning, social -> social = the quiet register, meeting -> governance = neutral); 'class'
    *  (no imported event uses it yet) gets its own distinct info chip. */
   const CATEGORY_CHIP: Record<EventCategory, string> = {
     racing: 'border-transparent bg-primary/10 text-primary',
     class: 'badge-info',
     operations: 'border-transparent bg-warning/15 text-warning-content',
-    social: 'badge-ghost',
+    social: 'cairn-chip-quiet',
     governance: 'badge-neutral',
   };
 
@@ -60,7 +60,7 @@ cheap, else omit and say so") for this same reason.
       {#each data.events as row (row.id)}
         {@const visibility = OPS_VISIBILITY_CHIP[row.visible ? 'visible' : 'hidden']}
         <tr class="transition-colors hover:bg-base-200/60">
-          <td class="whitespace-nowrap text-sm tabular-nums text-muted">{formatCivilDate(row.startDate, 'TBD')}</td>
+          <td class="whitespace-nowrap type-body tabular-nums text-muted">{formatCivilDate(row.startDate, 'TBD')}</td>
           <td>
             <a class="font-semibold hover:text-primary hover:underline" href={`/admin/club/events/${row.id}`}>
               {row.title}
@@ -71,7 +71,7 @@ cheap, else omit and say so") for this same reason.
         </tr>
       {:else}
         <tr>
-          <td colspan="4" class="px-6 py-10 text-center text-sm text-muted">
+          <td colspan="4" class="px-6 py-10 text-center type-body text-muted">
             {data.error ? 'The events table could not be read.' : 'No events on the calendar yet.'}
           </td>
         </tr>

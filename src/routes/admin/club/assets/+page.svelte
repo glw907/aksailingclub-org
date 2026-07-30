@@ -30,7 +30,7 @@ shipped.
   const STANDING_CHIP: Record<AssetPaymentStanding, { label: string; cls: string }> = {
     paid: { label: 'Paid', cls: 'badge-sm border-transparent bg-primary/10 font-medium text-primary' },
     outstanding: { label: 'Outstanding', cls: 'badge-sm border-transparent bg-warning/15 font-medium text-warning-content' },
-    'not-billed': { label: 'Not billed', cls: 'badge-ghost badge-sm font-medium' },
+    'not-billed': { label: 'Not billed', cls: 'cairn-chip-quiet badge-sm font-medium' },
   };
 
   const METHOD_LABEL: Record<PaymentMethod, string> = { card: 'Card', check: 'Check', cash: 'Cash' };
@@ -150,7 +150,7 @@ shipped.
   {/snippet}
 
   {#if form?.error}
-    <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-error" role="alert">
+    <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-error" role="alert">
       {form.error}
     </p>
   {/if}
@@ -159,9 +159,9 @@ shipped.
     {#each byAssetGroups as group (group.type.id)}
       <div class="border-b border-[var(--cairn-card-border)] p-6">
         <div class="mb-3 flex items-center justify-between">
-          <h2 class="text-sm font-semibold">
+          <h2 class="type-body font-semibold">
             {group.type.name}
-            <span class="ml-1 font-normal text-muted">
+            <span class="count-qualifier font-normal text-muted">
               {group.rows.length}{group.type.capacity != null ? `/${group.type.capacity}` : ''} assigned &middot; {formatDollars(group.type.fee)}
             </span>
           </h2>
@@ -180,11 +180,11 @@ shipped.
             {#each group.rows as row (row.id)}
               {@const standing = STANDING_CHIP[row.paymentStanding]}
               <tr class="transition-colors hover:bg-base-200/60">
-                <td class="text-sm">
+                <td class="type-body">
                   <span class="font-medium">{row.householdName}</span>
                   {#if row.primaryMemberName}<span class="text-muted"> &middot; {row.primaryMemberName}</span>{/if}
                 </td>
-                <td class="text-sm text-muted">{row.description ?? '—'}</td>
+                <td class="type-body text-muted">{row.description ?? '—'}</td>
                 <td><span class="badge {standing.cls}">{standing.label}</span></td>
                 <td class="flex justify-end gap-1">
                   <button type="button" class="btn btn-ghost btn-xs" onclick={() => openPaymentDialog(row)}>Record payment</button>
@@ -193,7 +193,7 @@ shipped.
               </tr>
             {:else}
               <tr>
-                <td colspan="4" class="px-6 py-6 text-center text-sm text-muted">No one holds this asset right now.</td>
+                <td colspan="4" class="px-6 py-6 text-center type-body text-muted">No one holds this asset right now.</td>
               </tr>
             {/each}
           </tbody>
@@ -202,7 +202,7 @@ shipped.
     {/each}
 
     <form method="post" action="?/assign" class="p-6">
-      <h2 class="mb-3 text-sm font-semibold">Assign an asset</h2>
+      <h2 class="mb-3 type-body font-semibold">Assign an asset</h2>
       <div class="grid gap-3 sm:grid-cols-2">
         <SelectField label="Asset type" name="assetType" bind:value={assignAssetType} options={assetTypeOptions} />
         <TextField label="Search household" name="householdQuery" type="search" placeholder="Name" bind:value={householdQuery} />
@@ -225,8 +225,8 @@ shipped.
       </thead>
       <tbody>
         {#each byPersonGroups as group (group.householdId)}
-          <tr class="align-top">
-            <td class="whitespace-nowrap text-sm">
+          <tr class="row-top">
+            <td class="whitespace-nowrap type-body">
               <span class="font-medium">{group.householdName}</span>
               {#if group.primaryMemberName}<br /><span class="text-muted">{group.primaryMemberName}</span>{/if}
             </td>
@@ -234,7 +234,7 @@ shipped.
               <ul class="flex flex-col gap-1">
                 {#each group.rows as row (row.id)}
                   {@const standing = STANDING_CHIP[row.paymentStanding]}
-                  <li class="flex flex-wrap items-center gap-2 text-sm">
+                  <li class="flex flex-wrap items-center gap-2 type-body">
                     <span class="font-medium">{row.assetTypeName}</span>
                     {#if row.description}<span class="text-muted">{row.description}</span>{/if}
                     <span class="badge {standing.cls}">{standing.label}</span>
@@ -247,7 +247,7 @@ shipped.
           </tr>
         {:else}
           <tr>
-            <td colspan="2" class="px-6 py-10 text-center text-sm text-muted">No household holds an asset right now.</td>
+            <td colspan="2" class="px-6 py-10 text-center type-body text-muted">No household holds an asset right now.</td>
           </tr>
         {/each}
       </tbody>
@@ -268,12 +268,12 @@ shipped.
         {#each data.waitlist as entry (entry.id)}
           <tr class="transition-colors hover:bg-base-200/60">
             <td><span class="badge badge-sm badge-neutral font-medium">{entry.assetTypeName}</span></td>
-            <td class="text-sm tabular-nums text-muted">{entry.position}</td>
-            <td class="text-sm">
+            <td class="type-body tabular-nums text-muted">{entry.position}</td>
+            <td class="type-body">
               <span class="font-medium">{entry.memberName}</span>
               {#if entry.memberEmail}<span class="text-muted"> &middot; {entry.memberEmail}</span>{/if}
             </td>
-            <td class="whitespace-nowrap text-sm tabular-nums text-muted">{formatCivilDate(entry.requestedAt)}</td>
+            <td class="whitespace-nowrap type-body tabular-nums text-muted">{formatCivilDate(entry.requestedAt)}</td>
             <td class="flex justify-end gap-1">
               <form method="post" action="?/waitlistMoveToEnd">
                 <CsrfField />
@@ -289,14 +289,14 @@ shipped.
           </tr>
         {:else}
           <tr>
-            <td colspan="5" class="px-6 py-10 text-center text-sm text-muted">No one is waiting for an asset right now.</td>
+            <td colspan="5" class="px-6 py-10 text-center type-body text-muted">No one is waiting for an asset right now.</td>
           </tr>
         {/each}
       </tbody>
     </table>
 
     <form method="post" action="?/waitlistAdd" class="border-t border-[var(--cairn-card-border)] p-6">
-      <h2 class="mb-3 text-sm font-semibold">Add to the waitlist</h2>
+      <h2 class="mb-3 type-body font-semibold">Add to the waitlist</h2>
       <div class="grid gap-3 sm:grid-cols-2">
         <SelectField label="Asset type" name="assetType" bind:value={waitlistAssetType} options={assetTypeOptions} />
         <TextField label="Search member" name="memberQuery" type="search" placeholder="Name or email" bind:value={memberQuery} />
@@ -313,8 +313,8 @@ shipped.
 
 <dialog bind:this={releaseDialog} class="modal" oncancel={(event) => event.preventDefault()}>
   <div class="modal-box">
-    <h2 class="text-lg font-bold">Release {releaseTargetLabel}?</h2>
-    <p class="py-2 text-sm text-muted">The asset returns to the pool. This does not remove its payment history.</p>
+    <h2 class="type-heading font-bold">Release {releaseTargetLabel}?</h2>
+    <p class="py-2 type-body text-muted">The asset returns to the pool. This does not remove its payment history.</p>
     <form method="dialog">
       <CsrfField />
       <div class="modal-action">
@@ -330,8 +330,8 @@ shipped.
 
 <dialog bind:this={paymentDialog} class="modal">
   <div class="modal-box">
-    <h2 class="text-lg font-bold">Record a payment</h2>
-    <p class="py-2 text-sm text-muted">{paymentTargetLabel}</p>
+    <h2 class="type-heading font-bold">Record a payment</h2>
+    <p class="py-2 type-body text-muted">{paymentTargetLabel}</p>
     <form method="post" action="?/recordPayment" class="flex flex-col gap-3">
       <CsrfField />
       <input type="hidden" name="assignmentId" value={paymentTargetId} />
@@ -347,3 +347,17 @@ shipped.
     </form>
   </div>
 </dialog>
+
+<style>
+  /* `/admin/**` renders against the precompiled `cairn-admin.css`, so a utility cairn's own admin
+     never uses does not exist here. `ml-1` and `align-top` were both in that category: each read
+     as live markup and compiled to nothing. Named scoped rules over package tokens instead, the
+     same escape `classes/[id]/+page.svelte` takes for its row dividers. */
+  .count-qualifier {
+    margin-left: var(--cairn-gap-label);
+  }
+
+  .row-top {
+    vertical-align: top;
+  }
+</style>

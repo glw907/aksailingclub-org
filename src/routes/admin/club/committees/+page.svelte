@@ -157,7 +157,7 @@ it stays intentionally small.
   {/snippet}
 
   {#if form?.error}
-    <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-error" role="alert">
+    <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-error" role="alert">
       {form.error}
     </p>
   {/if}
@@ -167,11 +167,11 @@ it stays intentionally small.
       <div class="border-b border-[var(--cairn-card-border)] p-6">
         <div class="mb-3 flex items-start justify-between gap-3">
           <div>
-            <h2 class="text-sm font-semibold">
+            <h2 class="type-body font-semibold">
               {group.committee.name}
-              <span class="badge badge-ghost badge-sm ml-1 font-medium">{KIND_LABEL[group.committee.kind]}</span>
+              <span class="badge cairn-chip-quiet badge-sm ml-1 font-medium">{KIND_LABEL[group.committee.kind]}</span>
             </h2>
-            {#if group.committee.description}<p class="mt-1 text-sm text-muted">{group.committee.description}</p>{/if}
+            {#if group.committee.description}<p class="mt-1 type-body text-muted">{group.committee.description}</p>{/if}
           </div>
           <div class="flex gap-1">
             <button type="button" class="btn btn-ghost btn-xs" onclick={() => openEditDialog(group.committee)}>Edit</button>
@@ -196,7 +196,7 @@ it stays intentionally small.
           <tbody>
             {#each group.rows as row (row.id)}
               <tr class="transition-colors hover:bg-base-200/60">
-                <td class="text-sm font-medium">{row.memberName}</td>
+                <td class="type-body font-medium">{row.memberName}</td>
                 <td>
                   {#if row.status === 'active'}
                     <form method="post" action="?/setMemberRole" class="flex items-center gap-1">
@@ -208,7 +208,7 @@ it stays intentionally small.
                       <button type="submit" class="btn btn-ghost btn-xs">Save</button>
                     </form>
                   {:else}
-                    <span class="badge badge-ghost badge-sm font-medium">{row.role}</span>
+                    <span class="badge cairn-chip-quiet badge-sm font-medium">{row.role}</span>
                   {/if}
                 </td>
                 <td>
@@ -239,7 +239,7 @@ it stays intentionally small.
               </tr>
             {:else}
               <tr>
-                <td colspan="4" class="px-6 py-6 text-center text-sm text-muted">No one is on this committee yet.</td>
+                <td colspan="4" class="px-6 py-6 text-center type-body text-muted">No one is on this committee yet.</td>
               </tr>
             {/each}
           </tbody>
@@ -248,7 +248,7 @@ it stays intentionally small.
     {/each}
 
     <form method="post" action="?/createCommittee" class="border-b border-[var(--cairn-card-border)] p-6">
-      <h2 class="mb-3 text-sm font-semibold">New committee</h2>
+      <h2 class="mb-3 type-body font-semibold">New committee</h2>
       <div class="grid gap-3 sm:grid-cols-2">
         <TextField label="Name" name="name" bind:value={newName} />
         <SelectField label="Kind" name="kind" bind:value={newKind} options={kindOptions} />
@@ -266,7 +266,7 @@ it stays intentionally small.
     </form>
 
     <form method="post" action="?/addMember" class="border-b border-[var(--cairn-card-border)] p-6">
-      <h2 class="mb-3 text-sm font-semibold">Add a committee member</h2>
+      <h2 class="mb-3 type-body font-semibold">Add a committee member</h2>
       <div class="grid gap-3 sm:grid-cols-2">
         <SelectField label="Committee" name="committeeId" bind:value={addCommitteeId} options={activeCommitteeOptions} />
         <SelectField label="Role" name="role" bind:value={addRole} options={roleOptions} />
@@ -281,10 +281,10 @@ it stays intentionally small.
 
     {#if archivedCommittees.length > 0}
       <div class="p-6">
-        <h2 class="mb-3 text-sm font-semibold text-muted">Archived committees</h2>
+        <h2 class="mb-3 type-body font-semibold text-muted">Archived committees</h2>
         <ul class="flex flex-col gap-2">
           {#each archivedCommittees as committee (committee.id)}
-            <li class="flex items-center justify-between text-sm">
+            <li class="flex items-center justify-between type-body">
               <span class="text-muted">{committee.name}</span>
               <form method="post" action="?/archiveCommittee">
                 <CsrfField />
@@ -300,9 +300,9 @@ it stays intentionally small.
   {:else}
     {#each positionGroups as group (group.title)}
       <div class="border-b border-[var(--cairn-card-border)] p-6">
-        <h2 class="mb-3 text-sm font-semibold">
+        <h2 class="mb-3 type-body font-semibold">
           {group.title}
-          <span class="badge badge-ghost badge-sm ml-1 font-medium">{POSITION_KIND_LABEL[group.kind]}</span>
+          <span class="badge cairn-chip-quiet badge-sm ml-1 font-medium">{POSITION_KIND_LABEL[group.kind]}</span>
         </h2>
         <table class="table">
           <caption class="sr-only">{group.title} holders</caption>
@@ -315,7 +315,7 @@ it stays intentionally small.
           <tbody>
             {#each group.rows as row, index (row.id)}
               <tr class="transition-colors hover:bg-base-200/60">
-                <td class="text-sm font-medium">{row.memberName}</td>
+                <td class="type-body font-medium">{row.memberName}</td>
                 <td class="flex justify-end gap-1">
                   <form method="post" action="?/movePosition">
                     <CsrfField />
@@ -349,11 +349,11 @@ it stays intentionally small.
         </table>
       </div>
     {:else}
-      <p class="px-6 py-10 text-center text-sm text-muted">No positions are assigned yet.</p>
+      <p class="px-6 py-10 text-center type-body text-muted">No positions are assigned yet.</p>
     {/each}
 
     <form method="post" action="?/createPosition" class="p-6">
-      <h2 class="mb-3 text-sm font-semibold">New position</h2>
+      <h2 class="mb-3 type-body font-semibold">New position</h2>
       <div class="grid gap-3 sm:grid-cols-2">
         <TextField label="Search member" name="memberQuery" type="search" placeholder="Name, email, or household" bind:value={positionMemberQuery} />
         <SelectField label="Member" name="memberId" bind:value={newPositionMemberId} options={positionMemberSelectOptions} />
@@ -370,7 +370,7 @@ it stays intentionally small.
 
 <dialog bind:this={editDialog} class="modal" aria-labelledby="edit-committee-heading">
   <div class="modal-box">
-    <h2 id="edit-committee-heading" class="text-lg font-bold">Edit committee</h2>
+    <h2 id="edit-committee-heading" class="type-heading font-bold">Edit committee</h2>
     <form method="post" action="?/updateCommittee" class="flex flex-col gap-3 py-2">
       <CsrfField />
       <input type="hidden" name="committeeId" value={editId} />
@@ -392,7 +392,7 @@ it stays intentionally small.
 
 <dialog bind:this={editPositionDialog} class="modal" aria-labelledby="edit-position-heading">
   <div class="modal-box">
-    <h2 id="edit-position-heading" class="text-lg font-bold">Edit position</h2>
+    <h2 id="edit-position-heading" class="type-heading font-bold">Edit position</h2>
     <form method="post" action="?/updatePosition" class="flex flex-col gap-3 py-2">
       <CsrfField />
       <input type="hidden" name="positionId" value={editPositionId} />

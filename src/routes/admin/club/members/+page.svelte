@@ -228,7 +228,7 @@ everything the panel renders.
     <button type="button" class="btn btn-primary btn-sm" onclick={openAddHouseholdDialog}>Add household</button>
   {/snippet}
   {#if form?.error}
-    <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-error" role="alert">
+    <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-error" role="alert">
       {form.error}
     </p>
   {/if}
@@ -237,7 +237,7 @@ everything the panel renders.
          (only bg-warning's bare, unmodified form does), so it silently rendered as plain body
          text; text-error compiles and matches the form-error banner above it, which is the more
          accurate read for a failed load anyway. -->
-    <p class="px-6 py-10 text-center text-sm text-error">{data.error}</p>
+    <p class="px-6 py-10 text-center type-body text-error">{data.error}</p>
   {:else}
     <div class="border-b border-[var(--cairn-card-border)] p-6">
       <ListToolbar
@@ -287,7 +287,7 @@ everything the panel renders.
                 legend={row.standing === 'former' && row.lastSeason ? `Last active ${row.lastSeason}` : undefined}
               />
             </td>
-            <td class="text-sm members-narrow-hide tabular-nums">{primary?.phone ? formatPhone(primary.phone) : '—'}</td>
+            <td class="type-body members-narrow-hide tabular-nums">{primary?.phone ? formatPhone(primary.phone) : '—'}</td>
           {/snippet}
           {#snippet panel(datum: HouseholdListRow)}
             {@const contact = primaryContact(datum)}
@@ -296,19 +296,19 @@ everything the panel renders.
                 <section>
                   <h2 class={HEADER_CELL}>Contacts</h2>
                   <div class="household-panel-contacts">
-                    <p class="text-sm">{contact?.email ?? 'No email on file'}</p>
-                    <p class="text-sm">{contact?.phone ? formatPhone(contact.phone) : 'No phone on file'}</p>
+                    <p class="type-body">{contact?.email ?? 'No email on file'}</p>
+                    <p class="type-body">{contact?.phone ? formatPhone(contact.phone) : 'No phone on file'}</p>
                   </div>
                 </section>
                 <section>
                   <h2 class={HEADER_CELL}>Members</h2>
                   <ul class="household-panel-list">
                     {#each datum.members as member (member.id)}
-                      <li class="text-sm">
+                      <li class="type-body">
                         {member.name}{member.isPrimary ? ' · Primary' : ''} · Age {ageFromBirthdate(member.birthdate) ?? '—'}
                       </li>
                     {:else}
-                      <li class="text-sm text-muted">No members on file.</li>
+                      <li class="type-body text-muted">No members on file.</li>
                     {/each}
                   </ul>
                 </section>
@@ -316,7 +316,7 @@ everything the panel renders.
                   <h2 class={HEADER_CELL}>Holdings</h2>
                   <ul class="household-panel-list">
                     {#each datum.holdings as holding (holding.id)}
-                      <li class="text-sm">
+                      <li class="type-body">
                         {holding.assetTypeName}
                         <StatusChip
                           tone={HOLDING_STATUS[holding.paymentStanding].tone}
@@ -325,7 +325,7 @@ everything the panel renders.
                         />
                       </li>
                     {:else}
-                      <li class="text-sm text-muted">No holdings.</li>
+                      <li class="type-body text-muted">No holdings.</li>
                     {/each}
                   </ul>
                 </section>
@@ -333,7 +333,7 @@ everything the panel renders.
                   <h2 class={HEADER_CELL}>Classes</h2>
                   <ul class="household-panel-list">
                     {#each datum.enrollments as enrollment (enrollment.id)}
-                      <li class="text-sm">
+                      <li class="type-body">
                         {enrollment.memberName} &middot; {enrollment.className} ({enrollment.season})
                         <StatusChip
                           tone={enrollment.feePaid ? 'success' : 'warning'}
@@ -342,7 +342,7 @@ everything the panel renders.
                         />
                       </li>
                     {:else}
-                      <li class="text-sm text-muted">No class enrollments.</li>
+                      <li class="type-body text-muted">No class enrollments.</li>
                     {/each}
                   </ul>
                 </section>
@@ -373,8 +373,8 @@ everything the panel renders.
 
 <dialog bind:this={addHouseholdDialog} class="modal" aria-labelledby="add-household-dialog-title">
   <div class="modal-box">
-    <h2 id="add-household-dialog-title" class="text-lg font-bold">Add a household</h2>
-    <p class="py-2 text-sm text-muted">The walk-up-join entry point: a household and its first, primary member. Record a payment from the new desk afterward.</p>
+    <h2 id="add-household-dialog-title" class="type-heading font-bold">Add a household</h2>
+    <p class="py-2 type-body text-muted">The walk-up-join entry point: a household and its first, primary member. Record a payment from the new desk afterward.</p>
     <form method="post" action="?/addHousehold" class="flex flex-col gap-3">
       <CsrfField />
       <TextField label="Household name" name="name" bind:value={newHouseholdName} />
@@ -382,7 +382,7 @@ everything the panel renders.
       <TextField label="Primary member's name" name="memberName" bind:value={newMemberName} />
       <TextField label="Email" name="memberEmail" type="email" bind:value={newMemberEmail} />
       <TextField label="Phone" name="memberPhone" bind:value={newMemberPhone} />
-      <label class="flex flex-col gap-1 text-sm">
+      <label class="flex flex-col gap-1 type-body">
         Birthdate
         <input class="input input-sm" type="date" name="memberBirthdate" bind:value={newMemberBirthdate} />
       </label>

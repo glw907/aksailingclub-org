@@ -79,8 +79,8 @@ since (unlike the desk) this screen has no single household in its own URL.
 <header class="mb-6 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
   <div class="flex flex-col gap-0.5">
     <span class={HEADER_CELL}>Club</span>
-    <h1 class="text-2xl font-bold tracking-tight font-[family-name:var(--font-display)]">Money &amp; Renewals</h1>
-    <p class="text-sm text-muted">The {data.currentSeason} season, ledger and standing together.</p>
+    <h1 class="type-title font-bold font-[family-name:var(--font-display)]">Money &amp; Renewals</h1>
+    <p class="type-body text-muted">The {data.currentSeason} season, ledger and standing together.</p>
   </div>
   <button type="button" class="btn btn-primary btn-sm" onclick={openPaymentDialog} disabled={data.households.length === 0}>
     Record manual payment
@@ -88,35 +88,39 @@ since (unlike the desk) this screen has no single household in its own URL.
 </header>
 
 {#if form?.error}
-  <p class="mb-4 rounded-box border border-error/30 bg-error/5 px-4 py-3 text-sm font-medium text-error" role="alert">
+  <p class="mb-4 rounded-box border border-error/30 bg-error/5 px-4 py-3 type-body font-medium text-error" role="alert">
     {form.error}
   </p>
 {/if}
 
 {#if data.error}
-  <p class="{cardCls} text-center text-sm text-warning">{data.error}</p>
+  <p class="{cardCls} text-center type-body text-warning">{data.error}</p>
 {:else}
-  <div class="flex flex-col gap-6">
+  <div class="flex flex-col gap-section">
     <!-- A plain grid, not DaisyUI stats: the stats component CSS is not part of this
          project's compiled set, so those classes render inert. -->
-    <div class="grid w-full grid-cols-2 gap-6 rounded-box border border-[var(--cairn-card-border)] bg-base-100 p-6 shadow-[var(--cairn-shadow)] xl:grid-cols-4">
+    <div class="grid w-full grid-cols-2 gap-section rounded-box border border-[var(--cairn-card-border)] bg-base-100 p-6 shadow-[var(--cairn-shadow)] xl:grid-cols-4">
       <div>
         <div class={HEADER_CELL}>Current households</div>
+        <!-- cairn-audit-disable-next-line type-scale -- 20px is off the closed scale, and the Money screen's own pass is deliberately deferred until the admin table and form vocabulary exists (ROADMAP); its stat typography is settled there, not in an upgrade sweep. -->
         <div class="stat-value text-xl">{data.overview.currentHouseholds} / {data.overview.totalHouseholds}</div>
         <div class="stat-desc">Paid for {data.currentSeason}</div>
       </div>
       <div>
         <div class={HEADER_CELL}>Dues collected</div>
+        <!-- cairn-audit-disable-next-line type-scale -- 20px is off the closed scale, and the Money screen's own pass is deliberately deferred until the admin table and form vocabulary exists (ROADMAP); its stat typography is settled there, not in an upgrade sweep. -->
         <div class="stat-value text-xl">{formatDollars(data.overview.duesCollected)}</div>
         <div class="stat-desc">{data.currentSeason} season</div>
       </div>
       <div>
         <div class={HEADER_CELL}>Renewal candidates</div>
+        <!-- cairn-audit-disable-next-line type-scale -- 20px is off the closed scale, and the Money screen's own pass is deliberately deferred until the admin table and form vocabulary exists (ROADMAP); its stat typography is settled there, not in an upgrade sweep. -->
         <div class="stat-value text-xl" class:text-warning={data.overview.renewalCandidates > 0}>{data.overview.renewalCandidates}</div>
         <div class="stat-desc">Lapsed since {data.currentSeason - 1}</div>
       </div>
       <div>
         <div class={HEADER_CELL}>Attention</div>
+        <!-- cairn-audit-disable-next-line type-scale -- 20px is off the closed scale, and the Money screen's own pass is deliberately deferred until the admin table and form vocabulary exists (ROADMAP); its stat typography is settled there, not in an upgrade sweep. -->
         <div class="stat-value text-xl" class:text-warning={data.overview.attentionCount > 0}>{data.overview.attentionCount}</div>
         <div class="stat-desc">Active assets, no current membership</div>
       </div>
@@ -124,7 +128,7 @@ since (unlike the desk) this screen has no single household in its own URL.
 
     <div class={cardCls}>
       <h2 class={HEADER_CELL}>Renewal candidates</h2>
-      <p class="mt-1 text-sm text-muted">Households whose last paid season was {data.currentSeason - 1}. Read-only; the automated reminders already reach them.</p>
+      <p class="mt-1 type-body text-muted">Households whose last paid season was {data.currentSeason - 1}. Read-only; the automated reminders already reach them.</p>
       {#if data.renewalCandidates.length}
         <table class="table mt-3">
           <thead>
@@ -149,20 +153,20 @@ since (unlike the desk) this screen has no single household in its own URL.
           </tbody>
         </table>
       {:else}
-        <p class="mt-2 text-sm text-muted">No renewal candidates right now.</p>
+        <p class="mt-2 type-body text-muted">No renewal candidates right now.</p>
       {/if}
     </div>
 
     <div class={cardCls}>
       <h2 class={HEADER_CELL}>Attention</h2>
-      <p class="mt-1 text-sm text-muted">Active asset assignments whose household has no paid, non-refunded {data.currentSeason} membership.</p>
+      <p class="mt-1 type-body text-muted">Active asset assignments whose household has no paid, non-refunded {data.currentSeason} membership.</p>
       {#if data.attentionItems.length}
         <ul class="mt-3 flex flex-col divide-y divide-[var(--cairn-card-border)]">
           {#each data.attentionItems as row (row.assignmentId)}
             <li class="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0">
               <div>
                 <a class="font-semibold hover:text-primary hover:underline" href={`/admin/club/members/${row.householdId}`}>{row.householdName}</a>
-                <p class="text-sm text-muted">{row.assetTypeName}</p>
+                <p class="type-body text-muted">{row.assetTypeName}</p>
               </div>
               <span class="badge badge-sm border-transparent bg-warning/15 font-medium text-warning-content">
                 Against a {row.membershipSeason} membership
@@ -171,7 +175,7 @@ since (unlike the desk) this screen has no single household in its own URL.
           {/each}
         </ul>
       {:else}
-        <p class="mt-2 text-sm text-muted">Nothing needs attention right now.</p>
+        <p class="mt-2 type-body text-muted">Nothing needs attention right now.</p>
       {/if}
     </div>
 
@@ -204,10 +208,10 @@ since (unlike the desk) this screen has no single household in its own URL.
                 <td>{TIER_LABEL[row.tier]}</td>
                 <td>{formatDollars(row.pricePaid)}</td>
                 <td>{formatCivilDate(row.paidAt, 'Not paid')}</td>
-                <td class="text-sm text-muted">{row.source ? TRANSACTION_SOURCE_LABEL[row.source] : '—'}</td>
+                <td class="type-body text-muted">{row.source ? TRANSACTION_SOURCE_LABEL[row.source] : '—'}</td>
                 <td>
                   {#if row.refundedAt}
-                    <span class="badge badge-ghost badge-sm font-medium">Refunded {formatCivilDate(row.refundedAt)}</span>
+                    <span class="badge cairn-chip-quiet badge-sm font-medium">Refunded {formatCivilDate(row.refundedAt)}</span>
                   {/if}
                 </td>
               </tr>
@@ -215,7 +219,7 @@ since (unlike the desk) this screen has no single household in its own URL.
           </tbody>
         </table>
       {:else}
-        <p class="mt-2 text-sm text-muted">No memberships on file for {data.selectedSeason}.</p>
+        <p class="mt-2 type-body text-muted">No memberships on file for {data.selectedSeason}.</p>
       {/if}
     </div>
 
@@ -243,7 +247,7 @@ since (unlike the desk) this screen has no single household in its own URL.
                   {/if}
                 </div>
               </div>
-              <ul class="mt-1 flex flex-col gap-0.5 pl-4 text-sm text-muted">
+              <ul class="mt-1 flex flex-col gap-0.5 pl-4 type-body text-muted">
                 {#each tx.lines as line (line.id)}
                   <li class="flex justify-between gap-2">
                     <span>{LINE_ITEM_LABEL[line.item]} &middot; {line.description}</span>
@@ -255,7 +259,7 @@ since (unlike the desk) this screen has no single household in its own URL.
           {/each}
         </ul>
       {:else}
-        <p class="mt-2 text-sm text-muted">No ledger transactions on file yet.</p>
+        <p class="mt-2 type-body text-muted">No ledger transactions on file yet.</p>
       {/if}
     </div>
   </div>
@@ -263,8 +267,8 @@ since (unlike the desk) this screen has no single household in its own URL.
 
 <dialog bind:this={paymentDialog} class="modal" aria-labelledby="money-payment-dialog-title">
   <div class="modal-box">
-    <h2 id="money-payment-dialog-title" class="text-lg font-bold">Record a manual payment</h2>
-    <p class="py-2 text-sm text-muted">A check, cash, or comp payment; creates the membership and the ledger entry together.</p>
+    <h2 id="money-payment-dialog-title" class="type-heading font-bold">Record a manual payment</h2>
+    <p class="py-2 type-body text-muted">A check, cash, or comp payment; creates the membership and the ledger entry together.</p>
     <form method="post" action="?/recordPayment" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => paymentDialog)}>
       <CsrfField />
       <SelectField label="Household" name="householdId" bind:value={paymentHouseholdId} options={householdOptions} />

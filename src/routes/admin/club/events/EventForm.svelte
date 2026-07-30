@@ -53,7 +53,7 @@ own field needs the admin's label rhythm with no bundled primitive to match"): `
   <TextField label="Title" name="title" bind:value={title} />
   <TextField label="Slug" name="slug" bind:value={slug} />
   <SelectField label="Category" name="category" bind:value={category} options={categoryOptions} />
-  <label class="flex items-center gap-1.5 text-sm">
+  <label class="flex items-center gap-1.5 type-body">
     <input type="checkbox" class="checkbox checkbox-sm" name="visible" bind:checked={visible} />
     Visible on the public calendar
   </label>
@@ -87,7 +87,7 @@ own field needs the admin's label rhythm with no bundled primitive to match"): `
   <!-- Read-only this pass: the media-library picker reuse seam (design suite Part B) is not
        wired for a custom /admin/club screen yet, so the hero image only displays what the ops
        import carried. Replacing or clearing it needs the picker seam, a later pass's work. -->
-  <div class="flex flex-wrap items-center gap-2 border-t border-[var(--cairn-card-border)] p-6 text-sm">
+  <div class="flex flex-wrap items-center gap-2 border-t border-[var(--cairn-card-border)] p-6 type-body">
     <span class="font-medium text-muted">Hero image (read-only):</span>
     <span>{heroImage}</span>
     {#if heroImageAlt}<span class="text-muted">&middot; {heroImageAlt}</span>{/if}

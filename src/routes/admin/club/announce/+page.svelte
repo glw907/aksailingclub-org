@@ -42,13 +42,13 @@ announced shows a plain dash rather than an empty cell that could read as a load
     <tbody>
       {#each data.posts as row (row.id)}
         <tr class="transition-colors hover:bg-base-200/60">
-          <td class="whitespace-nowrap text-sm tabular-nums text-muted">{formatCivilDate(row.date ?? null, 'Undated')}</td>
+          <td class="whitespace-nowrap type-body tabular-nums text-muted">{formatCivilDate(row.date ?? null, 'Undated')}</td>
           <td>
             <a class="font-semibold hover:text-primary hover:underline" href={`/admin/club/announce/${row.id}`}>
               {row.title}
             </a>
           </td>
-          <td class="text-sm text-muted">
+          <td class="type-body text-muted">
             {#if row.announced}
               {announcedLabel(row)}
             {:else}
@@ -59,7 +59,7 @@ announced shows a plain dash rather than an empty cell that could read as a load
         </tr>
       {:else}
         <tr>
-          <td colspan="3" class="px-6 py-10 text-center text-sm text-muted">
+          <td colspan="3" class="px-6 py-10 text-center type-body text-muted">
             {data.error ? 'The announcements table could not be read.' : 'No published posts yet.'}
           </td>
         </tr>

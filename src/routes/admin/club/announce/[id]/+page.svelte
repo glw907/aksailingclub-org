@@ -41,13 +41,13 @@ rather than asserting it.
   );
 </script>
 
-<a href="/admin/club/announce" class="mb-4 inline-flex w-fit items-center gap-1 text-sm text-muted hover:text-primary">
+<a href="/admin/club/announce" class="mb-4 inline-flex w-fit items-center gap-1 type-body text-muted hover:text-primary">
   <span aria-hidden="true">&larr;</span> Back to Announce
 </a>
 
 {#if !data.post}
   <div class="rounded-box border border-[var(--cairn-card-border)] bg-base-100 p-6 py-10 text-center shadow-[var(--cairn-shadow)]">
-    <p class="text-sm text-muted">{data.error ?? 'No such published post.'}</p>
+    <p class="type-body text-muted">{data.error ?? 'No such published post.'}</p>
   </div>
 {:else}
   <!-- Keyed on the post's own id, the same reasoning `classes/[id]/+page.svelte`'s own comment
@@ -56,17 +56,17 @@ rather than asserting it.
   {#key data.post.id}
     <OfficeList eyebrow="Club" title={data.post.title} subtitle="Announce this post by email and/or Discord.">
       {#if form?.error}
-        <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-error" role="alert">
+        <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-error" role="alert">
           {form.error}
         </p>
       {/if}
       {#if form && 'ok' in form && form.ok}
-        <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-success" role="status">
+        <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-success" role="status">
           Sent: {form.emailCount} member email{form.emailCount === 1 ? '' : 's'}{form.discordChannel ? `, Discord #${form.discordChannel}` : ''}.
         </p>
       {/if}
       {#if data.previous}
-        <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-warning" role="status">
+        <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-warning" role="status">
           Already announced {formatClubTimestamp(data.previous.createdAt)}
           ({data.previous.emailCount > 0 ? `email to ${data.previous.emailCount}` : 'no email'}{data.previous.discordChannel
             ? `, #${data.previous.discordChannel}`
@@ -75,23 +75,23 @@ rather than asserting it.
       {/if}
 
       <form method="post" action="?/send">
-        <div class="grid gap-6 p-6 lg:grid-cols-2">
+        <div class="grid gap-section p-6 lg:grid-cols-2">
           <section class="flex flex-col gap-4">
             <TextField label="Subject (email only)" name="subject" bind:value={subject} />
             <FieldLabel label="Summary">
               <textarea class="textarea textarea-sm w-full" name="message" rows="6" bind:value={message}></textarea>
             </FieldLabel>
-            <p class="text-xs text-muted">
+            <p class="type-meta text-muted">
               Shared by both channels: the email body leads with this, and Discord shows a short version of it.
             </p>
 
             <fieldset class="flex flex-col gap-3 border-t border-[var(--cairn-card-border)] pt-4">
               <legend class={HEADER_CELL}>Where to send</legend>
-              <label class="flex items-center gap-1.5 text-sm">
+              <label class="flex items-center gap-1.5 type-body">
                 <input type="checkbox" class="checkbox checkbox-sm" name="emailAll" bind:checked={emailAll} />
                 Email all current members
               </label>
-              <label class="flex items-center gap-1.5 text-sm">
+              <label class="flex items-center gap-1.5 type-body">
                 <input type="checkbox" class="checkbox checkbox-sm" name="notifyDiscord" bind:checked={notifyDiscordOn} />
                 Notify Discord
               </label>
@@ -107,24 +107,24 @@ rather than asserting it.
             </fieldset>
           </section>
 
-          <section class="flex flex-col gap-6">
+          <section class="flex flex-col gap-section">
             <div>
               <h2 class={HEADER_CELL}>Email preview</h2>
-              <p class="mt-2 text-sm font-medium">{subject}</p>
-              <div class="prose mt-2 max-w-none rounded-box border border-[var(--cairn-card-border)] p-4 text-sm">
+              <p class="mt-2 type-body font-medium">{subject}</p>
+              <div class="prose mt-2 max-w-none rounded-box border border-[var(--cairn-card-border)] p-4 type-body">
                 {@html emailPreview}
               </div>
             </div>
             <div>
               <h2 class={HEADER_CELL}>Discord preview</h2>
               {#if discordPreview}
-                <div class="mt-2 rounded-box border-l-4 border-primary bg-base-200/60 p-4 text-sm">
+                <div class="mt-2 rounded-box border-l-4 border-primary bg-base-200/60 p-4 type-body">
                   <a class="font-semibold text-primary hover:underline" href={discordPreview.url} target="_blank" rel="noreferrer">
                     {discordPreview.title}
                   </a>
-                  <p class="mt-1 whitespace-pre-line text-sm">{discordPreview.description}</p>
+                  <p class="mt-1 whitespace-pre-line type-body">{discordPreview.description}</p>
                   {#if message.trim().length > 0 && truncateForEmbed(message) !== message.trim()}
-                    <p class="mt-2 text-xs text-muted">Truncated for Discord's embed limit.</p>
+                    <p class="mt-2 type-meta text-muted">Truncated for Discord's embed limit.</p>
                   {/if}
                 </div>
               {/if}

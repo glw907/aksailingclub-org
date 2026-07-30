@@ -159,13 +159,13 @@ as the list screen's identical patch.
   );
 </script>
 
-<a href="/admin/club/classes" class="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-primary">
+<a href="/admin/club/classes" class="mb-4 inline-flex items-center gap-1 type-body text-muted hover:text-primary">
   <span aria-hidden="true">&larr;</span> Back to Classes
 </a>
 
 {#if !data.class}
   <div class="rounded-box border border-[var(--cairn-card-border)] bg-base-100 p-6 py-10 text-center shadow-[var(--cairn-shadow)]">
-    <p class="text-sm text-muted">
+    <p class="type-body text-muted">
       {data.error ?? 'No such class. It may have been deleted, or this link is stale.'}
     </p>
   </div>
@@ -180,15 +180,15 @@ as the list screen's identical patch.
   </div>
 
   {#if form?.error}
-    <p class="mb-4 rounded-box border border-[var(--cairn-card-border)] bg-base-100 px-6 py-3 text-sm font-medium text-error shadow-[var(--cairn-shadow)]" role="alert">
+    <p class="mb-4 rounded-box border border-[var(--cairn-card-border)] bg-base-100 px-6 py-3 type-body font-medium text-error shadow-[var(--cairn-shadow)]" role="alert">
       {form.error}
     </p>
   {/if}
 
   <div class="{cardCls} mb-6">
     <div class="border-b border-[var(--cairn-card-border)] p-6">
-      <h2 class="text-sm font-semibold">Roster</h2>
-      <p class="mt-1 text-sm text-muted">
+      <h2 class="type-body font-semibold">Roster</h2>
+      <p class="mt-1 type-body text-muted">
         {data.class.enrolledCount} enrolled, {data.class.waitlistCount} on the waitlist. Dropping an
         enrollee frees the spot; a nonempty waitlist gets an automatic offer.
       </p>
@@ -202,7 +202,7 @@ as the list screen's identical patch.
         <th class="sr-only">Actions</th>
       {/snippet}
       {#snippet empty()}
-        <p class="text-sm text-muted">No one is enrolled yet.</p>
+        <p class="type-body text-muted">No one is enrolled yet.</p>
       {/snippet}
       {#each data.enrollments as enrollment (enrollment.id)}
         <tr>
@@ -239,32 +239,32 @@ as the list screen's identical patch.
 
   <div class="{cardCls} mb-6">
     <div class="border-b border-[var(--cairn-card-border)] p-6">
-      <h2 class="text-sm font-semibold">Waitlist &amp; offers</h2>
-      <p class="mt-1 text-sm text-muted">
+      <h2 class="type-body font-semibold">Waitlist &amp; offers</h2>
+      <p class="mt-1 type-body text-muted">
         Position order. Offering a spot mints a one-time claim code; it appears here only once, right
         after you offer it.
       </p>
     </div>
     <ul class="divide-list">
       {#each waitlistView as { entry, isMember, displayName, activeOffer, history } (entry.id)}
-        <li class="flex flex-col gap-2 px-6 py-3 text-sm">
+        <li class="flex flex-col gap-2 px-6 py-3 type-body">
           <div class="flex items-center justify-between gap-4">
             <div class="flex items-center gap-2">
               <span class="font-medium">{displayName}</span>
-              <span class="badge badge-ghost badge-sm font-medium">{isMember ? 'Member' : 'Applicant'}</span>
+              <span class="badge cairn-chip-quiet badge-sm font-medium">{isMember ? 'Member' : 'Applicant'}</span>
               <span class="text-muted">&middot; #{entry.position}</span>
             </div>
             {#if history.length > 0 && !activeOffer}
-              <span class="badge badge-ghost badge-sm font-medium capitalize">{history[0].resolved}</span>
+              <span class="badge cairn-chip-quiet badge-sm font-medium capitalize">{history[0].resolved}</span>
             {/if}
           </div>
 
           {#if entry.notes}
-            <p class="m-0 text-xs text-muted">Wants to learn: {entry.notes}</p>
+            <p class="m-0 type-meta text-muted">Wants to learn: {entry.notes}</p>
           {/if}
 
           {#if activeOffer}
-            <div class="flex flex-wrap items-center justify-between gap-2 rounded-box bg-base-200/60 px-3 py-2 text-sm">
+            <div class="flex flex-wrap items-center justify-between gap-2 rounded-box bg-base-200/60 px-3 py-2 type-body">
               <span>Offered, expires {formatClubTimestamp(activeOffer.expiresAt)}.</span>
               <form method="post" action="?/cancelOffer">
                 <CsrfField />
@@ -273,7 +273,7 @@ as the list screen's identical patch.
               </form>
             </div>
             {#if form && 'offered' in form && form.offered?.waitlistId === entry.id}
-              <div class="flex flex-wrap items-center gap-2 text-sm">
+              <div class="flex flex-wrap items-center gap-2 type-body">
                 <label class="flex flex-1 flex-col gap-1" for={`claim-code-${entry.id}`}>
                   Claim code (copy it now; it will not show again)
                   <input id={`claim-code-${entry.id}`} class="input input-sm font-mono" readonly value={form.offered.token} />
@@ -289,15 +289,15 @@ as the list screen's identical patch.
           {/if}
         </li>
       {:else}
-        <li class="px-6 py-6 text-center text-sm text-muted">No one is on the waitlist.</li>
+        <li class="px-6 py-6 text-center type-body text-muted">No one is on the waitlist.</li>
       {/each}
     </ul>
   </div>
 
   <div class="{cardCls} mb-6">
     <div class="border-b border-[var(--cairn-card-border)] p-6">
-      <h2 class="text-sm font-semibold">Details</h2>
-      <p class="mt-1 text-sm text-muted">Edit this class, then save.</p>
+      <h2 class="type-body font-semibold">Details</h2>
+      <p class="mt-1 type-body text-muted">Edit this class, then save.</p>
     </div>
     <form method="post" action="?/update">
       <ClassForm
@@ -326,13 +326,13 @@ as the list screen's identical patch.
 
   <div class="{cardCls} mb-6">
     <div class="border-b border-[var(--cairn-card-border)] p-6">
-      <h2 class="text-sm font-semibold">Instructors</h2>
-      <p class="mt-1 text-sm text-muted">Assign by email; an instructor's own account arrives in a later pass.</p>
+      <h2 class="type-body font-semibold">Instructors</h2>
+      <p class="mt-1 type-body text-muted">Assign by email; an instructor's own account arrives in a later pass.</p>
     </div>
     <ul class="divide-list">
       {#each data.instructors as instructor (instructor.email)}
         <li class="flex items-center justify-between gap-4 px-6 py-3">
-          <span class="text-sm">
+          <span class="type-body">
             <span class="font-medium">{instructor.name ?? instructor.email}</span>
             {#if instructor.name}<span class="text-muted"> &middot; {instructor.email}</span>{/if}
           </span>
@@ -343,16 +343,16 @@ as the list screen's identical patch.
           </form>
         </li>
       {:else}
-        <li class="px-6 py-6 text-center text-sm text-muted">No instructor assigned yet.</li>
+        <li class="px-6 py-6 text-center type-body text-muted">No instructor assigned yet.</li>
       {/each}
     </ul>
     <form method="post" action="?/assignInstructor" class="flex flex-wrap items-end gap-2 border-t border-[var(--cairn-card-border)] p-6">
       <CsrfField />
-      <label class="flex flex-col gap-1 text-sm">
+      <label class="flex flex-col gap-1 type-body">
         Email
         <input class="input input-sm" type="email" name="email" bind:value={newInstructorEmail} required />
       </label>
-      <label class="flex flex-col gap-1 text-sm">
+      <label class="flex flex-col gap-1 type-body">
         Display name
         <input class="input input-sm" type="text" name="name" bind:value={newInstructorName} />
       </label>
@@ -362,8 +362,8 @@ as the list screen's identical patch.
 
   <div class={cardCls}>
     <div class="p-6">
-      <h2 class="text-sm font-semibold">Danger zone</h2>
-      <p class="mt-1 text-sm text-muted">Deleting a class removes it and its history for good. There is no undo.</p>
+      <h2 class="type-body font-semibold">Danger zone</h2>
+      <p class="mt-1 type-body text-muted">Deleting a class removes it and its history for good. There is no undo.</p>
       <button type="button" class="btn btn-ghost btn-sm mt-3" onclick={() => deleteDialog?.showModal()}>
         Delete class
       </button>
@@ -372,9 +372,9 @@ as the list screen's identical patch.
 
   <dialog bind:this={paymentDialog} class="modal" aria-labelledby="payment-dialog-title">
     <div class="modal-box">
-      <h2 id="payment-dialog-title" class="text-lg font-bold">Record a payment</h2>
+      <h2 id="payment-dialog-title" class="type-heading font-bold">Record a payment</h2>
       {#if paymentTarget}
-        <p class="py-2 text-sm text-muted">
+        <p class="py-2 type-body text-muted">
           Records a {formatDollars(data.class.fee)} charge for {paymentTarget.memberName}. This does not touch
           Stripe: use it only for a cash, check, or comp payment collected outside checkout.
         </p>
@@ -394,9 +394,9 @@ as the list screen's identical patch.
 
   <dialog bind:this={transferDialog} class="modal" aria-labelledby="transfer-dialog-title">
     <div class="modal-box">
-      <h2 id="transfer-dialog-title" class="text-lg font-bold">Move {transferTarget?.memberName}</h2>
+      <h2 id="transfer-dialog-title" class="type-heading font-bold">Move {transferTarget?.memberName}</h2>
       {#if form?.error}
-        <p class="rounded-box border border-[var(--cairn-card-border)] bg-base-100 px-3 py-2 text-sm font-medium text-error" role="alert">
+        <p class="rounded-box border border-[var(--cairn-card-border)] bg-base-100 px-3 py-2 type-body font-medium text-error" role="alert">
           {form.error}
         </p>
       {/if}
@@ -405,7 +405,7 @@ as the list screen's identical patch.
           <CsrfField />
           <input type="hidden" name="enrollmentId" value={transferTarget.id} />
           <input type="hidden" name="confirmFeeMismatch" value={transferConfirmMismatch ? 'true' : 'false'} />
-          <label class="flex flex-col gap-1 text-sm" for="transfer-destination">
+          <label class="flex flex-col gap-1 type-body" for="transfer-destination">
             Move to
             <select
               id="transfer-destination"
@@ -424,7 +424,7 @@ as the list screen's identical patch.
             </select>
           </label>
           {#if transferFeeMismatch && transferDestination && data.class}
-            <div class="alert alert-warning text-sm" role="alert">
+            <div class="alert alert-warning type-body" role="alert">
               <div>
                 <p class="m-0">
                   {data.class.name} is {formatDollars(data.class.fee)}; {transferDestination.name} is
@@ -454,8 +454,8 @@ as the list screen's identical patch.
 
   <dialog bind:this={deleteDialog} class="modal" aria-labelledby="delete-dialog-title">
     <div class="modal-box">
-      <h2 id="delete-dialog-title" class="text-lg font-bold">Delete {data.class.name}?</h2>
-      <p class="py-2 text-sm text-muted">
+      <h2 id="delete-dialog-title" class="type-heading font-bold">Delete {data.class.name}?</h2>
+      <p class="py-2 type-body text-muted">
         This removes the class for good. There is no undo.
       </p>
       <form method="dialog">

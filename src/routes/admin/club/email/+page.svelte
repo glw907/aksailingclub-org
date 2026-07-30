@@ -45,12 +45,12 @@ and the header's own "Compose" entry point into the segment-targeted one-off Com
               {template.id}
             </a>
           </td>
-          <td class="text-sm text-muted">{template.subject}</td>
-          <td class="whitespace-nowrap text-sm tabular-nums text-muted">{formatClubTimestamp(template.updatedAt)}</td>
+          <td class="type-body text-muted">{template.subject}</td>
+          <td class="whitespace-nowrap type-body tabular-nums text-muted">{formatClubTimestamp(template.updatedAt)}</td>
         </tr>
       {:else}
         <tr>
-          <td colspan="3" class="px-6 py-10 text-center text-sm text-muted">
+          <td colspan="3" class="px-6 py-10 text-center type-body text-muted">
             {data.error ? 'The email templates table could not be read.' : 'No templates yet.'}
           </td>
         </tr>
@@ -61,8 +61,8 @@ and the header's own "Compose" entry point into the segment-targeted one-off Com
 
 <div class="mt-6 rounded-box border border-[var(--cairn-card-border)] bg-base-100 shadow-[var(--cairn-shadow)]">
   <div class="border-b border-[var(--cairn-card-border)] p-6">
-    <h2 class="text-sm font-semibold">Send log</h2>
-    <p class="mt-1 text-sm text-muted">Every attempted send, newest first. Empty until a real send has gone out.</p>
+    <h2 class="type-body font-semibold">Send log</h2>
+    <p class="mt-1 type-body text-muted">Every attempted send, newest first. Empty until a real send has gone out.</p>
   </div>
   <table class="table">
     <caption class="sr-only">Email send log, newest first</caption>
@@ -78,15 +78,15 @@ and the header's own "Compose" entry point into the segment-targeted one-off Com
     <tbody>
       {#each data.log as entry (entry.id)}
         <tr class="transition-colors hover:bg-base-200/60">
-          <td class="text-sm">{entry.recipient}</td>
-          <td class="text-sm text-muted">{entry.subject}</td>
-          <td class="text-sm text-muted">{entry.segment ?? 'Single'}</td>
+          <td class="type-body">{entry.recipient}</td>
+          <td class="type-body text-muted">{entry.subject}</td>
+          <td class="type-body text-muted">{entry.segment ?? 'Single'}</td>
           <td><span class="badge badge-sm {STATUS_CHIP[entry.status]}">{entry.status === 'sent' ? 'Sent' : 'Failed'}</span></td>
-          <td class="whitespace-nowrap text-sm tabular-nums text-muted">{formatClubTimestamp(entry.sentAt)}</td>
+          <td class="whitespace-nowrap type-body tabular-nums text-muted">{formatClubTimestamp(entry.sentAt)}</td>
         </tr>
       {:else}
         <tr>
-          <td colspan="5" class="px-6 py-10 text-center text-sm text-muted">No sends yet.</td>
+          <td colspan="5" class="px-6 py-10 text-center type-body text-muted">No sends yet.</td>
         </tr>
       {/each}
     </tbody>

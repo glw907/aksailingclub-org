@@ -55,7 +55,7 @@ forward-only check collapse into the one comparison).
 
 <OfficeList eyebrow="Club" title="Settings" {subtitle}>
   {#if form?.error}
-    <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 text-sm font-medium text-error" role="alert">
+    <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-error" role="alert">
       {form.error}
     </p>
   {/if}
@@ -63,14 +63,14 @@ forward-only check collapse into the one comparison).
   <div class="grid gap-8 p-6 lg:grid-cols-2">
     <section>
       <h2 class={HEADER_CELL}>Club roles</h2>
-      <p class="mt-1 text-sm text-muted">
+      <p class="mt-1 type-body text-muted">
         Grant, change, or revoke a seat from <a href="/admin/editors" class="link">Editors</a>.
       </p>
     </section>
 
     <section>
       <h2 class={HEADER_CELL}>Waitlist offer window</h2>
-      <p class="mt-1 text-sm text-muted">
+      <p class="mt-1 type-body text-muted">
         How long a class waitlist offer stays open before it expires and the spot frees up.
       </p>
       {#if data.isOwner}
@@ -80,19 +80,19 @@ forward-only check collapse into the one comparison).
           <button type="submit" class="btn btn-sm">Save</button>
         </form>
       {:else}
-        <p class="mt-3 text-sm font-semibold">{data.offerWindowHours} hours</p>
+        <p class="mt-3 type-body font-semibold">{data.offerWindowHours} hours</p>
       {/if}
     </section>
 
     <section>
       <h2 class={HEADER_CELL}>Class registration opens</h2>
-      <p class="mt-1 text-sm text-muted">
+      <p class="mt-1 type-body text-muted">
         Before this date the public class schedule shows "Opens &lt;date&gt;" instead of Open.
         Clear it to disable the gate.
       </p>
       {#if data.isOwner}
         <form method="post" action="?/updateClassRegistrationOpens" class="mt-3 flex flex-wrap items-end gap-3">
-          <label class="flex flex-col gap-1 text-sm" for="class-registration-opens">
+          <label class="flex flex-col gap-1 type-body" for="class-registration-opens">
             Opens
             <input
               id="class-registration-opens"
@@ -106,13 +106,13 @@ forward-only check collapse into the one comparison).
           <button type="submit" class="btn btn-sm">Save</button>
         </form>
       {:else}
-        <p class="mt-3 text-sm font-semibold">{data.classRegistrationOpens || 'No gate configured'}</p>
+        <p class="mt-3 type-body font-semibold">{data.classRegistrationOpens || 'No gate configured'}</p>
       {/if}
     </section>
 
     <section>
       <h2 class={HEADER_CELL}>Membership tier prices</h2>
-      <p class="mt-1 text-sm text-muted">
+      <p class="mt-1 type-body text-muted">
         Whole dollars. A change here only affects a membership purchased AFTER this save; every
         past season's own price stays exactly what was paid.
       </p>
@@ -125,7 +125,7 @@ forward-only check collapse into the one comparison).
           <button type="submit" class="btn btn-sm">Save</button>
         </form>
       {:else if data.tierPrices}
-        <p class="mt-3 text-sm font-semibold">
+        <p class="mt-3 type-body font-semibold">
           Individual ${data.tierPrices.individual} &middot; Family ${data.tierPrices.family} &middot; Young adult ${data
             .tierPrices['young-adult']}
         </p>
@@ -135,7 +135,7 @@ forward-only check collapse into the one comparison).
     <section>
       <h2 class={HEADER_CELL}>Season</h2>
       {#if data.rollover}
-        <p class="mt-1 text-sm text-muted">
+        <p class="mt-1 type-body text-muted">
           The current season is <span class="font-semibold text-base-content">{data.rollover.currentSeason}</span>.
           Rolling over to {data.rollover.nextSeason} lets
           {data.rollover.classesFallingOutOfCurrency}
@@ -151,7 +151,7 @@ forward-only check collapse into the one comparison).
           </button>
         {/if}
       {:else}
-        <p class="mt-1 text-sm text-muted">The season could not be read.</p>
+        <p class="mt-1 type-body text-muted">The season could not be read.</p>
       {/if}
     </section>
   </div>
@@ -160,14 +160,14 @@ forward-only check collapse into the one comparison).
 {#if data.rollover}
   <dialog bind:this={rolloverDialog} class="modal" oncancel={(event) => event.preventDefault()}>
     <div class="modal-box">
-      <h2 class="text-lg font-bold">Roll over to {data.rollover.nextSeason}?</h2>
-      <p class="py-2 text-sm text-muted">
+      <h2 class="type-heading font-bold">Roll over to {data.rollover.nextSeason}?</h2>
+      <p class="py-2 type-body text-muted">
         This advances the current season and nothing else: memberships and asset waitlists are
         untouched (neither is season-bound), and no class or waitlist row is deleted or edited.
         Type <span class="font-mono font-semibold">{data.rollover.nextSeason}</span> to confirm.
       </p>
       <form method="dialog">
-        <label class="flex flex-col gap-1 text-sm" for="rollover-typed-year">
+        <label class="flex flex-col gap-1 type-body" for="rollover-typed-year">
           New season year
           <input
             id="rollover-typed-year"

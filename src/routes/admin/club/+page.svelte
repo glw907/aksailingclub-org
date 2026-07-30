@@ -16,8 +16,8 @@ the board of every paid join). Pass B T7 reshapes the strip to the three ruled a
   );
 </script>
 
-<h1 class="m-0 text-2xl font-semibold text-base-content">Club</h1>
-<p class="mt-1 text-sm text-muted">
+<h1 class="m-0 type-title font-semibold text-base-content">Club</h1>
+<p class="mt-1 type-body text-muted">
   {nothingPending ? 'Nothing needs attention right now.' : 'A few things need a look.'}
 </p>
 

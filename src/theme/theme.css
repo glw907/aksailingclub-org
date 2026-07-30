@@ -39,6 +39,12 @@
 @import '../chassis/tokens.css';
 @import './asc-components.css';
 
+/* `.claude/` holds the cairn-admin-screens skill's exemplar files, which quote literal utility
+   tokens as prose, including retired ones shown as annotated counter-examples. Tailwind's
+   automatic source detection would compile those quotations into the sheet, so the retired
+   recipes would resolve again and `no-uncompiled-class` would stop being able to see them. */
+@source not "../../.claude";
+
 @import '@fontsource-variable/figtree/index.css';
 @import '@fontsource-variable/source-sans-3/index.css';
 @import '@fontsource-variable/source-code-pro/index.css';
