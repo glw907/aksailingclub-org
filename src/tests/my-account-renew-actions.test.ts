@@ -39,8 +39,8 @@ const { fakeD1 } = await import('./_fake-d1');
  *  nothing); every test below supplies a bound `CLUB_DB` and no redirect condition, so the real
  *  object always comes back -- this narrows for the assertions rather than widening `heldAssets`
  *  itself to `unknown`. */
-function expectHeldAssets(result: unknown): { assetType: string; assetTypeName: string; alreadyRequested: boolean }[] | null {
-  return (result as { heldAssets: { assetType: string; assetTypeName: string; alreadyRequested: boolean }[] | null }).heldAssets;
+function expectHeldAssets(result: unknown): { assetType: string; assetTypeName: string; alreadyRequested: boolean; feeDollars: number }[] | null {
+  return (result as { heldAssets: { assetType: string; assetTypeName: string; alreadyRequested: boolean; feeDollars: number }[] | null }).heldAssets;
 }
 
 const MEMBER_ROW = { id: 'mem-1', household_id: 'hh-1', name: 'Scratch Member', email: 'scratch@example.com', archived_at: null };
@@ -372,15 +372,31 @@ describe('load', () => {
       firstResults: { 'FROM households WHERE id': { primary_member_id: 'mem-1' }, "'current_season'": { value: '2026' } },
       allResults: {
         'FROM asset_assignments aa': [
-          { id: 'aa-1', asset_type: 'boat-parking', asset_type_name: 'Trailered Boat Parking', description: 'Boat 1', payment_id: null, paid_at: null, fee_amount: null },
-          { id: 'aa-2', asset_type: 'boat-parking', asset_type_name: 'Trailered Boat Parking', description: 'Boat 2', payment_id: null, paid_at: null, fee_amount: null },
-          { id: 'aa-3', asset_type: 'boat-parking', asset_type_name: 'Trailered Boat Parking', description: 'Boat 3', payment_id: null, paid_at: null, fee_amount: null },
+          { id: 'aa-1', asset_type: 'boat-parking', asset_type_name: 'Trailered Boat Parking', description: 'Boat 1', type_fee: 100, payment_id: null, paid_at: null, fee_amount: null },
+          { id: 'aa-2', asset_type: 'boat-parking', asset_type_name: 'Trailered Boat Parking', description: 'Boat 2', type_fee: 100, payment_id: null, paid_at: null, fee_amount: null },
+          { id: 'aa-3', asset_type: 'boat-parking', asset_type_name: 'Trailered Boat Parking', description: 'Boat 3', type_fee: 100, payment_id: null, paid_at: null, fee_amount: null },
         ],
       },
     });
 
     const result = await load(fakeLoadEvent(db, MEMBER) as never);
-    expect(expectHeldAssets(result)).toEqual([{ assetType: 'boat-parking', assetTypeName: 'Trailered Boat Parking', alreadyRequested: false }]);
+    expect(expectHeldAssets(result)).toEqual([{ assetType: 'boat-parking', assetTypeName: 'Trailered Boat Parking', alreadyRequested: false, feeDollars: 100 }]);
+  });
+
+  // This task's own addition: `load` carries the type's own standing season fee through onto
+  // `heldAssets`, the retention step's own "prices should definitely be shown" fix.
+  it("carries the asset type's own standing season fee onto the held-asset row", async () => {
+    const { db } = fakeD1({
+      firstResults: { 'FROM households WHERE id': { primary_member_id: 'mem-1' }, "'current_season'": { value: '2026' } },
+      allResults: {
+        'FROM asset_assignments aa': [
+          { id: 'aa-1', asset_type: 'mooring', asset_type_name: 'Mooring', description: null, type_fee: 300, payment_id: null, paid_at: null, fee_amount: null },
+        ],
+      },
+    });
+
+    const result = await load(fakeLoadEvent(db, MEMBER) as never);
+    expect(expectHeldAssets(result)?.[0].feeDollars).toBe(300);
   });
 
   it('treats an approved-awaiting-payment or assigned retention request as already requested, not just pending', async () => {
@@ -389,7 +405,7 @@ describe('load', () => {
         firstResults: { 'FROM households WHERE id': { primary_member_id: 'mem-1' }, "'current_season'": { value: '2026' } },
         allResults: {
           'FROM asset_assignments aa': [
-            { id: 'aa-1', asset_type: 'mooring', asset_type_name: 'Mooring', description: null, payment_id: null, paid_at: null, fee_amount: null },
+            { id: 'aa-1', asset_type: 'mooring', asset_type_name: 'Mooring', description: null, type_fee: 150, payment_id: null, paid_at: null, fee_amount: null },
           ],
           'FROM asset_requests r JOIN asset_types at': [
             { id: 'req-1', asset_type: 'mooring', asset_type_name: 'Mooring', kind: 'retention', status, note: null, deny_reason: null, fee: 150, created_at: '2026-01-01 00:00:00' },
@@ -398,7 +414,7 @@ describe('load', () => {
       });
 
       const result = await load(fakeLoadEvent(db, MEMBER) as never);
-      expect(expectHeldAssets(result)).toEqual([{ assetType: 'mooring', assetTypeName: 'Mooring', alreadyRequested: true }]);
+      expect(expectHeldAssets(result)).toEqual([{ assetType: 'mooring', assetTypeName: 'Mooring', alreadyRequested: true, feeDollars: 150 }]);
     }
   });
 
@@ -408,7 +424,7 @@ describe('load', () => {
         firstResults: { 'FROM households WHERE id': { primary_member_id: 'mem-1' }, "'current_season'": { value: '2026' } },
         allResults: {
           'FROM asset_assignments aa': [
-            { id: 'aa-1', asset_type: 'mooring', asset_type_name: 'Mooring', description: null, payment_id: null, paid_at: null, fee_amount: null },
+            { id: 'aa-1', asset_type: 'mooring', asset_type_name: 'Mooring', description: null, type_fee: 150, payment_id: null, paid_at: null, fee_amount: null },
           ],
           'FROM asset_requests r JOIN asset_types at': [
             { id: 'req-1', asset_type: 'mooring', asset_type_name: 'Mooring', kind: 'retention', status, note: null, deny_reason: null, fee: 150, created_at: '2026-01-01 00:00:00' },
@@ -417,7 +433,7 @@ describe('load', () => {
       });
 
       const result = await load(fakeLoadEvent(db, MEMBER) as never);
-      expect(expectHeldAssets(result)).toEqual([{ assetType: 'mooring', assetTypeName: 'Mooring', alreadyRequested: false }]);
+      expect(expectHeldAssets(result)).toEqual([{ assetType: 'mooring', assetTypeName: 'Mooring', alreadyRequested: false, feeDollars: 150 }]);
     }
   });
 });

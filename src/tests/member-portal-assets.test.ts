@@ -30,9 +30,9 @@ describe('listHouseholdAssignments', () => {
     const { db } = fakeD1({
       allResults: {
         'FROM asset_assignments aa': [
-          { id: 'aa-1', asset_type: 'mooring', asset_type_name: 'Mooring', description: 'Buoy M-14', payment_id: 'pay-1', paid_at: '2026-01-01 00:00:00', fee_amount: 300 },
-          { id: 'aa-2', asset_type: 'rv-parking', asset_type_name: 'RV Parking', description: null, payment_id: 'pay-2', paid_at: null, fee_amount: 150 },
-          { id: 'aa-3', asset_type: 'boat-parking', asset_type_name: 'Boat Parking', description: null, payment_id: null, paid_at: null, fee_amount: null },
+          { id: 'aa-1', asset_type: 'mooring', asset_type_name: 'Mooring', description: 'Buoy M-14', type_fee: 300, payment_id: 'pay-1', paid_at: '2026-01-01 00:00:00', fee_amount: 300 },
+          { id: 'aa-2', asset_type: 'rv-parking', asset_type_name: 'RV Parking', description: null, type_fee: 150, payment_id: 'pay-2', paid_at: null, fee_amount: 150 },
+          { id: 'aa-3', asset_type: 'boat-parking', asset_type_name: 'Boat Parking', description: null, type_fee: 100, payment_id: null, paid_at: null, fee_amount: null },
         ],
       },
     });
@@ -44,14 +44,31 @@ describe('listHouseholdAssignments', () => {
     const { db } = fakeD1({
       allResults: {
         'FROM asset_assignments aa': [
-          { id: 'aa-1', asset_type: 'mooring', asset_type_name: 'Mooring', description: null, payment_id: 'pay-1', paid_at: '2026-01-01 00:00:00', fee_amount: 300 },
-          { id: 'aa-2', asset_type: 'rv-parking', asset_type_name: 'RV Parking', description: null, payment_id: 'pay-2', paid_at: null, fee_amount: 150 },
-          { id: 'aa-3', asset_type: 'boat-parking', asset_type_name: 'Boat Parking', description: null, payment_id: null, paid_at: null, fee_amount: null },
+          { id: 'aa-1', asset_type: 'mooring', asset_type_name: 'Mooring', description: null, type_fee: 300, payment_id: 'pay-1', paid_at: '2026-01-01 00:00:00', fee_amount: 300 },
+          { id: 'aa-2', asset_type: 'rv-parking', asset_type_name: 'RV Parking', description: null, type_fee: 150, payment_id: 'pay-2', paid_at: null, fee_amount: 150 },
+          { id: 'aa-3', asset_type: 'boat-parking', asset_type_name: 'Boat Parking', description: null, type_fee: 100, payment_id: null, paid_at: null, fee_amount: null },
         ],
       },
     });
     const rows = await listHouseholdAssignments(db, 'hh-1', 2026);
     expect(rows.map((r) => r.feeCents)).toEqual([null, 15000, null]);
+  });
+
+  // This task's own addition: the type's own standing season fee (`asset_types.fee`, whole
+  // dollars) rides along on every row regardless of billing state -- distinct from `feeCents`
+  // above, which is the outstanding PAYMENT amount and is `null` for two of these three rows.
+  it("carries the asset type's own standing season fee on every row, billed or not", async () => {
+    const { db } = fakeD1({
+      allResults: {
+        'FROM asset_assignments aa': [
+          { id: 'aa-1', asset_type: 'mooring', asset_type_name: 'Mooring', description: null, type_fee: 300, payment_id: 'pay-1', paid_at: '2026-01-01 00:00:00', fee_amount: 300 },
+          { id: 'aa-2', asset_type: 'rv-parking', asset_type_name: 'RV Parking', description: null, type_fee: 150, payment_id: 'pay-2', paid_at: null, fee_amount: 150 },
+          { id: 'aa-3', asset_type: 'boat-parking', asset_type_name: 'Boat Parking', description: null, type_fee: 100, payment_id: null, paid_at: null, fee_amount: null },
+        ],
+      },
+    });
+    const rows = await listHouseholdAssignments(db, 'hh-1', 2026);
+    expect(rows.map((r) => r.feeDollars)).toEqual([300, 150, 100]);
   });
 });
 

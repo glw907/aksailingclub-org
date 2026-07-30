@@ -11,6 +11,7 @@ function assignment(overrides: Partial<HouseholdAssignmentRow>): HouseholdAssign
     description: null,
     paymentStanding: 'paid',
     feeCents: null,
+    feeDollars: 150,
     ...overrides,
   };
 }

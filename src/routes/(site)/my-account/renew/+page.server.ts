@@ -65,6 +65,10 @@ export interface RenewHeldAssetOption {
   assetType: string;
   assetTypeName: string;
   alreadyRequested: boolean;
+  /** The type's own standing season fee (whole dollars, `assets.ts`'s own `feeDollars`), shown
+   *  beside the row the same way the tier picker above shows each tier's `priceDollars` -- the
+   *  owner's own review ask: "prices ... should definitely be shown." */
+  feeDollars: number;
 }
 
 export const load: PageServerLoad = async (event) => {
@@ -117,6 +121,7 @@ export const load: PageServerLoad = async (event) => {
     heldAssets.push({
       assetType: assignment.assetType,
       assetTypeName: assignment.assetTypeName,
+      feeDollars: assignment.feeDollars,
       alreadyRequested: requests.some(
         (request) => request.assetType === assignment.assetType && request.kind === 'retention' && OPEN_RETENTION_STATUSES.has(request.status),
       ),

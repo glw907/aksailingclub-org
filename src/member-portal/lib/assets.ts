@@ -53,6 +53,13 @@ export interface HouseholdAssignmentRow {
    *  This task's own portal pay door (`getPayableAssignmentFee`) re-verifies this amount against
    *  the database before ever building a Checkout Session, so this field is display-only. */
   feeCents: number | null;
+  /** The asset type's own standing season fee (`asset_types.fee`, whole dollars), regardless of
+   *  whether this particular assignment is billed yet. Deliberately NOT `feeCents`: that field is
+   *  the outstanding PAYMENT amount and is `null` for most rows, while this is the type's list
+   *  price, always present, and in dollars rather than cents -- the retention step on
+   *  `/my-account/renew` shows it beside every held asset the way the tier picker shows a tier's
+   *  own price, before any billing has happened. */
+  feeDollars: number;
 }
 
 /** One of the household's own waitlist queue positions, with the queue's honest length (design
@@ -86,7 +93,7 @@ export interface HouseholdRequestRow {
 export async function listHouseholdAssignments(db: D1Database, householdId: string, currentSeason: number): Promise<HouseholdAssignmentRow[]> {
   const { results } = await db
     .prepare(
-      `SELECT aa.id, aa.asset_type, at.name AS asset_type_name, aa.description, ap.id AS payment_id, ap.paid_at, ap.amount AS fee_amount
+      `SELECT aa.id, aa.asset_type, at.name AS asset_type_name, aa.description, at.fee AS type_fee, ap.id AS payment_id, ap.paid_at, ap.amount AS fee_amount
        FROM asset_assignments aa
        JOIN asset_types at ON at.id = aa.asset_type
        JOIN memberships m ON m.id = aa.membership_id
@@ -100,6 +107,7 @@ export async function listHouseholdAssignments(db: D1Database, householdId: stri
       asset_type: string;
       asset_type_name: string;
       description: string | null;
+      type_fee: number;
       payment_id: string | null;
       paid_at: string | null;
       fee_amount: number | null;
@@ -113,6 +121,7 @@ export async function listHouseholdAssignments(db: D1Database, householdId: stri
       description: r.description,
       paymentStanding,
       feeCents: paymentStanding === 'outstanding' ? Math.round((r.fee_amount ?? 0) * 100) : null,
+      feeDollars: r.type_fee,
     };
   });
 }

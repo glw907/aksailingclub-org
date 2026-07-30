@@ -17,6 +17,8 @@ money-committing step here reads the same as every other portal payment action
   import type { MembershipTier } from '$member-auth/lib/standing';
   import { formatMemberCents } from '$member-auth/lib/format';
   import { untrack } from 'svelte';
+  import { enhance } from '$app/forms';
+  import { cubicOut } from 'svelte/easing';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -45,6 +47,43 @@ money-committing step here reads the same as every other portal payment action
    *  tier as "$247.5" on the one screen where a member commits to a price. */
   function formatTierPrice(dollars: number): string {
     return formatMemberCents(Math.round(dollars * 100));
+  }
+
+  /** The retention control's own request -> requested toggle (owner review, 2026-07-30): the
+   *  asset type currently mid-submit, so its control shows a busy label and refuses a second
+   *  click while the request is in flight -- the double-click window a review flagged, and the
+   *  same "the control flips on server success, not on click" rule `?/retainAsset` itself already
+   *  guarantees (it never lies about a write it hasn't made). */
+  let submittingAssetType = $state<string | null>(null);
+
+  /** `use:enhance` for one held-asset row's `?/retainAsset` form: keeps the plain POST working
+   *  with JavaScript off (SvelteKit's own enhance-degrades-to-plain-submit contract), and with it
+   *  on, `update()` re-runs `load` so `asset.alreadyRequested` flips only once the server has
+   *  actually recorded the request -- never client-side state that gets ahead of the write. */
+  function retainEnhance(assetType: string) {
+    submittingAssetType = assetType;
+    return async ({ update }: { update: (opts?: { reset?: boolean }) => Promise<void> }) => {
+      await update({ reset: false });
+      submittingAssetType = null;
+    };
+  }
+
+  function reducedMotion(): boolean {
+    return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  /** The request/requested crossfade (owner review, 2026-07-30): both states fill
+   *  `.retain-control`'s own fixed box absolutely (see the style block), so this only ever
+   *  animates opacity and a small vertical drift, never width or layout. Honors
+   *  `prefers-reduced-motion` with a zero-duration instant swap, matching `/my-account/sign`'s
+   *  own `reducedMotion()` guard. */
+  function retainSwap(_node: HTMLElement) {
+    if (reducedMotion()) return { duration: 0 };
+    return {
+      duration: 180,
+      easing: cubicOut,
+      css: (t: number) => `opacity: ${t}; transform: translateY(${(1 - t) * 4}px);`,
+    };
   }
 </script>
 
@@ -124,18 +163,37 @@ money-committing step here reads the same as every other portal payment action
         {#each data.heldAssets as asset (asset.assetType)}
           <li class="rounded-box border border-card-border bg-base-100 p-s text-step--1">
             <div class="flex flex-wrap items-center justify-between gap-xs">
-              <span class="text-base-content">{asset.assetTypeName}</span>
-              {#if asset.alreadyRequested}
-                <span class="asc-availability-chip">Requested</span>
-              {:else}
-                <form method="POST" action="?/retainAsset">
-                  <input type="hidden" name="csrf" value={data.csrf} />
-                  <input type="hidden" name="assetType" value={asset.assetType} />
-                  <button type="submit" class="btn btn-primary btn-sm portal-touch-btn">
-                    Request {asset.assetTypeName.toLowerCase()} again for {data.renewalSeason}
-                  </button>
-                </form>
-              {/if}
+              <span class="renew-tier-text">
+                <span class="renew-tier-name">{asset.assetTypeName}</span>
+                <span class="renew-tier-price">{formatTierPrice(asset.feeDollars)} / season</span>
+              </span>
+
+              <!-- The fixed-width control slot (owner review): both states fill this same box
+                   absolutely (see `.retain-control` below), so the row never reflows when its
+                   state changes, whether that change is the request->requested crossfade or the
+                   plain-POST reload a JS-off visit gets instead. -->
+              <div class="retain-control">
+                {#if asset.alreadyRequested}
+                  <span class="retain-action retain-action-done" in:retainSwap out:retainSwap>
+                    Requested
+                    <span class="sr-only"> {asset.assetTypeName.toLowerCase()} for {data.renewalSeason}</span>
+                  </span>
+                {:else}
+                  <form method="POST" action="?/retainAsset" use:enhance={() => retainEnhance(asset.assetType)} in:retainSwap out:retainSwap>
+                    <input type="hidden" name="csrf" value={data.csrf} />
+                    <input type="hidden" name="assetType" value={asset.assetType} />
+                    <button
+                      type="submit"
+                      class="btn btn-sm portal-quiet-action portal-touch-btn retain-action"
+                      disabled={submittingAssetType === asset.assetType}
+                      aria-busy={submittingAssetType === asset.assetType}
+                    >
+                      {submittingAssetType === asset.assetType ? 'Requesting…' : 'Request'}
+                      <span class="sr-only"> {asset.assetTypeName.toLowerCase()} again for {data.renewalSeason}</span>
+                    </button>
+                  </form>
+                {/if}
+              </div>
             </div>
           </li>
         {/each}
@@ -193,5 +251,63 @@ money-committing step here reads the same as every other portal payment action
     flex-shrink: 0;
     font-variant-numeric: tabular-nums;
     color: var(--color-muted);
+  }
+
+  /* The retention step's own request/requested control (owner review, 2026-07-30): a fixed-size
+     slot both states fill absolutely, so swapping between them never changes the slot's own
+     width or height -- the earlier button-vanishes-then-a-chip-appears pattern this replaces did
+     reflow the row, which is exactly what the review flagged. `height` matches
+     `.portal-touch-btn`'s own 44px floor so the control clears the portal's touch-target rule in
+     either state. */
+  .retain-control {
+    position: relative;
+    flex-shrink: 0;
+    width: 8rem;
+    height: 2.75rem;
+  }
+  .retain-control form {
+    position: absolute;
+    inset: 0;
+  }
+  .retain-action {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-3xs);
+    border-radius: var(--radius-field);
+    font-weight: 600;
+  }
+
+  /* The done state (the toggle the owner asked for): a real span, not a button, so it reads as
+     inert rather than a second control -- but sized and shaped identically to the `.retain-action`
+     button it replaces, plus its own tinted-success chrome, so it reads unmistakably as "sent"
+     rather than as the button having quietly gone missing. */
+  .retain-action-done {
+    position: absolute;
+    inset: 0;
+    border: 1px solid color-mix(in oklab, var(--color-success) 35%, transparent);
+    background: color-mix(in oklab, var(--color-success) 10%, var(--color-base-100));
+    color: var(--color-success);
+  }
+  .retain-action-done::before {
+    content: '✓';
+  }
+
+  /* Dark mode: a plain `.btn` (`.portal-quiet-action` only touches text color) renders border and
+     fill at the same lightness as the asc-dark page ground, an invisible edge (agent memory:
+     daisyui-plain-btn-dark-contrast) -- caught here by actually rendering the "Request" button in
+     asc-dark, not assumed. Both the system-dark and explicit-toggle paths (matching
+     `asc-components.css`'s own established two-selector idiom for this exact gap): the ancestor
+     half of each selector is outside this component, so it needs `:global()` the way
+     `DonateForm.svelte`'s own dark-mode fix already does. */
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme])) .retain-control form .retain-action {
+      border-color: var(--color-card-border);
+    }
+  }
+  :global([data-theme='asc-dark']) .retain-control form .retain-action {
+    border-color: var(--color-card-border);
   }
 </style>
