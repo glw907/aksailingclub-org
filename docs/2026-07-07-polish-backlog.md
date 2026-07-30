@@ -127,7 +127,13 @@ not done today Geoff tackles on Opus tomorrow; hand this file to that session.
   member-people list. Scope it in the admin review round; it connects to the MW-absorption
   membership-management item.
 - **A global, default-correct vertical-centering mechanism for padded labels** (Geoff,
-  2026-07-30, deferred to a subsequent pass). Geoff noticed the `CURRENT PLAN` chip's text
+  2026-07-30, deferred to a subsequent pass). **This is an ENGINE-level fix (Geoff): the
+  mechanism belongs in cairn, and the standing check belongs in `cairn-audit`, so every
+  consuming site inherits both. Filed for the harvest in
+  `docs/2026-07-30-assets-substrate-harvest-findings.md`, finding 1, which carries the full
+  evidence.** What stays site-side is only the eventual adoption: ASC's own
+  `.asc-availability-chip` and its siblings drop their local compensation once cairn ships the
+  default. Geoff noticed the `CURRENT PLAN` chip's text
   sitting off-centre in its pill on `/my-account/renew` at 390 and asked for a global way to
   manage vertical centering so it is easy and correct by default, rather than a per-component
   fix each time someone spots one. A one-off `line-height: 1` patch to `.asc-availability-chip`
