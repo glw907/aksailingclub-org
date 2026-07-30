@@ -15,6 +15,7 @@ import {
   releaseAssignment,
   removeFromWaitlist,
 } from '$admin-club/lib/assets-store';
+import { getHouseholdDesk, listHouseholds } from '$admin-club/lib/households-store';
 
 describe('listAssetTypes', () => {
   it('maps each raw row to the camelCased shape', async () => {
@@ -73,6 +74,63 @@ describe('listActiveAssignments', () => {
     const { db } = fakeD1({ allResults: { 'FROM asset_assignments aa': [{ ...RAW, payment_id: 'p-1', paid_at: '2026-03-01 00:00:00' }] } });
     const rows = await listActiveAssignments(db, 2026);
     expect(rows[0].paymentStanding).toBe('paid');
+  });
+});
+
+describe('the shared lens agrees across its three consumers (Task 3)', () => {
+  // The same seeded assignment, read through each of the three lenses that now all query
+  // through `listAssignments`: the Assets screen's own `listActiveAssignments`, the Members
+  // list's holding chips (`listHouseholds`), and the household desk's Assets panel
+  // (`getHouseholdDesk`). Each gets its own fake database, since the point under test is that
+  // the shared query produces the same asset type, description, and payment standing no matter
+  // which consumer reads it, not that one literal SQL call is reused across three unrelated
+  // route handlers.
+  const SEEDED_ROW = {
+    id: 'aa-agree',
+    asset_type: 'mooring',
+    asset_type_name: 'Mooring',
+    membership_id: 'ms-agree',
+    household_id: 'hh-agree',
+    household_name: 'The Agreeing Household',
+    primary_member_name: 'Kaija Agreeing',
+    season: 2026,
+    description: 'Buoy M-9',
+    status: 'active',
+    created_at: '2026-01-01 00:00:00',
+    payment_id: 'ap-agree',
+    paid_at: '2026-02-01 00:00:00',
+  };
+
+  it('the Assets screen sees the assignment as paid', async () => {
+    const { db } = fakeD1({ allResults: { 'FROM asset_assignments aa': [SEEDED_ROW] } });
+    const [row] = await listActiveAssignments(db, 2026);
+    expect(row).toMatchObject({ assetType: 'mooring', description: 'Buoy M-9', paymentStanding: 'paid' });
+  });
+
+  it('the Members-list holding chip agrees', async () => {
+    const { db } = fakeD1({
+      allResults: {
+        'FROM households h': [
+          { id: 'hh-agree', name: 'The Agreeing Household', city: null, primary_member_id: null, former_at: null, season: 2026, paid_at: '2026-01-01' },
+        ],
+        'FROM asset_assignments aa': [SEEDED_ROW],
+      },
+    });
+    const [household] = await listHouseholds(db);
+    expect(household.holdings[0]).toMatchObject({ assetTypeName: 'Mooring', description: 'Buoy M-9', paymentStanding: 'paid' });
+  });
+
+  it('the household desk Assets panel agrees', async () => {
+    const { db } = fakeD1({
+      firstResults: {
+        'FROM households WHERE id': { id: 'hh-agree', name: 'The Agreeing Household', city: null, primary_member_id: null },
+      },
+      allResults: {
+        'FROM asset_assignments aa': [SEEDED_ROW],
+      },
+    });
+    const desk = await getHouseholdDesk(db, 'hh-agree');
+    expect(desk?.assets[0]).toMatchObject({ assetType: 'mooring', assetTypeName: 'Mooring', description: 'Buoy M-9', paymentStanding: 'paid' });
   });
 });
 
