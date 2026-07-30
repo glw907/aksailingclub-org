@@ -6,6 +6,24 @@
 > improves as we go, so each finding is an improvement to make rather than a complaint to
 > archive.
 
+## The routing principle behind findings 1 to 3 (Geoff, 2026-07-30)
+
+Geoff's own framing, said of all three in one sitting: "That all seems like stuff that should
+live at the engine level, so every site doesn't need to deal with this." He volunteered it for
+the centering and the row wrap, and applied it to the toggle control over a deliberate decision
+to defer that one.
+
+The line it draws is between a design **choice**, which is the site's, and a UI **mechanic**,
+which is the engine's. A mechanic is anything that would recur in any component of that shape
+on any consuming site: how a padded label centres its own text, which element a two-part row
+drops when space runs out, how a form action animates a control into a settled state. Fixing
+one of those in ASC's `src/theme/asc-components.css` or a route's scoped `<style>` leaves every
+sibling site to rediscover it. Two qualifications came out of the same sitting and are carried
+in the findings below: a mechanic that is always right can be a silent default, while one whose
+correct answer depends on what the content means makes the choice explicit at the call site
+instead; and the mechanically detectable half of each belongs in `cairn-audit` rather than a
+consuming site's own probe script.
+
 ## Filed during execution (2026-07-30)
 
 1. **Vertical centering of padded labels wants an engine-level default, not a per-component
