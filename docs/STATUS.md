@@ -42,6 +42,12 @@ What happened:
   `docs/design-benchmark/2026-07-29-assets-trial-log.md`; six cairn findings staged in
   `docs/2026-07-29-assets-trial-harvest-findings.md` (paste into cairn's friction log
   when that repo is free — a `design-infra-pass-2` worktree still had live workerd).
+- **COMMITTED AS 986f95c, DELIBERATELY NOT PUSHED. Do not push before regenerating the
+  visual baselines.** Rendering moved (0.91.0's `PageHeader` margin fix, the four
+  documents h1s, the chip register, and `HEADER_CELL` on 118 sites), so the existing
+  baselines are stale and `ci.yml`'s visual suite will fail on the current PNGs. A push
+  to `main` is also a dev deploy. Regenerate via `gh workflow run ci.yml -f
+  update_snapshots=true` and READ the log, never a local `--update-snapshots`.
 - **PASS-SIZE FLAG (Geoff): the "mechanical" pre-trial chores became a pass of their
   own** — a substrate defect, ~400 repaired sites, and a six-item harvest, before any
   measurement. The trial itself has not started.
