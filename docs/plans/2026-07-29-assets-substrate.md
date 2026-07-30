@@ -31,12 +31,22 @@ The evidence base is `docs/2026-07-29-assets-functional-input.md`, whose claims 
 
 ### Blocking input
 
-**This task does not start until Geoff supplies the four confirmed capacities** for `mooring`,
-`rv-parking`, `boat-parking`, and `small-boat-rack`. The design spec's ruling 1 records that the
-imported capacity values were authored examples rather than club data, and that `rv_parking`'s
-`5` was invented. `rv-parking` is expected to be 10, pending confirmation. The migration never
-ships with the invented values, and an implementer who reaches this task without the four
-numbers stops and reports the missing input rather than guessing.
+**SUPPLIED AND LANDED 2026-07-30. Geoff's four confirmed capacities**, written by migration
+`0034_asset_type_ids` and verified live:
+
+| asset type | capacity |
+| --- | --- |
+| `mooring` | 10 |
+| `rv-parking` | 10 |
+| `boat-parking` | NULL, meaning no limit. Geoff: "Right now there's no specific capacity. We have plenty of space to add more." |
+| `small-boat-rack` | 9 |
+
+The prior imported values were `mooring` 12, `rv_parking` 5, `boat_parking` 15, `small_boat`
+NULL. The design spec's ruling 1 records that they were authored examples rather than club data,
+and that `rv_parking`'s `5` was invented.
+
+Original blocking condition, kept for the record: this task did not start until Geoff supplied
+those four numbers, and the migration never shipped with the invented values.
 
 ### Outcomes
 

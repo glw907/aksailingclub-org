@@ -126,9 +126,10 @@ confirmation, the one-executor check.
 **Acceptance criteria**
 
 - The live query returns `mooring`, `rv-parking`, `boat-parking`, `small-boat-rack`, and each
-  row's `capacity` matches the four values recorded in the substrate plan's "Blocking input"
-  section (`docs/plans/2026-07-29-assets-substrate.md`, Task 1). If that section still names no
-  confirmed numbers, the substrate has not landed and this plan does not start.
+  row's `capacity` matches the four values now recorded in the substrate plan's "Blocking input"
+  section (`docs/plans/2026-07-29-assets-substrate.md`, Task 1), which are `mooring` 10,
+  `rv-parking` 10, `boat-parking` NULL for no limit, and `small-boat-rack` 9. The migration that
+  wrote them is `migrations/asc-club/0034_asset_type_ids`, whose README records the live apply.
 - `src/admin-club/lib/assets-store.ts` carries the coexistence comment, naming the legacy
   payment-link route, the `asset_payments` rows it never writes, and the phase-2 owner. It is a
   spec commitment sitting in a file the rebuild touches, so it is confirmed present before the
@@ -164,10 +165,22 @@ for populated and empty states.
 **Constraints**
 
 - **Attach the new rows to the real `mooring` asset type that `waivers-seed.sql` already seeds.**
-  Do not insert, delete, or re-key any other real type id. Every other type these rows need is a
-  fixture-prefixed placeholder, which is the established convention: `portal-seed.sql` documents
-  it in its own waiver-scope comment for `portal-at-mooring`, `portal-at-trailer`, and
-  `portal-at-rv`, and `membership-admin-seed.sql` follows it with its `madm-` prefix.
+  Do not insert, delete, or re-key any other real type id.
+- **An `asset_type` value is NEVER a fixture-prefixed placeholder. This constraint was rewritten
+  2026-07-30 and the precedent it used to cite no longer exists.** The substrate pass added
+  `parseAssetKind` (`src/member-portal/lib/waiver-requirements.ts`), which throws on any id
+  outside `mooring`, `rv-parking`, `boat-parking`, `small-boat-rack`, and the member portal
+  reaches it through its own signing gate. `portal-seed.sql`'s old `portal-at-mooring`,
+  `portal-at-trailer` and `portal-at-rv` ids were removed for exactly that reason: they threw the
+  moment anything parsed them, and a first repair then crossed an id with the wrong display name,
+  seeding a type production has never held. **Use the real four ids, each paired with the display
+  name live `asset_types` actually gives it** (`boat-parking` is "Trailered Boat Parking",
+  `rv-parking` is "Long-Term RV Parking"), and confirm the pairing against the live table rather
+  than assuming it.
+- Every OTHER id the new file creates (assignments, requests, waitlist entries, payments) keeps a
+  distinct fixture prefix, so its rows delete cleanly and never collide with the `portal-`,
+  `waiver-`, or `madm-` sets. That convention is unchanged; only asset-type ids are exempt from
+  it.
 - Prefix every id the new file creates distinctly, so its rows delete cleanly and never collide
   with the `portal-`, `waiver-`, or `madm-` sets.
 - **Bootstrap slot: last.** Append the new file to `e2e/fixtures/bootstrap-club-db.mjs` after
