@@ -18,7 +18,7 @@ import { resolveMemberDb } from '$member-auth/lib/db';
 import { getMemberStanding, MEMBERSHIP_TIER_LABEL, type MembershipTier } from '$member-auth/lib/standing';
 import { getCurrentSeason, getTierPrices } from '$admin-club/lib/club-settings';
 import { mintOrReuseRenewalMembership, nextUnclaimedRenewalSeason } from '$member-portal/lib/renewal';
-import { createAssetRequest, listHouseholdAssignments, listHouseholdRequests } from '$member-portal/lib/assets';
+import { createAssetRequest, listHouseholdAssignments, listHouseholdRequests, type HouseholdRequestRow } from '$member-portal/lib/assets';
 import { portalAction } from '$member-portal/lib/portal-action';
 import { checkoutOrStub } from '$member-portal/lib/checkout';
 import { documents } from '$chassis/content';
@@ -32,6 +32,13 @@ import { householdSignaturesComplete } from '$member-portal/lib/waiver-requireme
 const SIGN_REDIRECT = '/my-account/sign?context=renewal&next=%2Fmy-account%2Frenew';
 
 export const prerender = false;
+
+/** The retention step's own "already in flight" statuses (task 4 finding 2): a request the admin
+ *  has approved moves through `approved_awaiting_payment` to `assigned` before it is truly done,
+ *  so the duplicate guard and the "Requested" chip both need to stay closed across that whole
+ *  span, not just `pending` -- otherwise the button reappears once an admin approves the request
+ *  and a second click inserts a duplicate pending row for an asset already granted. */
+const OPEN_RETENTION_STATUSES: ReadonlySet<HouseholdRequestRow['status']> = new Set(['pending', 'approved_awaiting_payment', 'assigned']);
 
 /** `MembershipTier`'s own three values (matching `$theme/join-apply-form.ts`'s own
  *  `MEMBERSHIP_TIERS` precedent): the tier picker's own option list and the `?/renew` action's
@@ -90,16 +97,31 @@ export const load: PageServerLoad = async (event) => {
 
   const tiers: RenewTierOption[] = MEMBERSHIP_TIERS.map((tier) => ({ tier, label: MEMBERSHIP_TIER_LABEL[tier], priceDollars: prices[tier] }));
 
-  // The retention step (design spec ruling 3, task 4): every asset the household holds today,
-  // read through the same `listHouseholdAssignments`/`listHouseholdRequests` `/my-account/gear`
-  // already uses, never a new query. A household with no active assignments gets an empty array,
-  // which the template reads as "no step at all".
+  // The retention step (design spec ruling 3, task 4): every asset TYPE the household holds
+  // today, read through the same `listHouseholdAssignments`/`listHouseholdRequests`
+  // `/my-account/gear` already uses, never a new query. A household with no active assignments
+  // gets an empty array, which the template reads as "no step at all".
+  //
+  // Deduplicated by asset type (finding 1): a household can hold more than one active assignment
+  // of the same type (three live households do, one holding three trailered-boat-parking
+  // assignments), and the whole downstream request model is type-keyed -- `asset_requests`
+  // carries no count, `createAssetRequest` takes a type, and the duplicate guard below matches on
+  // type. One row and one request per type is the honest representation of what that model can
+  // express; a per-assignment request model would need a schema change this pass forbids.
   const [assignments, requests] = await Promise.all([listHouseholdAssignments(db, member.householdId, currentSeason), listHouseholdRequests(db, member.householdId)]);
-  const heldAssets: RenewHeldAssetOption[] = assignments.map((assignment) => ({
-    assetType: assignment.assetType,
-    assetTypeName: assignment.assetTypeName,
-    alreadyRequested: requests.some((request) => request.assetType === assignment.assetType && request.kind === 'retention' && request.status === 'pending'),
-  }));
+  const seenAssetTypes = new Set<string>();
+  const heldAssets: RenewHeldAssetOption[] = [];
+  for (const assignment of assignments) {
+    if (seenAssetTypes.has(assignment.assetType)) continue;
+    seenAssetTypes.add(assignment.assetType);
+    heldAssets.push({
+      assetType: assignment.assetType,
+      assetTypeName: assignment.assetTypeName,
+      alreadyRequested: requests.some(
+        (request) => request.assetType === assignment.assetType && request.kind === 'retention' && OPEN_RETENTION_STATUSES.has(request.status),
+      ),
+    });
+  }
 
   return { csrf, standing, currentSeason, renewalSeason, tiers, heldAssets };
 };
@@ -137,6 +159,11 @@ export const actions: Actions = {
   // "yes" per held asset (`/my-account/gear`'s own per-row action shape). A "no" is simply never
   // submitting this action, so it creates nothing by construction -- releasing a held asset stays
   // the separate, deliberate action on `/my-account/gear`, never reachable from here.
+  //
+  // Its own `retainError` key, distinct from `?/renew`'s `error` (finding 5): the two actions
+  // share this route's one `form` prop, and the retention section renders its own error surface
+  // beside itself rather than reusing the renewal form's, so the template needs to tell which
+  // action a failure came from.
   retainAsset: portalAction(async ({ form, ctx }) => {
     const currentSeason = await getCurrentSeason(ctx.db);
     // The same defense-in-depth re-check `?/renew` above carries: the retention step never offers
@@ -147,18 +174,21 @@ export const actions: Actions = {
     }
 
     const assetType = String(form.get('assetType') ?? '').trim();
-    if (!assetType) return fail(400, { error: 'Missing asset type.' });
+    if (!assetType) return fail(400, { retainError: 'Missing asset type.' });
 
     const assignments = await listHouseholdAssignments(ctx.db, ctx.member.householdId, currentSeason);
     if (!assignments.some((assignment) => assignment.assetType === assetType)) {
-      return fail(400, { error: 'Your household does not hold this asset.' });
+      return fail(400, { retainError: 'Your household does not hold this asset.' });
     }
 
-    // The duplicate guard: a second submission for the same asset type must not create a second
-    // pending row, so this checks the household's own existing requests before inserting.
+    // The duplicate guard (finding 2): a second submission for the same asset type must not
+    // create a second pending row, so this checks the household's own existing requests before
+    // inserting -- across every OPEN_RETENTION_STATUSES status, not just 'pending', so a request
+    // an admin has already approved does not reopen the button and let a second click duplicate
+    // an asset already granted.
     const requests = await listHouseholdRequests(ctx.db, ctx.member.householdId);
-    const alreadyPending = requests.some((request) => request.assetType === assetType && request.kind === 'retention' && request.status === 'pending');
-    if (!alreadyPending) {
+    const alreadyOpen = requests.some((request) => request.assetType === assetType && request.kind === 'retention' && OPEN_RETENTION_STATUSES.has(request.status));
+    if (!alreadyOpen) {
       await createAssetRequest(ctx.db, { assetType, householdId: ctx.member.householdId, requestedBy: ctx.member.id, kind: 'retention', note: null });
     }
 

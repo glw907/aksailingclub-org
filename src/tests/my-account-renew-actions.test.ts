@@ -32,8 +32,16 @@ vi.mock('$chassis/content', () => ({
   documents: { all: () => [{ id: PUBLISHED_RELEASE.id }], byId: () => PUBLISHED_RELEASE },
 }));
 
-const { actions } = await import('../routes/(site)/my-account/renew/+page.server');
+const { actions, load } = await import('../routes/(site)/my-account/renew/+page.server');
 const { fakeD1 } = await import('./_fake-d1');
+
+/** `load`'s generated return type includes `void` (a SvelteKit `Load` can redirect and return
+ *  nothing); every test below supplies a bound `CLUB_DB` and no redirect condition, so the real
+ *  object always comes back -- this narrows for the assertions rather than widening `heldAssets`
+ *  itself to `unknown`. */
+function expectHeldAssets(result: unknown): { assetType: string; assetTypeName: string; alreadyRequested: boolean }[] | null {
+  return (result as { heldAssets: { assetType: string; assetTypeName: string; alreadyRequested: boolean }[] | null }).heldAssets;
+}
 
 const MEMBER_ROW = { id: 'mem-1', household_id: 'hh-1', name: 'Scratch Member', email: 'scratch@example.com', archived_at: null };
 const ACTIVE_ADULT_MEMBER = { id: 'mem-1', name: 'Scratch Member', email: 'scratch@example.com', phone: null, birthdate: '1980-01-01', directory_visibility: 'partial', archived_at: null };
@@ -54,6 +62,19 @@ function fakeEvent(form: Record<string, string>, db: unknown, stripeKey?: string
     request: { clone: () => ({ formData: async () => fd }) } as unknown as Request,
     cookies: { get: (name: string) => cookies[name], set: () => {} },
     platform: { env: { CLUB_DB: db, ...(stripeKey ? { STRIPE_SECRET_KEY: stripeKey } : {}) } },
+  };
+}
+
+/** `load`'s own event shape: no `member_sessions` cookie lookup (the member arrives pre-resolved
+ *  through `event.parent()`, `+layout.server.ts`'s own job), so this needs less than `fakeEvent`
+ *  above -- just a CSRF-cookie jar and the parent's own resolved member. */
+function fakeLoadEvent(db: unknown, member: { id: string; householdId: string }) {
+  const cookies: Record<string, string> = {};
+  return {
+    url: new URL('http://localhost/my-account/renew'),
+    cookies: { get: (name: string) => cookies[name], set: (name: string, value: string) => (cookies[name] = value) },
+    parent: async () => ({ member }),
+    platform: { env: { CLUB_DB: db } },
   };
 }
 
@@ -287,8 +308,36 @@ describe('?/retainAsset', () => {
     });
 
     const result = await actions.retainAsset(fakeEvent({ assetType: 'mooring' }, db) as never);
-    expect(result).toEqual(expect.objectContaining({ status: 400 }));
+    expect(result).toEqual(expect.objectContaining({ status: 400, data: { retainError: 'Your household does not hold this asset.' } }));
     expect(calls.some((c) => c.sql.startsWith('INSERT INTO asset_requests'))).toBe(false);
+  });
+
+  // Finding 2 (task 4 fold): once an admin approves a retention request its status moves past
+  // 'pending' (approved_awaiting_payment, then assigned) before it is truly done, and the
+  // duplicate guard must stay closed across that whole span -- otherwise the button reappears and
+  // a second click inserts a duplicate pending request for an asset already granted.
+  it('does not create a duplicate when the household\'s existing retention request has already moved to approved_awaiting_payment or assigned', async () => {
+    for (const status of ['approved_awaiting_payment', 'assigned']) {
+      const { db, calls } = fakeD1({
+        firstResults: {
+          'FROM member_sessions': MEMBER_ROW,
+          'FROM households WHERE id': { primary_member_id: 'mem-1' },
+          "'current_season'": { value: '2026' },
+        },
+        allResults: {
+          'FROM asset_assignments aa': [
+            { id: 'aa-1', asset_type: 'mooring', asset_type_name: 'Mooring', description: null, payment_id: null, paid_at: null, fee_amount: null },
+          ],
+          'FROM asset_requests r JOIN asset_types at': [
+            { id: 'req-1', asset_type: 'mooring', asset_type_name: 'Mooring', kind: 'retention', status, note: null, deny_reason: null, fee: 300, created_at: '2026-01-01 00:00:00' },
+          ],
+        },
+      });
+
+      const result = await actions.retainAsset(fakeEvent({ assetType: 'mooring' }, db) as never);
+      expect(result).toEqual({ retained: true });
+      expect(calls.some((c) => c.sql.startsWith('INSERT INTO asset_requests'))).toBe(false);
+    }
   });
 
   it('hard-gates on the household-complete signature check the same way ?/renew does: redirects and creates nothing', async () => {
@@ -307,5 +356,68 @@ describe('?/retainAsset', () => {
     expect(isRedirect(caught)).toBe(true);
     expect((caught as Redirect).location).toBe('/my-account/sign?context=renewal&next=%2Fmy-account%2Frenew');
     expect(calls.some((c) => c.sql.startsWith('INSERT INTO asset_requests'))).toBe(false);
+  });
+});
+
+// `load`'s own construction of `heldAssets` (task 4 findings 1 and 2, confirmed against live
+// data): a household can hold more than one active assignment of the same asset TYPE, and the
+// whole downstream request model is type-keyed, so the list must render one row per type, not one
+// per assignment. And the "already requested" flag must stay set across every non-terminal
+// request status, not just 'pending'.
+describe('load', () => {
+  const MEMBER = { id: 'mem-1', householdId: 'hh-1' };
+
+  it('deduplicates held assets by type when the household holds more than one active assignment of the same type', async () => {
+    const { db } = fakeD1({
+      firstResults: { 'FROM households WHERE id': { primary_member_id: 'mem-1' }, "'current_season'": { value: '2026' } },
+      allResults: {
+        'FROM asset_assignments aa': [
+          { id: 'aa-1', asset_type: 'boat-parking', asset_type_name: 'Trailered Boat Parking', description: 'Boat 1', payment_id: null, paid_at: null, fee_amount: null },
+          { id: 'aa-2', asset_type: 'boat-parking', asset_type_name: 'Trailered Boat Parking', description: 'Boat 2', payment_id: null, paid_at: null, fee_amount: null },
+          { id: 'aa-3', asset_type: 'boat-parking', asset_type_name: 'Trailered Boat Parking', description: 'Boat 3', payment_id: null, paid_at: null, fee_amount: null },
+        ],
+      },
+    });
+
+    const result = await load(fakeLoadEvent(db, MEMBER) as never);
+    expect(expectHeldAssets(result)).toEqual([{ assetType: 'boat-parking', assetTypeName: 'Trailered Boat Parking', alreadyRequested: false }]);
+  });
+
+  it('treats an approved-awaiting-payment or assigned retention request as already requested, not just pending', async () => {
+    for (const status of ['pending', 'approved_awaiting_payment', 'assigned']) {
+      const { db } = fakeD1({
+        firstResults: { 'FROM households WHERE id': { primary_member_id: 'mem-1' }, "'current_season'": { value: '2026' } },
+        allResults: {
+          'FROM asset_assignments aa': [
+            { id: 'aa-1', asset_type: 'mooring', asset_type_name: 'Mooring', description: null, payment_id: null, paid_at: null, fee_amount: null },
+          ],
+          'FROM asset_requests r JOIN asset_types at': [
+            { id: 'req-1', asset_type: 'mooring', asset_type_name: 'Mooring', kind: 'retention', status, note: null, deny_reason: null, fee: 150, created_at: '2026-01-01 00:00:00' },
+          ],
+        },
+      });
+
+      const result = await load(fakeLoadEvent(db, MEMBER) as never);
+      expect(expectHeldAssets(result)).toEqual([{ assetType: 'mooring', assetTypeName: 'Mooring', alreadyRequested: true }]);
+    }
+  });
+
+  it('does not treat a denied or cancelled retention request as already requested', async () => {
+    for (const status of ['denied', 'cancelled']) {
+      const { db } = fakeD1({
+        firstResults: { 'FROM households WHERE id': { primary_member_id: 'mem-1' }, "'current_season'": { value: '2026' } },
+        allResults: {
+          'FROM asset_assignments aa': [
+            { id: 'aa-1', asset_type: 'mooring', asset_type_name: 'Mooring', description: null, payment_id: null, paid_at: null, fee_amount: null },
+          ],
+          'FROM asset_requests r JOIN asset_types at': [
+            { id: 'req-1', asset_type: 'mooring', asset_type_name: 'Mooring', kind: 'retention', status, note: null, deny_reason: null, fee: 150, created_at: '2026-01-01 00:00:00' },
+          ],
+        },
+      });
+
+      const result = await load(fakeLoadEvent(db, MEMBER) as never);
+      expect(expectHeldAssets(result)).toEqual([{ assetType: 'mooring', assetTypeName: 'Mooring', alreadyRequested: false }]);
+    }
   });
 });

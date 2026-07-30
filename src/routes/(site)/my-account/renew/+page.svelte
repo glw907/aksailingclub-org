@@ -64,10 +64,6 @@ money-committing step here reads the same as every other portal payment action
     This isn't available right now. Please try again shortly.
   </p>
 {:else}
-  {#if form && 'error' in form && form.error}
-    <p class="mt-s max-w-measure-wide rounded-field border border-error bg-error/10 px-s py-xs text-step--1 text-error">{form.error}</p>
-  {/if}
-
   <form method="POST" action="?/renew" class="mt-l max-w-measure-wide">
     <input type="hidden" name="csrf" value={data.csrf} />
 
@@ -103,6 +99,9 @@ money-committing step here reads the same as every other portal payment action
         Online payment isn't available yet; the club will follow up by email with how to pay.
       </p>
     {/if}
+    {#if form && 'error' in form && form.error}
+      <p class="mt-xs mb-0 text-step--1 text-error">{form.error}</p>
+    {/if}
   </form>
 
   {#if data.heldAssets.length > 0}
@@ -113,6 +112,14 @@ money-committing step here reads the same as every other portal payment action
     <section class="mt-l max-w-measure-wide">
       <h2 class="m-0 text-step-1 font-semibold text-base-content">Your gear and moorings</h2>
       <p class="mt-2xs mb-0 text-step--1 text-muted">Request the same asset again for {data.renewalSeason}, or leave it for now.</p>
+
+      {#if form && 'retained' in form && form.retained}
+        <p class="mt-xs mb-0 text-step--1 text-base-content">Your request is in. The club will review it and follow up.</p>
+      {/if}
+      {#if form && 'retainError' in form && form.retainError}
+        <p class="mt-xs mb-0 max-w-measure-wide rounded-field border border-error bg-error/10 px-s py-xs text-step--1 text-error">{form.retainError}</p>
+      {/if}
+
       <ul class="mt-xs flex flex-col gap-xs">
         {#each data.heldAssets as asset (asset.assetType)}
           <li class="rounded-box border border-card-border bg-base-100 p-s text-step--1">
@@ -124,7 +131,9 @@ money-committing step here reads the same as every other portal payment action
                 <form method="POST" action="?/retainAsset">
                   <input type="hidden" name="csrf" value={data.csrf} />
                   <input type="hidden" name="assetType" value={asset.assetType} />
-                  <button type="submit" class="btn btn-primary btn-sm portal-touch-btn">Request again for {data.renewalSeason}</button>
+                  <button type="submit" class="btn btn-primary btn-sm portal-touch-btn">
+                    Request {asset.assetTypeName.toLowerCase()} again for {data.renewalSeason}
+                  </button>
                 </form>
               {/if}
             </div>
