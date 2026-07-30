@@ -6,6 +6,25 @@
 
 **[Trimmed 2026-07-30 at the Assets brainstorm close.]**
 
+**[Trimmed 2026-07-30 at the Assets substrate close.]**
+
+**THE FIVE PRE-TRIAL CHORES ARE DONE, AND THEY TURNED UP A CAIRN 0.91.0 REGRESSION
+(2026-07-29, Opus 5 conducting, plan docs/plans/2026-07-29-cairn-design-trial-assets.md;
+full entry in docs/status-archive.md, full record in
+docs/design-benchmark/2026-07-29-assets-trial-log.md).** cairn 0.91.0's type-grammar
+migration silently killed 300 ASC admin markup sites and shipped as non-breaking. ASC was
+repaired forward onto the grammar roles (~400 sites across 27 files; static audit 434
+errors to 96 with 5 counted suppressions), and cairn shipped the fix as 0.91.1, installed
+here at `^0.91.1` and measured rendering-neutral. The 94 remaining dead classes are ROUTED
+to each screen's own pass, never absorbed. The rendered audit baseline is recorded: two
+runs, exit 0, zero error-tier findings, with 12 advisories on the Assets perimeter, of
+which the invisible state chip is a build item. **THE EDIT-DESK HYDRATION DEFECT DOES NOT
+EXIST**: corpus C configured cairn's internal route name, those paths 404, and every error
+under the authed admin shell returns HTTP 200 because the shell load streams
+(sveltejs/kit#12987, open). All ten staged cairn findings are folded cairn-side.
+**PASS-SIZE FLAG (Geoff): the "mechanical" chores became a pass of their own.**
+
+
 **MEMBERS REFINEMENT ROUND 1 IS LANDED AND COHERENCE-PASSED (2026-07-24; full entry in
 docs/status-archive.md).** cairn 0.90.0 and 0.90.1 published, ASC A1-A4 landed, the cold
 coherence read PASSED with no expert-visible tells across 16 renders, baselines

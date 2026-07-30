@@ -8,6 +8,79 @@
 > entries beyond the top two or three to the archive — this file is @-imported into every
 > session's context, so its length is a per-session token tax.
 
+**THE ASSETS SUBSTRATE PLAN IS DONE, ALL SEVEN TASKS, AND THE RENEWAL SCREEN TOOK A
+GEOFF-DIRECTED DESIGN ROUND ON TOP. DEV IS DEPLOYED AND BASELINES ARE ASSERTED. THE TRIAL
+BUILD (PLAN 2) IS NEXT, IN ITS OWN SESSION (2026-07-30, Opus 5 conducting, plan
+docs/plans/2026-07-29-assets-substrate.md).** What happened:
+
+- **The live schema repair landed and did what it was for.** Migration
+  `migrations/asc-club/0034_asset_type_ids` renamed the three underscore ids to the document
+  vocabulary, corrected the capacities to Geoff's confirmed numbers (mooring 10, rv-parking 10,
+  boat-parking NULL for no limit, small-boat-rack 9), and backfilled the 4 payment-method rows.
+  **Households holding a mismatched-type asset went from 21 to 0**, the plan's own success
+  criterion, verified live. The rename needed insert-repoint-delete rather than an `UPDATE`:
+  three tables declare `REFERENCES asset_types(id)` with no `ON UPDATE CASCADE` and remote D1
+  enforces foreign keys. Scratch-proven through all six steps first; the README records the
+  live before/after. **Do not edit `forward.sql`, it has run against production.**
+- **All seven tasks are on main**, four of them built in parallel isolated worktrees: the cast
+  validation (`parseAssetKind`, `grep "as AssetKind" src/` now empty, drift throws at read
+  time), the one shared holdings lens behind all three consumers, the retention step on
+  `/my-account/renew`, the five decision-email kinds with four wired and slot-opened
+  deliberately unwired, and the coexistence comment in `assets-store.ts` (**plan 2's preflight
+  must verify it survives the screen rebuild**).
+- **Adversarial review found 17 confirmed findings and all were folded.** The two that mattered:
+  the retention list was keyed by asset type while **three live households hold more than one of
+  a type** (one holds three boat-parking), which broke both the render and the model; and the
+  duplicate guard only checked `pending`, so an approved request let the button return and
+  create a duplicate. Both fixed and tested. Lane B's emails pointed members at
+  `/my-account/gear` for denied and queued states that page filters out entirely.
+- **A cross-lane defect worth remembering**: Task 2's strict parser and Task 4's captures were
+  built in separate worktrees, so neither saw the other, and the parser rejected
+  `portal-seed.sql`'s placeholder asset ids. Repaired, and then repaired again: the first fix
+  paired the id `rv-parking` with the name "Trailered Boat Parking", a combination production
+  has never held. Fixtures now match live pairings exactly, verified against the seeded replica.
+- **Geoff's review drove a design round on the renewal screen**, superseding the plan's
+  no-design-content boundary (his call, recorded as such): season fees on every held-asset row,
+  a fixed-slot control reading "Request" that toggles in place to "Requested", quiet-action
+  weight so the page keeps one filled primary, per-row accessible names via hidden text (a bare
+  `aria-label` would break WCAG 2.5.3), and a reduced-motion-aware crossfade, which required
+  progressively enhancing the form since a transition cannot cross a navigation. Then two
+  wrapping fixes at 390, both measured: the tier price now holds line one for every tier with
+  the chip yielding, and the asset rows stack deterministically below 40rem because the longest
+  real name plus price plus control needs ~370px against ~307px available.
+- **BEFORE/AFTER IS READY TO READ**:
+  https://claude.ai/code/artifact/6e29d1e8-1b9f-4d51-a133-9be3b8c0eecb — the full arc at both
+  viewports and themes, with the wrap measurements in a table.
+- **Baselines regenerated via the CI dispatch against a side branch, then asserted.** Run
+  30580355396 minted exactly 8 files: 4 new `my-account-renew` and 4 changed
+  `waivers-admin-rollup` (the fixture repair feeds the waiver derivation the rollup counts).
+  The push to main ran the mirror image, 75 visual tests passing on the runner. **A local
+  `npm run test:e2e` fails 56 visual comparisons at ratio 0.01 including untouched site pages:
+  that is the workstation/CI rendering delta, not a regression.** The local run also minted 4
+  workstation baselines for the new case, which were deleted.
+- **SIX ENGINE-LEVEL FINDINGS FILED**, in `docs/2026-07-30-assets-substrate-harvest-findings.md`:
+  optical centering of padded labels, the toggle-action control, the label-and-value row
+  primitive, the D1 foreign-key rename recipe, DaisyUI's plain `.btn` rendering an invisible
+  edge on a dark ground (**third local patch, the tell**), and distinct accessible names for
+  repeated per-row controls. **Geoff made this a workstation-level rule covering every cairn
+  site** (`~/.claude/CLAUDE.md`, "Engine-level UI mechanics, every cairn site"): a mechanic
+  belongs to cairn, a choice belongs to the site, and filing them is default behavior at the end
+  of any UI pass rather than something done when asked.
+- **Deferred deliberately**: the chip centering fix was built and REVERTED, because it was a
+  per-component patch where Geoff asked for a global default and its rationale did not survive
+  measurement (the ink sits low in the pill, not high). The `asset_requests` uniqueness race
+  under a genuine double-click is routed, not absorbed: closing it needs a unique index, which
+  is a migration outside this plan.
+- **PASS-SIZE NOTE (owed to Geoff, per his own rule)**: this pass ran well past the substrate
+  plan. Seven plan tasks, 17 review folds, then five owner-directed design items on one screen.
+  Each addition was small and coherent; the total was not. The plan's own boundary was
+  superseded mid-pass rather than re-scoped.
+- **NEXT**: the trial build per `docs/plans/2026-07-29-assets-trial-build.md`, in its own fresh
+  session, under the protocol's control conditions. RESUME PROMPT: "Execute the Assets trial
+  build: read docs/plans/2026-07-29-assets-trial-build.md and the protocol
+  docs/plans/2026-07-29-cairn-design-trial-assets.md; the substrate landed 2026-07-30 so the
+  screens build against honest data." Launch from ~/Projects/aksailingclub-org.
+
 **THE ASSETS FUNCTIONAL BRAINSTORM IS DONE; BOTH EXECUTION PLANS ARE COMMITTED AND
 REVIEWED; A FRESH OPUS 5 SESSION EXECUTES THE SUBSTRATE PLAN NEXT (2026-07-30, Fable
 sitting).** What happened:
@@ -93,22 +166,6 @@ Opus 5 conducting).** What happened:
   docs/plans/2026-07-29-cairn-design-trial-assets.md; the nine open questions at the foot of
   the packet are the agenda." Launch from ~/Projects/aksailingclub-org.
 
-**THE FIVE PRE-TRIAL CHORES ARE DONE, AND THEY TURNED UP A CAIRN 0.91.0 REGRESSION
-(2026-07-29, Opus 5 conducting, plan docs/plans/2026-07-29-cairn-design-trial-assets.md;
-full entry in docs/status-archive.md, full record in
-docs/design-benchmark/2026-07-29-assets-trial-log.md).** cairn 0.91.0's type-grammar
-migration silently killed 300 ASC admin markup sites and shipped as non-breaking. ASC was
-repaired forward onto the grammar roles (~400 sites across 27 files; static audit 434
-errors to 96 with 5 counted suppressions), and cairn shipped the fix as 0.91.1, installed
-here at `^0.91.1` and measured rendering-neutral. The 94 remaining dead classes are ROUTED
-to each screen's own pass, never absorbed. The rendered audit baseline is recorded: two
-runs, exit 0, zero error-tier findings, with 12 advisories on the Assets perimeter, of
-which the invisible state chip is a build item. **THE EDIT-DESK HYDRATION DEFECT DOES NOT
-EXIST**: corpus C configured cairn's internal route name, those paths 404, and every error
-under the authed admin shell returns HTTP 200 because the shell load streams
-(sveltejs/kit#12987, open). All ten staged cairn findings are folded cairn-side.
-**PASS-SIZE FLAG (Geoff): the "mechanical" chores became a pass of their own.**
-
 
 **STILL OPEN ON GEOFF'S QUEUE (pointers; full entries in docs/status-archive.md):**
 the Classes before/after on dev (/admin/club/classes) and the 2026-07-21 probe
@@ -131,4 +188,6 @@ the five-stop dev walkthrough; the 07-15 apology-send verification; the fragment
 (shared portal section primitive, --container-measure-list token — in the archive
 entry);
 the board-demo cleanup after the board meeting (`node scripts/import/demo-household.mjs --cleanup`; full entry in the archive);
-the asset_types underscore-vs-hyphen id defect (dry-storage document audiences never match; small fix task; full entry in the archive).
+the retention step's before/after on /my-account/renew (artifact link in the top entry);
+the asset_requests uniqueness race (a double-click can still create two pending retention
+rows; needs a unique index, so a migration, deliberately routed out of the substrate pass).
