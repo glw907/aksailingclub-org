@@ -126,3 +126,42 @@ not done today Geoff tackles on Opus tomorrow; hand this file to that session.
   paid-through/standing, the dues records the payments webhook reconciles) distinct from the
   member-people list. Scope it in the admin review round; it connects to the MW-absorption
   membership-management item.
+- **A global, default-correct vertical-centering mechanism for padded labels** (Geoff,
+  2026-07-30, deferred to a subsequent pass). Geoff noticed the `CURRENT PLAN` chip's text
+  sitting off-centre in its pill on `/my-account/renew` at 390 and asked for a global way to
+  manage vertical centering so it is easy and correct by default, rather than a per-component
+  fix each time someone spots one. A one-off `line-height: 1` patch to `.asc-availability-chip`
+  was built and reverted during the Assets substrate pass, deliberately: it was not the general
+  answer, and its stated rationale did not survive measurement.
+
+  What the measurement actually showed, so the next pass does not re-derive it. On the events
+  page chip (13.12px uppercase text, `padding: 0.1rem 0.5rem`, inheriting the ambient
+  line-height), the ink sits **1.0px LOW** in the pill, not high: 6.59px of space above the cap
+  line against 4.59px below the baseline. `line-height: 1` reduces that to 0.43px low but
+  shrinks the pill from 23.19px to 18.31px, which is a real layout change in the 19 places the
+  chip is used. `line-height: 1.5` measures best of the three at 0.15px low. **The
+  `CURRENT PLAN` instance Geoff actually saw was NOT measured**; it sits inside
+  `.renew-tier-name`'s `inline-flex` with `align-items: center`, a different context from the
+  events-page instance, so start there rather than trusting the numbers above to describe it.
+
+  Method that worked, reusable for a probe check: read the baseline from real layout by
+  appending a zero-size `inline-block` with `vertical-align: baseline` and taking its
+  `getBoundingClientRect().bottom`, then take glyph extents from canvas
+  `TextMetrics.actualBoundingBoxAscent`/`Descent` for the element's own resolved font. Deriving
+  the baseline from font metrics alone produced numbers that disagreed with the rendered result.
+
+  The standards answer worth evaluating first: CSS `text-box-trim` / `text-box-edge` (the
+  `text-box: trim-both cap alphabetic` shorthand) trims the unfilled ascent and descent
+  allowance at its source, which is exactly the "correct by default" behaviour asked for. Check
+  current browser support and treat it as progressive enhancement over a fallback, since this is
+  a public member-facing site. Whatever mechanism wins, pair it with a standing check in
+  `scripts/design-probe.mjs` alongside `checkTouchTargets` and `checkOverflow`, so the rule is
+  mechanical rather than dependent on someone noticing.
+- **A shared portal toggle-action primitive** (DX harvest, 2026-07-30). The retention control on
+  `/my-account/renew` established the pattern: a fixed-size slot holding two absolutely
+  positioned states, `use:enhance` wiring with a per-key in-flight busy state that closes the
+  double-submit window, and a reduced-motion-aware crossfade between states. It was deliberately
+  built self-contained in that one route rather than abstracted from a single example. A shared
+  primitive would need to parameterise the done-state visual (icon, colour, copy vary by use:
+  Requested here, Cancelled or Released elsewhere) while keeping those mechanics. Lift it when a
+  second surface wants the same behaviour, not before.
