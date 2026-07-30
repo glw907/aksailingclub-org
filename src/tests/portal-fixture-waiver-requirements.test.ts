@@ -19,11 +19,11 @@
 // `portal-at-trailer`) that never matched any real `AssetKind`, which is how it reached "zero
 // outstanding" without any asset-kind-scope signature on file. Task 2's `parseAssetKind` now
 // throws on exactly that kind of unresolvable id, so this fixture was updated to hold real asset
-// kinds (`mooring`, `rv-parking`) with the matching real documents signed instead. **The live
-// `e2e/fixtures/portal-seed.sql` this file mirrors by hand still uses the old placeholder ids and
-// was not updated here** (out of Task 2's own scope, and shared with concurrent e2e work) -- a
-// real Playwright run against it will hit the same throw this fixture used to dodge. See Task 2's
-// own report for the pointer.
+// kinds (`mooring`, `boat-parking`) with the matching real documents signed instead.
+// `e2e/fixtures/portal-seed.sql`, which this file mirrors by hand, carries the identical ids,
+// display names, and signature rows. The pairing matters as much as the id: live `asset_types`
+// pairs `boat-parking` with "Trailered Boat Parking" and `rv-parking` with "Long-Term RV Parking",
+// so a fixture crossing the two would certify a shape production has never held.
 import { describe, expect, it } from 'vitest';
 import { documents } from '$chassis/content';
 import { loadPublishedDocuments } from '$theme/documents';
@@ -67,13 +67,13 @@ describe('portal-seed.sql fixture households against the real season-2026 corpus
         ],
         'FROM asset_assignments aa': [
           { id: 'portal-aa-mooring', asset_type: 'mooring', asset_type_name: 'Mooring', description: 'Sailboat', payment_id: 'portal-ap-mooring', paid_at: '2026-06-20 00:00:00', fee_amount: 150 },
-          { id: 'portal-aa-trailer', asset_type: 'rv-parking', asset_type_name: 'Trailered Boat Parking', description: 'BUCC', payment_id: 'portal-ap-trailer', paid_at: null, fee_amount: 150 },
+          { id: 'portal-aa-trailer', asset_type: 'boat-parking', asset_type_name: 'Trailered Boat Parking', description: 'BUCC', payment_id: 'portal-ap-trailer', paid_at: null, fee_amount: 150 },
         ],
         'FROM waiver_acceptances': [
           { id: 'portal-wa-primary-release', document_id: 'general-release', season: SEASON, member_id: 'portal-mem-primary', minor_member_id: null, signed_at: '2026-06-01 00:00:00' },
           { id: 'portal-wa-primary-rules', document_id: 'rules-acknowledgement', season: SEASON, member_id: 'portal-mem-primary', minor_member_id: null, signed_at: '2026-06-01 00:00:00' },
           { id: 'portal-wa-primary-mooring', document_id: 'mooring-agreement', season: SEASON, member_id: 'portal-mem-primary', minor_member_id: null, signed_at: '2026-06-01 00:00:00' },
-          { id: 'portal-wa-primary-rv', document_id: 'rv-acknowledgement', season: SEASON, member_id: 'portal-mem-primary', minor_member_id: null, signed_at: '2026-06-01 00:00:00' },
+          { id: 'portal-wa-primary-boat', document_id: 'boat-parking-acknowledgement', season: SEASON, member_id: 'portal-mem-primary', minor_member_id: null, signed_at: '2026-06-01 00:00:00' },
           { id: 'portal-wa-primary-storage', document_id: 'storage-agreement', season: SEASON, member_id: 'portal-mem-primary', minor_member_id: null, signed_at: '2026-06-01 00:00:00' },
           { id: 'portal-wa-second-release', document_id: 'general-release', season: SEASON, member_id: 'portal-mem-second', minor_member_id: null, signed_at: '2026-06-01 00:00:00' },
           { id: 'portal-wa-second-rules', document_id: 'rules-acknowledgement', season: SEASON, member_id: 'portal-mem-second', minor_member_id: null, signed_at: '2026-06-01 00:00:00' },

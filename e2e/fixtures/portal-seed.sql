@@ -17,9 +17,9 @@
 --
 -- Every id is prefixed `portal-`, so this file only ever touches its own rows (scoped deletes
 -- below), safe to re-run against a warm workstation replica without disturbing signup-seed.sql's
--- or membership-admin-seed.sql's own fixture rows. The two exceptions are the `asset_types` rows
--- the Wright household holds (`mooring`, `rv-parking`): they carry the real, unprefixed
--- production ids `parseAssetKind` checks against (Assets substrate Task 2), so the `asset_types`
+-- or membership-admin-seed.sql's own fixture rows. The exceptions are the three `asset_types` rows
+-- (`mooring`, `boat-parking`, `rv-parking`): they carry the real, unprefixed production ids
+-- `parseAssetKind` checks against (Assets substrate Task 2), so the `asset_types`
 -- delete below also names them explicitly, the same DELETE-then-INSERT idempotency
 -- `waivers-seed.sql`'s own `mooring` row already uses. Deletes go child-before-parent through the
 -- FK closure: waiver_acceptances/transaction_lines -> transactions, then asset_payments ->
@@ -32,7 +32,7 @@ DELETE FROM asset_payments WHERE id LIKE 'portal-%';
 DELETE FROM asset_waitlist WHERE id LIKE 'portal-%';
 DELETE FROM asset_assignments WHERE id LIKE 'portal-%';
 DELETE FROM credit_grants WHERE id LIKE 'portal-%';
-DELETE FROM asset_types WHERE id LIKE 'portal-%' OR id IN ('mooring', 'rv-parking');
+DELETE FROM asset_types WHERE id LIKE 'portal-%' OR id IN ('mooring', 'boat-parking', 'rv-parking');
 DELETE FROM memberships WHERE id LIKE 'portal-%';
 UPDATE households SET primary_member_id = NULL WHERE id LIKE 'portal-%';
 DELETE FROM members WHERE id LIKE 'portal-%';
@@ -83,21 +83,27 @@ INSERT INTO memberships (id, household_id, season, tier, price_paid, paid_at)
 -- must stress it with the longest string a member can actually see, or the fix gets verified
 -- against a string production never renders.
 --
--- The first two ids are the REAL, unprefixed `asset_types.id` values `parseAssetKind`
+-- All three ids are the REAL, unprefixed `asset_types.id` values `parseAssetKind`
 -- (`$member-portal/lib/waiver-requirements.ts`, Assets substrate Task 2) checks a raw assignment's
--- `asset_type` against -- a placeholder `portal-`-prefixed id throws there, which the renewal
--- route's own signing gate reaches on every load. `src/tests/portal-fixture-waiver-requirements
--- .test.ts` is this fixture's unit mirror and already made this same swap; kept in exact agreement
--- with it, both households and both files describe the identical Wright holdings. The display name
--- stays 'Trailered Boat Parking' on the `rv-parking` row (unchanged from before this swap): only
--- the id moved, matching real production's own `mooring`/`rv-parking`/`boat-parking`/
--- `small-boat-rack` vocabulary, never the display text `e2e/portal-visual.spec.ts`'s own assertion
--- still matches verbatim. The third type (the RV waitlist entry below) carries no assignment, so
--- `parseAssetKind` never reaches it; it keeps its fixture-prefixed id, out of this repair's scope.
+-- `asset_type` against: a placeholder `portal-`-prefixed id throws there, which the renewal
+-- route's own signing gate reaches on every load.
+--
+-- Each id keeps the display name live `asset_types` actually pairs it with, verified against the
+-- production table: `boat-parking` is "Trailered Boat Parking" and `rv-parking` is "Long-Term RV
+-- Parking". Crossing the two would keep every rendered assertion matching while seeding a type
+-- that has never existed, which is how a fixture ends up certifying a fiction (the standing lesson
+-- from mock D, whose invented asset type reached a baseline unchallenged).
+--
+-- The waitlist entry's own type below carries no assignment, so `parseAssetKind` does not reach it
+-- today, but it holds a real id anyway rather than leaving a value that throws the moment anything
+-- parses a waitlist row.
+--
+-- `src/tests/portal-fixture-waiver-requirements.test.ts` is this fixture's unit mirror and carries
+-- the identical ids, names, and signature rows.
 INSERT INTO asset_types (id, name, fee, capacity, sort_order) VALUES
   ('mooring', 'Mooring', 150, NULL, 10),
-  ('rv-parking', 'Trailered Boat Parking', 150, NULL, 20),
-  ('portal-at-rv', 'Long-Term RV Parking', 100, NULL, 30);
+  ('boat-parking', 'Trailered Boat Parking', 150, NULL, 20),
+  ('rv-parking', 'Long-Term RV Parking', 100, NULL, 30);
 
 -- The mooring: an active assignment, PAID for the current season -- listHouseholdAssignments
 -- (src/member-portal/lib/assets.ts) reads paymentStanding 'paid' once a matching-season
@@ -125,13 +131,13 @@ INSERT INTO asset_payments (id, assignment_id, season, amount, paid_at, method)
 -- 'BUCC' is a real live description verbatim (a Buccaneer 18); members really do enter terse
 -- all-caps shorthand here, and the rail's two-line row has to hold it without looking broken.
 INSERT INTO asset_assignments (id, asset_type, membership_id, description, status)
-  VALUES ('portal-aa-trailer', 'rv-parking', 'portal-ms-2026', 'BUCC', 'active');
+  VALUES ('portal-aa-trailer', 'boat-parking', 'portal-ms-2026', 'BUCC', 'active');
 INSERT INTO asset_payments (id, assignment_id, season, amount, paid_at, method)
   VALUES ('portal-ap-trailer', 'portal-aa-trailer', 2026, 150, NULL, NULL);
 
 -- One waitlist entry, so the rail's own "Waitlist" chip row has real data too.
 INSERT INTO asset_waitlist (id, asset_type, member_id, position, requested_at)
-  VALUES ('portal-aw-rv', 'portal-at-rv', 'portal-mem-second', 1, '2026-03-01 00:00:00');
+  VALUES ('portal-aw-rv', 'rv-parking', 'portal-mem-second', 1, '2026-03-01 00:00:00');
 
 -- One available class credit (grants minus redemptions; no redemption row below, so the balance
 -- reads 1 -- credits.ts's own computed-never-stored ledger).
@@ -175,13 +181,13 @@ INSERT INTO transaction_lines (id, transaction_id, item, description, amount_cen
 --
 -- The Wright household DOES owe household-scope documents now (Assets substrate Task 2/task 4
 -- finding 6): the mooring and trailered-boat-parking assignments above hold the real
--- `asset_types.id` values (`mooring`, `rv-parking`) `parseAssetKind` checks a raw assignment
+-- `asset_types.id` values (`mooring`, `boat-parking`) `parseAssetKind` checks a raw assignment
 -- against, rather than the fixture-prefixed placeholder ids this file used to seed (which never
 -- matched a document's own `audience` and so never derived a requirement at all -- the gap
 -- `waivers-seed.sql`'s own header already named for its own mooring fixture row, which
 -- deliberately used the real id instead). The three rows below satisfy them: the mooring
--- agreement, the RV acknowledgement, and the Dry Storage Agreement (`rv-parking` is one of the
--- three dry kinds, `waiver-requirements.ts`'s own `DRY_STORAGE_KINDS`) -- all household-scope,
+-- agreement, the boat-parking acknowledgement, and the Dry Storage Agreement (`boat-parking` is
+-- one of the three dry kinds, `waiver-requirements.ts`'s own `DRY_STORAGE_KINDS`) -- all household-scope,
 -- attached only to the primary member's own list (this module's own "one signature per household"
 -- rule), so only Geoff Wright signs them, never Sam. Without these three, the household would
 -- grow outstanding household-scope requirements and fail the renewal route's `SIGN_REDIRECT`
@@ -207,18 +213,18 @@ VALUES
    '(fixture) the season-2026 rules-acknowledgement text.',
    'Geoff Wright', 'e2e-member@aksailingclub.org', 'renewal', '2026-06-01 00:00:00',
    'portal-mem-primary', NULL),
-  -- The three household-scope documents the mooring/rv-parking holdings above now require
-  -- (finding 6): mooring's own agreement, rv-parking's own acknowledgement, and the Dry Storage
-  -- Agreement rv-parking also opens as one of the three dry kinds. Primary-only, matching
+  -- The three household-scope documents the mooring/boat-parking holdings above now require
+  -- (finding 6): mooring's own agreement, boat-parking's own acknowledgement, and the Dry Storage
+  -- Agreement boat-parking also opens as one of the three dry kinds. Primary-only, matching
   -- `deriveHouseholdRequirements`'s "one adult, the household's primary member" rule.
   ('portal-wa-primary-mooring', 'mooring-agreement', 1, 2026, 'agreement',
    '0000000000000000000000000000000000000000000000000000000000000000',
    '(fixture) the season-2026 mooring-agreement text.',
    'Geoff Wright', 'e2e-member@aksailingclub.org', 'renewal', '2026-06-01 00:00:00',
    'portal-mem-primary', NULL),
-  ('portal-wa-primary-rv', 'rv-acknowledgement', 1, 2026, 'acknowledgement',
+  ('portal-wa-primary-boat', 'boat-parking-acknowledgement', 1, 2026, 'acknowledgement',
    '0000000000000000000000000000000000000000000000000000000000000000',
-   '(fixture) the season-2026 rv-acknowledgement text.',
+   '(fixture) the season-2026 boat-parking-acknowledgement text.',
    'Geoff Wright', 'e2e-member@aksailingclub.org', 'renewal', '2026-06-01 00:00:00',
    'portal-mem-primary', NULL),
   ('portal-wa-primary-storage', 'storage-agreement', 1, 2026, 'agreement',
