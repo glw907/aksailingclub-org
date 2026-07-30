@@ -74,8 +74,12 @@ export function parseAssetTypeEditForm(form: FormData): { name: string; fee: num
   if (typeof name !== 'string' || !name.trim()) {
     return { error: 'A name is required.' };
   }
-  const feeRaw = form.get('fee');
-  const fee = typeof feeRaw === 'string' ? Number(feeRaw) : NaN;
+  // Blank is rejected rather than coerced: `Number('')` is 0, so a cleared fee field would
+  // otherwise pass the non-negative check and silently make the type free. Capacity below reads
+  // blank as "clear it" because null is a meaningful capacity; there is no such reading for a fee,
+  // where 0 has to be typed deliberately.
+  const feeRaw = emptyToNull(form.get('fee'));
+  const fee = feeRaw === null ? NaN : Number(feeRaw);
   if (!Number.isInteger(fee) || fee < 0) {
     return { error: 'Fee must be a non-negative whole number.' };
   }

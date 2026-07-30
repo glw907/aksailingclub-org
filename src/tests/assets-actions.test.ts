@@ -347,6 +347,14 @@ describe('assets actions: editType', () => {
     expect(calls.some((c) => c.sql.startsWith('UPDATE asset_types'))).toBe(false);
   });
 
+  it('rejects a blank fee rather than coercing it to a free type, writing nothing', async () => {
+    const { db, calls } = fakeD1();
+    const result = await actions.editType(postEvent(admin, { id: 'mooring', name: 'Mooring', fee: '' }, { db }));
+    expect(isActionFailure(result)).toBe(true);
+    expect((result as { status: number }).status).toBe(400);
+    expect(calls.some((c) => c.sql.startsWith('UPDATE asset_types'))).toBe(false);
+  });
+
   it('rejects a fractional fee, writing nothing', async () => {
     const { db, calls } = fakeD1();
     const result = await actions.editType(postEvent(admin, { id: 'mooring', name: 'Mooring', fee: '300.50' }, { db }));
