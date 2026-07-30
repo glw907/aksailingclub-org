@@ -1,20 +1,33 @@
 <!--
 @component
-The Club section's Assets screen (Part 2, the redesign's own architecture): the by-asset and
-by-person lenses ops proved, re-expressed as two views over the SAME active-assignment read
-(`listActiveAssignments`, never a separate query per lens), plus the single polymorphic waitlist
-queue with type chips. Assignment CRUD (assign / release / record a payment, including an offline
-check or cash payment) and waitlist CRUD (add / remove / move-to-end) all post through this
-route's own `+page.server.ts` actions. Replaces the structural placeholder this route previously
-shipped.
+The Club section's Assets screen: the by-asset and by-person lenses ops proved, re-expressed as
+two views over the SAME active-assignment read (`listActiveAssignments`, never a separate query
+per lens), plus the single polymorphic waitlist queue with type chips. Assignment CRUD (assign /
+release / record a payment, including an offline check or cash payment), waitlist CRUD (add /
+remove / move-to-end / promote the head), and the asset-type editor (name / fee / capacity, id
+immutable) all post through this route's own `+page.server.ts` actions.
+
+Waitlist promotion is reachable from two places, deliberately not a third: the by-asset view's own
+type header (whenever that type currently carries any waitlist entries, independent of any release)
+and the release-confirm dialog (when the assignment being released belongs to a type that currently
+has a queue, so freeing the slot and filling it from the queue are one visit). Both post the same
+`?/waitlistPromote` action and never touch capacity, matching the store's own promotion contract.
 -->
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { ActionData, PageData } from './$types';
   import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
   import { FieldLabel, SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
+  import { StatusChip, type StatusChipTone } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL, formatCivilDate, formatDollars } from '$admin-club/lib/ui';
-  import { PAYMENT_METHODS, type AssetPaymentStanding, type AssignmentDisplayRow, type PaymentMethod } from '$admin-club/lib/assets-store';
+  import {
+    PAYMENT_METHODS,
+    type AssetPaymentStanding,
+    type AssetTypeRow,
+    type AssetWaitlistDisplayRow,
+    type AssignmentDisplayRow,
+    type PaymentMethod,
+  } from '$admin-club/lib/assets-store';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -27,10 +40,13 @@ shipped.
     { id: 'waitlist', label: 'Waitlist' },
   ];
 
-  const STANDING_CHIP: Record<AssetPaymentStanding, { label: string; cls: string }> = {
-    paid: { label: 'Paid', cls: 'badge-sm border-transparent bg-primary/10 font-medium text-primary' },
-    outstanding: { label: 'Outstanding', cls: 'badge-sm border-transparent bg-warning/15 font-medium text-warning-content' },
-    'not-billed': { label: 'Not billed', cls: 'cairn-chip-quiet badge-sm font-medium' },
+  // The same tone vocabulary the Members screen's own holdings panel uses for this identical
+  // `AssetPaymentStanding` derivation (`households-store.ts`'s shared type), so a payment standing
+  // reads identically wherever an admin encounters it rather than drifting screen to screen.
+  const HOLDING_STATUS: Record<AssetPaymentStanding, { label: string; tone: StatusChipTone }> = {
+    paid: { label: 'Paid', tone: 'success' },
+    outstanding: { label: 'Outstanding', tone: 'warning' },
+    'not-billed': { label: 'Not billed', tone: 'neutral' },
   };
 
   const METHOD_LABEL: Record<PaymentMethod, string> = { card: 'Card', check: 'Check', cash: 'Cash' };
@@ -51,6 +67,19 @@ shipped.
   });
 
   const feeByType = $derived(new Map(data.assetTypes.map((t) => [t.id, t.fee])));
+
+  // The waitlist's own head-of-queue lens, grouped client-side from the one already-loaded read
+  // (`data.waitlist` arrives ordered by type then position, so each group's first entry is that
+  // type's head): both promotion entry points below key off this map rather than issuing a second
+  // query for "does this type have a queue right now."
+  const waitlistByType = $derived.by(() => {
+    const map = new Map<string, AssetWaitlistDisplayRow[]>();
+    for (const entry of data.waitlist) {
+      if (!map.has(entry.assetType)) map.set(entry.assetType, []);
+      map.get(entry.assetType)!.push(entry);
+    }
+    return map;
+  });
 
   // -- assign form --
   const assetTypeOptions = $derived(data.assetTypes.map((t) => ({ value: t.id, label: `${t.name} (${formatDollars(t.fee)})` })));
@@ -83,10 +112,34 @@ shipped.
   let releaseDialog: HTMLDialogElement | undefined = $state();
   let releaseTargetId = $state('');
   let releaseTargetLabel = $state('');
+  let releaseTargetType = $state('');
+  let releaseTargetTypeName = $state('');
   function openReleaseDialog(row: AssignmentDisplayRow) {
     releaseTargetId = row.id;
     releaseTargetLabel = `${row.assetTypeName} — ${row.householdName}`;
+    releaseTargetType = row.assetType;
+    releaseTargetTypeName = row.assetTypeName;
     releaseDialog?.showModal();
+  }
+  // The queue for the type being released, read live off `waitlistByType` rather than captured at
+  // open time: an admin who leaves the dialog open across an unrelated waitlist change still sees
+  // the current head, and this same derivation drives the by-asset header's own promote control.
+  const releaseTargetWaitlist = $derived(waitlistByType.get(releaseTargetType) ?? []);
+
+  // -- edit asset type dialog --
+  let editTypeDialog: HTMLDialogElement | undefined = $state();
+  let editTypeId = $state('');
+  let editTypeDialogTitle = $state('');
+  let editTypeName = $state('');
+  let editTypeFee = $state('');
+  let editTypeCapacity = $state('');
+  function openEditTypeDialog(type: AssetTypeRow) {
+    editTypeId = type.id;
+    editTypeDialogTitle = type.name;
+    editTypeName = type.name;
+    editTypeFee = String(type.fee);
+    editTypeCapacity = type.capacity != null ? String(type.capacity) : '';
+    editTypeDialog?.showModal();
   }
 
   // -- record payment dialog --
@@ -158,13 +211,31 @@ shipped.
   {#if view === 'by-asset'}
     {#each byAssetGroups as group (group.type.id)}
       <div class="border-b border-[var(--cairn-card-border)] p-6">
-        <div class="mb-3 flex items-center justify-between">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 class="type-body font-semibold">
             {group.type.name}
             <span class="count-qualifier font-normal text-muted">
               {group.rows.length}{group.type.capacity != null ? `/${group.type.capacity}` : ''} assigned &middot; {formatDollars(group.type.fee)}
             </span>
           </h2>
+          <div class="flex items-center gap-2">
+            {#if (waitlistByType.get(group.type.id)?.length ?? 0) > 0}
+              {@const queue = waitlistByType.get(group.type.id)!}
+              <form method="post" action="?/waitlistPromote" class="flex items-center gap-2">
+                <CsrfField />
+                <input type="hidden" name="assetType" value={group.type.id} />
+                <span class="type-meta text-muted">
+                  {queue.length} waiting &middot; next: {queue[0].memberName}
+                </span>
+                <button type="submit" class="btn btn-ghost btn-xs" aria-label={`Promote the next household waiting for ${group.type.name}`}>
+                  Promote
+                </button>
+              </form>
+            {/if}
+            <button type="button" class="btn btn-ghost btn-xs" onclick={() => openEditTypeDialog(group.type)} aria-label={`Edit ${group.type.name}`}>
+              Edit
+            </button>
+          </div>
         </div>
         <table class="table">
           <caption class="sr-only">{group.type.name} assignments</caption>
@@ -178,14 +249,14 @@ shipped.
           </thead>
           <tbody>
             {#each group.rows as row (row.id)}
-              {@const standing = STANDING_CHIP[row.paymentStanding]}
+              {@const standing = HOLDING_STATUS[row.paymentStanding]}
               <tr class="transition-colors hover:bg-base-200/60">
                 <td class="type-body">
                   <span class="font-medium">{row.householdName}</span>
                   {#if row.primaryMemberName}<span class="text-muted"> &middot; {row.primaryMemberName}</span>{/if}
                 </td>
                 <td class="type-body text-muted">{row.description ?? '—'}</td>
-                <td><span class="badge {standing.cls}">{standing.label}</span></td>
+                <td><StatusChip tone={standing.tone} label={standing.label} size="xs" /></td>
                 <td class="flex justify-end gap-1">
                   <button type="button" class="btn btn-ghost btn-xs" onclick={() => openPaymentDialog(row)}>Record payment</button>
                   <button type="button" class="btn btn-ghost btn-xs text-error" onclick={() => openReleaseDialog(row)}>Release</button>
@@ -233,11 +304,11 @@ shipped.
             <td>
               <ul class="flex flex-col gap-1">
                 {#each group.rows as row (row.id)}
-                  {@const standing = STANDING_CHIP[row.paymentStanding]}
+                  {@const standing = HOLDING_STATUS[row.paymentStanding]}
                   <li class="flex flex-wrap items-center gap-2 type-body">
                     <span class="font-medium">{row.assetTypeName}</span>
                     {#if row.description}<span class="text-muted">{row.description}</span>{/if}
-                    <span class="badge {standing.cls}">{standing.label}</span>
+                    <StatusChip tone={standing.tone} label={standing.label} size="xs" />
                     <button type="button" class="btn btn-ghost btn-xs" onclick={() => openPaymentDialog(row)}>Record payment</button>
                     <button type="button" class="btn btn-ghost btn-xs text-error" onclick={() => openReleaseDialog(row)}>Release</button>
                   </li>
@@ -317,6 +388,17 @@ shipped.
     <p class="py-2 type-body text-muted">The asset returns to the pool. This does not remove its payment history.</p>
     <form method="dialog">
       <CsrfField />
+      {#if releaseTargetWaitlist.length > 0}
+        <div class="mt-3 flex items-center justify-between gap-3 rounded-box border border-[var(--cairn-card-border)] bg-base-200/60 px-3 py-2">
+          <p class="type-body">
+            <span class="font-medium">{releaseTargetWaitlist.length}</span> waiting for {releaseTargetTypeName}
+            &middot; next up <span class="font-medium">{releaseTargetWaitlist[0].memberName}</span>
+          </p>
+          <button type="submit" class="btn btn-sm" formmethod="post" formaction="?/waitlistPromote" name="assetType" value={releaseTargetType}>
+            Promote next
+          </button>
+        </div>
+      {/if}
       <div class="modal-action">
         <!-- svelte-ignore a11y_autofocus -->
         <button type="submit" class="btn" autofocus formnovalidate>Cancel</button>
@@ -343,6 +425,28 @@ shipped.
       <div class="modal-action">
         <button type="button" class="btn btn-sm" onclick={() => paymentDialog?.close()}>Cancel</button>
         <button type="submit" class="btn btn-primary btn-sm">Record payment</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog bind:this={editTypeDialog} class="modal" aria-labelledby="edit-type-dialog-title">
+  <div class="modal-box">
+    <h2 id="edit-type-dialog-title" class="type-heading font-bold">Edit {editTypeDialogTitle}</h2>
+    <form method="post" action="?/editType" class="flex flex-col gap-3">
+      <CsrfField />
+      <input type="hidden" name="id" value={editTypeId} />
+      <TextField label="Name" name="name" bind:value={editTypeName} />
+      <FieldLabel label="Fee (USD)">
+        <input class="input input-sm" type="number" min="0" step="1" name="fee" bind:value={editTypeFee} />
+      </FieldLabel>
+      <FieldLabel label="Capacity">
+        <input class="input input-sm" type="number" min="1" step="1" name="capacity" placeholder="No limit" bind:value={editTypeCapacity} />
+      </FieldLabel>
+      <p class="type-meta text-muted">Leave capacity blank for no limit.</p>
+      <div class="modal-action">
+        <button type="button" class="btn btn-sm" onclick={() => editTypeDialog?.close()}>Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Save</button>
       </div>
     </form>
   </div>
