@@ -8,6 +8,7 @@ import {
   listActiveAssignments,
   listAssetTypes,
   listAssetWaitlist,
+  listAssignments,
   listMemberOptions,
   listMembershipOptions,
   moveToEndOfWaitlist,
@@ -26,21 +27,23 @@ describe('listAssetTypes', () => {
   });
 });
 
+const ASSIGNMENT_RAW_ROW = {
+  id: 'a-1',
+  asset_type: 'mooring',
+  asset_type_name: 'Mooring',
+  membership_id: 'ms-1',
+  household_id: 'hh-1',
+  household_name: 'The Larsens',
+  primary_member_name: 'Kaija Larsen',
+  description: 'Buoy M-14',
+  status: 'active',
+  created_at: '2026-01-01 00:00:00',
+  payment_id: null,
+  paid_at: null,
+};
+
 describe('listActiveAssignments', () => {
-  const RAW = {
-    id: 'a-1',
-    asset_type: 'mooring',
-    asset_type_name: 'Mooring',
-    membership_id: 'ms-1',
-    household_id: 'hh-1',
-    household_name: 'The Larsens',
-    primary_member_name: 'Kaija Larsen',
-    description: 'Buoy M-14',
-    status: 'active',
-    created_at: '2026-01-01 00:00:00',
-    payment_id: null,
-    paid_at: null,
-  };
+  const RAW = ASSIGNMENT_RAW_ROW;
 
   it('derives not-billed when no payment row exists', async () => {
     const { db, calls } = fakeD1({ allResults: { 'FROM asset_assignments aa': [RAW] } });
@@ -61,7 +64,7 @@ describe('listActiveAssignments', () => {
         paymentStanding: 'not-billed',
       },
     ]);
-    expect(calls[0].args).toEqual([2026]);
+    expect(calls[0].args).toEqual([2026, 'active']);
   });
 
   it('derives outstanding when a payment row exists with no paid_at', async () => {
@@ -74,6 +77,43 @@ describe('listActiveAssignments', () => {
     const { db } = fakeD1({ allResults: { 'FROM asset_assignments aa': [{ ...RAW, payment_id: 'p-1', paid_at: '2026-03-01 00:00:00' }] } });
     const rows = await listActiveAssignments(db, 2026);
     expect(rows[0].paymentStanding).toBe('paid');
+  });
+});
+
+describe('listAssignments', () => {
+  it('returns an empty array for an empty statuses scope without querying the database', async () => {
+    const { db, calls } = fakeD1({ allResults: { 'FROM asset_assignments aa': [ASSIGNMENT_RAW_ROW] } });
+    const rows = await listAssignments(db, 2026, { statuses: [], orderBy: 'type-household' });
+    expect(rows).toEqual([]);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('binds each status as a placeholder rather than interpolating it into the WHERE clause', async () => {
+    const { db, calls } = fakeD1({ allResults: { 'FROM asset_assignments aa': [ASSIGNMENT_RAW_ROW] } });
+    await listAssignments(db, 2026, { statuses: ['active', 'released'], orderBy: 'status-season' });
+    const [call] = calls;
+    // The status scope itself must never appear as a literal in the WHERE clause: only the
+    // fixed, caller-uncontrolled CASE literal in the payment join (asserted separately below)
+    // may.
+    expect(call.sql).toContain('WHERE aa.status IN (?2, ?3)');
+    expect(call.sql).not.toContain("IN ('active'");
+    expect(call.sql).not.toContain("IN ('released'");
+    expect(call.args).toEqual([2026, 'active', 'released']);
+  });
+
+  it('derives a released row\'s payment standing from its own season, not the current one', async () => {
+    const PAST_RELEASED_ROW = {
+      ...ASSIGNMENT_RAW_ROW,
+      status: 'released',
+      season: 2024,
+      payment_id: 'ap-2024',
+      paid_at: '2024-03-01 00:00:00',
+    };
+    const { db, calls } = fakeD1({ allResults: { 'FROM asset_assignments aa': [PAST_RELEASED_ROW] } });
+    const [row] = await listAssignments(db, 2026, { statuses: ['released'], orderBy: 'status-season' });
+    expect(row.paymentStanding).toBe('paid');
+    const [call] = calls;
+    expect(call.sql).toContain("ap.season = CASE WHEN aa.status = 'released' THEN m.season ELSE ?1 END");
   });
 });
 
@@ -101,14 +141,19 @@ describe('the shared lens agrees across its three consumers (Task 3)', () => {
     paid_at: '2026-02-01 00:00:00',
   };
 
-  it('the Assets screen sees the assignment as paid', async () => {
-    const { db } = fakeD1({ allResults: { 'FROM asset_assignments aa': [SEEDED_ROW] } });
+  it('the Assets screen sees the assignment as paid, ordered by type then household', async () => {
+    const { db, calls } = fakeD1({ allResults: { 'FROM asset_assignments aa': [SEEDED_ROW] } });
     const [row] = await listActiveAssignments(db, 2026);
     expect(row).toMatchObject({ assetType: 'mooring', description: 'Buoy M-9', paymentStanding: 'paid' });
+    const assetsCall = calls.find((c) => c.sql.includes('FROM asset_assignments aa'));
+    // Guards the constraint that each of the three lenses keeps its own pre-consolidation
+    // ordering: the Assets screen groups by asset type then household name.
+    expect(assetsCall?.sql).toContain('ORDER BY at.sort_order, h.name');
   });
 
-  it('the Members-list holding chip agrees', async () => {
-    const { db } = fakeD1({
+  it('the Members-list holding chip agrees, binding only the season (no household scope)', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: { "'current_season'": { value: '2026' } },
       allResults: {
         'FROM households h': [
           { id: 'hh-agree', name: 'The Agreeing Household', city: null, primary_member_id: null, former_at: null, season: 2026, paid_at: '2026-01-01' },
@@ -118,12 +163,19 @@ describe('the shared lens agrees across its three consumers (Task 3)', () => {
     });
     const [household] = await listHouseholds(db);
     expect(household.holdings[0]).toMatchObject({ assetTypeName: 'Mooring', description: 'Buoy M-9', paymentStanding: 'paid' });
+    const assetsCall = calls.find((c) => c.sql.includes('FROM asset_assignments aa'));
+    // Guards the constraint that the Members list reads the whole club in one set-based query,
+    // never narrowed to one household, and orders by type then asset name (never household name,
+    // which is the Assets screen's own distinct order).
+    expect(assetsCall?.sql).toContain('ORDER BY at.sort_order, at.name');
+    expect(assetsCall?.args).toEqual([2026, 'active']);
   });
 
-  it('the household desk Assets panel agrees', async () => {
-    const { db } = fakeD1({
+  it('the household desk Assets panel agrees, keeping released rows and scoping to this one household', async () => {
+    const { db, calls } = fakeD1({
       firstResults: {
         'FROM households WHERE id': { id: 'hh-agree', name: 'The Agreeing Household', city: null, primary_member_id: null },
+        "'current_season'": { value: '2026' },
       },
       allResults: {
         'FROM asset_assignments aa': [SEEDED_ROW],
@@ -131,6 +183,14 @@ describe('the shared lens agrees across its three consumers (Task 3)', () => {
     });
     const desk = await getHouseholdDesk(db, 'hh-agree');
     expect(desk?.assets[0]).toMatchObject({ assetType: 'mooring', assetTypeName: 'Mooring', description: 'Buoy M-9', paymentStanding: 'paid' });
+    const assetsCall = calls.find((c) => c.sql.includes('FROM asset_assignments aa'));
+    // Guards the three constraints the desk alone carries: it asks for BOTH statuses (never
+    // narrowed to active-only, which would silently drop its released-history rows), it binds
+    // the household id to scope the read to this one household, and it orders by status then
+    // season (never the other two lenses' asset-type-first order).
+    expect(assetsCall?.sql).toContain('WHERE aa.status IN (?2, ?3)');
+    expect(assetsCall?.sql).toContain('ORDER BY aa.status ASC, m.season DESC');
+    expect(assetsCall?.args).toEqual([2026, 'active', 'released', 'hh-agree']);
   });
 });
 

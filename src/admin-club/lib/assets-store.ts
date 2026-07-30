@@ -146,12 +146,28 @@ function assignmentOrderClause(orderBy: ListAssignmentsOptions['orderBy']): stri
 
 /** THE single "who holds what" lens (Task 3): every consumer of an assignment's display row,
  *  across both `assets-store.ts` and `households-store.ts`, reads through this one query, scoped
- *  by {@link ListAssignmentsOptions}. `opts.statuses` is interpolated the same injection-free way
- *  as `opts.orderBy` (a closed union, never caller-free-form text). */
+ *  by {@link ListAssignmentsOptions}. `opts.statuses` binds as ordinary placeholders, never
+ *  interpolated -- only `opts.orderBy` is interpolated, and only because
+ *  {@link assignmentOrderClause} maps it to a fixed literal from its own closed union first, never
+ *  caller text. An empty `opts.statuses` returns `[]` without querying: `WHERE aa.status IN ()`
+ *  is a SQLite syntax error, and no caller means "match nothing" any other way.
+ *
+ *  For a released row, payment standing derives from the assignment's OWN season (`m.season`,
+ *  the grounding membership it was held under) rather than `currentSeason`: the household desk is
+ *  the one lens that returns released rows, which can predate the current season, and asking
+ *  "was this billed for a season that already ended and isn't the one it was held in" is never a
+ *  meaningful question. Active rows keep checking against `currentSeason`, exactly as before --
+ *  the other two lenses only ever request `statuses: ['active']`, so this change is invisible to
+ *  them. */
 export async function listAssignments(db: D1Database, currentSeason: number, opts: ListAssignmentsOptions): Promise<AssignmentDisplayRow[]> {
-  const statusList = opts.statuses.map((status) => `'${status}'`).join(', ');
-  const householdClause = opts.householdId ? 'AND h.id = ?2' : '';
-  const binds = opts.householdId ? [currentSeason, opts.householdId] : [currentSeason];
+  if (opts.statuses.length === 0) return [];
+  const statusPlaceholders = opts.statuses.map((_, index) => `?${index + 2}`).join(', ');
+  const binds: (string | number)[] = [currentSeason, ...opts.statuses];
+  let householdClause = '';
+  if (opts.householdId) {
+    householdClause = `AND h.id = ?${binds.length + 1}`;
+    binds.push(opts.householdId);
+  }
   const { results } = await db
     .prepare(
       `SELECT aa.id, aa.asset_type, at.name AS asset_type_name, aa.membership_id, h.id AS household_id,
@@ -162,8 +178,9 @@ export async function listAssignments(db: D1Database, currentSeason: number, opt
        JOIN memberships m ON m.id = aa.membership_id
        JOIN households h ON h.id = m.household_id
        LEFT JOIN members pm ON pm.id = h.primary_member_id
-       LEFT JOIN asset_payments ap ON ap.assignment_id = aa.id AND ap.season = ?1
-       WHERE aa.status IN (${statusList}) ${householdClause}
+       LEFT JOIN asset_payments ap ON ap.assignment_id = aa.id
+         AND ap.season = CASE WHEN aa.status = 'released' THEN m.season ELSE ?1 END
+       WHERE aa.status IN (${statusPlaceholders}) ${householdClause}
        ORDER BY ${assignmentOrderClause(opts.orderBy)}`,
     )
     .bind(...binds)
