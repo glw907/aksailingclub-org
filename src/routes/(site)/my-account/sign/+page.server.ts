@@ -38,6 +38,7 @@ import { loadPublishedDocuments } from '$theme/documents';
 import {
   deriveHouseholdRequirements,
   loadHouseholdRequirements,
+  parseAssetKind,
   type AssetKind,
   type SignatureRecord,
 } from '$member-portal/lib/waiver-requirements';
@@ -119,7 +120,7 @@ export const load: PageServerLoad = async (event) => {
 
   const publishedDocuments = loadPublishedDocuments(documents, season);
   const activeMembers = memberRows.filter((row) => row.archivedAt === null);
-  const assetKinds = [...new Set(assignments.map((assignment) => assignment.assetType as AssetKind))];
+  const assetKinds = [...new Set(assignments.map((assignment) => parseAssetKind(assignment.assetType)))];
 
   // The engine's SignatureRecord is the minimal shape; the moment rows carry the extra display
   // fields, so the derivation reads the ids off them and the view reads the names off them too.

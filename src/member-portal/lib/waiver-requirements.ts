@@ -31,6 +31,38 @@ import { householdSignatureGate } from './household-signature-gate';
  *  audience vocabulary minus the three non-asset audiences. */
 export type AssetKind = Exclude<DocumentAudience, 'all-members' | 'dry-storage' | 'youth-class'>;
 
+/** The runtime counterpart of {@link AssetKind} (Task 2, `docs/plans/2026-07-29-assets-substrate.md`):
+ *  `AssetKind` is a pure type-level derivation with no expression that can produce its members, so
+ *  {@link parseAssetKind} needs a real array to check a raw `asset_types.id` value against.
+ *  `satisfies` checks this array carries no string `AssetKind` disallows; the exhaustiveness
+ *  assertion right below checks the other direction, that it is missing none. Together the two
+ *  catch a kind added to or removed from `AssetKind` without a matching edit here at compile time,
+ *  rather than letting it drift silently past `npm run check`. */
+export const ASSET_KINDS = ['mooring', 'rv-parking', 'boat-parking', 'small-boat-rack'] as const satisfies readonly AssetKind[];
+
+/** Every `AssetKind` member {@link ASSET_KINDS} fails to list; `never` when the list is complete.
+ *  Assigning it to `true` two lines down only compiles when this is `never` -- otherwise the
+ *  compiler error names the missing kind(s) as this type's own value. */
+type MissingAssetKind = Exclude<AssetKind, (typeof ASSET_KINDS)[number]>;
+const assetKindsExhaustive: MissingAssetKind extends never ? true : MissingAssetKind = true;
+void assetKindsExhaustive;
+
+/** Whether `value` is one of {@link ASSET_KINDS}, narrowing the type for {@link parseAssetKind}. */
+function isAssetKind(value: string): value is AssetKind {
+  return (ASSET_KINDS as readonly string[]).includes(value);
+}
+
+/** Parse a raw `asset_types.id` value into an {@link AssetKind}, the only sanctioned replacement for
+ *  an unchecked assertion to the type (Task 2). Throws, naming the offending value, when `value`
+ *  falls outside {@link ASSET_KINDS} -- the id-rename migration
+ *  (`migrations/asc-club/0034_asset_type_ids`) is what makes this reachable at all in production;
+ *  before it, a stale underscore-form id would have silently mismatched a document's own audience
+ *  instead of failing loudly here. */
+export function parseAssetKind(value: string): AssetKind {
+  if (!isAssetKind(value)) throw new Error(`Unknown asset kind: ${value}`);
+  return value;
+}
+
 /** The three asset kinds the single Dry Storage Agreement covers (its own drafting notes: "one
  *  agreement covering all three"), on top of each kind's own per-asset acknowledgement. */
 const DRY_STORAGE_KINDS: ReadonlySet<AssetKind> = new Set(['rv-parking', 'boat-parking', 'small-boat-rack']);
@@ -343,7 +375,7 @@ export async function loadHouseholdRequirements(
   const members: HouseholdMemberInput[] = memberRows
     .filter((row) => row.archivedAt === null)
     .map((row) => ({ id: row.id, name: row.name, birthdate: row.birthdate }));
-  const assetKinds = [...new Set(assignments.map((assignment) => assignment.assetType as AssetKind))];
+  const assetKinds = [...new Set(assignments.map((assignment) => parseAssetKind(assignment.assetType)))];
 
   return deriveHouseholdRequirements({
     season,

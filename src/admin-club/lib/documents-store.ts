@@ -12,6 +12,7 @@ import type { D1Database } from '@cloudflare/workers-types';
 import type { DocumentAudience, DocumentKind, SignableDocument } from '$theme/documents';
 import {
   deriveHouseholdRequirements,
+  parseAssetKind,
   type AssetKind,
   type HouseholdMemberInput,
   type SignatureRecord,
@@ -206,7 +207,7 @@ export async function loadSeasonDocumentSummaries(
   }
   for (const row of assignmentsResult.results) {
     const household = householdsById.get(row.household_id);
-    const assetKind = row.asset_type as AssetKind;
+    const assetKind = parseAssetKind(row.asset_type);
     if (household && !household.assetKinds.includes(assetKind)) household.assetKinds.push(assetKind);
   }
 

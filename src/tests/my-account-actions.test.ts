@@ -153,7 +153,7 @@ describe('?/payAssetFee', () => {
         'FROM member_sessions': MEMBER_ROW,
         'FROM households WHERE id': { primary_member_id: 'mem-1' },
         "'current_season'": { value: '2026' },
-        'FROM asset_assignments aa': { asset_type_name: 'Mooring', amount: 150 },
+        'FROM asset_assignments aa': { asset_type: 'mooring', asset_type_name: 'Mooring', amount: 150 },
       },
     });
     vi.stubGlobal(
@@ -232,7 +232,7 @@ describe('?/payRequest', () => {
         'FROM asset_requests WHERE id': { asset_type: 'mooring', household_id: 'hh-1' },
         'FROM memberships WHERE household_id': { id: 'ms-1' },
         'FROM asset_types WHERE id': { fee: 150 },
-        'FROM asset_assignments aa': { asset_type_name: 'Mooring', amount: 150 },
+        'FROM asset_assignments aa': { asset_type: 'mooring', asset_type_name: 'Mooring', amount: 150 },
       },
     });
     vi.stubGlobal(

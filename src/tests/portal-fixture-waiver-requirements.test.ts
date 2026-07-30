@@ -11,9 +11,19 @@
 // no real SQL engine to load the fixture file into, `src/tests/_fake-d1.ts`'s own header), against
 // the REAL published season-2026 document corpus (`$chassis/content`'s `documents` index, the same
 // parse path `document-freeze-guard.test.ts` already uses), and asserts zero outstanding
-// requirements for both households -- proving, not assuming, the fixture's own comment that neither
-// household's asset holdings ever derive a household-scope document requirement (their asset_types
-// ids are fixture placeholders, not real `AssetKind` values).
+// requirements for both households -- proving, not assuming, that a household with real asset-kind
+// holdings and a matching signature on file for every one of them reads as fully signed.
+//
+// NOTE (Assets substrate Task 2, docs/plans/2026-07-29-assets-substrate.md): the Wright household
+// below used to hold assets under fixture-prefixed placeholder ids (`portal-at-mooring`,
+// `portal-at-trailer`) that never matched any real `AssetKind`, which is how it reached "zero
+// outstanding" without any asset-kind-scope signature on file. Task 2's `parseAssetKind` now
+// throws on exactly that kind of unresolvable id, so this fixture was updated to hold real asset
+// kinds (`mooring`, `rv-parking`) with the matching real documents signed instead. **The live
+// `e2e/fixtures/portal-seed.sql` this file mirrors by hand still uses the old placeholder ids and
+// was not updated here** (out of Task 2's own scope, and shared with concurrent e2e work) -- a
+// real Playwright run against it will hit the same throw this fixture used to dodge. See Task 2's
+// own report for the pointer.
 import { describe, expect, it } from 'vitest';
 import { documents } from '$chassis/content';
 import { loadPublishedDocuments } from '$theme/documents';
@@ -45,7 +55,7 @@ describe('portal-seed.sql fixture households against the real season-2026 corpus
     );
   });
 
-  it('derives zero outstanding requirements for the Wright household (two adults, no minors)', async () => {
+  it('derives zero outstanding requirements for the Wright household (two adults, no minors, real asset kinds all signed)', async () => {
     const { db } = fakeD1({
       firstResults: {
         'FROM households WHERE id': { id: 'portal-hh-wright', name: 'Wright household', primary_member_id: 'portal-mem-primary', left_at: null },
@@ -56,12 +66,15 @@ describe('portal-seed.sql fixture households against the real season-2026 corpus
           { id: 'portal-mem-second', name: 'Sam Wright', email: null, phone: null, birthdate: null, directory_visibility: 'partial', archived_at: null },
         ],
         'FROM asset_assignments aa': [
-          { id: 'portal-aa-mooring', asset_type: 'portal-at-mooring', asset_type_name: 'Mooring', description: 'Sailboat', payment_id: 'portal-ap-mooring', paid_at: '2026-06-20 00:00:00', fee_amount: 150 },
-          { id: 'portal-aa-trailer', asset_type: 'portal-at-trailer', asset_type_name: 'Trailered Boat Parking', description: 'BUCC', payment_id: 'portal-ap-trailer', paid_at: null, fee_amount: 150 },
+          { id: 'portal-aa-mooring', asset_type: 'mooring', asset_type_name: 'Mooring', description: 'Sailboat', payment_id: 'portal-ap-mooring', paid_at: '2026-06-20 00:00:00', fee_amount: 150 },
+          { id: 'portal-aa-trailer', asset_type: 'rv-parking', asset_type_name: 'Trailered Boat Parking', description: 'BUCC', payment_id: 'portal-ap-trailer', paid_at: null, fee_amount: 150 },
         ],
         'FROM waiver_acceptances': [
           { id: 'portal-wa-primary-release', document_id: 'general-release', season: SEASON, member_id: 'portal-mem-primary', minor_member_id: null, signed_at: '2026-06-01 00:00:00' },
           { id: 'portal-wa-primary-rules', document_id: 'rules-acknowledgement', season: SEASON, member_id: 'portal-mem-primary', minor_member_id: null, signed_at: '2026-06-01 00:00:00' },
+          { id: 'portal-wa-primary-mooring', document_id: 'mooring-agreement', season: SEASON, member_id: 'portal-mem-primary', minor_member_id: null, signed_at: '2026-06-01 00:00:00' },
+          { id: 'portal-wa-primary-rv', document_id: 'rv-acknowledgement', season: SEASON, member_id: 'portal-mem-primary', minor_member_id: null, signed_at: '2026-06-01 00:00:00' },
+          { id: 'portal-wa-primary-storage', document_id: 'storage-agreement', season: SEASON, member_id: 'portal-mem-primary', minor_member_id: null, signed_at: '2026-06-01 00:00:00' },
           { id: 'portal-wa-second-release', document_id: 'general-release', season: SEASON, member_id: 'portal-mem-second', minor_member_id: null, signed_at: '2026-06-01 00:00:00' },
           { id: 'portal-wa-second-rules', document_id: 'rules-acknowledgement', season: SEASON, member_id: 'portal-mem-second', minor_member_id: null, signed_at: '2026-06-01 00:00:00' },
         ],

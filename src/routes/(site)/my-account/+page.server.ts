@@ -46,7 +46,7 @@ import { verifyTurnstile } from '$theme/turnstile';
 import { checkRateLimitKeys, RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
 import { documents } from '$chassis/content';
 import { loadPublishedDocuments } from '$theme/documents';
-import { householdDocumentSigner, loadHouseholdRequirements, outstandingAssetDocuments, type AssetKind } from '$member-portal/lib/waiver-requirements';
+import { householdDocumentSigner, loadHouseholdRequirements, outstandingAssetDocuments, parseAssetKind } from '$member-portal/lib/waiver-requirements';
 
 export const prerender = false;
 
@@ -238,7 +238,7 @@ async function payAssetFeeCheckout(event: PortalActionEvent, ctx: PortalActionCo
 
   const publishedDocuments = loadPublishedDocuments(documents, currentSeason);
   const requirements = await loadHouseholdRequirements(ctx.db, publishedDocuments, ctx.member.householdId, currentSeason);
-  if (requirements && outstandingAssetDocuments(requirements, payable.assetType as AssetKind).length > 0) {
+  if (requirements && outstandingAssetDocuments(requirements, parseAssetKind(payable.assetType)).length > 0) {
     const signer = householdDocumentSigner(requirements);
     if (signer && signer.memberId !== ctx.member.id) {
       return fail(400, { error: `${signer.memberName} needs to sign for this first. Ask them to sign in and visit their account.` });

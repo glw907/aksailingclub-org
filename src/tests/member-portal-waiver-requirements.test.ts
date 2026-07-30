@@ -7,11 +7,13 @@
 import { describe, expect, it } from 'vitest';
 import type { DocumentFrontmatter, SignableDocument } from '$theme/documents';
 import {
+  ASSET_KINDS,
   deriveHouseholdRequirements,
   hasSignedCurrentRelease,
   householdDocumentSigner,
   loadHouseholdRequirements,
   outstandingAssetDocuments,
+  parseAssetKind,
   type DeriveHouseholdRequirementsInput,
   type SignatureRecord,
 } from '$member-portal/lib/waiver-requirements';
@@ -331,5 +333,15 @@ describe('loadHouseholdRequirements', () => {
   it('resolves null for an unknown household', async () => {
     const { db } = fakeD1({ firstResults: { 'FROM households WHERE id': null } });
     await expect(loadHouseholdRequirements(db, published(), 'no-such-household', SEASON)).resolves.toBeNull();
+  });
+});
+
+describe('parseAssetKind (Task 2, cast validation)', () => {
+  it('throws on a stale underscore-form asset-type id, naming it in the message', () => {
+    expect(() => parseAssetKind('rv_parking')).toThrow('rv_parking');
+  });
+
+  it.each(ASSET_KINDS)('parses the valid id %s to itself', (kind) => {
+    expect(parseAssetKind(kind)).toBe(kind);
   });
 });
