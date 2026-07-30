@@ -17,6 +17,7 @@ import {
   recordPayment,
   releaseAssignment,
   removeFromWaitlist,
+  updateAssetType,
   type WaitlistHeadEntry,
 } from '$admin-club/lib/assets-store';
 import { getHouseholdDesk, listHouseholds } from '$admin-club/lib/households-store';
@@ -27,6 +28,36 @@ describe('listAssetTypes', () => {
       allResults: { 'FROM asset_types ORDER BY': [{ id: 'mooring', name: 'Mooring', fee: 300, capacity: 12, sort_order: 1 }] },
     });
     await expect(listAssetTypes(db)).resolves.toEqual([{ id: 'mooring', name: 'Mooring', fee: 300, capacity: 12, sortOrder: 1 }]);
+  });
+});
+
+describe('updateAssetType', () => {
+  it('writes name, fee, and capacity, keyed by id in the WHERE clause, never the SET clause', async () => {
+    const { db, calls } = fakeD1();
+    await updateAssetType(db, 'mooring', { name: 'Mooring (renamed)', fee: 350, capacity: 15 });
+    expect(calls).toEqual([
+      { sql: 'UPDATE asset_types SET name = ?1, fee = ?2, capacity = ?3 WHERE id = ?4', args: ['Mooring (renamed)', 350, 15, 'mooring'] },
+    ]);
+    // The id appears only after WHERE: no SET clause token contains it, so no code path here can
+    // ever rename the row (asset_types.id keys the waiver signing lists).
+    const setClause = calls[0].sql.split('WHERE')[0];
+    expect(setClause).not.toContain('id');
+  });
+
+  it('clears capacity to null as a supported edit', async () => {
+    const { db, calls } = fakeD1();
+    await updateAssetType(db, 'boat-parking', { name: 'Trailered Boat Parking', fee: 0, capacity: null });
+    expect(calls[0].args).toEqual(['Trailered Boat Parking', 0, null, 'boat-parking']);
+  });
+
+  it('accepts a capacity below the current active-assignment count, issuing no guard read', async () => {
+    // No fixture answering a COUNT-style read: if this function queried current assignments to
+    // guard the new capacity, the fake would still answer, but the point is it never asks --
+    // capacity is advisory only, never a write barrier.
+    const { db, calls } = fakeD1();
+    await expect(updateAssetType(db, 'small-boat-rack', { name: 'Small Boat Rack', fee: 100, capacity: 1 })).resolves.toBeUndefined();
+    expect(calls).toHaveLength(1);
+    expect(calls.some((c) => c.sql.includes('COUNT'))).toBe(false);
   });
 });
 

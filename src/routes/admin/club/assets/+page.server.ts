@@ -27,13 +27,20 @@ import {
   recordPayment,
   releaseAssignment,
   removeFromWaitlist,
+  updateAssetType,
   type AssetTypeRow,
   type AssetWaitlistDisplayRow,
   type AssignmentDisplayRow,
   type MemberOption,
   type MembershipOption,
 } from '$admin-club/lib/assets-store';
-import { parseAssignForm, parsePaymentForm, parseWaitlistAddForm, parseWaitlistPromoteForm } from './assets-form-input';
+import {
+  parseAssetTypeEditForm,
+  parseAssignForm,
+  parsePaymentForm,
+  parseWaitlistAddForm,
+  parseWaitlistPromoteForm,
+} from './assets-form-input';
 
 /** The narrow bridge this route reads `EMAIL` off `event.platform.env` through, matching
  *  `asset-requests/+page.server.ts`'s own precedent: `AdminActionEvent.platform.env` is typed by
@@ -207,5 +214,24 @@ export const actions: Actions = {
       return { ok: true, assignmentId: result.assignmentId, emailSent: emailResult.ok, emailError: emailResult.ok ? null : emailResult.error };
     },
     { action: 'promote', entity: 'asset-waitlist', deniedMessage: DENIED_MESSAGE },
+  ),
+
+  editType: clubAdminAction(
+    async ({ form, ctx }) => {
+      const id = form.get('id');
+      if (typeof id !== 'string' || !id.trim()) {
+        ctx.audit({ action: 'edit', entity: 'asset-type', detail: 'rejected: missing id' });
+        return fail(400, { error: 'An asset type is required.' });
+      }
+      const parsed = parseAssetTypeEditForm(form);
+      if ('error' in parsed) {
+        ctx.audit({ action: 'edit', entity: 'asset-type', entityId: id, detail: `rejected: ${parsed.error}` });
+        return fail(400, { error: parsed.error });
+      }
+      await updateAssetType(ctx.db, id, parsed);
+      ctx.audit({ action: 'edit', entity: 'asset-type', entityId: id });
+      return { ok: true };
+    },
+    { action: 'edit', entity: 'asset-type', deniedMessage: DENIED_MESSAGE },
   ),
 };

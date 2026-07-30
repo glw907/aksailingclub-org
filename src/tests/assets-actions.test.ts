@@ -292,3 +292,84 @@ describe('assets actions: waitlistPromote', () => {
     expect(emailLogIndex).toBeGreaterThan(deleteIndex);
   });
 });
+
+describe('assets actions: editType', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('refuses an editor with no club role (403), auditing the rejected attempt', async () => {
+    const { db } = fakeD1();
+    const sink = vi.fn();
+    const result = await actions.editType(
+      postEvent(noRole, { id: 'mooring', name: 'Mooring', fee: '300', capacity: '12' }, { db, auditSink: sink }),
+    );
+    expect(isActionFailure(result)).toBe(true);
+    expect((result as { status: number }).status).toBe(403);
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'edit', entity: 'asset-type' }));
+  });
+
+  it('updates all three fields and audits the id', async () => {
+    const { db, calls } = fakeD1();
+    const sink = vi.fn();
+    const result = await actions.editType(
+      postEvent(admin, { id: 'mooring', name: 'Mooring (renamed)', fee: '350', capacity: '15' }, { db, auditSink: sink }),
+    );
+    expect(result).toEqual({ ok: true });
+    const update = calls.find((c) => c.sql.startsWith('UPDATE asset_types'));
+    expect(update?.args).toEqual(['Mooring (renamed)', 350, 15, 'mooring']);
+    expect(sink).toHaveBeenCalledWith({ action: 'edit', entity: 'asset-type', entityId: 'mooring', editor: admin.email });
+  });
+
+  it('clears capacity to null without error', async () => {
+    const { db, calls } = fakeD1();
+    const result = await actions.editType(postEvent(admin, { id: 'boat-parking', name: 'Trailered Boat Parking', fee: '0' }, { db }));
+    expect(result).toEqual({ ok: true });
+    const update = calls.find((c) => c.sql.startsWith('UPDATE asset_types'));
+    expect(update?.args).toEqual(['Trailered Boat Parking', 0, null, 'boat-parking']);
+  });
+
+  it('rejects an empty name, auditing the rejected attempt and writing nothing', async () => {
+    const { db, calls } = fakeD1();
+    const sink = vi.fn();
+    const result = await actions.editType(postEvent(admin, { id: 'mooring', name: '', fee: '300' }, { db, auditSink: sink }));
+    expect(isActionFailure(result)).toBe(true);
+    expect((result as { status: number }).status).toBe(400);
+    expect(calls.some((c) => c.sql.startsWith('UPDATE asset_types'))).toBe(false);
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'edit', entity: 'asset-type', entityId: 'mooring' }));
+  });
+
+  it('rejects a negative fee, writing nothing', async () => {
+    const { db, calls } = fakeD1();
+    const result = await actions.editType(postEvent(admin, { id: 'mooring', name: 'Mooring', fee: '-5' }, { db }));
+    expect(isActionFailure(result)).toBe(true);
+    expect((result as { status: number }).status).toBe(400);
+    expect(calls.some((c) => c.sql.startsWith('UPDATE asset_types'))).toBe(false);
+  });
+
+  it('rejects a fractional fee, writing nothing', async () => {
+    const { db, calls } = fakeD1();
+    const result = await actions.editType(postEvent(admin, { id: 'mooring', name: 'Mooring', fee: '300.50' }, { db }));
+    expect(isActionFailure(result)).toBe(true);
+    expect((result as { status: number }).status).toBe(400);
+    expect(calls.some((c) => c.sql.startsWith('UPDATE asset_types'))).toBe(false);
+  });
+
+  it('rejects a fractional capacity, writing nothing', async () => {
+    const { db, calls } = fakeD1();
+    const result = await actions.editType(postEvent(admin, { id: 'mooring', name: 'Mooring', fee: '300', capacity: '12.5' }, { db }));
+    expect(isActionFailure(result)).toBe(true);
+    expect((result as { status: number }).status).toBe(400);
+    expect(calls.some((c) => c.sql.startsWith('UPDATE asset_types'))).toBe(false);
+  });
+
+  it('accepts a capacity below the type\'s current active-assignment count without error', async () => {
+    // No guard read exists to fixture against: the write goes straight through, proving capacity
+    // is advisory only.
+    const { db, calls } = fakeD1();
+    const result = await actions.editType(postEvent(admin, { id: 'small-boat-rack', name: 'Small Boat Rack', fee: '100', capacity: '1' }, { db }));
+    expect(result).toEqual({ ok: true });
+    const update = calls.find((c) => c.sql.startsWith('UPDATE asset_types'));
+    expect(update?.args).toEqual(['Small Boat Rack', 100, 1, 'small-boat-rack']);
+  });
+});

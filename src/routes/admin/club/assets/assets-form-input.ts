@@ -60,3 +60,32 @@ export function parseWaitlistPromoteForm(form: FormData): { assetType: string } 
   }
   return { assetType: assetType.trim() };
 }
+
+/**
+ * Parse an "edit asset type" form post: a non-empty name and a non-negative whole-number fee are
+ * required. Capacity is either a positive whole number or explicitly cleared to null when the
+ * field is absent or blank -- clearing it is a supported edit, never an error (boat-parking
+ * legitimately runs with no limit). The id itself is never part of this shape: it is the
+ * request's own key, read directly off the form by the route action, never validated or returned
+ * here, so this parser can never hand a caller an id to write.
+ */
+export function parseAssetTypeEditForm(form: FormData): { name: string; fee: number; capacity: number | null } | { error: string } {
+  const name = form.get('name');
+  if (typeof name !== 'string' || !name.trim()) {
+    return { error: 'A name is required.' };
+  }
+  const feeRaw = form.get('fee');
+  const fee = typeof feeRaw === 'string' ? Number(feeRaw) : NaN;
+  if (!Number.isInteger(fee) || fee < 0) {
+    return { error: 'Fee must be a non-negative whole number.' };
+  }
+  const capacityRaw = emptyToNull(form.get('capacity'));
+  if (capacityRaw === null) {
+    return { name: name.trim(), fee, capacity: null };
+  }
+  const capacity = Number(capacityRaw);
+  if (!Number.isInteger(capacity) || capacity <= 0) {
+    return { error: 'Capacity must be a positive whole number, or left blank to clear it.' };
+  }
+  return { name: name.trim(), fee, capacity };
+}

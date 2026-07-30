@@ -133,6 +133,27 @@ export async function listAssetTypes(db: D1Database): Promise<AssetTypeRow[]> {
   return results.map((r) => ({ id: r.id, name: r.name, fee: r.fee, capacity: r.capacity, sortOrder: r.sort_order }));
 }
 
+/**
+ * Update one asset type's editable fields (Task 4): the first write path to `asset_types` in
+ * the whole application, previously touched only by the one-time import and the substrate
+ * migration. `id` is a WHERE-clause key only, never part of `args`, so no caller can route a
+ * rename through this function -- `asset_types.id` keys the waiver signing lists the substrate
+ * migration just repaired, and a rename would silently un-gate them again. `sort_order` stays
+ * unwritten, matching this pass's own scope; `args.capacity` accepts `null` to clear a type's
+ * limit, and this function never reads current assignments to guard against a lower value, since
+ * capacity is advisory only.
+ */
+export async function updateAssetType(
+  db: D1Database,
+  id: string,
+  args: { name: string; fee: number; capacity: number | null },
+): Promise<void> {
+  await db
+    .prepare('UPDATE asset_types SET name = ?1, fee = ?2, capacity = ?3 WHERE id = ?4')
+    .bind(args.name, args.fee, args.capacity, id)
+    .run();
+}
+
 /** Which literal `ORDER BY` clause reproduces one lens's own pre-consolidation ordering. Built
  *  from `opts.orderBy`'s own closed union, never from anything a caller could pass free-form, so
  *  interpolating it directly into the query text below carries no injection risk. */
