@@ -386,3 +386,88 @@ export async function moveToEndOfWaitlist(db: D1Database, id: string, assetType:
     .bind(id, assetType)
     .run();
 }
+
+/** The HEAD of one asset type's own waitlist queue: the entry's own asset-type name is joined
+ *  out here (never a second query) since {@link promoteWaitlistEntry} needs it for the
+ *  slot-opened email's pre-resolved payload. */
+export interface WaitlistHeadEntry {
+  id: string;
+  assetType: string;
+  assetTypeName: string;
+  memberId: string;
+}
+
+/** Read the head of one asset type's own waitlist queue -- the entry with the lowest `position`
+ *  in that type -- or `null` when that type's queue is currently empty. Scoped by `asset_type` in
+ *  the `WHERE` clause, so an entry queued under a different type never surfaces here. */
+export async function getWaitlistHead(db: D1Database, assetType: string): Promise<WaitlistHeadEntry | null> {
+  const row = await db
+    .prepare(
+      `SELECT aw.id, aw.asset_type, at.name AS asset_type_name, aw.member_id
+       FROM asset_waitlist aw
+       JOIN asset_types at ON at.id = aw.asset_type
+       WHERE aw.asset_type = ?1
+       ORDER BY aw.position ASC
+       LIMIT 1`,
+    )
+    .bind(assetType)
+    .first<{ id: string; asset_type: string; asset_type_name: string; member_id: string }>();
+  return row ? { id: row.id, assetType: row.asset_type, assetTypeName: row.asset_type_name, memberId: row.member_id } : null;
+}
+
+/** The fields a promotion's slot-opened email needs, captured BEFORE the waitlist row is
+ *  deleted (the ordering ruling this function follows): the row is gone by the time the email
+ *  sends, so nothing downstream may re-derive these by looking the row back up. */
+export interface WaitlistPromotionEmailPayload {
+  memberId: string;
+  householdId: string;
+  assetTypeName: string;
+}
+
+/** {@link promoteWaitlistEntry}'s result: either the new assignment id plus the email payload the
+ *  caller must pass through to `sendAssetDecisionEmail`'s `resolved` field, or a reason nothing
+ *  was written. */
+export type WaitlistPromotionResult = { ok: true; assignmentId: string; emailPayload: WaitlistPromotionEmailPayload } | { error: string };
+
+/**
+ * Promote one waitlist entry (an admin-triggered action only, never a side effect of releasing an
+ * assignment): resolves the entry's member to that member's CURRENT-season membership through its
+ * household (assignments attach to memberships, never members -- this module's own header), fails
+ * with nothing written when no such membership exists, then re-confirms the entry itself still
+ * exists (closing the race between `entry`'s own read, by the caller, and this call), and only
+ * then creates the new active assignment and removes the waitlist entry in one atomic
+ * `db.batch()` -- a partial write here would leave a household double-counted, holding both a
+ * queue position and a live assignment. Capacity is never checked: an admin choosing to promote
+ * against a full type is deliberate, not a bug this function guards against.
+ */
+export async function promoteWaitlistEntry(db: D1Database, entry: WaitlistHeadEntry, currentSeason: number): Promise<WaitlistPromotionResult> {
+  const membership = await db
+    .prepare(
+      `SELECT ms.id AS membership_id, m.household_id
+       FROM members m
+       JOIN memberships ms ON ms.household_id = m.household_id AND ms.season = ?2
+       WHERE m.id = ?1`,
+    )
+    .bind(entry.memberId, currentSeason)
+    .first<{ membership_id: string; household_id: string }>();
+  if (!membership) return { error: 'This member has no current-season membership to assign into.' };
+
+  const stillWaiting = await getWaitlistEntry(db, entry.id);
+  if (!stillWaiting) return { error: 'No such waitlist entry.' };
+
+  const emailPayload: WaitlistPromotionEmailPayload = {
+    memberId: entry.memberId,
+    householdId: membership.household_id,
+    assetTypeName: entry.assetTypeName,
+  };
+
+  const assignmentId = crypto.randomUUID();
+  await db.batch([
+    db
+      .prepare('INSERT INTO asset_assignments (id, asset_type, membership_id, description, status) VALUES (?1, ?2, ?3, ?4, ?5)')
+      .bind(assignmentId, entry.assetType, membership.membership_id, null, 'active'),
+    db.prepare('DELETE FROM asset_waitlist WHERE id = ?1').bind(entry.id),
+  ]);
+
+  return { ok: true, assignmentId, emailPayload };
+}

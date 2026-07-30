@@ -44,6 +44,16 @@ interface RequestDecisionArgs {
   origin: string;
 }
 
+/** The fields `slot_opened`'s own by-id waitlist lookup would otherwise produce, for a caller
+ *  that already knows them (waitlist promotion's own case): supplying this SKIPS that lookup
+ *  entirely, so a caller whose write already deleted the waitlist row can still send correctly
+ *  (the ordering defect this field exists to close -- see this module's own header). */
+export interface SlotOpenedResolvedPayload {
+  memberId: string;
+  householdId: string;
+  assetTypeName: string;
+}
+
 /** {@link sendAssetDecisionEmail}'s argument, one variant per {@link AssetDecisionKind}. The
  *  `denied` kind alone carries a `reason`, the admin's recorded text sent verbatim; `slot_opened`
  *  alone carries a `waitlistId` in place of a `requestId`, since a freed slot notifies off the
@@ -56,9 +66,13 @@ export type AssetDecisionEmailArgs =
   | {
       kind: 'slot_opened';
       /** The `asset_waitlist.id` entry whose slot opened: also {@link assetSlotOpenedSegment}'s
-       *  own identity. */
+       *  own identity. Still required even when `resolved` is supplied, since the segment tag
+       *  keys off it. */
       waitlistId: string;
       origin: string;
+      /** Optional pre-resolved recipient/asset-type data, bypassing the by-id waitlist lookup
+       *  below entirely when present. Omitted, this falls back to that lookup unchanged. */
+      resolved?: SlotOpenedResolvedPayload;
     };
 
 /** The `email_log.segment` tag a request-decision send is logged under: unique per (request,
@@ -102,19 +116,29 @@ const NO_EMAIL_BINDING: SendClubEmailResult = { ok: false, error: 'EMAIL binding
 export async function sendAssetDecisionEmail(db: D1Database, env: EmailBindingEnv, args: AssetDecisionEmailArgs): Promise<SendClubEmailResult> {
   try {
     if (args.kind === 'slot_opened') {
-      const entry = await db
-        .prepare(
-          `SELECT aw.member_id, m.household_id, at.name AS asset_type_name
-           FROM asset_waitlist aw
-           JOIN asset_types at ON at.id = aw.asset_type
-           JOIN members m ON m.id = aw.member_id
-           WHERE aw.id = ?1`,
-        )
-        .bind(args.waitlistId)
-        .first<{ member_id: string; household_id: string; asset_type_name: string }>();
-      if (!entry) return { ok: false, error: 'No such waitlist entry to notify about.' };
+      let memberId: string;
+      let householdId: string;
+      let assetTypeName: string;
+      if (args.resolved) {
+        ({ memberId, householdId, assetTypeName } = args.resolved);
+      } else {
+        const entry = await db
+          .prepare(
+            `SELECT aw.member_id, m.household_id, at.name AS asset_type_name
+             FROM asset_waitlist aw
+             JOIN asset_types at ON at.id = aw.asset_type
+             JOIN members m ON m.id = aw.member_id
+             WHERE aw.id = ?1`,
+          )
+          .bind(args.waitlistId)
+          .first<{ member_id: string; household_id: string; asset_type_name: string }>();
+        if (!entry) return { ok: false, error: 'No such waitlist entry to notify about.' };
+        memberId = entry.member_id;
+        householdId = entry.household_id;
+        assetTypeName = entry.asset_type_name;
+      }
 
-      const recipient = await resolveRecipient(db, entry.member_id, entry.household_id);
+      const recipient = await resolveRecipient(db, memberId, householdId);
       if (!recipient) return NO_RECIPIENT;
       if (!env.EMAIL) return NO_EMAIL_BINDING;
 
@@ -125,7 +149,7 @@ export async function sendAssetDecisionEmail(db: D1Database, env: EmailBindingEn
           subject: 'A {{assetTypeName}} spot is open for your household',
           body: 'A {{assetTypeName}} spot has opened for your household. See your place on the waitlist at {{link}}.',
         },
-        vars: { assetTypeName: entry.asset_type_name, link },
+        vars: { assetTypeName, link },
         segment: assetSlotOpenedSegment(args.waitlistId),
       });
     }

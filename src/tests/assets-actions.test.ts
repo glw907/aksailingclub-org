@@ -23,7 +23,7 @@ type ActionEvent = Parameters<typeof actions.assign>[0];
 function postEvent(
   editor: Editor | null,
   fields: Record<string, string>,
-  opts: { db?: unknown; auditSink?: (record: AdminActionAuditRecord) => void } = {},
+  opts: { db?: unknown; auditSink?: (record: AdminActionAuditRecord) => void; email?: { send: (message: unknown) => Promise<void> } } = {},
 ) {
   const formData = new FormData();
   formData.set('csrf', CSRF_TOKEN);
@@ -39,7 +39,7 @@ function postEvent(
       set: () => undefined,
       delete: () => undefined,
     },
-    platform: { env: { CLUB_DB: opts.db } },
+    platform: { env: { CLUB_DB: opts.db, EMAIL: opts.email } },
     locals: { editor, auditSink: opts.auditSink, cairnAccess: access },
   } as unknown as ActionEvent;
 }
@@ -196,5 +196,99 @@ describe('assets actions: waitlist', () => {
     expect(result).toEqual({ ok: true });
     expect(calls.some((c) => c.sql.startsWith('UPDATE asset_waitlist SET position') && c.args.includes('mooring'))).toBe(true);
     expect(sink).toHaveBeenCalledWith({ action: 'reorder', entity: 'asset-waitlist', entityId: 'w-1', editor: admin.email });
+  });
+});
+
+describe('assets actions: waitlistPromote', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const PROMOTABLE_DB_FIXTURES = {
+    'FROM asset_waitlist aw': { id: 'w-1', asset_type: 'mooring', asset_type_name: 'Mooring', member_id: 'mem-1' },
+    "'current_season'": { value: '2026' },
+    'FROM members m': { membership_id: 'ms-1', household_id: 'hh-1' },
+    'FROM asset_waitlist WHERE id': { id: 'w-1', asset_type: 'mooring' },
+    'FROM members WHERE id': { email: 'waiting@example.com' },
+  };
+
+  it('refuses an editor with no club role (403), auditing the rejected attempt', async () => {
+    const { db } = fakeD1({ firstResults: PROMOTABLE_DB_FIXTURES });
+    const sink = vi.fn();
+    const result = await actions.waitlistPromote(postEvent(noRole, { assetType: 'mooring' }, { db, auditSink: sink }));
+    expect(isActionFailure(result)).toBe(true);
+    expect((result as { status: number }).status).toBe(403);
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'promote', entity: 'asset-waitlist' }));
+  });
+
+  it('fails 400 when assetType is missing, auditing the rejected attempt', async () => {
+    const { db } = fakeD1();
+    const sink = vi.fn();
+    const result = await actions.waitlistPromote(postEvent(admin, {}, { db, auditSink: sink }));
+    expect(isActionFailure(result)).toBe(true);
+    expect((result as { status: number }).status).toBe(400);
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'promote', entity: 'asset-waitlist' }));
+  });
+
+  it('fails 404 when no one is waiting for that asset type, auditing the rejected attempt', async () => {
+    const { db } = fakeD1({ firstResults: { 'FROM asset_waitlist aw': null } });
+    const sink = vi.fn();
+    const result = await actions.waitlistPromote(postEvent(admin, { assetType: 'mooring' }, { db, auditSink: sink }));
+    expect(isActionFailure(result)).toBe(true);
+    expect((result as { status: number }).status).toBe(404);
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'promote', entity: 'asset-waitlist' }));
+  });
+
+  it('fails 400 when the member has no current-season membership, writing nothing and auditing the rejection', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: { ...PROMOTABLE_DB_FIXTURES, 'FROM members m': null },
+    });
+    const sink = vi.fn();
+    const result = await actions.waitlistPromote(postEvent(admin, { assetType: 'mooring' }, { db, auditSink: sink }));
+    expect(isActionFailure(result)).toBe(true);
+    expect((result as { status: number }).status).toBe(400);
+    expect(calls.some((c) => c.sql.startsWith('INSERT INTO asset_assignments'))).toBe(false);
+    expect(calls.some((c) => c.sql.startsWith('DELETE FROM asset_waitlist'))).toBe(false);
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'promote', entity: 'asset-waitlist', entityId: 'w-1' }));
+  });
+
+  it('creates the assignment, removes the entry, audits the assignment id, and calls the email helper exactly once', async () => {
+    const { db, calls } = fakeD1({ firstResults: PROMOTABLE_DB_FIXTURES });
+    const send = vi.fn().mockResolvedValue(undefined);
+    const sink = vi.fn();
+    const result = await actions.waitlistPromote(postEvent(admin, { assetType: 'mooring' }, { db, auditSink: sink, email: { send } }));
+    expect(result).toMatchObject({ ok: true, assignmentId: expect.any(String), emailSent: true });
+    expect(calls.some((c) => c.sql.startsWith('INSERT INTO asset_assignments'))).toBe(true);
+    const remove = calls.find((c) => c.sql.startsWith('DELETE FROM asset_waitlist'));
+    expect(remove?.args).toEqual(['w-1']);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0].to).toBe('waiting@example.com');
+    expect(sink).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'promote', entity: 'asset-waitlist', entityId: 'w-1', detail: expect.stringContaining('assignment=') }),
+    );
+  });
+
+  it('succeeds against a type already at or over capacity: capacity is never checked', async () => {
+    const { db, calls } = fakeD1({ firstResults: PROMOTABLE_DB_FIXTURES });
+    const send = vi.fn().mockResolvedValue(undefined);
+    const result = await actions.waitlistPromote(postEvent(admin, { assetType: 'mooring' }, { db, email: { send } }));
+    expect(result).toMatchObject({ ok: true });
+    // No capacity read (`asset_types.capacity`) and no active-count read: promotion never asks,
+    // it only ever creates the assignment the admin already chose to make.
+    expect(calls.some((c) => c.sql.includes('SELECT capacity'))).toBe(false);
+    expect(calls.some((c) => c.sql.includes('COUNT(*)'))).toBe(false);
+  });
+
+  it("sends the slot-opened email even though the promotion has already deleted the waitlist row (the ordering defect this pass closes)", async () => {
+    const { db, calls } = fakeD1({ firstResults: PROMOTABLE_DB_FIXTURES });
+    const send = vi.fn().mockResolvedValue(undefined);
+    const result = await actions.waitlistPromote(postEvent(admin, { assetType: 'mooring' }, { db, email: { send } }));
+    expect(result).toMatchObject({ ok: true, emailSent: true });
+    // The email send happens AFTER the delete in the recorded call order, proving the send
+    // reached a pre-resolved payload rather than re-looking the (now-gone) row up.
+    const deleteIndex = calls.findIndex((c) => c.sql.startsWith('DELETE FROM asset_waitlist'));
+    const emailLogIndex = calls.findIndex((c) => c.sql.startsWith('INSERT INTO email_log'));
+    expect(deleteIndex).toBeGreaterThanOrEqual(0);
+    expect(emailLogIndex).toBeGreaterThan(deleteIndex);
   });
 });

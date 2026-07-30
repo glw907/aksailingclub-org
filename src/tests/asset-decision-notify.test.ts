@@ -128,6 +128,49 @@ describe('sendAssetDecisionEmail: slot_opened', () => {
   });
 });
 
+describe('sendAssetDecisionEmail: slot_opened with a pre-resolved payload (the ordering-defect fix)', () => {
+  it('sends correctly when the waitlist row is already gone, skipping the by-id lookup entirely', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: {
+        // Deliberately absent/null: a resolved payload must never need this row to still exist.
+        'FROM asset_waitlist aw': null,
+        'FROM members WHERE id': { email: 'waiting@example.com' },
+      },
+    });
+    const send = vi.fn().mockResolvedValue(undefined);
+
+    const result = await sendAssetDecisionEmail(db, { EMAIL: { send } }, {
+      kind: 'slot_opened',
+      waitlistId: 'aw-1',
+      origin: ORIGIN,
+      resolved: { memberId: 'mem-waiting', householdId: 'hh-2', assetTypeName: 'RV Parking' },
+    });
+
+    expect(result).toEqual({ ok: true });
+    const message = send.mock.calls[0][0];
+    expect(message.to).toBe('waiting@example.com');
+    expect(message.text).toContain('RV Parking');
+    expect(message.text).toContain('your place on the waitlist');
+
+    const logWrite = calls.find((c) => c.sql.startsWith('INSERT INTO email_log'));
+    expect(logWrite?.args[2]).toBe(assetSlotOpenedSegment('aw-1'));
+  });
+
+  it('still refuses a recipient with no email on file, the same way the by-id path does', async () => {
+    const { db } = fakeD1({ firstResults: { 'FROM members WHERE id': { email: null } } });
+    const send = vi.fn();
+    await expect(
+      sendAssetDecisionEmail(db, { EMAIL: { send } }, {
+        kind: 'slot_opened',
+        waitlistId: 'aw-1',
+        origin: ORIGIN,
+        resolved: { memberId: 'mem-waiting', householdId: 'hh-2', assetTypeName: 'RV Parking' },
+      }),
+    ).resolves.toEqual({ ok: false, error: expect.any(String) });
+    expect(send).not.toHaveBeenCalled();
+  });
+});
+
 describe('sendAssetDecisionEmail: recipient fallback', () => {
   it("falls back to the household's managing adult when the requester has no email on file", async () => {
     const { db } = fakeD1({

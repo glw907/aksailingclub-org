@@ -9,17 +9,21 @@ import { requireSession } from '@glw907/cairn-cms/sveltekit';
 import { resolveClubDb } from '$admin-club/lib/club-db';
 import { clubAdminAction } from '$admin-club/lib/club-action';
 import { getCurrentSeason } from '$admin-club/lib/club-settings';
+import type { EmailBindingEnv } from '$admin-club/lib/club-email';
+import { sendAssetDecisionEmail } from '$member-portal/lib/asset-decision-notify';
 import {
   addToWaitlist,
   assignAsset,
   getAssignment,
   getWaitlistEntry,
+  getWaitlistHead,
   listActiveAssignments,
   listAssetTypes,
   listAssetWaitlist,
   listMemberOptions,
   listMembershipOptions,
   moveToEndOfWaitlist,
+  promoteWaitlistEntry,
   recordPayment,
   releaseAssignment,
   removeFromWaitlist,
@@ -29,7 +33,14 @@ import {
   type MemberOption,
   type MembershipOption,
 } from '$admin-club/lib/assets-store';
-import { parseAssignForm, parsePaymentForm, parseWaitlistAddForm } from './assets-form-input';
+import { parseAssignForm, parsePaymentForm, parseWaitlistAddForm, parseWaitlistPromoteForm } from './assets-form-input';
+
+/** The narrow bridge this route reads `EMAIL` off `event.platform.env` through, matching
+ *  `asset-requests/+page.server.ts`'s own precedent: `AdminActionEvent.platform.env` is typed by
+ *  the engine's own narrow `AuthEnv`, which never expresses a site-only binding. */
+function resolveEmailEnv(env: unknown): EmailBindingEnv {
+  return (env as EmailBindingEnv | undefined) ?? {};
+}
 
 export const load: PageServerLoad = async (event) => {
   requireSession(event);
@@ -162,5 +173,39 @@ export const actions: Actions = {
       return { ok: true };
     },
     { action: 'reorder', entity: 'asset-waitlist', deniedMessage: DENIED_MESSAGE },
+  ),
+
+  waitlistPromote: clubAdminAction(
+    async ({ event, form, ctx }) => {
+      const parsed = parseWaitlistPromoteForm(form);
+      if ('error' in parsed) {
+        ctx.audit({ action: 'promote', entity: 'asset-waitlist', detail: `rejected: ${parsed.error}` });
+        return fail(400, { error: parsed.error });
+      }
+      const head = await getWaitlistHead(ctx.db, parsed.assetType);
+      if (!head) {
+        ctx.audit({ action: 'promote', entity: 'asset-waitlist', detail: `rejected: no waitlist entry for ${parsed.assetType}` });
+        return fail(404, { error: 'No one is waiting for that asset type.' });
+      }
+      const currentSeason = await getCurrentSeason(ctx.db);
+      const result = await promoteWaitlistEntry(ctx.db, head, currentSeason);
+      if ('error' in result) {
+        ctx.audit({ action: 'promote', entity: 'asset-waitlist', entityId: head.id, detail: `rejected: ${result.error}` });
+        return fail(400, { error: result.error });
+      }
+      ctx.audit({ action: 'promote', entity: 'asset-waitlist', entityId: head.id, detail: `assignment=${result.assignmentId}` });
+
+      // Email delivery is deliberately NOT part of the write's atomicity above: the assignment
+      // and dequeue already committed, so a send failure here is reported back rather than
+      // swallowed or rolled back (the ordering ruling this route follows).
+      const emailResult = await sendAssetDecisionEmail(ctx.db, resolveEmailEnv(event.platform?.env), {
+        kind: 'slot_opened',
+        waitlistId: head.id,
+        origin: event.url.origin,
+        resolved: result.emailPayload,
+      });
+      return { ok: true, assignmentId: result.assignmentId, emailSent: emailResult.ok, emailError: emailResult.ok ? null : emailResult.error };
+    },
+    { action: 'promote', entity: 'asset-waitlist', deniedMessage: DENIED_MESSAGE },
   ),
 };

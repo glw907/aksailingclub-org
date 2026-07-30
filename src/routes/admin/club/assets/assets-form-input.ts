@@ -50,3 +50,13 @@ export function parseWaitlistAddForm(form: FormData): { assetType: string; membe
   }
   return { assetType: assetType.trim(), memberId: memberId.trim(), notes: emptyToNull(form.get('notes')) };
 }
+
+/** Parse a "promote waitlist head" form post: the asset type whose queue head should be
+ *  promoted is the only field. */
+export function parseWaitlistPromoteForm(form: FormData): { assetType: string } | { error: string } {
+  const assetType = form.get('assetType');
+  if (typeof assetType !== 'string' || !assetType.trim()) {
+    return { error: 'An asset type is required.' };
+  }
+  return { assetType: assetType.trim() };
+}

@@ -5,6 +5,7 @@ import {
   assignAsset,
   getAssignment,
   getWaitlistEntry,
+  getWaitlistHead,
   listActiveAssignments,
   listAssetTypes,
   listAssetWaitlist,
@@ -12,9 +13,11 @@ import {
   listMemberOptions,
   listMembershipOptions,
   moveToEndOfWaitlist,
+  promoteWaitlistEntry,
   recordPayment,
   releaseAssignment,
   removeFromWaitlist,
+  type WaitlistHeadEntry,
 } from '$admin-club/lib/assets-store';
 import { getHouseholdDesk, listHouseholds } from '$admin-club/lib/households-store';
 
@@ -336,5 +339,107 @@ describe('moveToEndOfWaitlist', () => {
     const { db, calls } = fakeD1();
     await moveToEndOfWaitlist(db, 'w-1', 'mooring');
     expect(calls).toEqual([{ sql: expect.stringContaining('UPDATE asset_waitlist SET position'), args: ['w-1', 'mooring'] }]);
+  });
+});
+
+describe('getWaitlistHead', () => {
+  it('picks the lowest-position entry for the given asset type, ignoring other types', async () => {
+    // The responder is keyed on the bound asset_type argument, standing in for the real WHERE
+    // clause + ORDER BY position ASC LIMIT 1 that a live D1 would apply: a call for 'mooring'
+    // must never see the 'rv-parking' queue's own head.
+    const { db, calls } = fakeD1({
+      firstResults: {
+        'FROM asset_waitlist aw': ((args: unknown[]) =>
+          args[0] === 'mooring'
+            ? { id: 'w-head', asset_type: 'mooring', asset_type_name: 'Mooring', member_id: 'mem-head' }
+            : { id: 'w-other', asset_type: 'rv-parking', asset_type_name: 'RV Parking', member_id: 'mem-other' }) as never,
+      },
+    });
+    await expect(getWaitlistHead(db, 'mooring')).resolves.toEqual({
+      id: 'w-head',
+      assetType: 'mooring',
+      assetTypeName: 'Mooring',
+      memberId: 'mem-head',
+    });
+    expect(calls[0].sql).toContain('WHERE aw.asset_type = ?1');
+    expect(calls[0].sql).toContain('ORDER BY aw.position ASC');
+    expect(calls[0].args).toEqual(['mooring']);
+  });
+
+  it('returns null when the type has no waitlist entries', async () => {
+    const { db } = fakeD1();
+    await expect(getWaitlistHead(db, 'mooring')).resolves.toBeNull();
+  });
+});
+
+const HEAD_ENTRY: WaitlistHeadEntry = { id: 'w-1', assetType: 'mooring', assetTypeName: 'Mooring', memberId: 'mem-1' };
+
+describe('promoteWaitlistEntry', () => {
+  it('creates the assignment, removes the entry, and reports the assignment id plus the email payload', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: {
+        'FROM members m': { membership_id: 'ms-1', household_id: 'hh-1' },
+        'FROM asset_waitlist WHERE id': { id: 'w-1', asset_type: 'mooring' },
+      },
+    });
+    const result = await promoteWaitlistEntry(db, HEAD_ENTRY, 2026);
+    expect(result).toEqual({
+      ok: true,
+      assignmentId: expect.any(String),
+      emailPayload: { memberId: 'mem-1', householdId: 'hh-1', assetTypeName: 'Mooring' },
+    });
+    const insert = calls.find((c) => c.sql.startsWith('INSERT INTO asset_assignments'));
+    expect(insert?.args).toEqual([(result as { assignmentId: string }).assignmentId, 'mooring', 'ms-1', null, 'active']);
+    const remove = calls.find((c) => c.sql.startsWith('DELETE FROM asset_waitlist'));
+    expect(remove?.args).toEqual(['w-1']);
+  });
+
+  it('binds the member id and current season against memberships, never inventing a membership', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: {
+        'FROM members m': { membership_id: 'ms-1', household_id: 'hh-1' },
+        'FROM asset_waitlist WHERE id': { id: 'w-1', asset_type: 'mooring' },
+      },
+    });
+    await promoteWaitlistEntry(db, HEAD_ENTRY, 2026);
+    const membershipRead = calls.find((c) => c.sql.includes('FROM members m'));
+    expect(membershipRead?.sql).toContain('ms.season = ?2');
+    expect(membershipRead?.args).toEqual(['mem-1', 2026]);
+  });
+
+  it('fails with nothing written when the member has no current-season membership', async () => {
+    const { db, calls } = fakeD1({ firstResults: { 'FROM members m': null } });
+    const result = await promoteWaitlistEntry(db, HEAD_ENTRY, 2026);
+    expect(result).toEqual({ error: expect.stringContaining('current-season membership') });
+    expect(calls.some((c) => c.sql.startsWith('INSERT INTO asset_assignments'))).toBe(false);
+    expect(calls.some((c) => c.sql.startsWith('DELETE FROM asset_waitlist'))).toBe(false);
+  });
+
+  it('fails when the waitlist entry no longer exists, writing nothing', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: {
+        'FROM members m': { membership_id: 'ms-1', household_id: 'hh-1' },
+        'FROM asset_waitlist WHERE id': null,
+      },
+    });
+    const result = await promoteWaitlistEntry(db, HEAD_ENTRY, 2026);
+    expect(result).toEqual({ error: expect.stringContaining('No such waitlist entry') });
+    expect(calls.some((c) => c.sql.startsWith('INSERT INTO asset_assignments'))).toBe(false);
+    expect(calls.some((c) => c.sql.startsWith('DELETE FROM asset_waitlist'))).toBe(false);
+  });
+
+  it('succeeds against a type already at or over capacity: capacity is never checked here', async () => {
+    // No 'FROM asset_types' fixture at all: if this function queried capacity, the fake would
+    // still answer (with a fallback), but the point is it never asks in the first place -- the
+    // admin's own promotion call is the deliberate override, not a check to satisfy.
+    const { db, calls } = fakeD1({
+      firstResults: {
+        'FROM members m': { membership_id: 'ms-1', household_id: 'hh-1' },
+        'FROM asset_waitlist WHERE id': { id: 'w-1', asset_type: 'mooring' },
+      },
+    });
+    const result = await promoteWaitlistEntry(db, HEAD_ENTRY, 2026);
+    expect(result).toEqual({ ok: true, assignmentId: expect.any(String), emailPayload: expect.any(Object) });
+    expect(calls.some((c) => c.sql.includes('asset_types'))).toBe(false);
   });
 });
