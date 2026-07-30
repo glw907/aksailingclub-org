@@ -4,6 +4,20 @@
 > STATUS.md's preamble). History only: nothing here is a live instruction, and entries
 > reflect what was true when written. The live rolling status is docs/STATUS.md.
 
+**[Trimmed 2026-07-30 at the Assets brainstorm close.]**
+
+**MEMBERS REFINEMENT ROUND 1 IS LANDED AND COHERENCE-PASSED (2026-07-24; full entry in
+docs/status-archive.md).** cairn 0.90.0 and 0.90.1 published, ASC A1-A4 landed, the cold
+coherence read PASSED with no expert-visible tells across 16 renders, baselines
+regenerated. **STILL OPEN ON GEOFF'S QUEUE from this round**: (1) the Members and Classes
+refined before/after on dev (`/admin/club/members` and `/classes`, toolbar at rest, a panel
+expanded, a filter applied, at 390 and 1440); (2) the facet-border contrast ruling, where
+`--cairn-card-border` measures 1.11:1 light and 1.43:1 dark against base-200, under WCAG
+1.4.11's 3:1, and stands as the ratified quiet hairline unless he wants a stronger
+`--input-color` mix (a one-token cairn patch); (3) StatusChip palette mapping. Process
+lesson banked: gate agents must THROW on null, since a dead reviewer silently filtering to
+"zero findings" nearly published unreviewed work.
+
 **[Trimmed 2026-07-29 at the Assets pre-trial-chores close.]**
 
 **[Trimmed 2026-07-29 at the baseline-regeneration close; the two entries below were the

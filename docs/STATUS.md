@@ -8,6 +8,37 @@
 > entries beyond the top two or three to the archive — this file is @-imported into every
 > session's context, so its length is a per-session token tax.
 
+**THE ASSETS FUNCTIONAL BRAINSTORM IS DONE; BOTH EXECUTION PLANS ARE COMMITTED AND
+REVIEWED; A FRESH OPUS 5 SESSION EXECUTES THE SUBSTRATE PLAN NEXT (2026-07-30, Fable
+sitting).** What happened:
+
+- **All nine packet questions are settled.** The rulings live in
+  `docs/2026-07-29-assets-functional-design.md` (commit d15c1e9), "The nine rulings."
+  Headlines: the imported capacity numbers were invented, so the migration corrects them
+  (**BLOCKING INPUT: Geoff's four confirmed capacities; rv-parking probably 10**); the id
+  mismatch is fixed first-task with a throwing parse on the cast; retention gets its
+  creation path in `/my-account/renew`; waitlist promotion is surfaced-not-automated;
+  decision emails ship; the type catalog gets a fee/capacity/label editor with ids
+  immutable; the rebuild optimizes for the rare real event; one shared holdings lens; the
+  legacy Stripe payment-link route stays phase-2's, with the coexistence drift documented.
+- **Two plans, two sessions** (the pass-sizing lesson applied at design time). Plan 1
+  `docs/plans/2026-07-29-assets-substrate.md`: seven functional-repair tasks, no new admin
+  surface. Plan 2 `docs/plans/2026-07-29-assets-trial-build.md`: the eight-task screen
+  rebuild under the protocol's control conditions, with the builder travel list explicit
+  and the input packet marked orchestrator-only. Both were workflow-drafted (Opus
+  drafters), adversarially reviewed (26 findings, 11 blockers), and the folds verified by
+  the Fable conductor's own read (commit df334ed).
+- **The trial protocol doc stands unamended**; deviations are findings.
+- **NEXT, in order**: (1) Geoff confirms the four capacities (Task 1 blocks on them;
+  tasks 3/4/5a can start without). (2) Substrate execution, fresh OPUS session — the
+  /model switch saved fable as the session default, so reset it. RESUME PROMPT: "Execute
+  the Assets substrate plan: read docs/plans/2026-07-29-assets-substrate.md and the spec
+  docs/2026-07-29-assets-functional-design.md; follow the plan's execution order; Task 1
+  blocks on the four confirmed capacities in its Blocking input section." Launch from
+  ~/Projects/aksailingclub-org. (3) The trial build per its own plan, in its own session
+  after the substrate lands. Geoff's before/after on the 0.91.1 baselines (artifact link
+  in the entry below) is still open.
+
 **THE HELD CHORES ARE LANDED: BASELINES REGENERATED AGAINST 0.91.1, MAIN PUSHED, DEV
 DEPLOYED, AND THE ASSETS BRAINSTORM'S FUNCTIONAL INPUT IS BUILT. TWO GATES ARE OPEN:
 GEOFF'S BEFORE/AFTER, AND THE BRAINSTORM ITSELF, WHICH IS A FABLE SITTING (2026-07-29,
@@ -78,17 +109,6 @@ under the authed admin shell returns HTTP 200 because the shell load streams
 (sveltejs/kit#12987, open). All ten staged cairn findings are folded cairn-side.
 **PASS-SIZE FLAG (Geoff): the "mechanical" chores became a pass of their own.**
 
-**MEMBERS REFINEMENT ROUND 1 IS LANDED AND COHERENCE-PASSED (2026-07-24; full entry in
-docs/status-archive.md).** cairn 0.90.0 and 0.90.1 published, ASC A1-A4 landed, the cold
-coherence read PASSED with no expert-visible tells across 16 renders, baselines
-regenerated. **STILL OPEN ON GEOFF'S QUEUE from this round**: (1) the Members and Classes
-refined before/after on dev (`/admin/club/members` and `/classes`, toolbar at rest, a panel
-expanded, a filter applied, at 390 and 1440); (2) the facet-border contrast ruling, where
-`--cairn-card-border` measures 1.11:1 light and 1.43:1 dark against base-200, under WCAG
-1.4.11's 3:1, and stands as the ratified quiet hairline unless he wants a stronger
-`--input-color` mix (a one-token cairn patch); (3) StatusChip palette mapping. Process
-lesson banked: gate agents must THROW on null, since a dead reviewer silently filtering to
-"zero findings" nearly published unreviewed work.
 
 **STILL OPEN ON GEOFF'S QUEUE (pointers; full entries in docs/status-archive.md):**
 the Classes before/after on dev (/admin/club/classes) and the 2026-07-21 probe
