@@ -63,8 +63,14 @@ docs/plans/2026-07-29-cairn-design-trial-assets.md).** What happened:
   file is deleted per its own instruction** (detail lives in cairn's ROADMAP harvest block
   and this repo's git history): finding 1 shipped as cairn `0.91.1` (published, `latest`;
   the nineteen dropped classes restored and the shipped sheet's class inventory now a
-  snapshot-gated contract, so the substrate upgrade step is UNBLOCKED, `^0.91.0` resolves
-  to it on the next install); the status flattening repointed cairn's standing kit entry
+  snapshot-gated contract). **THE HOTFIX IS NOW INSTALLED HERE at `^0.91.1`** — the range
+  floor sits above the broken release, so no fresh install can resolve back to it — **and it
+  is rendering-neutral for ASC, measured**: all nineteen confirmed back in the shipped sheet,
+  ASC carrying zero live uses of any of them (the forward repair renamed them all), static
+  audit unchanged at 96 errors / 5 suppressed, gates green (check 0/0 across 1003 files,
+  2003 tests, build). The unchanged count is the falsification test — had any of the 94
+  routed dead classes been regression fallout rather than ASC's own debt, it would have
+  dropped. The status flattening repointed cairn's standing kit entry
   to the OPEN sveltejs/kit#12987 (the previously tracked kit#12533 is closed, stale) with
   a cairn-side mitigation now weighed; findings 7 and 8 remain the important pair, the
   flattening composing with 0.91.0's identity guard to reopen the audited-404 hole, both
@@ -82,9 +88,11 @@ docs/plans/2026-07-29-cairn-design-trial-assets.md).** What happened:
   first — `ci.yml`'s `update_snapshots` dispatch commits the PNGs back to whatever branch
   it ran against, and `ci.yml` also triggers on a push to `main`, so pushing these
   commits straight to `main` would both fail CI on the stale baselines and fire a dev
-  deploy. Push the two commits to a side branch, dispatch `update_snapshots` against it,
-  READ the log, pull the bot's PNG commit, then fast-forward `main`. **AWAITING GEOFF'S
-  GO — it is the first remote action of this pass.** (2) Geoff's before/after on the
+  deploy. Push the commits to a side branch, dispatch `update_snapshots` against it,
+  READ the log, pull the bot's PNG commit, then fast-forward `main`. The 0.91.1 install
+  rides in the same push, so the baselines are minted against the hotfix; it adds nothing
+  of its own to the pixel delta. **AWAITING GEOFF'S GO — it is the first remote action of
+  this pass.** (2) Geoff's before/after on the
   changed admin screens (every admin column header moves to 11px via `HEADER_CELL`, four
   documents h1s to 24px/700, 21 chips to the quiet register). (3) THEN the trial proper,
   opening with the Assets functional brainstorm, carrying the 12 perimeter advisories as

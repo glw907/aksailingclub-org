@@ -359,3 +359,29 @@ open). Nothing was repaired here.
 Also surfaced in passing and filed as finding 10: a CodeMirror `Ranges must be added sorted by
 'from' position` throw on the bulletins edit desk, non-fatal, plus a failing `source-code-pro`
 woff2 on that same desk.
+
+### Chore 1 addendum: the 0.91.1 hotfix, and why it changes nothing here
+
+cairn `0.91.1` shipped the evening of 2026-07-29, restoring the nineteen class rules `0.91.0`
+dropped (the six this pass measured, plus `text-base`, `text-3xl`, `badge-ghost`, and ten
+bracketed arbitrary sizes) through a labeled compatibility safelist, and gating the shipped
+sheet's class inventory behind a snapshot test so a class can leave it only as a deliberate,
+changelog-carried act. Installed here as `^0.91.1` rather than `^0.91.0`: the range floor now sits
+above the broken release, so no fresh install can resolve back to it.
+
+**The install is rendering-neutral for ASC, measured rather than assumed.** Every one of the
+nineteen is confirmed back in the shipped sheet, and ASC carries zero live uses of any of them:
+the forward repair already renamed them all onto the grammar roles. The single grep hit for
+`text-[0.6875rem]` is inside `ui.ts`'s own doc comment explaining that `HEADER_CELL` moved off that
+literal. The static audit is unchanged at 96 errors and 5 suppressions, which is the falsification
+test that matters: had any of ASC's 94 routed dead classes been among the restored nineteen, the
+count would have dropped. It did not, so the routed debt is confirmed to be ASC's own
+pre-existing debt and not regression fallout. `text-xl` (the 9 off-scale sites, 5 suppressed) is
+not among the restored classes and remains genuine drift.
+
+Gates on the new resolution: `npm run check` 0 errors / 0 warnings (1003 files), 2003 tests across
+153 files passing, build green.
+
+The one consequence for sequencing: the pending visual-baseline regeneration must be minted
+against `0.91.1`, so this install belongs in the same push as the chores commit rather than after
+the regen. It adds nothing of its own to the pixel delta.
