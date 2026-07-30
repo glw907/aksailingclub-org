@@ -22,13 +22,17 @@
 --
 -- Every id is prefixed `waiver-` except the one asset type below, which intentionally uses the
 -- REAL production id shape (`scripts/import/ops-assets.mjs`'s own header: "asc-ops's own stable
--- text id, e.g. `mooring`" -- unlike portal-seed.sql's and membership-admin-seed.sql's own fixture
--- asset types, which use fixture-prefixed ids that never match a real DocumentAudience and so
--- never exercise the requirement engine's asset-kind document matching at all): only this file
--- ever inserts that literal row, so its own delete is scoped by id rather than by prefix.
+-- text id, e.g. `mooring`"). `portal-seed.sql` (Assets substrate task 4 finding 6) now ALSO seeds
+-- this same real id, on the Wright household's own mooring assignment, and runs immediately before
+-- this file in `bootstrap-club-db.mjs`'s own fixed order -- this file therefore no longer owns
+-- `mooring` exclusively, and can no longer delete-then-reinsert it: real local D1 enforces foreign
+-- keys, so deleting the type out from under `portal-seed.sql`'s still-live `portal-aa-mooring`
+-- assignment fails outright (SQLITE_CONSTRAINT_FOREIGNKEY). `portal-seed.sql`'s own delete-and-
+-- reinsert already resets `mooring` to this exact canonical shape (name/fee/capacity/sort_order)
+-- on every bootstrap run, so this file's own `INSERT OR IGNORE` below is a defensive no-op in the
+-- one fixed order this suite ever runs in, never a second source of truth for its shape.
 DELETE FROM waiver_acceptances WHERE id LIKE 'waiver-%';
 DELETE FROM asset_assignments WHERE id LIKE 'waiver-%';
-DELETE FROM asset_types WHERE id = 'mooring';
 DELETE FROM memberships WHERE id LIKE 'waiver-%';
 UPDATE households SET primary_member_id = NULL WHERE id LIKE 'waiver-%';
 DELETE FROM members WHERE id LIKE 'waiver-%';
@@ -153,7 +157,7 @@ INSERT INTO members (id, household_id, name, email, phone, birthdate, directory_
 UPDATE households SET primary_member_id = 'waiver-mem-visual-contact' WHERE id = 'waiver-hh-visual-contact';
 INSERT INTO memberships (id, household_id, season, tier, price_paid, paid_at)
   VALUES ('waiver-ms-visual-contact', 'waiver-hh-visual-contact', 2025, 'individual', 250, '2025-05-01 00:00:00');
-INSERT INTO asset_types (id, name, fee, capacity, sort_order) VALUES ('mooring', 'Mooring', 150, NULL, 10);
+INSERT OR IGNORE INTO asset_types (id, name, fee, capacity, sort_order) VALUES ('mooring', 'Mooring', 150, NULL, 10);
 INSERT INTO asset_assignments (id, asset_type, membership_id, description, status)
   VALUES ('waiver-aa-visual-mooring', 'mooring', 'waiver-ms-visual-contact', 'Test Sailboat', 'active');
 INSERT INTO waiver_acceptances
