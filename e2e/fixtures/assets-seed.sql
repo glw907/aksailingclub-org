@@ -45,16 +45,20 @@ DELETE FROM households WHERE id LIKE 'atrial-%';
 -- These three UPDATEs touch ONLY `capacity`, never `name` or `id` (the orchestrator's own
 -- ruling: an UPDATE of capacity is not an insert, a delete, or a re-key).
 --
--- `mooring` is set to 2, exactly matching its existing active-assignment count
--- (`portal-aa-mooring` + `waiver-aa-visual-mooring`, both seeded by earlier fixtures in this
--- pipeline, verified live against a fresh bootstrap run): this file adds no new mooring
--- assignment, so mooring lands FULL, the state a "new" request against it must enqueue rather
--- than assign directly.
+-- `mooring` is set to its OWN current active-assignment count, computed rather than written as a
+-- literal, so it lands exactly FULL: the state in which a "new" request against it must enqueue
+-- onto the waitlist rather than assign directly. Today that count is 2 (`portal-aa-mooring` +
+-- `waiver-aa-visual-mooring`, both seeded by earlier fixtures in this pipeline) and this file adds
+-- no mooring assignment of its own. It is computed because a literal would silently stop being
+-- "full" the day an unrelated fixture adds or drops a mooring assignment, and the enqueue path
+-- would then be unreachable with every acceptance query still reading plausible.
 -- `boat-parking` is set to 5: its active count after this file's own retention assignment below
 -- is 2 (`portal-aa-trailer` + `atrial-aa-retain-boat`), below capacity, so approving a request
 -- against it assigns directly.
 -- `rv-parking` is set to 3, also above its own active count of 0.
-UPDATE asset_types SET capacity = 2 WHERE id = 'mooring';
+UPDATE asset_types SET capacity =
+  (SELECT COUNT(*) FROM asset_assignments WHERE asset_type = 'mooring' AND status = 'active')
+  WHERE id = 'mooring';
 UPDATE asset_types SET capacity = 5 WHERE id = 'boat-parking';
 UPDATE asset_types SET capacity = 3 WHERE id = 'rv-parking';
 
