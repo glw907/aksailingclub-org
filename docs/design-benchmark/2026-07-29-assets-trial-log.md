@@ -385,3 +385,76 @@ Gates on the new resolution: `npm run check` 0 errors / 0 warnings (1003 files),
 The one consequence for sequencing: the pending visual-baseline regeneration must be minted
 against `0.91.1`, so this install belongs in the same push as the chores commit rather than after
 the regen. It adds nothing of its own to the pixel delta.
+
+## The visual baselines, regenerated against 0.91.1
+
+The five held commits went to a side branch (`visual-baselines/cairn-0.91.1`) before any dispatch,
+for the reason STATUS named: `update_snapshots` commits its PNGs back to whatever branch it ran
+against, and `ci.yml` also fires on a push to `main`, so dispatching against `main` would have
+failed CI on the stale baselines and fired a dev deploy in the same motion. Pushing a side branch
+triggers nothing, since `ci.yml`'s push trigger names `main` alone.
+
+Run 30516293343, dispatched against that branch. **The log was read rather than the conclusion**,
+which is the whole point of the standing rule: the assert step correctly skipped, the regen step
+ran, and the commit step staged all three snapshot directories. Playwright reported 71 passed and
+named exactly four files as re-generated:
+
+| Baseline | Theme | Viewport |
+| --- | --- | --- |
+| `waivers-admin-rollup-light-1440` | light | 1440 |
+| `waivers-admin-rollup-dark-1440` | dark | 1440 |
+| `waivers-admin-rollup-light-390` | light | 390 |
+| `waivers-admin-rollup-dark-390` | dark | 390 |
+
+Committed by the bot as `1ff5926`. **Nothing in `site-visual` or `portal-visual` moved**, and that
+is a measurement rather than a convenience: the baseline set independently confirms the grammar
+repair and the 0.91.1 install are admin-only in rendering terms, since the public site and the
+member portal do not load `cairn-admin.css`. The waivers season rollup remains the single baselined
+admin surface, which is why one screen absorbs the whole delta.
+
+Read against the retained pre-regen PNGs, three of the four change classes are visible in the pair,
+and all four viewport-theme combinations agree. The page h1 grows from 20px/600 to 24px/700. The
+never-signed `0` gains the quiet register's ground where it previously rendered with no fill at all.
+The page reflows down about 9px from 0.91.0's `PageHeader` margin fix. The column-header move to
+11px is inside eyeball tolerance at this scale and rests on the audit and the `ui.ts` diff rather
+than on the render.
+
+`main` fast-forwarded to `1ff5926` and pushed. The deploy to the `asc-site` Worker went green, so
+dev now serves the repaired admin. Run 30516667787 is the mirror image of the regen run and closes
+the loop: the assert step ran with 71 passed and the two regen steps skipped, so the new PNGs are
+asserted-correct on the CI runner rather than merely minted there.
+
+## A correction to the perimeter advisory reading
+
+Two of the rendered-audit readings recorded above are wrong about *what* they measured, caught when
+the functional-discovery pass read the same markup independently. The contrast numbers stand; the
+attribution does not.
+
+The chip at 1.15 against its row is the **Paid** payment-standing badge
+(`bg-primary/10`), and the chip at 1.00 in both themes is **Outstanding** (`bg-warning/15`), both in
+`STANDING_CHIP` at `src/routes/admin/club/assets/+page.svelte:31-32`. The actual asset-type chip is
+a `badge-neutral` in the waitlist view (line 270) and was never flagged. This sharpens the build
+item rather than softening it: the state rendering at 1.00, invisible against its own row, is the
+one that says a household owes the club money.
+
+The "square-cornered pagination button" advisory cannot be attributed to this perimeter at all.
+No `Pagination` component is imported by any Assets or asset-requests file; the only admin importer
+is the Members screen. Whatever produced that reading, it is not a control on these screens.
+
+## The functional input packet
+
+`docs/2026-07-29-assets-functional-input.md` is the brainstorm's standing input, built by six
+read-only discovery agents and a synthesizer, each required to cite `file:line` or a live query.
+It is **functional only** by construction, since the control conditions make cairn's packaged
+capture the sole sanctioned carrier of design content to a builder.
+
+Three findings from it bear on the trial itself. The perimeter is larger than the two screens the
+plan names: the Members list and the household desk both compute "who holds what" from queries that
+mirror rather than reuse the Assets screen's lens, and `/my-account/gear` is a fully wired
+member-facing counterpart. The request and waitlist machinery is **completely unexercised**, with
+zero live rows in `asset_requests` and `asset_waitlist` against 41 active assignments, so the review
+inbox has never once run against real data. And the `asset_types` id mismatch is live, not dormant:
+`settings.current_season` is `2026`, matching the six published waiver documents, and 21 households
+currently hold an asset of one of the three types whose id never matches, so their type-specific
+acknowledgement never appears on a signing list and never gates the fee. Nine questions only Geoff
+can settle are listed at the foot of the packet.
