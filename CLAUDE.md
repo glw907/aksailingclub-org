@@ -192,6 +192,34 @@ App, committer `cairn-cms[bot]`; values on file in the cairn-cms repo's `CLAUDE.
 npx wrangler secret list
 ```
 
+## Engine-level UI mechanics: file them by default (Geoff, 2026-07-30)
+
+A UI **mechanic** belongs to cairn; a design **choice** belongs to this site. A mechanic is
+anything that would recur in any component of that shape on any cairn site: how a padded label
+centers its own text, which element a two-part row drops when space runs out, how a form action
+animates a control into a settled state, whether a framework default renders an invisible
+control on a dark ground, how repeated per-row buttons get distinct accessible names. Fixing one
+of those in `src/theme/` or a route's scoped `<style>` leaves every sibling site to rediscover
+it, so the fix belongs at the engine and the local patch is a stopgap that names its own
+expiry.
+
+**Filing these is default behavior, not something to do when asked.** Any pass carrying UI work
+ends by enumerating what it built or fixed and asking of each item whether it is a mechanic,
+then files what qualifies in that pass's `docs/YYYY-MM-DD-<pass>-harvest-findings.md` before
+reporting the pass done. **A repeated local workaround is the loudest available signal that
+something sits at the wrong altitude**: treat "this repo has patched this before" as an
+automatic filing trigger. The 2026-07-30 pass patched DaisyUI's invisible dark-mode `.btn` edge
+for the third time before anyone filed it.
+
+Two qualifications, both settled 2026-07-30. A mechanic that is always right can be a silent
+default (`text-box-trim` for optical centering); one whose correct answer depends on what the
+content means makes the choice explicit at the call site instead (which element a row drops).
+And the mechanically detectable half of each belongs in `cairn-audit`, never in this repo's own
+`scripts/design-probe.mjs`, so the rule reaches the family rather than one repo.
+
+Worked example with evidence, including the measurement methods:
+`docs/2026-07-30-assets-substrate-harvest-findings.md`.
+
 ## Documentation
 
 - `docs/STATUS.md`: rolling status, read first.
