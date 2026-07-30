@@ -458,3 +458,223 @@ inbox has never once run against real data. And the `asset_types` id mismatch is
 currently hold an asset of one of the three types whose id never matches, so their type-specific
 acknowledgement never appears on a signing list and never gates the fee. Nine questions only Geoff
 can settle are listed at the foot of the packet.
+
+---
+
+# The trial build (plan 2)
+
+Executed 2026-07-30 from `~/Projects/aksailingclub-org` under an Opus 5 conductor, against
+`docs/plans/2026-07-29-assets-trial-build.md`. The substrate plan landed earlier the same day, so
+every screen below builds on honest data.
+
+## Task 1: preflight and dependency verification
+
+### The substrate's landed outcomes, each confirmed against code or the live database
+
+| Outcome | How it was checked | Result |
+| --- | --- | --- |
+| `asset_types` ids are the hyphenated forms | live `--remote` query | `mooring`, `rv-parking`, `boat-parking`, `small-boat-rack` |
+| capacities are Geoff's confirmed numbers | same query | 10, 10, NULL, 9 |
+| casts replaced by a throwing parse | `grep -rn "as AssetKind" src/` | no matches; `parseAssetKind` reached from 5 call sites |
+| one shared active-holdings query | `listAssignments` consumers | assets screen, `households-store.ts:244` (Members list), `households-store.ts:443` (household desk) |
+| renewal creates `kind: 'retention'` | `my-account/renew/+page.server.ts:197` | `createAssetRequest(..., kind: 'retention', ...)` |
+| `sendAssetDecisionEmail` with five kinds | `asset-decision-notify.ts:102`, its own test file | `assigned`, `queued`, `retention_approved`, `denied`, `slot_opened` |
+| the coexistence comment | `assets-store.ts:35-39` | present, naming the legacy payment-link route and the phase-2 owner |
+
+The live query the plan asked for, verbatim from `migrations/asc-club/0034_asset_type_ids/verify.sql`:
+
+| id | name | fee | capacity |
+| --- | --- | ---: | ---: |
+| `mooring` | Mooring | 300 | 10 |
+| `rv-parking` | Long-Term RV Parking | 100 | 10 |
+| `boat-parking` | Trailered Boat Parking | 100 | NULL |
+| `small-boat-rack` | Small Boat Rack | 50 | 9 |
+
+**The waiver repair holds at 0.** The substrate's own success criterion, the count of households
+holding a mismatched-type active asset, returns 0 against a live pre-migration 21. Two companion
+counts also read clean: 0 `asset_payments` rows still missing a method behind a `stripe_ref`, and 0
+referencing rows anywhere still holding an underscore id.
+
+**The id-to-name pairings above are the authority for task 2's fixtures**, which is the constraint
+the substrate pass learned the expensive way. `boat-parking` is "Trailered Boat Parking" and
+`rv-parking` is "Long-Term RV Parking"; a fixture that crosses them seeds a type production has
+never held.
+
+### The real data is unchanged, so the never-exercised finding still stands
+
+`asset_requests` 0 rows. `asset_waitlist` 0 rows. `asset_assignments` 41 active. Fixtures remain
+the only path to the populated states of either screen, which is what task 2 exists for.
+
+### Gates on the tree as inherited
+
+`npm run check` 0 errors / 0 warnings across 1005 files. `npm test` 2042 tests across 154 files,
+exit 0. `npm run build` green.
+
+### The audit baseline, both halves
+
+Static: **0 error-tier findings on the perimeter**, which is the criterion. The 96 site-wide errors
+are the state the chores already recorded and routed, all `no-uncompiled-class` on 17 other screens,
+none of them on `assets/` or `asset-requests/`. One pre-existing suppression sits on the perimeter,
+`asset-requests/+page.svelte:32` `type-scale text-xl`; it is recorded here because metric 4 counts
+suppressions *added*, and this one is inherited rather than builder-authored.
+
+Rendered: the protocol's own door, local `wrangler dev` on `:8787` with `BASE_URL` set and the
+local Administrator session (`e2e-owner@aksailingclub.org`, valid to 2026-08-29) passed through
+`CAIRN_AUDIT_COOKIES`. **12 pages, exit 0, 0 errors, 660 advisories, 352 suppressed** — identical to
+the extended run the chores recorded, so the substrate pass's one perimeter commit
+(`a4472cd`, decision emails into the request inbox) moved nothing the audit measures. All 12 pages
+were measured rather than refused, so no page was identity-swapped.
+
+The perimeter's own advisory baseline, counted at instance level so the post-build comparison uses
+the same method:
+
+| Rule | Instances on the perimeter |
+| --- | ---: |
+| `border-contrast` | 54 |
+| `norms-bands` | 8 |
+| `weight-budget` | 4 |
+| `relational-spacing` | 4 |
+| `chip-ground-collision` | 4 |
+
+Note the method difference against the chores entry above, which recorded "12 advisories" on the
+perimeter as a share of the 267-advisory delta. That was a delta-contribution figure; 74 is the
+instance count on the two pages. Neither supersedes the other, and the build compares against 74.
+
+`chip-ground-collision` reproduces exactly as the correction earlier in this log describes: in light
+theme the `bg-warning/15` **Outstanding** chip paints `rgb(253, 251, 249)` against a row of the same
+value. The state that says a household owes money is not perceivable at all. It is build input.
+
+### One executor, and a leak worth naming
+
+No other executor in this worktree: one live `claude` process, this session's own, plus an unrelated
+session in `~/Projects/poplar`. Working tree clean at `c268ae2`.
+
+**Twenty parentless `workerd` processes were reaped before the audit**, left behind by the substrate
+pass's four isolated worktrees and its local test runs, the oldest over four hours old. This is the
+third pass to find the same leak at its opening. The corpus C lesson holds that process cleanup
+belongs at a pass boundary; the recurrence suggests the boundary that owns it is the *closing* one,
+not the opening one, and no pass has yet claimed it.
+
+## Tasks 2 through 4: the server side
+
+### Task 2, the fixtures
+
+`e2e/fixtures/assets-seed.sql`, appended last in `bootstrap-club-db.mjs`. Last is the only correct
+slot: `signup-seed.sql` deletes `asset_requests`, `asset_waitlist`, `asset_payments` and
+`asset_assignments` with no WHERE clause, and `portal-seed.sql` deletes and reinserts the three
+real `asset_types` rows. All rows carry an `atrial-` prefix except the asset-type ids themselves,
+which are the real `mooring`, `boat-parking` and `rv-parking`, each paired with the display name
+the live table gives it.
+
+Reachability, verified by query after a fresh bootstrap: one pending `new` request and one pending
+`retention` request; waitlist entries in two types (`mooring` at positions 1 and 2, `rv-parking` at
+position 2 behind `portal-seed.sql`'s own position 1); `mooring` at capacity 2 against 2 active
+assignments, `boat-parking` 2 against 5, `rv-parking` 0 against 3. Every waitlist member resolves
+to a 2026 membership. The file is idempotent across two consecutive bootstraps.
+
+**One orchestrator ruling was needed.** `portal-seed.sql`'s reinsert always leaves `capacity` NULL,
+so the plan's "one type at capacity" criterion is unreachable without a capacity write. An UPDATE of
+`capacity` on a real id is not an insert, a delete, or a re-key, so it is inside the constraint;
+`name` and `id` stay untouched.
+
+**One orchestrator fix on top of the implementer's work.** Mooring's capacity had been written as a
+literal `2`, matching the count `portal-seed.sql` and `waivers-seed.sql` happen to produce between
+them. Tasks 5 through 7 all measure against that at-capacity state, and a literal would silently
+stop being full the day an unrelated fixture adds a mooring assignment, with every acceptance query
+still reading green. It is now computed from the live count, so the state is true by construction
+(`2d0a8f5`).
+
+**The e2e claim was checked rather than accepted.** The implementer reported 60 visual failures as
+the known workstation delta; `docs/STATUS.md` records that delta as 56. A controlled comparison
+settles it: the suite fails **60 with the fixture and 60 without it**, split identically (portal 15,
+site 25, waivers 20). The fixture is baseline-neutral, no snapshot was minted, and the 56-to-60 gap
+predates this pass.
+
+### Task 3, waitlist promotion, and a cross-pass defect it exposed
+
+`getWaitlistHead` and `promoteWaitlistEntry` in `assets-store.ts`, `parseWaitlistPromoteForm`, and a
+`waitlistPromote` action gated and audited like the other six.
+
+**The defect: a notify helper going stale on its own caller's write.** The substrate's
+`slot_opened` email variant resolves its recipient and asset-type name by looking the waitlist row
+up by id, returning `No such waitlist entry to notify about.` when the row is gone. Promotion's
+whole job is to delete that row. Called in the obvious order the email never sends and the action
+reports a plausible soft failure, under a green gate. Helper and only caller were built in separate
+passes and neither saw the other, which is the same shape the substrate pass hit once already
+across two of its own worktrees.
+
+Resolved by ruling at dispatch rather than leaving it to the builder: capture the payload before
+the write, and extend the `slot_opened` variant with an optional pre-resolved payload that falls
+back to the existing lookup when omitted. Every prior call site and test is unaffected. That made
+Task 3 a five-deliverable task against a plan that scoped it at four, recorded here because the
+sizing rule asks for it rather than because anything went wrong.
+
+The assignment and the dequeue commit in one `db.batch()`. The email sits deliberately outside that
+atomicity and its failure is returned rather than swallowed. Capacity is not consulted.
+
+**An interpretation the implementer surfaced rather than buried.** The ruling read "resolve
+membership, then read the entry," but resolving a membership needs the entry's member id, so
+identifying the head necessarily comes first. It kept a second defensive re-read immediately before
+the write, which closes the real time-of-check window between the route's read and the mutation.
+That is a better resolution than the ruling's literal wording.
+
+### Task 4, the asset-type editor
+
+`updateAssetType`, `parseAssetTypeEditForm`, and a gated `editType` action. `id` is a WHERE-clause
+key and never appears in a SET clause, asserted against the literal SQL rather than against an
+unchanged value, because an id rename would silently un-gate the waiver signing lists the substrate
+migration just repaired. `sort_order` stays unwritten. Capacity accepts null and accepts a value
+below the current active count with no guard read.
+
+**One orchestrator fix.** `Number('')` is `0`, so a cleared fee field passed the non-negative
+whole-number check and silently set the type's fee to zero. Capacity reads blank as "clear it"
+because null is a meaningful capacity; a fee has no such reading, and `0` has to be typed
+deliberately. Blank is now rejected (`e529812`).
+
+### Gates after each task
+
+`npm run check` 0/0 across 1005 files at every step. `npm test` 2042 to 2058 to 2070 tests, all
+green. `npm run build` green. Each verified by the orchestrator's own run, not from the
+implementer's report.
+
+## Task 5 dispatch record: `/admin/club/assets`
+
+**Builder:** the repo's Sonnet-pinned `site-implementer`, fresh session, no context from any other
+task in this plan. The trial log has no record of which agent type the Members and Classes baselines
+used, so the choice is recorded here rather than asserted to match.
+
+**What the builder had in context, exhaustively:** this task's Files line, Outcomes, Constraints and
+Acceptance criteria as written in the plan; the instruction to load the `cairn-admin-screens` skill;
+the protocol's "The done-gate" paragraph, inlined verbatim; and the process mechanics below.
+
+**What it did not have:** the evidence packet, the functional design spec, the plan's global
+constraints, control conditions, and dispatch notes, every other task's text, and every part of the
+protocol doc other than the done-gate paragraph.
+
+**Three orchestrator-supplied additions, recorded as deviations rather than hidden.**
+
+1. **The done-gate travelled inlined, not as a path.** The plan's own constraint text points at the
+   protocol doc by filename. Sending that path would have handed the builder the control conditions,
+   the metrics and the grader calibration, all orchestrator-only. The paragraph is quoted verbatim
+   and the filename withheld.
+2. **The rendered audit's mechanics travelled**: the `BASE_URL` requirement (the default 4173 fails
+   against this repo's 8787 dev server), the session-cookie query, and the teardown. Pure process,
+   no design content. A builder that cannot open the audit door cannot satisfy the done-gate at all,
+   which would cost more measurement than the aid does.
+3. **The inherited rendered baseline travelled as a number** (0 errors, 660 advisories across 12
+   pages) so the builder would not read the admin's whole advisory mass as its own page's debt. The
+   per-rule perimeter breakdown, and every specific advisory, were withheld.
+
+**The withheld measurement is intact.** Nothing in the dispatch names the standing-chip contrast
+finding, in any form.
+
+**A residual control risk, stated rather than solved.** The plan and the spec sit in `docs/` in the
+working repo, so a builder that went looking could read its own orchestrator-only blocks. Five stale
+workflow worktrees carrying full copies of the plan were removed at preflight, which closes the
+accidental-grep path; the canonical copies remain. The dispatch tells the builder everything it
+needs is in the message plus the skill and not to go looking, which is mitigation, not enforcement.
+
+**Sizing, flagged at dispatch as the plan asks.** This is the pass's largest task: four artifacts
+carrying eight user-facing actions, past the roughly-four-deliverable bar on action count. It is
+deliberately not split, because one fresh session owning one screen is the premise the trial
+measures.
