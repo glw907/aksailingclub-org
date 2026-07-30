@@ -73,3 +73,9 @@ d1File(path.join(repoRoot, 'e2e/fixtures/portal-seed.sql'));
 // The member-waivers e2e fixture (T8): its own `waiver-`-prefixed rows never collide with
 // portal-seed.sql's `portal-`-prefixed ones, so ordering relative to that file does not matter.
 d1File(path.join(repoRoot, 'e2e/fixtures/waivers-seed.sql'));
+// The Assets trial build's request/waitlist fixture (Task 2): MUST run last. signup-seed.sql's
+// own blanket (no-WHERE) deletes of asset_requests/asset_waitlist/asset_payments/
+// asset_assignments would wipe this file's rows if it ran earlier, and its own capacity UPDATEs
+// on the real asset_types rows would be undone by portal-seed.sql's delete-and-reinsert of those
+// same rows (that file's own header explains why capacity always resets to NULL there).
+d1File(path.join(repoRoot, 'e2e/fixtures/assets-seed.sql'));
