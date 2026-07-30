@@ -58,13 +58,17 @@ docs/plans/2026-07-29-cairn-design-trial-assets.md).** What happened:
   (`sveltejs/kit#12987`, open). Proven on the shipped bundle; ETag presence tracks the
   lost status exactly. An independent refuter tried to break this and returned CONFIRMED.
 - **Gates**: check 0/0 (1003 files), 2003 tests exit 0, build green. Full record in
-  `docs/design-benchmark/2026-07-29-assets-trial-log.md`; **ten** cairn findings staged in
-  `docs/2026-07-29-assets-trial-harvest-findings.md` (paste into cairn's friction log
-  when that repo is free — a `design-infra-pass-2` worktree still had live workerd).
-  Findings 7 and 8 are the important pair: the status flattening, and the fact that it
-  composes with 0.91.0's new identity guard to reopen exactly the hole that guard closed
-  (a never-was-a-route page SSRs the 404 and hydrates the same 404, so identities agree
-  and only the non-2xx precondition would catch it — which the flattening defeats).
+  `docs/design-benchmark/2026-07-29-assets-trial-log.md`. **All ten staged cairn findings
+  are FOLDED cairn-side (2026-07-29 evening, at cairn's 0.91.1 hotfix pass) and the staging
+  file is deleted per its own instruction** (detail lives in cairn's ROADMAP harvest block
+  and this repo's git history): finding 1 shipped as cairn `0.91.1` (published, `latest`;
+  the nineteen dropped classes restored and the shipped sheet's class inventory now a
+  snapshot-gated contract, so the substrate upgrade step is UNBLOCKED, `^0.91.0` resolves
+  to it on the next install); the status flattening repointed cairn's standing kit entry
+  to the OPEN sveltejs/kit#12987 (the previously tracked kit#12533 is closed, stale) with
+  a cairn-side mitigation now weighed; findings 7 and 8 remain the important pair, the
+  flattening composing with 0.91.0's identity guard to reopen the audited-404 hole, both
+  filed with the remedy candidates named.
 - **COMMITTED AS 986f95c, DELIBERATELY NOT PUSHED. Do not push before regenerating the
   visual baselines.** Rendering moved (0.91.0's `PageHeader` margin fix, the four
   documents h1s, the chip register, and `HEADER_CELL` on 118 sites), so the existing
