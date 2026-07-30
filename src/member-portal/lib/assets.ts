@@ -9,6 +9,32 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import { assignAsset, addToWaitlist, listAssetTypes, releaseAssignment, type AssetTypeRow } from '$admin-club/lib/assets-store';
 import { getCurrentSeason } from '$admin-club/lib/club-settings';
+import type { EmailBindingEnv } from '$admin-club/lib/club-email';
+import { sendAssetDecisionEmail, type AssetDecisionKind } from './asset-decision-notify';
+
+/**
+ * Fire the decision email for `requestId` best-effort (Assets substrate T5b): a failed or
+ * unbound send never fails the admin action that already committed, matching
+ * `offers.ts`'s own `try`/`catch`-around-`sendClubEmail` precedent, since
+ * `sendAssetDecisionEmail` itself only degrades to `{ ok: false }` for an expected refusal
+ * (no recipient, an unbound `EMAIL`), not for an unexpected error mid-lookup.
+ */
+async function notifyDecision(
+  db: D1Database,
+  env: EmailBindingEnv,
+  origin: string,
+  args: { kind: Exclude<AssetDecisionKind, 'slot_opened'>; requestId: string; reason?: string },
+): Promise<void> {
+  try {
+    if (args.kind === 'denied') {
+      await sendAssetDecisionEmail(db, env, { kind: 'denied', requestId: args.requestId, origin, reason: args.reason ?? '' });
+    } else {
+      await sendAssetDecisionEmail(db, env, { kind: args.kind, requestId: args.requestId, origin });
+    }
+  } catch (err) {
+    console.error('member-portal: asset decision email failed', err);
+  }
+}
 
 /** A user-facing refusal, matching every other portal module's `{ error }` shape. */
 export interface AssetActionError {
@@ -299,9 +325,16 @@ export async function getPriorHoldingSummary(db: D1Database, householdId: string
  * design doc's own "approve places the household into the queue (or assigns directly when the
  * type has a free slot)"). Refuses a request that is not pending, or not a 'new' request (a
  * 'retention' request always goes through {@link approveRetentionRequest} instead, the merit-gate
- * sequence).
+ * sequence). Fires the matching decision email (Assets substrate T5b) once the decision commits;
+ * `env`/`origin` reach {@link notifyDecision}, never gate the decision itself.
  */
-export async function approveNewRequest(db: D1Database, requestId: string, actorEmail: string): Promise<{ ok: true; outcome: 'assigned' | 'queued' } | AssetActionError> {
+export async function approveNewRequest(
+  db: D1Database,
+  requestId: string,
+  actorEmail: string,
+  env: EmailBindingEnv,
+  origin: string,
+): Promise<{ ok: true; outcome: 'assigned' | 'queued' } | AssetActionError> {
   const request = await db
     .prepare("SELECT asset_type, household_id, requested_by, kind FROM asset_requests WHERE id = ?1 AND status = 'pending'")
     .bind(requestId)
@@ -324,6 +357,7 @@ export async function approveNewRequest(db: D1Database, requestId: string, actor
       .prepare("UPDATE asset_requests SET status = 'assigned', assignment_id = ?1, resolved_at = datetime('now'), resolved_by = ?2 WHERE id = ?3")
       .bind(assignmentId, actorEmail, requestId)
       .run();
+    await notifyDecision(db, env, origin, { kind: 'assigned', requestId });
     return { ok: true, outcome: 'assigned' };
   }
 
@@ -332,6 +366,7 @@ export async function approveNewRequest(db: D1Database, requestId: string, actor
     .prepare("UPDATE asset_requests SET status = 'queued', waitlist_id = ?1, resolved_at = datetime('now'), resolved_by = ?2 WHERE id = ?3")
     .bind(waitlistId, actorEmail, requestId)
     .run();
+  await notifyDecision(db, env, origin, { kind: 'queued', requestId });
   return { ok: true, outcome: 'queued' };
 }
 
@@ -340,9 +375,17 @@ export async function approveNewRequest(db: D1Database, requestId: string, actor
  * own merit-gate-then-pay sequence — "the approval moment is leadership's merit gate... before
  * money changes hands"). The member's landing task list then reads `status ===
  * 'approved_awaiting_payment'` as "Pay for your <asset> — $<fee>". Refuses a request that is not
- * pending or not a 'retention' request.
+ * pending or not a 'retention' request. Fires the retention-approved decision email (Assets
+ * substrate T5b): `approved_awaiting_payment` is a state the member must still act on, unlike a
+ * plain assignment.
  */
-export async function approveRetentionRequest(db: D1Database, requestId: string, actorEmail: string): Promise<{ ok: true } | AssetActionError> {
+export async function approveRetentionRequest(
+  db: D1Database,
+  requestId: string,
+  actorEmail: string,
+  env: EmailBindingEnv,
+  origin: string,
+): Promise<{ ok: true } | AssetActionError> {
   const request = await db.prepare("SELECT kind FROM asset_requests WHERE id = ?1 AND status = 'pending'").bind(requestId).first<{ kind: 'new' | 'retention' }>();
   if (!request) return { error: 'No such pending request.' };
   if (request.kind !== 'retention') return { error: 'A new request needs the new-request approval action.' };
@@ -350,17 +393,27 @@ export async function approveRetentionRequest(db: D1Database, requestId: string,
     .prepare("UPDATE asset_requests SET status = 'approved_awaiting_payment', resolved_at = datetime('now'), resolved_by = ?1 WHERE id = ?2")
     .bind(actorEmail, requestId)
     .run();
+  await notifyDecision(db, env, origin, { kind: 'retention_approved', requestId });
   return { ok: true };
 }
 
 /** Deny a pending request, requiring a reason (the signup queue's own required-reason
- *  convention). Works for either `kind`. */
-export async function denyAssetRequest(db: D1Database, requestId: string, reason: string, actorEmail: string): Promise<{ ok: true } | AssetActionError> {
+ *  convention). Works for either `kind`. Fires the denied decision email (Assets substrate T5b)
+ *  carrying `reason` verbatim, so the household reads exactly what the admin recorded. */
+export async function denyAssetRequest(
+  db: D1Database,
+  requestId: string,
+  reason: string,
+  actorEmail: string,
+  env: EmailBindingEnv,
+  origin: string,
+): Promise<{ ok: true } | AssetActionError> {
   const result = await db
     .prepare("UPDATE asset_requests SET status = 'denied', deny_reason = ?1, resolved_at = datetime('now'), resolved_by = ?2 WHERE id = ?3 AND status = 'pending'")
     .bind(reason, actorEmail, requestId)
     .run();
   if ((result.meta.changes ?? 0) !== 1) return { error: 'No such pending request.' };
+  await notifyDecision(db, env, origin, { kind: 'denied', requestId, reason });
   return { ok: true };
 }
 

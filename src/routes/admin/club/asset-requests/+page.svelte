@@ -75,7 +75,7 @@ outright (the merit gate), so its own button reads "Approve (opens pay task)". -
         <dialog bind:this={dialogs[row.id]} class="modal" oncancel={(event) => event.preventDefault()}>
           <div class="modal-box">
             <h2 class="type-heading font-bold">Deny {row.householdName}'s request</h2>
-            <p class="py-2 type-body text-muted">This clears the case from the queue; letting the household know is a manual step today.</p>
+            <p class="py-2 type-body text-muted">This clears the case from the queue. The household automatically receives the reason below by email.</p>
             <form method="dialog">
               <input type="hidden" name="id" value={row.id} />
               <CsrfField />

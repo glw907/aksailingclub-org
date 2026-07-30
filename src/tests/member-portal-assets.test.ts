@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { fakeD1 } from './_fake-d1';
+import type { EmailBindingEnv } from '$admin-club/lib/club-email';
 import {
   approveNewRequest,
   approveRetentionRequest,
@@ -15,6 +16,14 @@ import {
   payForApprovedRequest,
   releaseHouseholdAssignment,
 } from '$member-portal/lib/assets';
+
+const ORIGIN = 'https://dev.aksailingclub.org';
+
+/** No `EMAIL` binding: every decision test below except the "decision emails" suite itself uses
+ *  this, so the notify-best-effort call inside each decision function degrades harmlessly (T5a's
+ *  own {@link sendAssetDecisionEmail} answers `{ ok: false }` with nothing wired to look up) and
+ *  never disturbs these tests' own pre-existing assertions. */
+const NO_EMAIL: EmailBindingEnv = {};
 
 describe('listHouseholdAssignments', () => {
   it('derives paymentStanding from the joined payment row, not a stored flag', async () => {
@@ -149,12 +158,12 @@ describe('approveNewRequest', () => {
 
   it('refuses a non-pending or unknown request', async () => {
     const { db } = fakeD1({ firstResults: { 'FROM asset_requests WHERE id': null } });
-    await expect(approveNewRequest(db, 'req-1', 'admin@example.com')).resolves.toEqual({ error: expect.stringContaining('No such pending') });
+    await expect(approveNewRequest(db, 'req-1', 'admin@example.com', NO_EMAIL, ORIGIN)).resolves.toEqual({ error: expect.stringContaining('No such pending') });
   });
 
   it('refuses a retention-kind request (needs the retention approval action)', async () => {
     const { db } = fakeD1({ firstResults: { 'FROM asset_requests WHERE id': { ...REQUEST_ROW, kind: 'retention' } } });
-    await expect(approveNewRequest(db, 'req-1', 'admin@example.com')).resolves.toEqual({ error: expect.stringContaining('retention approval') });
+    await expect(approveNewRequest(db, 'req-1', 'admin@example.com', NO_EMAIL, ORIGIN)).resolves.toEqual({ error: expect.stringContaining('retention approval') });
   });
 
   it('assigns directly when the type has a free slot', async () => {
@@ -166,7 +175,7 @@ describe('approveNewRequest', () => {
         'FROM memberships WHERE household_id': { id: 'ms-1' },
       },
     });
-    const result = await approveNewRequest(db, 'req-1', 'admin@example.com');
+    const result = await approveNewRequest(db, 'req-1', 'admin@example.com', NO_EMAIL, ORIGIN);
     expect(result).toEqual({ ok: true, outcome: 'assigned' });
     expect(calls.some((c) => c.sql.startsWith('INSERT INTO asset_assignments'))).toBe(true);
     expect(calls.some((c) => c.sql.includes("SET status = 'assigned'"))).toBe(true);
@@ -180,7 +189,7 @@ describe('approveNewRequest', () => {
         'FROM asset_assignments WHERE asset_type': { n: 3 },
       },
     });
-    const result = await approveNewRequest(db, 'req-1', 'admin@example.com');
+    const result = await approveNewRequest(db, 'req-1', 'admin@example.com', NO_EMAIL, ORIGIN);
     expect(result).toEqual({ ok: true, outcome: 'queued' });
     expect(calls.some((c) => c.sql.startsWith('INSERT INTO asset_waitlist'))).toBe(true);
     expect(calls.some((c) => c.sql.includes("SET status = 'queued'"))).toBe(true);
@@ -195,14 +204,14 @@ describe('approveNewRequest', () => {
         'FROM memberships WHERE household_id': { id: 'ms-1' },
       },
     });
-    await expect(approveNewRequest(db, 'req-1', 'admin@example.com')).resolves.toEqual({ ok: true, outcome: 'assigned' });
+    await expect(approveNewRequest(db, 'req-1', 'admin@example.com', NO_EMAIL, ORIGIN)).resolves.toEqual({ ok: true, outcome: 'assigned' });
   });
 });
 
 describe('approveRetentionRequest', () => {
   it('opens the pay task without assigning outright (the merit gate)', async () => {
     const { db, calls } = fakeD1({ firstResults: { 'FROM asset_requests WHERE id': { kind: 'retention' } } });
-    const result = await approveRetentionRequest(db, 'req-1', 'admin@example.com');
+    const result = await approveRetentionRequest(db, 'req-1', 'admin@example.com', NO_EMAIL, ORIGIN);
     expect(result).toEqual({ ok: true });
     expect(calls.some((c) => c.sql.includes("SET status = 'approved_awaiting_payment'"))).toBe(true);
     expect(calls.some((c) => c.sql.startsWith('INSERT INTO asset_assignments'))).toBe(false);
@@ -210,19 +219,19 @@ describe('approveRetentionRequest', () => {
 
   it('refuses a new-kind request', async () => {
     const { db } = fakeD1({ firstResults: { 'FROM asset_requests WHERE id': { kind: 'new' } } });
-    await expect(approveRetentionRequest(db, 'req-1', 'admin@example.com')).resolves.toEqual({ error: expect.stringContaining('new-request approval') });
+    await expect(approveRetentionRequest(db, 'req-1', 'admin@example.com', NO_EMAIL, ORIGIN)).resolves.toEqual({ error: expect.stringContaining('new-request approval') });
   });
 });
 
 describe('denyAssetRequest', () => {
   it('requires the request to still be pending', async () => {
     const { db } = fakeD1({ runResults: { "SET status = 'denied'": { changes: 0 } } });
-    await expect(denyAssetRequest(db, 'req-1', 'Not eligible', 'admin@example.com')).resolves.toEqual({ error: 'No such pending request.' });
+    await expect(denyAssetRequest(db, 'req-1', 'Not eligible', 'admin@example.com', NO_EMAIL, ORIGIN)).resolves.toEqual({ error: 'No such pending request.' });
   });
 
   it('denies with the reason recorded', async () => {
     const { db, calls } = fakeD1({ runResults: { "SET status = 'denied'": { changes: 1 } } });
-    const result = await denyAssetRequest(db, 'req-1', 'Not eligible', 'admin@example.com');
+    const result = await denyAssetRequest(db, 'req-1', 'Not eligible', 'admin@example.com', NO_EMAIL, ORIGIN);
     expect(result).toEqual({ ok: true });
     expect(calls[0].args).toEqual(['Not eligible', 'admin@example.com', 'req-1']);
   });
@@ -280,5 +289,91 @@ describe('listPendingAssetRequests (the admin review inbox)', () => {
     const rows = await listPendingAssetRequests(db);
     expect(rows).toHaveLength(1);
     expect(rows[0].priorHolding).toBe('Held this type 2025, paid each season.');
+  });
+});
+
+// The decision-email wiring (Assets substrate T5b): every firstResults fixture below carries
+// BOTH the deciding function's own lookup keys (`FROM asset_requests WHERE id`, etc.) and
+// `sendAssetDecisionEmail`'s own re-lookup keys (`FROM asset_requests r`, `FROM members WHERE
+// id`), since a decision send re-reads the request fresh rather than threading its data through
+// from the caller (asset-decision-notify.ts's own header explains why).
+describe('decision emails (Assets substrate T5b)', () => {
+  const DECISION_LOOKUP = { household_id: 'hh-1', requested_by: 'mem-1', asset_type_name: 'Mooring', fee: 300 };
+  const RECIPIENT = { 'FROM asset_requests r': DECISION_LOOKUP, 'FROM members WHERE id': { email: 'household@example.com' } };
+
+  it('approving a new request into a free slot sends the assigned kind', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const { db } = fakeD1({
+      firstResults: {
+        'FROM asset_requests WHERE id': { asset_type: 'mooring', household_id: 'hh-1', requested_by: 'mem-1', kind: 'new' as const },
+        'FROM asset_types WHERE id': { capacity: 10 },
+        'FROM asset_assignments WHERE asset_type': { n: 3 },
+        'FROM memberships WHERE household_id': { id: 'ms-1' },
+        ...RECIPIENT,
+      },
+    });
+    const result = await approveNewRequest(db, 'req-1', 'admin@example.com', { EMAIL: { send } }, ORIGIN);
+    expect(result).toEqual({ ok: true, outcome: 'assigned' });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0].to).toBe('household@example.com');
+    expect(send.mock.calls[0][0].text).toContain('assigned it to your household');
+  });
+
+  it('approving into a full type sends the queued kind', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const { db } = fakeD1({
+      firstResults: {
+        'FROM asset_requests WHERE id': { asset_type: 'mooring', household_id: 'hh-1', requested_by: 'mem-1', kind: 'new' as const },
+        'FROM asset_types WHERE id': { capacity: 3 },
+        'FROM asset_assignments WHERE asset_type': { n: 3 },
+        ...RECIPIENT,
+      },
+    });
+    const result = await approveNewRequest(db, 'req-1', 'admin@example.com', { EMAIL: { send } }, ORIGIN);
+    expect(result).toEqual({ ok: true, outcome: 'queued' });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0].text).toContain('your household is on the waitlist');
+  });
+
+  it('approving a retention request sends the retention kind', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const { db } = fakeD1({
+      firstResults: {
+        'FROM asset_requests WHERE id': { kind: 'retention' as const },
+        ...RECIPIENT,
+      },
+    });
+    const result = await approveRetentionRequest(db, 'req-1', 'admin@example.com', { EMAIL: { send } }, ORIGIN);
+    expect(result).toEqual({ ok: true });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0].text).toContain('$300');
+  });
+
+  it('denying sends the denied kind with the reason present in the body', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const { db } = fakeD1({
+      runResults: { "SET status = 'denied'": { changes: 1 } },
+      firstResults: RECIPIENT,
+    });
+    const result = await denyAssetRequest(db, 'req-1', 'Not eligible this season', 'admin@example.com', { EMAIL: { send } }, ORIGIN);
+    expect(result).toEqual({ ok: true });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0].text).toContain('Not eligible this season');
+  });
+
+  it('an unbound EMAIL binding leaves the approve and deny results unchanged', async () => {
+    const { db: approveDb } = fakeD1({
+      firstResults: {
+        'FROM asset_requests WHERE id': { asset_type: 'mooring', household_id: 'hh-1', requested_by: 'mem-1', kind: 'new' as const },
+        'FROM asset_types WHERE id': { capacity: 10 },
+        'FROM asset_assignments WHERE asset_type': { n: 3 },
+        'FROM memberships WHERE household_id': { id: 'ms-1' },
+        ...RECIPIENT,
+      },
+    });
+    await expect(approveNewRequest(approveDb, 'req-1', 'admin@example.com', {}, ORIGIN)).resolves.toEqual({ ok: true, outcome: 'assigned' });
+
+    const { db: denyDb } = fakeD1({ runResults: { "SET status = 'denied'": { changes: 1 } }, firstResults: RECIPIENT });
+    await expect(denyAssetRequest(denyDb, 'req-1', 'Not eligible', 'admin@example.com', {}, ORIGIN)).resolves.toEqual({ ok: true });
   });
 });

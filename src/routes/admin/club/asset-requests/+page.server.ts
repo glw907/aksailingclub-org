@@ -7,7 +7,15 @@ import type { Actions, PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
 import { clubAdminAction } from '$admin-club/lib/club-action';
 import { resolveClubDb } from '$admin-club/lib/club-db';
+import type { EmailBindingEnv } from '$admin-club/lib/club-email';
 import { approveNewRequest, approveRetentionRequest, denyAssetRequest, listPendingAssetRequests } from '$member-portal/lib/assets';
+
+/** The narrow bridge this route reads `EMAIL` off `event.platform.env` through, matching
+ *  `sign/+page.server.ts`'s own precedent: `AdminActionEvent.platform.env` is typed by the
+ *  engine's own narrow `AuthEnv`, which never expresses a site-only binding. */
+function resolveEmailEnv(env: unknown): EmailBindingEnv {
+  return (env as EmailBindingEnv | undefined) ?? {};
+}
 
 export const load: PageServerLoad = async (event) => {
   requireSession(event);
@@ -25,13 +33,13 @@ const DENIED_MESSAGE = 'A club role is required to review asset requests.';
 
 export const actions: Actions = {
   approveNew: clubAdminAction(
-    async ({ form, ctx }) => {
+    async ({ event, form, ctx }) => {
       const id = requireRequestId(form);
       if (!id) {
         ctx.audit({ action: 'approve', entity: 'asset-request', detail: 'rejected: missing request id' });
         return fail(400, { error: 'Missing request id.' });
       }
-      const result = await approveNewRequest(ctx.db, id, ctx.editor.email);
+      const result = await approveNewRequest(ctx.db, id, ctx.editor.email, resolveEmailEnv(event.platform?.env), event.url.origin);
       if ('error' in result) {
         ctx.audit({ action: 'approve', entity: 'asset-request', entityId: id, detail: `rejected: ${result.error}` });
         return fail(400, { error: result.error });
@@ -43,13 +51,13 @@ export const actions: Actions = {
   ),
 
   approveRetention: clubAdminAction(
-    async ({ form, ctx }) => {
+    async ({ event, form, ctx }) => {
       const id = requireRequestId(form);
       if (!id) {
         ctx.audit({ action: 'approve', entity: 'asset-request', detail: 'rejected: missing request id' });
         return fail(400, { error: 'Missing request id.' });
       }
-      const result = await approveRetentionRequest(ctx.db, id, ctx.editor.email);
+      const result = await approveRetentionRequest(ctx.db, id, ctx.editor.email, resolveEmailEnv(event.platform?.env), event.url.origin);
       if ('error' in result) {
         ctx.audit({ action: 'approve', entity: 'asset-request', entityId: id, detail: `rejected: ${result.error}` });
         return fail(400, { error: result.error });
@@ -61,7 +69,7 @@ export const actions: Actions = {
   ),
 
   deny: clubAdminAction(
-    async ({ form, ctx }) => {
+    async ({ event, form, ctx }) => {
       const id = requireRequestId(form);
       if (!id) {
         ctx.audit({ action: 'deny', entity: 'asset-request', detail: 'rejected: missing request id' });
@@ -73,7 +81,7 @@ export const actions: Actions = {
         return fail(400, { error: 'A reason is required to deny a request.', id });
       }
       const trimmedReason = reason.trim();
-      const result = await denyAssetRequest(ctx.db, id, trimmedReason, ctx.editor.email);
+      const result = await denyAssetRequest(ctx.db, id, trimmedReason, ctx.editor.email, resolveEmailEnv(event.platform?.env), event.url.origin);
       if ('error' in result) {
         ctx.audit({ action: 'deny', entity: 'asset-request', entityId: id, detail: `rejected: ${result.error}` });
         return fail(400, { error: result.error });
