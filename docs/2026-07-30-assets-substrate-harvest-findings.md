@@ -50,15 +50,35 @@
    Tracked site-side in `docs/2026-07-07-polish-backlog.md`, deferred by Geoff to a subsequent
    pass.
 
-2. **A toggle-action primitive, if a second surface wants it.** ASC's retention control on
-   `/my-account/renew` established a pattern worth naming: a fixed-size slot holding two
-   absolutely positioned states, `use:enhance` wiring with a per-key in-flight busy state that
-   also closes the double-submit window, and a reduced-motion-aware crossfade between states.
-   It was built self-contained in one route on purpose rather than abstracted from a single
-   example. A shared primitive would need to parameterise the done-state visual, since the
-   icon, colour and copy vary by use (Requested here, Cancelled or Released elsewhere), while
-   keeping those mechanics. Filed as an observation, not a request: lift it when a second
-   surface needs the behaviour.
+2. **The toggle-action control is an engine-level primitive (Geoff, 2026-07-30).** ASC's
+   retention control on `/my-account/renew` established the pattern: a fixed-size slot holding
+   two absolutely positioned states, `use:enhance` wiring with a per-key in-flight busy state
+   that also closes the double-submit window, and a reduced-motion-aware crossfade between
+   them. It was built self-contained in that one route during the pass, and this finding was
+   first filed as an observation to lift later. **Geoff's call supersedes that: cairn should
+   own it, alongside findings 1 and 3.** The mechanics are generic, and a form action that
+   toggles a row into a settled state is a shape every consuming site reaches for, so the
+   family wants one implementation rather than each site rediscovering the enhance wiring and
+   the reduced-motion branch.
+
+   What cairn ships: the two-state slot with a stable footprint so a row never reflows as its
+   state changes, the enhanced-form wiring keyed per row, the in-flight busy state that refuses
+   a second submit, and the motion treatment with its reduced-motion path. The state must flip
+   on the action's own success and never optimistically, since a control that animates ahead of
+   the write and then disagrees with the database is worse than one that does not animate.
+
+   The open design question for the cairn pass, which does not block it: how the done state is
+   parameterised. Icon, colour and copy vary by use (Requested here, Cancelled or Released
+   elsewhere), and ASC's single instance is not enough to settle whether that wants slots, a
+   variant enum, or plain props. Decide it against a second real surface if cairn has one to
+   hand; otherwise choose the least binding option, since widening later is additive and
+   narrowing is not.
+
+   Accessibility rides with the primitive rather than the caller. ASC's instance carries a
+   visible short label plus visually hidden text naming the row's own subject, so repeated
+   controls in one list do not present one accessible name many times, and the visible label
+   stays a leading substring of the accessible name (WCAG 2.5.3, which a bare `aria-label`
+   would violate). A primitive that leaves this to each call site will be got wrong.
 
 3. **The label-and-value row wants an engine primitive with an explicit wrap contract, plus a
    sibling-consistency check (Geoff, 2026-07-30).** Geoff's second observation was that the row

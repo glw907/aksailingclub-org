@@ -163,11 +163,8 @@ not done today Geoff tackles on Opus tomorrow; hand this file to that session.
   a public member-facing site. Whatever mechanism wins, pair it with a standing check in
   `scripts/design-probe.mjs` alongside `checkTouchTargets` and `checkOverflow`, so the rule is
   mechanical rather than dependent on someone noticing.
-- **A shared portal toggle-action primitive** (DX harvest, 2026-07-30). The retention control on
-  `/my-account/renew` established the pattern: a fixed-size slot holding two absolutely
-  positioned states, `use:enhance` wiring with a per-key in-flight busy state that closes the
-  double-submit window, and a reduced-motion-aware crossfade between states. It was deliberately
-  built self-contained in that one route rather than abstracted from a single example. A shared
-  primitive would need to parameterise the done-state visual (icon, colour, copy vary by use:
-  Requested here, Cancelled or Released elsewhere) while keeping those mechanics. Lift it when a
-  second surface wants the same behaviour, not before.
+- **The toggle-action control** (Geoff, 2026-07-30). **ENGINE-level, like the two items above:
+  cairn owns the primitive. Filed for the harvest in
+  `docs/2026-07-30-assets-substrate-harvest-findings.md`, finding 2.** ASC's retention control on
+  `/my-account/renew` is the reference implementation and stays self-contained in that route
+  until cairn ships; the site-side work is then dropping the local copy for the primitive.
