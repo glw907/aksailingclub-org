@@ -4,5 +4,21 @@
       "src/theme/theme.css",
       "src/chassis/tokens.css"
     ]
+  },
+  "rendered": {
+    "pages": [
+      "/admin/editors",
+      "/admin/login",
+      "/admin/media",
+      "/admin/pages",
+      "/admin/posts",
+      "/admin/vocabulary",
+      "/admin/club/assets",
+      "/admin/club/asset-requests",
+      "/admin/club/members",
+      "/admin/club/classes",
+      "/admin/posts/2026-02-27-welcome-new-website",
+      "/admin/pages/bylaws"
+    ]
   }
 }

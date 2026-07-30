@@ -102,3 +102,46 @@
    assumes the setting is off. The check cannot distinguish "the zone setting is wrong" from "this
    token cannot read zone settings," and it reports the first while measuring the second. Naming
    the scope the read needs would make the failure actionable.
+
+## Filed at the rendered baseline (2026-07-29, chore 5)
+
+7. **Every error thrown under the authed admin shell returns HTTP 200 (correctness, HIGH).**
+   `admin.shellLoad` returns an unawaited `pendingEntries` promise (`content-routes-core.js:142`,
+   streamed deliberately per its own doc comment), so every authed `/admin/**` response takes
+   SvelteKit's streaming branch. That branch builds `new Response(stream, { headers })` with no
+   `status`, where the non-streamed branch passes `status` through. A cairn `error(404, 'Not
+   found')` therefore goes out as 200 with the consumer's themed 404 in the body. Confirmed on
+   the shipped artifact, not just in `node_modules`: `.svelte-kit/output/server/index.js` carries
+   the same single status-passing site, and ETag presence tracks the lost status exactly as
+   `render.js:640` predicts. The root cause is upstream (`sveltejs/kit#12987`, open), but cairn
+   chooses the streaming that triggers it, so cairn is where a consumer can be protected. The
+   blast radius is not only bad paths: `/admin/posts/<deleted-or-mistyped-slug>` is the likely
+   real-world hit, and it reports success to crawlers, uptime monitors, and any caller that
+   trusts a status code.
+
+8. **The post-hydration identity guard and the non-2xx precondition leave a hole between them,
+   and finding 7 is what opens it (harness, HIGH).** `0.91.0` added the identity guard so a
+   route that hydrates into the wrong chrome is reported unmeasurable rather than silently
+   audited. It catches a *swap*: SSR identity against settled identity. A page that was never a
+   route fails differently — it SSRs the consumer's 404 and hydrates that same 404, so the two
+   identities agree and the guard passes it. The only check that would catch it is the
+   "any configured page rendering outside 2xx" precondition (`audit/rendered.js:665`), and
+   finding 7 defeats exactly that. Composed, the two reopen the precise hole the guard was
+   added to close: this run audited twelve pages, exit 0, zero identity mismatches, and would
+   have measured a 404 page as a real screen had one of its configured paths been wrong. Worth
+   reading the page's own embedded `status`, or comparing settled identity against the
+   *requested route* rather than only against what the server sent.
+
+9. **The rendered summary's two totals are computed differently (DX, low).** The advisories
+   total counts printed lines, while the suppressed total is `(xN)`-weighted: 393 advisories
+   equals a raw 393-line count even though two lines carry `(x4)`, whereas the suppressed total
+   of 217 equals the weighted sum of its 96 lines. Neither number is wrong on its own terms, but
+   a reader hand-reconciling them will find a discrepancy that has no meaning.
+
+10. **A CodeMirror decoration throw on the bulletins edit desk (defect, medium).**
+    `/admin/bulletins/2026-03-membership-open` throws `Ranges must be added sorted by 'from'
+    position and 'startSide'` at 1440 in both themes. The editor still mounts and stays
+    reactive, so it does not break the desk, and it did not surface on the post or page desks.
+    A decoration set is being built out of order somewhere in the editing surface. Alongside it,
+    a `source-code-pro-latin-wght-normal.*.woff2` request fails on that desk, which is a
+    separate question about whether that face ships.

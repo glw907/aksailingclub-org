@@ -8,10 +8,10 @@
 > entries beyond the top two or three to the archive — this file is @-imported into every
 > session's context, so its length is a per-session token tax.
 
-**THE ASSETS PASS IS OPEN AS THE CAIRN DESIGN-CAPTURE TRIAL; THE PRE-TRIAL CHORES ARE
-DONE AND THEY TURNED UP A CAIRN 0.91.0 REGRESSION, SO NO MEASUREMENT HAS RUN YET
-(2026-07-29, Opus 5 conducting, plan docs/plans/2026-07-29-cairn-design-trial-assets.md).**
-What happened:
+**THE ASSETS PASS IS OPEN AS THE CAIRN DESIGN-CAPTURE TRIAL; ALL FIVE PRE-TRIAL CHORES
+ARE NOW DONE, AND THEY TURNED UP A CAIRN 0.91.0 REGRESSION PLUS A SECOND, WORSE SUBSTRATE
+DEFECT (2026-07-29, Opus 5 conducting, plan
+docs/plans/2026-07-29-cairn-design-trial-assets.md).** What happened:
 
 - **THE HEADLINE FINDING: cairn 0.91.0 silently killed 300 ASC admin markup sites and
   shipped as non-breaking.** Its grammar migration moved cairn's own screens onto
@@ -38,10 +38,33 @@ What happened:
   screens (Money 18, Members detail 18, the signature certificate 15, ...) and go to
   each screen's own pass, per the discovered-work rule. Only 5 of 99 were ever on the
   Assets perimeter.
+- **CHORE 5 (the rendered baseline) IS DONE: two runs, both exit 0, ZERO error-tier
+  findings.** Default 6-page list 393 advisories; `rendered.pages` extended with ASC's
+  own screens (Assets perimeter, Members, Classes, two edit desks) 12 pages / 660
+  advisories, all advisory mass being the known stock-hairline and pre-chroma-repair chip
+  states. **The Assets perimeter carries 12 advisories and two matter to the build**: the
+  asset-type chip reads 1.15 against its row and the warning-state chip reads **1.00 in
+  both themes**, so that state marker is not perceivable at all. Also undersized
+  `select-sm`/`input-sm` at 30.4px against a 32-40px band.
+- **THE EDIT-DESK HYDRATION DEFECT DOES NOT EXIST, and what replaced it is worse.**
+  Corpus C configured `/admin/edit/<concept>/<id>`, which is cairn's INTERNAL route name;
+  ASC's single-mount admin serves that desk at `/admin/<concept>/<id>`. Those paths 404,
+  and the themed 404 IS the SSR body (verified JS-disabled). The real desks are clean: 24
+  runs across 6 desks / 5 concepts / 2 themes / 2 viewports, SSR identity == settled
+  identity every time, hydration proven live. The 0.90.1 alibi is closed too — that
+  version's dispatch already returned null for a three-segment path. **What made a 404
+  read as admin HTML: every error under the authed admin shell returns HTTP 200**, because
+  cairn's shell load streams and SvelteKit's streaming branch omits `status`
+  (`sveltejs/kit#12987`, open). Proven on the shipped bundle; ETag presence tracks the
+  lost status exactly. An independent refuter tried to break this and returned CONFIRMED.
 - **Gates**: check 0/0 (1003 files), 2003 tests exit 0, build green. Full record in
-  `docs/design-benchmark/2026-07-29-assets-trial-log.md`; six cairn findings staged in
+  `docs/design-benchmark/2026-07-29-assets-trial-log.md`; **ten** cairn findings staged in
   `docs/2026-07-29-assets-trial-harvest-findings.md` (paste into cairn's friction log
   when that repo is free — a `design-infra-pass-2` worktree still had live workerd).
+  Findings 7 and 8 are the important pair: the status flattening, and the fact that it
+  composes with 0.91.0's new identity guard to reopen exactly the hole that guard closed
+  (a never-was-a-route page SSRs the 404 and hydrates the same 404, so identities agree
+  and only the non-2xx precondition would catch it — which the flattening defeats).
 - **COMMITTED AS 986f95c, DELIBERATELY NOT PUSHED. Do not push before regenerating the
   visual baselines.** Rendering moved (0.91.0's `PageHeader` margin fix, the four
   documents h1s, the chip register, and `HEADER_CELL` on 118 sites), so the existing
@@ -51,16 +74,21 @@ What happened:
 - **PASS-SIZE FLAG (Geoff): the "mechanical" pre-trial chores became a pass of their
   own** — a substrate defect, ~400 repaired sites, and a six-item harvest, before any
   measurement. The trial itself has not started.
-- **NEXT, in order**: (1) the rendered audit baseline, which needs local `wrangler dev`
-  + a seeded D1 session row + `CAIRN_AUDIT_COOKIES` — the same door the edit-desk
-  hydration defect must be diagnosed through, so do both together; (2) regenerate the
-  visual baselines via `gh workflow run ci.yml -f update_snapshots=true` and READ the
-  log (0.91.0's `PageHeader` margin fix plus the h1 and chip changes all move
-  rendering); (3) Geoff's before/after on the changed admin screens; (4) THEN the trial
-  proper, opening with the Assets functional brainstorm. RESUME PROMPT: "Continue the
-  Assets design-capture trial: read docs/design-benchmark/2026-07-29-assets-trial-log.md
-  and the plan, then run the rendered audit baseline and diagnose the edit-desk
-  hydration defect against local wrangler dev." Launch from ~/Projects/aksailingclub-org.
+- **NEXT, in order**: (1) regenerate the visual baselines, which needs a REMOTE BRANCH
+  first — `ci.yml`'s `update_snapshots` dispatch commits the PNGs back to whatever branch
+  it ran against, and `ci.yml` also triggers on a push to `main`, so pushing these
+  commits straight to `main` would both fail CI on the stale baselines and fire a dev
+  deploy. Push the two commits to a side branch, dispatch `update_snapshots` against it,
+  READ the log, pull the bot's PNG commit, then fast-forward `main`. **AWAITING GEOFF'S
+  GO — it is the first remote action of this pass.** (2) Geoff's before/after on the
+  changed admin screens (every admin column header moves to 11px via `HEADER_CELL`, four
+  documents h1s to 24px/700, 21 chips to the quiet register). (3) THEN the trial proper,
+  opening with the Assets functional brainstorm, carrying the 12 perimeter advisories as
+  input — the invisible warning chip is a build item, not a chore. RESUME PROMPT:
+  "Continue the Assets design-capture trial: read
+  docs/design-benchmark/2026-07-29-assets-trial-log.md and the plan; chores 1-5 are done,
+  so pick up at the visual-baseline regeneration and then the Assets functional
+  brainstorm." Launch from ~/Projects/aksailingclub-org.
 
 
 **MEMBERS REFINEMENT ROUND 1 IS LANDED: COHERENCE-PASSED, ON DEV, BASELINES REGENERATED;

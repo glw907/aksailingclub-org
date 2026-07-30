@@ -268,3 +268,94 @@ found no rule defect at all. The 28 candidates it turned up are names defined in
 the grep was wrong. **`cairn-audit` was the reliable instrument at every step; the hand-rolled
 sheet grep was the unreliable one.** A finding against the engine gets held to the engine's own
 standard of proof before it is filed.
+
+### Chore 5, the rendered half: the baseline
+
+The door is the one corpus C used: local `wrangler dev` on `:8787` against the local D1 state,
+which still carried a live Administrator session (`cairn_session`, editor
+`e2e-owner@aksailingclub.org`, valid to 2026-08-24), so no seeding was needed. Three parentless
+`workerd` processes left over from the previous session's test run were reaped before the server
+started, per the corpus C lesson that process cleanup belongs at a pass boundary and never
+mid-flight.
+
+Two runs, both exit 0, both **zero error-tier findings**. The five error rules
+(`one-filled-action`, `focus-renders`, `interactive-contrast`, `touch-targets`,
+`viewport-overflow`) fired on nothing, on either page list, in either theme.
+
+| Run | Pages | Errors | Advisories |
+| --- | ---: | ---: | ---: |
+| default page list | 6 | 0 | 393 |
+| extended, ASC's own screens | 12 | 0 | 660 |
+
+The default list contains none of this site's own surfaces, so `rendered.pages` now names the six
+defaults plus `/admin/club/assets`, `/admin/club/asset-requests`, `/admin/club/members`,
+`/admin/club/classes`, and two edit desks (`/admin/posts/2026-02-27-welcome-new-website`,
+`/admin/pages/bylaws`). The 267-advisory delta is entirely the six added pages, and only 12 of it
+falls on the Assets perimeter. Advisory distribution on the extended run: `border-contrast` 452,
+`norms-bands` 74, `relational-spacing` 62, `chip-ground-collision` 54, `weight-budget` 14,
+`screen-anatomy` 4. The `border-contrast` mass is the known family-wide stock-hairline state, and
+`chip-ground-collision` is advisory pending its chroma repair, both already filed in cairn's
+ROADMAP.
+
+**The Assets perimeter carries 12 advisories, and two of them are worth acting on in the pass
+itself.** The asset-type chip (`bg-primary/10`) reads at 1.15 against its own row, and the
+warning-state chip (`bg-warning/15`) reads at **1.00 in both themes**, meaning that state marker
+is not perceivable at all against the row it sits on. The rule is advisory because its formula has
+no chroma term, but 1.00 is not a hue-blindness artifact: identical is identical. The rest are the
+undersized `select-sm`/`input-sm` toolbar controls at 30.4px against an observed 32-40px band, a
+square-cornered pagination button against a 10px radius band, and the shared table-header and
+hairline patterns every admin screen carries. All of it is input to the Assets build, not repair
+work for the chores.
+
+One fragility to know about the extended page list: it names two content slugs by hand, so a
+rename or deletion turns an audited screen into a silently-measured 404. That is not hypothetical,
+per the next section.
+
+### The edit-desk hydration defect does not exist
+
+Diagnosed against the running server, then put to an independent refuter that tried to break the
+finding with its own probes. Verdict **CONFIRMED, not refuted**, and the conclusion is that there
+was never a hydration defect.
+
+Corpus C's `rendered.pages` named `/admin/edit/<concept>/<id>`, which is cairn's *internal* route
+name (`admin/edit/[concept]/[id]`). ASC mounts the admin as a single `[...path]` catch-all, so its
+edit desk is `/admin/<concept>/<id>`. On the configured paths `parseAdminPath` returns null,
+`cairn-admin.js:54` throws `error(404, 'Not found')`, and with no `/admin/+error.svelte` the root
+`src/routes/+error.svelte` renders the public themed 404. **That 404 is the SSR body, verified in a
+JavaScript-disabled context at 12,320 bytes.** The corpus findings quarantined behind this are
+verbatim `+error.svelte` markup, so they were never a hydration product. Both content ids in that
+config exist and render fine at ASC's real URL shape (193KB and 214KB of admin HTML).
+
+The real edit desks are clean. Six desks across five concepts, two themes, two viewports, 24 runs:
+SSR identity matched settled identity on every one, with hydration proven live rather than assumed
+(runtime present, `.cm-editor` mounted, a tab click producing observable DOM change). Client-side
+navigation, back, forward, hard reloads, and an 8x-throttled load are all clean too.
+
+**What made a 404 look like correct admin HTML is a separate and real defect: every error under
+the authed admin shell returns HTTP 200.** cairn's shell load streams, SvelteKit's streaming
+branch omits `status` where the non-streamed branch passes it, so the 404 ships as 200 with a 404
+body. Confirmed on the shipped bundle and by a four-URL natural experiment in which ETag presence
+tracks the lost status exactly: `/admin/nope` and `/admin/edit/posts/…` return 200 with no ETag,
+while `/admin/auth/nonsense` (the same route, the same `error(404)` throw, but public and
+therefore unstreamed) and `/nonexistent-page` both return a correct 404 with an ETag. The 200 is
+what let corpus C read "SSR 200, curl proves admin markup" as proof of admin markup, when it was
+proof of nothing, and the hydration story was invented to reconcile that false premise with a true
+observation of 404 chrome in the screenshots.
+
+The version alibi is closed too, not merely assumed: `git show v0.90.1:src/lib/sveltekit/admin-dispatch.ts`
+ends its dispatch with a bare `return null` after the two-segment branch, so a three-segment
+`/admin/edit/posts/<id>` was already unroutable under the exact version corpus C measured. No
+defect existed then and was repaired since.
+
+Two consequences beyond the corpus. The likeliest real-world hit is
+`/admin/posts/<deleted-or-mistyped-slug>`, which serves the themed 404 at HTTP 200 — a real
+concept with a bad id, not an exotic path. And the status flattening composes with the identity
+guard to reopen the hole the guard was added to close: a never-was-a-route page SSRs the 404 and
+hydrates the same 404, so the identities agree and the guard passes, leaving only the non-2xx
+precondition, which the flattening defeats. Both filed as harvest findings 7 and 8, with the fix
+belonging to cairn (which chooses the streaming) over upstream SvelteKit (`sveltejs/kit#12987`,
+open). Nothing was repaired here.
+
+Also surfaced in passing and filed as finding 10: a CodeMirror `Ranges must be added sorted by
+'from' position` throw on the bulletins edit desk, non-fatal, plus a failing `source-code-pro`
+woff2 on that same desk.
