@@ -8,7 +8,8 @@
 // Sends through `sendClubEmail`'s `raw` path (`$admin-club/lib/club-email.ts`), following
 // `waiver-notify.ts`'s own precedent for a lib module owning its send rather than leaving it to
 // the route, and mints a fresh sign-in link the same way so the household lands signed in on
-// `/my-account/gear`.
+// `/my-account/gear` -- except `denied`, which has nothing on that page to act on (a denied
+// request is filtered out of its Requests section) and so mints no link at all.
 //
 // Recipient resolution: the request's own `requested_by` member, falling back to the household's
 // `primary_member_id` (`household.ts`'s own "managing adult" -- the same fallback
@@ -20,6 +21,13 @@
 // entry (`assetSlotOpenedSegment`), matching the segment idiom at `waiver-notify.ts:41,55` --
 // traceability only, never a dedup guard, since the callers already re-check a request is still
 // pending before deciding it.
+//
+// The `EMAIL` binding is checked, alongside the recipient, before any link is minted (matching
+// `waiver-notify.ts`'s own guard-before-minting order): an unbound deployment must never write a
+// live, unused sign-in token to `member_tokens`. The whole send is also wrapped in one `try`/
+// `catch`, so a D1 failure anywhere in the lookup, mint, or log step degrades to `{ ok: false }`
+// the same way an expected refusal does, keeping this module's own "never throws" promise true
+// for every failure mode, not just the two named lookups.
 import type { D1Database } from '@cloudflare/workers-types';
 import { mintMemberSignInLink } from '$member-auth/lib/auth';
 import { formatMemberCents } from '$member-auth/lib/format';
@@ -81,103 +89,115 @@ async function resolveRecipient(db: D1Database, memberId: string, householdId: s
 }
 
 const NO_RECIPIENT: SendClubEmailResult = { ok: false, error: 'No recipient email on file to notify.' };
+const NO_EMAIL_BINDING: SendClubEmailResult = { ok: false, error: 'EMAIL binding is not configured' };
 
 /**
- * Send the decision email for `args.kind`, resolving the recipient and minting their sign-in link
- * first. Never throws: a request or waitlist entry that no longer resolves, or a household with no
- * usable email anywhere, degrades to `{ ok: false }` the same way {@link sendClubEmail} degrades an
- * unbound `EMAIL` binding, so a caller can pass either failure straight through without special
- * casing which one happened.
+ * Send the decision email for `args.kind`, resolving the recipient and checking the `EMAIL`
+ * binding before minting their sign-in link. Never throws: a request or waitlist entry that no
+ * longer resolves, a household with no usable email anywhere, an unbound `EMAIL` binding, or any
+ * other failure along the way (a D1 error mid-lookup, mid-mint, or mid-log) all degrade to
+ * `{ ok: false }`, so a caller can pass any of them straight through without special casing which
+ * one happened.
  */
 export async function sendAssetDecisionEmail(db: D1Database, env: EmailBindingEnv, args: AssetDecisionEmailArgs): Promise<SendClubEmailResult> {
-  if (args.kind === 'slot_opened') {
-    const entry = await db
+  try {
+    if (args.kind === 'slot_opened') {
+      const entry = await db
+        .prepare(
+          `SELECT aw.member_id, m.household_id, at.name AS asset_type_name
+           FROM asset_waitlist aw
+           JOIN asset_types at ON at.id = aw.asset_type
+           JOIN members m ON m.id = aw.member_id
+           WHERE aw.id = ?1`,
+        )
+        .bind(args.waitlistId)
+        .first<{ member_id: string; household_id: string; asset_type_name: string }>();
+      if (!entry) return { ok: false, error: 'No such waitlist entry to notify about.' };
+
+      const recipient = await resolveRecipient(db, entry.member_id, entry.household_id);
+      if (!recipient) return NO_RECIPIENT;
+      if (!env.EMAIL) return NO_EMAIL_BINDING;
+
+      const link = await mintMemberSignInLink(db, recipient.memberId, args.origin, '/my-account/gear');
+      return sendClubEmail(db, env, {
+        to: recipient.email,
+        raw: {
+          subject: 'A {{assetTypeName}} spot is open for your household',
+          body: 'A {{assetTypeName}} spot has opened for your household. See your place on the waitlist at {{link}}.',
+        },
+        vars: { assetTypeName: entry.asset_type_name, link },
+        segment: assetSlotOpenedSegment(args.waitlistId),
+      });
+    }
+
+    const request = await db
       .prepare(
-        `SELECT aw.member_id, m.household_id, at.name AS asset_type_name
-         FROM asset_waitlist aw
-         JOIN asset_types at ON at.id = aw.asset_type
-         JOIN members m ON m.id = aw.member_id
-         WHERE aw.id = ?1`,
+        `SELECT r.household_id, r.requested_by, at.name AS asset_type_name, at.fee
+         FROM asset_requests r
+         JOIN asset_types at ON at.id = r.asset_type
+         WHERE r.id = ?1`,
       )
-      .bind(args.waitlistId)
-      .first<{ member_id: string; household_id: string; asset_type_name: string }>();
-    if (!entry) return { ok: false, error: 'No such waitlist entry to notify about.' };
+      .bind(args.requestId)
+      .first<{ household_id: string; requested_by: string; asset_type_name: string; fee: number }>();
+    if (!request) return { ok: false, error: 'No such request to notify about.' };
 
-    const recipient = await resolveRecipient(db, entry.member_id, entry.household_id);
+    const recipient = await resolveRecipient(db, request.requested_by, request.household_id);
     if (!recipient) return NO_RECIPIENT;
+    if (!env.EMAIL) return NO_EMAIL_BINDING;
 
-    const link = await mintMemberSignInLink(db, recipient.memberId, args.origin, '/my-account/gear');
-    return sendClubEmail(db, env, {
-      to: recipient.email,
-      raw: {
-        subject: 'A {{assetTypeName}} spot is open for your household',
-        body: 'A {{assetTypeName}} spot has opened. Visit {{link}} to claim it for your household.',
-      },
-      vars: { assetTypeName: entry.asset_type_name, link },
-      segment: assetSlotOpenedSegment(args.waitlistId),
-    });
-  }
-
-  const request = await db
-    .prepare(
-      `SELECT r.household_id, r.requested_by, at.name AS asset_type_name, at.fee
-       FROM asset_requests r
-       JOIN asset_types at ON at.id = r.asset_type
-       WHERE r.id = ?1`,
-    )
-    .bind(args.requestId)
-    .first<{ household_id: string; requested_by: string; asset_type_name: string; fee: number }>();
-  if (!request) return { ok: false, error: 'No such request to notify about.' };
-
-  const recipient = await resolveRecipient(db, request.requested_by, request.household_id);
-  if (!recipient) return NO_RECIPIENT;
-
-  const link = await mintMemberSignInLink(db, recipient.memberId, args.origin, '/my-account/gear');
-  const segment = assetDecisionSegment(args.requestId, args.kind);
-  const vars = { assetTypeName: request.asset_type_name, link };
-
-  switch (args.kind) {
-    case 'assigned':
-      return sendClubEmail(db, env, {
-        to: recipient.email,
-        raw: {
-          subject: 'Your {{assetTypeName}} request is approved',
-          body: "The club approved your household's request for {{assetTypeName}} and has assigned it to your household. See the details at {{link}}.",
-        },
-        vars,
-        segment,
-      });
-    case 'queued':
-      return sendClubEmail(db, env, {
-        to: recipient.email,
-        raw: {
-          subject: 'Your {{assetTypeName}} request is approved',
-          body:
-            "The club approved your household's request for {{assetTypeName}}. There is no open slot right now, so your household is on the waitlist. The club will reach out when one opens. See your household's requests at {{link}}.",
-        },
-        vars,
-        segment,
-      });
-    case 'retention_approved':
-      return sendClubEmail(db, env, {
-        to: recipient.email,
-        raw: {
-          subject: 'Pay to keep your {{assetTypeName}}',
-          body: "The club approved your household's request to keep {{assetTypeName}}. The fee is {{fee}}. Pay it at {{link}} to finish.",
-        },
-        vars: { ...vars, fee: formatMemberCents(Math.round(request.fee * 100)) },
-        segment,
-      });
-    case 'denied':
+    if (args.kind === 'denied') {
+      // No link, no sign-in token: a denied request has nothing left to act on, and a denied
+      // row is filtered out of `/my-account/gear`'s own Requests section, so the link would land
+      // the household on a page with no trace of what they clicked through for.
       return sendClubEmail(db, env, {
         to: recipient.email,
         raw: {
           subject: 'Your {{assetTypeName}} request was not approved',
-          body:
-            "The club did not approve your household's request for {{assetTypeName}}. The reason given: {{reason}}. See your household's requests at {{link}}.",
+          body: "The club did not approve your household's request for {{assetTypeName}}. {{reason}}",
         },
-        vars: { ...vars, reason: args.reason },
-        segment,
+        vars: { assetTypeName: request.asset_type_name, reason: args.reason },
+        segment: assetDecisionSegment(args.requestId, 'denied'),
       });
+    }
+
+    const link = await mintMemberSignInLink(db, recipient.memberId, args.origin, '/my-account/gear');
+    const segment = assetDecisionSegment(args.requestId, args.kind);
+    const vars = { assetTypeName: request.asset_type_name, link };
+
+    switch (args.kind) {
+      case 'assigned':
+        return sendClubEmail(db, env, {
+          to: recipient.email,
+          raw: {
+            subject: 'Your {{assetTypeName}} request is approved',
+            body: "The club approved your household's request for {{assetTypeName}} and it's now assigned to you. See the details at {{link}}.",
+          },
+          vars,
+          segment,
+        });
+      case 'queued':
+        return sendClubEmail(db, env, {
+          to: recipient.email,
+          raw: {
+            subject: "Your {{assetTypeName}} request is approved and you're on the waitlist",
+            body:
+              "The club approved your household's request for {{assetTypeName}}. There is no open slot right now, so your household is on the waitlist. Check your place in line at {{link}}.",
+          },
+          vars,
+          segment,
+        });
+      case 'retention_approved':
+        return sendClubEmail(db, env, {
+          to: recipient.email,
+          raw: {
+            subject: 'Pay to keep your {{assetTypeName}}',
+            body: "The club approved your household's request to keep {{assetTypeName}}. The fee is {{fee}}. Pay it at {{link}} to finish.",
+          },
+          vars: { ...vars, fee: formatMemberCents(Math.round(request.fee * 100)) },
+          segment,
+        });
+    }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
 }

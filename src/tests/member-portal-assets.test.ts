@@ -316,7 +316,7 @@ describe('decision emails (Assets substrate T5b)', () => {
     expect(result).toEqual({ ok: true, outcome: 'assigned' });
     expect(send).toHaveBeenCalledTimes(1);
     expect(send.mock.calls[0][0].to).toBe('household@example.com');
-    expect(send.mock.calls[0][0].text).toContain('assigned it to your household');
+    expect(send.mock.calls[0][0].text).toContain("it's now assigned to you");
   });
 
   it('approving into a full type sends the queued kind', async () => {
