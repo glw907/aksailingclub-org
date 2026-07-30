@@ -162,7 +162,7 @@ money-committing step here reads the same as every other portal payment action
       <ul class="mt-xs flex flex-col gap-xs">
         {#each data.heldAssets as asset (asset.assetType)}
           <li class="rounded-box border border-card-border bg-base-100 p-s text-step--1">
-            <div class="flex flex-wrap items-center justify-between gap-xs">
+            <div class="retain-row">
               <span class="renew-tier-text">
                 <span class="renew-tier-name">{asset.assetTypeName}</span>
                 <span class="renew-tier-price">{formatTierPrice(asset.feeDollars)} / season</span>
@@ -231,17 +231,22 @@ money-committing step here reads the same as every other portal payment action
     border-color: var(--color-primary);
     background: color-mix(in oklab, var(--color-primary) 6%, var(--color-base-100));
   }
+  /* The row never wraps as a whole (task 4 fix): the price is `flex-shrink: 0` and stays pinned
+     to the end of the FIRST line always. `.renew-tier-name` is the one that wraps internally when
+     its own shrunk width can't hold both the label and the selected row's "Current plan" chip --
+     the label stays on line one beside the price, and the chip is what drops to a second line,
+     never the other way around. */
   .renew-tier-text {
     display: flex;
     flex: 1 1 auto;
     min-width: 0;
-    flex-wrap: wrap;
     align-items: baseline;
     justify-content: space-between;
     gap: var(--spacing-2xs) var(--spacing-s);
   }
   .renew-tier-name {
     display: inline-flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--spacing-2xs);
     font-weight: 600;
@@ -251,6 +256,30 @@ money-committing step here reads the same as every other portal payment action
     flex-shrink: 0;
     font-variant-numeric: tabular-nums;
     color: var(--color-muted);
+  }
+
+  /* Each retention row's own layout (task 4 fix): the name/price pair and the fixed-width control
+     used to share one wrapping row, so whichever asset type's name was long enough to starve the
+     control of room sent the control alone to a second line -- a plain Tailwind-tier's asset (the
+     short "Mooring") stayed one line while a longer one ("Trailered Boat Parking") did not, so
+     sibling rows read as different shapes. The longest real asset-type name plus its price still
+     does not leave room for the control's own 8rem slot at 390px, so every row now stacks the
+     same way below `40rem`: name/price full width on top (the same nowrap-with-price-pinned row
+     `.renew-tier-text` above already uses), the control on its own line underneath, always in the
+     same left-aligned spot regardless of the name's length. From `40rem` up there is room for all
+     three on one line, matching `.gear-row`'s own established stack-then-row breakpoint
+     (`/my-account/gear`). */
+  .retain-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+  @media (min-width: 40rem) {
+    .retain-row {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
   }
 
   /* The retention step's own request/requested control (owner review, 2026-07-30): a fixed-size
