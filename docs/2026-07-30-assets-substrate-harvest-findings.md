@@ -137,3 +137,47 @@ consuming site's own probe script.
    the children, then delete the old row. Worth carrying in cairn's migration guidance, since
    any consuming site with a natural-key lookup table hits the same wall the first time it
    renames one.
+
+5. **DaisyUI's plain `.btn` renders an invisible edge on a dark ground, and this is the third
+   site-side patch for it.** An unmodified `class="btn"` with no colour variant computes its
+   background and border at `--color-base-200`, which in ASC's `asc-dark` theme is the same
+   lightness as the page ground: a measured contrast of about 1.00:1, so the control is present
+   and invisible. `DonateForm.svelte` patched it locally on 2026-07-15, ASC's agent memory
+   carries it as a known recurring gap (`daisyui-plain-btn-dark-contrast`), and this pass patched
+   it a third time for the retention control. Each fix is the same two-selector override of
+   `border-color` to the site's hairline token, once for the system-dark path and once for the
+   explicit theme toggle.
+
+   Three local workarounds for one framework default is the wrong altitude. DaisyUI is a
+   family-level dependency, and any cairn site whose dark theme sets `base-200` near its page
+   ground inherits the same defect the first time someone reaches for an unstyled `.btn`. cairn
+   should either correct the plain-`.btn` baseline in the layer it already owns, or, better,
+   catch the class rather than the instance.
+
+   **The check is the durable half, and it generalises past `.btn`:** an interactive element
+   whose fill and border both fall below a contrast threshold against their own immediate ground,
+   in either theme, is a disappearing control whatever produced it. That belongs in `cairn-audit`
+   beside findings 1 and 3's checks. Measure it from rendered pixels rather than
+   `getComputedStyle` where translucency is involved; ASC's own memory records a case where
+   computed style alone was not enough.
+
+6. **Repeated per-row controls need distinct accessible names, and the rule wants a check.**
+   A list of rows each carrying its own action button is a shape every cairn site builds, and
+   the naive version gives a screen-reader or voice-control user the same accessible name once
+   per row. ASC has now solved it twice, correctly and differently: `/my-account/gear` puts the
+   asset into the visible label ("Release mooring"), while this pass's retention control keeps a
+   short visible "Request" and appends visually hidden text naming the row's subject. Both are
+   right, and the divergence is the finding: nothing tells the next author which to reach for, or
+   that the choice exists.
+
+   The trap worth naming in cairn's own guidance is that the obvious fix is wrong. Reaching for
+   `aria-label="Request mooring"` over a visible "Request" gives distinct names but breaks WCAG
+   2.5.3 Label in Name, because the spoken visible label is no longer contained in the accessible
+   name, and voice control stops working on exactly the control the label describes. Hidden text
+   appended after the visible label satisfies both.
+
+   Mechanically detectable, so it belongs in `cairn-audit`: flag any container holding two or
+   more interactive elements that compute the same accessible name, and any control whose visible
+   text is not a substring of its accessible name. Finding 2's toggle primitive should carry this
+   behaviour rather than leaving it to each call site, but the check catches the shape wherever it
+   appears, including the many lists that will never use that primitive.
