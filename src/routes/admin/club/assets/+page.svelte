@@ -208,7 +208,7 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
           type="button"
           role="tab"
           aria-selected={view === tab.id}
-          class="join-item btn btn-sm {view === tab.id ? 'btn-active' : ''}"
+          class="view-tab join-item btn btn-sm {view === tab.id ? 'btn-active' : ''}"
           onclick={() => (view = tab.id)}
         >
           {tab.label}
@@ -226,14 +226,14 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
   {#if view === 'by-asset'}
     {#each byAssetGroups as group (group.type.id)}
       <div class="border-b border-[var(--cairn-card-border)] p-6">
-        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div class="mb-3 flex flex-wrap items-center gap-2">
           <h2 class="type-body font-semibold">
             {group.type.name}
             <span class="count-qualifier font-normal text-muted">
               {group.rows.length}{group.type.capacity != null ? `/${group.type.capacity}` : ''} assigned &middot; {formatDollars(group.type.fee)}
             </span>
           </h2>
-          <div class="flex items-center gap-2">
+          <div class="type-header-actions flex items-center gap-2">
             {#if (waitlistByType.get(group.type.id)?.length ?? 0) > 0}
               {@const queue = waitlistByType.get(group.type.id)!}
               <form method="post" action="?/waitlistPromote" class="flex items-center gap-2">
@@ -407,7 +407,7 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
   {/if}
 </OfficeList>
 
-<dialog bind:this={releaseDialog} class="modal" oncancel={(event) => event.preventDefault()}>
+<dialog bind:this={releaseDialog} class="assets-dialog modal" oncancel={(event) => event.preventDefault()}>
   <div class="modal-box">
     <h2 class="type-heading font-bold">Release {releaseTargetLabel}?</h2>
     <p class="py-2 type-body text-muted">The asset returns to the pool. This does not remove its payment history.</p>
@@ -435,7 +435,7 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
   </div>
 </dialog>
 
-<dialog bind:this={paymentDialog} class="modal">
+<dialog bind:this={paymentDialog} class="assets-dialog modal">
   <div class="modal-box">
     <h2 class="type-heading font-bold">Record a payment</h2>
     <p class="py-2 type-body text-muted">{paymentTargetLabel}</p>
@@ -455,7 +455,7 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
   </div>
 </dialog>
 
-<dialog bind:this={editTypeDialog} class="modal" aria-labelledby="edit-type-dialog-title">
+<dialog bind:this={editTypeDialog} class="assets-dialog modal" aria-labelledby="edit-type-dialog-title">
   <div class="modal-box">
     <h2 id="edit-type-dialog-title" class="type-heading font-bold">Edit {editTypeDialogTitle}</h2>
     <form method="post" action="?/editType" class="flex flex-col gap-3">
@@ -541,5 +541,54 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
     flex-wrap: wrap;
     align-items: center;
     gap: var(--cairn-gap-control);
+  }
+
+  /* Each by-asset type header is `flex flex-wrap` with the name+meta `<h2>` first and this
+     actions block second. At 390 the two no longer fit one line and the actions block wraps to
+     its own line, where it's the sole item -- `justify-content: space-between`'s single-item
+     behavior (no second item to distribute against) places it at the row's START, not its end,
+     so a type with no waitlist meta line to share (a short actions block) landed hard against
+     the card's LEFT edge while a type whose waitlist form happens to span nearly the full row
+     width read as right-aligned only by coincidence of its own content's length. `margin-left:
+     auto` pins this block to the row's end on every line it lands on, shared or alone, rather
+     than chasing a per-content wrap point. */
+  .type-header-actions {
+    margin-left: auto;
+  }
+
+  /* cairn-admin.css caps `.input`, `.select`, and `.textarea` at `width: clamp(3rem, 20rem,
+     100%)` (20rem preferred), so every field on this screen -- the Assign grid, the Waitlist-add
+     grid, the Edit-type dialog, and the Record-payment dialog alike -- stopped at 320px
+     regardless of its own container's width, leaving a visible empty gutter beside the filled
+     submit button, which aligns to the container's real edge. `:global` is needed because the
+     Record-payment dialog's Method/Reference fields render through the packaged `SelectField`/
+     `TextField` components, a separate component instance a scoped selector can't reach; this
+     rule still ships only inside this route's own code-split stylesheet, so its reach stays this
+     page. */
+  :global(.input),
+  :global(.select),
+  :global(.textarea) {
+    width: 100%;
+  }
+
+  /* The view switcher's selected segment used `btn-active`, which mixes 7% black into
+     `--color-base-200` -- a fix that reads clearly in light (base-200 is near-white, so darkening
+     it registers) but nearly vanishes in `cairn-admin-dark` (base-200 is already near-black, so
+     the same relative mix barely moves its absolute lightness). Mixing toward
+     `--color-base-content` instead of always toward black makes the shift track the theme: content
+     is dark in light mode (still darkens, matching the previous read) and light in dark mode
+     (lightens, giving the same kind of highlight `btn-active` gives in light). No accent hue is
+     introduced, so the screen keeps its one filled action (the `Assign` submit). */
+  .view-tab[aria-selected='true'] {
+    --btn-bg: color-mix(in oklab, var(--color-base-content) 16%, var(--color-base-200));
+    border-color: color-mix(in oklab, var(--color-base-content) 30%, transparent);
+  }
+
+  /* Chrome's UA stylesheet sets `dialog { border: solid }` (medium width, `currentColor`), which
+     neither daisyUI's `.modal` nor `cairn-admin.css` resets; a `<dialog>` positions itself over
+     the full viewport before the `::backdrop`/`.modal-box` layout takes over, so that UA border
+     paints a 3px frame around the whole screen the instant any dialog here opens. */
+  .assets-dialog {
+    border: none;
   }
 </style>
