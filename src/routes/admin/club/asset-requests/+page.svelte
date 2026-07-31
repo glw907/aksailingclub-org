@@ -59,18 +59,18 @@ against daisyUI's own `@layer`-wrapped declaration. -->
       message="A member's new or retention asset request lands here for review, with any prior holding history beside it."
     />
   {:else}
-    <ul class="list">
+    <ul class="list asset-request-list">
       {#each data.requests as row (row.id)}
         <li class="list-row asset-request-row">
           <div>
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="asset-request-identity">
               <span class="font-semibold">{row.assetTypeName}</span>
-              <span class="type-body text-muted">&middot; {row.householdName}</span>
-              <span class="badge cairn-chip-quiet badge-sm font-medium">{row.kind === 'retention' ? 'Retention' : 'New'}</span>
+              <span class="type-body text-muted ml-2">&middot; {row.householdName}</span>
+              <span class="badge cairn-chip-quiet badge-sm font-medium ml-2">{row.kind === 'retention' ? 'Retention' : 'New'}</span>
             </div>
             <p class="mt-1 type-body text-muted">Requested by {row.requesterName} &middot; {formatClubTimestamp(row.createdAt)}</p>
             {#if row.note}<p class="mt-1 type-body text-muted">"{row.note}"</p>{/if}
-            {#if row.priorHolding}<p class="mt-1.5 type-meta font-medium text-base-content">{row.priorHolding}</p>{/if}
+            {#if row.priorHolding}<p class="mt-1.5 type-meta text-muted">{row.priorHolding}</p>{/if}
           </div>
 
           {#if row.kind === 'new'}
@@ -116,9 +116,9 @@ against daisyUI's own `@layer`-wrapped declaration. -->
               <form method="dialog">
                 <input type="hidden" name="id" value={row.id} />
                 <CsrfField />
-                <fieldset class="fieldset">
+                <fieldset class="fieldset deny-reason-fieldset">
                   <legend class="fieldset-legend">Reason</legend>
-                  <textarea name="reason" class="textarea w-full" rows="3" required placeholder="Why this was denied"></textarea>
+                  <textarea name="reason" class="textarea deny-reason-textarea w-full" rows="3" required placeholder="Why this was denied"></textarea>
                 </fieldset>
                 <div class="modal-action">
                   <!-- svelte-ignore a11y_autofocus -->
@@ -163,5 +163,40 @@ against daisyUI's own `@layer`-wrapped declaration. -->
     .asset-request-row > form {
       grid-row-start: 1;
     }
+  }
+
+  /* Neither this admin's build nor the browser's own UA styles reset a bare `<ul>`'s
+     bullet-reserved indent, so `.list` keeps the browser default 40px `padding-inline-start`
+     even though no bullet ever renders (the row's own `list-row` padding already carries the
+     card's inner margin). That reads as a wide empty left gutter pushing every row's content
+     to the right while the right edge runs out normally. */
+  .asset-request-list {
+    padding-inline-start: 0;
+  }
+
+  /* Subject (asset type) and the kind chip stay in normal inline text flow rather than a
+     `flex flex-wrap` row: a flex row wraps whichever child doesn't fit as one rigid unit, which
+     at 390px stranded the kind chip alone below the household name for a short subject, and
+     dropped the whole "-- household" span to its own line (leading with the bare separator) for
+     a long one -- two different orphaned shapes from the same mechanism. Plain inline flow lets
+     the browser reflow at any word boundary instead, the same wrapping every other line in this
+     card already gets for free. */
+  .asset-request-identity {
+    display: block;
+  }
+
+  /* Neither the browser's own `fieldset`/`textarea` defaults nor this admin's packaged CSS
+     resets them: Chromium's UA stylesheet sets `textarea { font-family: monospace; resize: both }`
+     and `fieldset { border: 2px groove ... }` unconditionally, so both render with no author
+     styling at all -- the Reason field was the only unstyled native control in this dialog. */
+  .deny-reason-fieldset {
+    border: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .deny-reason-textarea {
+    font-family: inherit;
+    resize: vertical;
   }
 </style>
