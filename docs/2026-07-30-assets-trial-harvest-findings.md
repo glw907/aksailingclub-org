@@ -236,11 +236,28 @@ diverging from the packaged stylesheet's own intent.
 
 ## A validation asset this pass produced
 
-Any new rendered rule proposed above can be validated rather than assumed. This pass leaves a
-labeled corpus: twelve captures at 390 and 1440 in both themes plus interaction states, each with a
-3-of-3 grader verdict and a specific tell list, and a matching set of the same screens after the
-fixes. A candidate rule should fire on the round-1 captures and go quiet on the round-2 ones. Lint
-rules rarely get a regression suite that good, and it will decay as soon as the screens move again.
+Any new rendered rule proposed above can be validated rather than assumed, because this pass leaves
+a labeled corpus with known verdicts on both sides. **The corpus is stored as commit SHAs rather
+than as image files**, so a rule can be run against a live render at each state instead of matched
+against a stale PNG, and nothing decays or bloats the repo.
+
+Check out the SHA, `npm run build`, serve it, and render `/admin/club/assets` or
+`/admin/club/asset-requests` at 390 and 1440 in both themes.
+
+| State | SHA | Cold-read verdict |
+| --- | --- | --- |
+| Both screens as first built | `8778556` | **FAIL 3/3 on both.** Assets: competing accent fills, no shared label column, dialog staircase. Asset-requests: retention note at subject weight, 57px phantom left gutter, orphaned separator dot at 390, unstyled native Reason field |
+| After fix round 1 | `5aad533` | Asset-requests **PASS 3/3**. Assets still FAIL 3/3: header actions rag at 390, fields capped at 320px, selected tab invisible in dark, viewport-wide dialog border |
+| After fix round 2 | `c340db6` | Assets **PASS 3/3** |
+
+A candidate rule should fire at `8778556` and go quiet at `c340db6`. The intermediate state is the
+useful one for the `one-filled-action` change specifically: at `8778556` the Assets view switcher
+carries `btn-primary` alongside the `Assign` submit, which is exactly the case the tightened
+partition must start failing, and the current rule passes it.
+
+The rendering environment matters. These verdicts were produced on this workstation, where the
+visual suite already diverges from CI by roughly 60 threshold-marginal comparisons, so a rule
+validated here should be re-checked on the CI runner before it gates a build.
 
 ## A process finding that is not cairn's
 
