@@ -8,6 +8,64 @@
 > entries beyond the top two or three to the archive — this file is @-imported into every
 > session's context, so its length is a per-session token tax.
 
+**THE ASSETS TRIAL BUILD IS DONE, ALL EIGHT TASKS. BOTH SCREENS REACH A UNANIMOUS PASS ON
+THE COLD COHERENCE READ. THE TRIAL'S OWN CONTROL CONDITIONS WERE UNSATISFIABLE, WHICH IS THE
+PASS'S LARGEST FINDING. NEXT IS THE CAIRN RATCHET PASS, IN THE CAIRN-CMS REPO (2026-07-30,
+Opus 5 conducting).** What happened:
+
+- **The measurement: asset-requests PASSES at read 2, Assets at read 3**, both unanimous with
+  empty tell lists, both under the pinned grader prompt at the calibration ledger's hash, k=3,
+  2-of-3 consensus, 390/1440/interaction in both themes. Against baselines of Members 2 and
+  Classes 3 and a target of 1, **this pass reproduced the baselines rather than beating them.**
+  Zero suppressions added across four builder sessions and three fix rounds; the asset-requests
+  rebuild REMOVED the one pre-existing suppression on its own file (site-wide static 5 to 4).
+- **THE CONTROL CONDITIONS WERE UNSATISFIABLE BEFORE THE FIRST DISPATCH.** `CLAUDE.md:10` is
+  `@docs/STATUS.md`, so every session in this repo auto-loads STATUS, and the entry below named
+  the trial's withheld measurement outright, by its `STANDING_CHIP` variable name. No dispatch
+  discipline could have protected it. Two further channels compounded it: the plan and spec sit
+  in `docs/`, and agent memory carried findings between supposedly uncoordinated builders. **Any
+  future trial needing a withheld measurement needs a clean-room repo, or a measurement that does
+  not depend on withholding.** The defect-11 capture question is unanswerable for this pass.
+- **Six engine findings are filed** in `docs/2026-07-30-assets-trial-harvest-findings.md`, the
+  staging file for cairn's friction log. The largest: **`cairn-admin.css` ships no user-agent
+  reset layer**, with four measured symptoms (every `textarea` renders monospace and `body`
+  computes to Times New Roman; a bare `<ul>` keeps the UA's 40px bullet indent; every modal
+  `<dialog>` paints a 3px near-black frame around the whole viewport; and `.input`/`.select`/
+  `.textarea` cap at 320px via `clamp(3rem, 20rem, 100%)` regardless of container). Also:
+  `form-anatomy.md`'s own worked example prescribes `gap-x-6 gap-y-4`, which never compiles, and
+  `cairn-audit` already convicts `ClassForm`/`EventForm` for using it; and the stacked field-label
+  register that fixes the dominant failure mode exists inside the package but is never exported.
+- **GEOFF RULED ON `one-filled-action` (2026-07-30): tighten the rule, keep the grader.** `nav` and
+  `aside` partition, the topmost dialog layer partitions, `header`/`footer` nested inside `main` do
+  NOT. The rule and the grader prompt disagreed about what one surface is, both shipped in the same
+  package, and the rule was partitioning on a boundary that does not match the harm it prevents.
+  Measured blast radius: one page (`/admin/club/members`). Full rationale in the harvest doc.
+  **The ruling creates a requirement the engine cannot yet meet**: it pushes segmented controls off
+  `btn-primary`, and `btn-active` is a 0.011 lightness step on a dark ground. That belongs in the
+  same cairn change.
+- **The pattern across three builds is that the token layer holds and the composition layer does
+  not.** Across twelve captures and six independent readers, not one tell landed on type roles, gap
+  values, chip registers, or color. Five of seven consensus tells clustered in composing form
+  fields, on both screens, by builders who could not see each other.
+- **Server side landed clean**: waitlist promotion (atomic assign-and-dequeue via `db.batch()`,
+  current-season membership resolved explicitly, capacity advisory) and asset-type editing (`id`
+  WHERE-only, asserted against the literal SQL). Two defects were caught in review rather than
+  shipped: `sendAssetDecisionEmail`'s `slot_opened` variant went stale on its own caller's delete,
+  and a blank fee coerced to `0` and silently made an asset free.
+- **PASS-SIZE NOTE (owed, per the standing rule)**: this pass ran far past its plan. Eight tasks,
+  a full rebuild redone because the first attempt narrowed "rebuild" to "wire two actions in",
+  eighteen grader runs, three fix rounds. ~3.23M subagent tokens across 26 dispatches. Same failure
+  mode as the substrate pass: a plan boundary superseded mid-flight rather than re-scoped.
+- **NEXT**: the cairn ratchet pass, in `~/Projects/cairn-cms`, not this repo. Bounded: expose the
+  stacked field primitive, add the UA reset layer, point `no-uncompiled-class` at the skill's own
+  exemplars, implement the `one-filled-action` ruling with a visible dark-ground selected state,
+  and cap the new geometry rules at three or four validated against this pass's labeled corpus
+  (round-1 captures should fire, round-2/3 should not). RESUME PROMPT: "Run the cairn ratchet pass
+  from the Assets trial: read aksailingclub-org/docs/2026-07-30-assets-trial-harvest-findings.md;
+  Geoff's one-filled-action ruling is in it and settled." Launch from ~/Projects/cairn-cms.
+- **OPEN ON GEOFF'S QUEUE**: the before/after on both rebuilt Assets screens on dev, which gates
+  the apex as always.
+
 **THE ASSETS SUBSTRATE PLAN IS DONE, ALL SEVEN TASKS, AND THE RENEWAL SCREEN TOOK A
 GEOFF-DIRECTED DESIGN ROUND ON TOP. DEV IS DEPLOYED AND BASELINES ARE ASSERTED. THE TRIAL
 BUILD (PLAN 2) IS NEXT, IN ITS OWN SESSION (2026-07-30, Opus 5 conducting, plan
@@ -80,92 +138,6 @@ docs/plans/2026-07-29-assets-substrate.md).** What happened:
   build: read docs/plans/2026-07-29-assets-trial-build.md and the protocol
   docs/plans/2026-07-29-cairn-design-trial-assets.md; the substrate landed 2026-07-30 so the
   screens build against honest data." Launch from ~/Projects/aksailingclub-org.
-
-**THE ASSETS FUNCTIONAL BRAINSTORM IS DONE; BOTH EXECUTION PLANS ARE COMMITTED AND
-REVIEWED; A FRESH OPUS 5 SESSION EXECUTES THE SUBSTRATE PLAN NEXT (2026-07-30, Fable
-sitting).** What happened:
-
-- **All nine packet questions are settled.** The rulings live in
-  `docs/2026-07-29-assets-functional-design.md` (commit d15c1e9), "The nine rulings."
-  Headlines: the imported capacity numbers were invented, so the migration corrects them
-  (**BLOCKING INPUT: Geoff's four confirmed capacities; rv-parking probably 10**); the id
-  mismatch is fixed first-task with a throwing parse on the cast; retention gets its
-  creation path in `/my-account/renew`; waitlist promotion is surfaced-not-automated;
-  decision emails ship; the type catalog gets a fee/capacity/label editor with ids
-  immutable; the rebuild optimizes for the rare real event; one shared holdings lens; the
-  legacy Stripe payment-link route stays phase-2's, with the coexistence drift documented.
-- **Two plans, two sessions** (the pass-sizing lesson applied at design time). Plan 1
-  `docs/plans/2026-07-29-assets-substrate.md`: seven functional-repair tasks, no new admin
-  surface. Plan 2 `docs/plans/2026-07-29-assets-trial-build.md`: the eight-task screen
-  rebuild under the protocol's control conditions, with the builder travel list explicit
-  and the input packet marked orchestrator-only. Both were workflow-drafted (Opus
-  drafters), adversarially reviewed (26 findings, 11 blockers), and the folds verified by
-  the Fable conductor's own read (commit df334ed).
-- **The trial protocol doc stands unamended**; deviations are findings.
-- **NEXT, in order**: (1) Geoff confirms the four capacities (Task 1 blocks on them;
-  tasks 3/4/5a can start without). (2) Substrate execution, fresh OPUS session — the
-  /model switch saved fable as the session default, so reset it. RESUME PROMPT: "Execute
-  the Assets substrate plan: read docs/plans/2026-07-29-assets-substrate.md and the spec
-  docs/2026-07-29-assets-functional-design.md; follow the plan's execution order; Task 1
-  blocks on the four confirmed capacities in its Blocking input section." Launch from
-  ~/Projects/aksailingclub-org. (3) The trial build per its own plan, in its own session
-  after the substrate lands. Geoff's before/after on the 0.91.1 baselines (artifact link
-  in the entry below) is still open.
-
-**THE HELD CHORES ARE LANDED: BASELINES REGENERATED AGAINST 0.91.1, MAIN PUSHED, DEV
-DEPLOYED, AND THE ASSETS BRAINSTORM'S FUNCTIONAL INPUT IS BUILT. TWO GATES ARE OPEN:
-GEOFF'S BEFORE/AFTER, AND THE BRAINSTORM ITSELF, WHICH IS A FABLE SITTING (2026-07-29,
-Opus 5 conducting).** What happened:
-
-- **The baselines are regenerated and asserted.** The five held commits went to a side
-  branch first, because `update_snapshots` commits its PNGs back to whatever branch it ran
-  against and `ci.yml` also fires on a push to `main`. Run 30516293343 dispatched against
-  the branch; **its log was read, not its conclusion**: assert skipped, regen ran, 71
-  passed, and exactly **four** files re-generated, all `waivers-admin-rollup` (both themes
-  at 390 and 1440), committed by the bot as `1ff5926`. `main` fast-forwarded and pushed;
-  the dev deploy went green; run 30516667787 is the mirror image (assert ran, 71 passed,
-  regen skipped), so the PNGs are asserted-correct and not merely minted.
-- **Nothing in `site-visual` or `portal-visual` moved, and that is a measurement.** The
-  baseline set independently confirms the grammar repair and the 0.91.1 install are
-  admin-only in rendering terms. The waivers rollup is still the one baselined admin
-  surface, so it absorbs the whole delta.
-- **GEOFF'S BEFORE/AFTER IS READY TO READ**:
-  https://claude.ai/code/artifact/311f260f-7fb4-4bdc-a5ed-af2a700e9d65 — the CI-canonical
-  pairs at both themes and both viewports, with an A/B/difference bench (the pairs are
-  dimension-identical, so difference blacks out everything the repair left alone). Three of
-  the four change classes are visible: the page h1 at 24px/700, the never-signed `0` gaining
-  the quiet register's ground, and the ~9px reflow from 0.91.0's `PageHeader` fix. The
-  118-site column-header move to 11px is inside eyeball tolerance and rests on the audit.
-- **The Assets brainstorm's functional input is built and committed**:
-  `docs/2026-07-29-assets-functional-input.md`, from six read-only discovery agents plus a
-  synthesizer, every claim carrying `file:line` or a live query. **Functional only by
-  construction**, since the trial's control conditions make cairn's packaged capture the
-  sole sanctioned carrier of design content to a builder. Nine questions only Geoff can
-  settle sit at its foot.
-- **Three findings from it resize the pass.** The perimeter is bigger than the plan's two
-  screens: the Members list and the household desk each compute "who holds what" from
-  queries that mirror rather than reuse the Assets lens, and `/my-account/gear` is a fully
-  wired member-facing counterpart. The request and waitlist machinery is **completely
-  unexercised** (zero rows in `asset_requests` and `asset_waitlist` against 41 active
-  assignments), so the review inbox has never run against real data. And the `asset_types`
-  id mismatch is **live, not dormant**: `current_season` is `2026`, matching the six
-  published waiver documents, and 21 households hold an asset whose id never matches, so
-  their acknowledgement never reaches a signing list and never gates the fee.
-- **Two trial-log readings were wrong about what they measured** (numbers stand,
-  attribution did not; verified in source). The 1.15 chip is the **Paid** badge and the
-  1.00 chip is **Outstanding**, both in `STANDING_CHIP`; the real asset-type chip is an
-  unflagged `badge-neutral`. This sharpens the build item: the state invisible against its
-  own row is the one saying a household owes money. The "square-cornered pagination button"
-  advisory is unattributable here at all, since no Assets file imports `Pagination`.
-- **NEXT, in order**: (1) Geoff's before/after on the artifact above. (2) **The Assets
-  functional brainstorm as a FABLE sitting**, opening against the input packet and its nine
-  questions, then a plan; execution returns to a fresh Opus 5 session per the model-boundary
-  rule. (3) The trial proper. RESUME PROMPT for the Fable sitting: "Open the Assets
-  functional brainstorm for the cairn design-capture trial: read
-  docs/2026-07-29-assets-functional-input.md and
-  docs/plans/2026-07-29-cairn-design-trial-assets.md; the nine open questions at the foot of
-  the packet are the agenda." Launch from ~/Projects/aksailingclub-org.
-
 
 **STILL OPEN ON GEOFF'S QUEUE (pointers; full entries in docs/status-archive.md):**
 the Classes before/after on dev (/admin/club/classes) and the 2026-07-21 probe
