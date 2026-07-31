@@ -1,101 +1,167 @@
 <!-- @component
-/admin/club/asset-requests: the request review inbox, the signup queue's own pattern (list/
-list-row + the destructive-confirm dialog for Deny). approveNew/approveRetention split by the
-request's own kind — a 'new' request gets one Approve button (assign-or-queue, no dialog, the
-acknowledging no-op); a 'retention' request's Approve opens the pay task instead of assigning
-outright (the merit gate), so its own button reads "Approve (opens pay task)". -->
+/admin/club/asset-requests: the request review inbox. Every pending row shows the asset type, the
+household, its kind ('new' vs 'retention'), the requester and timestamp, an optional note, and a
+plain-words prior-holding line when the household has held this type before -- the evidence a
+reviewer needs beside the decision, all read off `listPendingAssetRequests`
+(`$member-portal/lib/assets`). A 'new' request's Approve assigns straight into a free slot or
+queues onto the waitlist (no dialog, an acknowledging no-op either way); a 'retention' request's
+Approve opens the pay task instead of assigning outright (the merit gate), so its own button names
+the fee. Deny is shared across both kinds and requires a reason, matching every other admin
+review queue's convention (`committees/+page.svelte`'s own approve/decline pair).
+
+Rebuilt from the pre-Assets-substrate draft: dropped the separate `stats` band restating the same
+pending count the header's own subtitle already states (two elements naming one fact is the
+assembled tell this pass exists to remove, and its `stats-vertical`/`text-warning` classes were
+already dead, never compiling into `cairn-admin.css`); the count line itself now runs through
+`itemNoun` rather than a hand-rolled singular/plural ternary. The zero-pending state -- production's
+own state today -- is the toolkit's `EmptyState` rather than an ad hoc `<li>`: this screen has no
+filtering, so its only empty state is ever the whole-concept one `EmptyState` is built for, never a
+filtered-to-zero case. Each row's Approve/Deny trigger carries a visually-hidden per-row name
+(distinct-accessible-names finding from the Assets substrate pass): the same three or four words
+render on every pending row, so a screen reader's own "list of buttons" view needs the household and
+asset type to tell them apart, the same way the Renewal screen's per-row controls do. The Deny
+dialog no longer blocks `Escape`: every sibling confirm dialog on this admin (`committees/+page.svelte`'s
+edit dialogs included) closes on it, and this one diverging read as an inconsistency with no
+documented reason, not a deliberate house rule.
+
+`.asset-request-row` overrides daisyUI's own `.list-row` grid below `sm` (the grader-prompt read
+this rebuild ran caught it): that component's default two-column grid gives its SECOND column the
+`1fr` growth track and its first only `minmax(0, auto)`, so a wide retention button ("Approve (opens
+pay task -- $150)") pushed the content column toward its own zero-width minimum on a 390px capture,
+and `word-break: break-word` let the asset type name wrap one character per line instead of
+overflowing where `viewport-overflow` would have caught it. Below `sm` the row now stacks into a
+single column (content, then the action form, full width each); at `sm` and up it returns to the
+original two-column arrangement with the content column now explicitly the one that grows. This is
+the unlayered-scoped-style-beats-any-`@layer`-rule idiom this admin already uses elsewhere: a plain
+Svelte `<style>` rule targeting the same class needs no `!important` and no specificity fight
+against daisyUI's own `@layer`-wrapped declaration. -->
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
   import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
-  import { HEADER_CELL, formatClubTimestamp } from '$admin-club/lib/ui';
+  import { EmptyState, itemNoun } from '@glw907/cairn-cms/admin-toolkit';
+  import { formatClubTimestamp, formatDollars } from '$admin-club/lib/ui';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
   let dialogs: Record<string, HTMLDialogElement> = {};
 
-  const subtitle = $derived(
-    data.requests.length === 0 ? 'Nothing pending.' : `${data.requests.length} ${data.requests.length === 1 ? 'request' : 'requests'} awaiting a decision.`,
-  );
+  const subtitle = $derived(`${itemNoun(data.requests.length, { one: 'request', many: 'requests' })} awaiting a decision.`);
 </script>
-
-<!-- `stats-vertical`/`lg:stats-horizontal` are gone rather than replaced: neither compiles into
-     the precompiled `cairn-admin.css` this route renders against, so both were already inert and
-     the band has always laid out on `.stats`' own column flow. The Assets pass decides whether
-     this becomes a plain responsive grid, the way `money/+page.svelte` already went. -->
-<div class="stats mb-6 w-full rounded-box border border-[var(--cairn-card-border)] bg-base-100 shadow-[var(--cairn-shadow)]">
-  <div class="stat">
-    <div class={HEADER_CELL}>Pending</div>
-    <!-- `text-warning` dropped, not recolored: it does not compile here either, so the count has
-         always rendered in the inherited ink. The Assets pass settles whether a pending count
-         earns emphasis and which token carries it. -->
-    <!-- cairn-audit-disable-next-line type-scale -- 20px is off the closed scale; the Assets pass rebuilds this screen and settles its stat typography there. -->
-    <div class="stat-value text-xl">{data.requests.length}</div>
-    <div class="stat-desc">Asset requests</div>
-  </div>
-</div>
 
 <OfficeList eyebrow="Club" title="Asset requests" {subtitle}>
   {#if form?.error}
     <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-error" role="alert">{form.error}</p>
   {/if}
-  <ul class="list">
-    {#each data.requests as row (row.id)}
-      <li class="list-row items-start">
-        <div class="list-col-grow">
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="font-semibold">{row.assetTypeName}</span>
-            <span class="type-body text-muted">&middot; {row.householdName}</span>
-            <span class="badge cairn-chip-quiet badge-sm font-medium">{row.kind === 'retention' ? 'Retention' : 'New'}</span>
+
+  {#if data.requests.length === 0}
+    <EmptyState
+      heading="Nothing pending"
+      message="A member's new or retention asset request lands here for review, with any prior holding history beside it."
+    />
+  {:else}
+    <ul class="list">
+      {#each data.requests as row (row.id)}
+        <li class="list-row asset-request-row">
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="font-semibold">{row.assetTypeName}</span>
+              <span class="type-body text-muted">&middot; {row.householdName}</span>
+              <span class="badge cairn-chip-quiet badge-sm font-medium">{row.kind === 'retention' ? 'Retention' : 'New'}</span>
+            </div>
+            <p class="mt-1 type-body text-muted">Requested by {row.requesterName} &middot; {formatClubTimestamp(row.createdAt)}</p>
+            {#if row.note}<p class="mt-1 type-body text-muted">"{row.note}"</p>{/if}
+            {#if row.priorHolding}<p class="mt-1.5 type-meta font-medium text-base-content">{row.priorHolding}</p>{/if}
           </div>
-          <p class="mt-1 type-body text-muted">Requested by {row.requesterName} &middot; {formatClubTimestamp(row.createdAt)}</p>
-          {#if row.note}<p class="mt-1 type-body text-muted">"{row.note}"</p>{/if}
-          {#if row.priorHolding}<p class="mt-1.5 type-meta font-medium text-base-content">{row.priorHolding}</p>{/if}
-        </div>
 
-        {#if row.kind === 'new'}
-          <form method="post" action="?/approveNew">
-            <input type="hidden" name="id" value={row.id} />
-            <CsrfField />
-            <div class="join">
-              <button type="submit" class="btn btn-sm join-item">Approve</button>
-              <button type="button" class="btn btn-sm btn-ghost join-item" onclick={() => dialogs[row.id]?.showModal()}>Deny</button>
-            </div>
-          </form>
-        {:else}
-          <form method="post" action="?/approveRetention">
-            <input type="hidden" name="id" value={row.id} />
-            <CsrfField />
-            <div class="join">
-              <button type="submit" class="btn btn-sm join-item">Approve (opens pay task &mdash; ${row.fee})</button>
-              <button type="button" class="btn btn-sm btn-ghost join-item" onclick={() => dialogs[row.id]?.showModal()}>Deny</button>
-            </div>
-          </form>
-        {/if}
-
-        <dialog bind:this={dialogs[row.id]} class="modal" oncancel={(event) => event.preventDefault()}>
-          <div class="modal-box">
-            <h2 class="type-heading font-bold">Deny {row.householdName}'s request</h2>
-            <p class="py-2 type-body text-muted">This clears the case from the queue. The household automatically receives the reason below by email.</p>
-            <form method="dialog">
+          {#if row.kind === 'new'}
+            <form method="post" action="?/approveNew">
               <input type="hidden" name="id" value={row.id} />
               <CsrfField />
-              <fieldset class="fieldset">
-                <legend class="fieldset-legend">Reason</legend>
-                <textarea name="reason" class="textarea w-full" rows="3" required placeholder="Why this was denied"></textarea>
-              </fieldset>
-              <div class="modal-action">
-                <!-- svelte-ignore a11y_autofocus -->
-                <button type="submit" class="btn" autofocus formnovalidate>Cancel</button>
-                <button type="submit" class="btn btn-error" formmethod="post" formaction="?/deny">Deny request</button>
+              <div class="join">
+                <button type="submit" class="btn btn-sm join-item">
+                  Approve<span class="sr-only"> {row.assetTypeName} for {row.householdName}</span>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-ghost join-item"
+                  onclick={() => dialogs[row.id]?.showModal()}
+                >
+                  Deny<span class="sr-only"> {row.assetTypeName} request for {row.householdName}</span>
+                </button>
               </div>
             </form>
-          </div>
-        </dialog>
-      </li>
-    {:else}
-      <li class="list-row">
-        <p class="w-full py-4 text-center type-body text-muted">Nothing pending right now.</p>
-      </li>
-    {/each}
-  </ul>
+          {:else}
+            <form method="post" action="?/approveRetention">
+              <input type="hidden" name="id" value={row.id} />
+              <CsrfField />
+              <div class="join">
+                <button type="submit" class="btn btn-sm join-item">
+                  Approve (opens pay task &mdash; {formatDollars(row.fee)})<span class="sr-only"> for {row.householdName}</span>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-ghost join-item"
+                  onclick={() => dialogs[row.id]?.showModal()}
+                >
+                  Deny<span class="sr-only"> {row.assetTypeName} request for {row.householdName}</span>
+                </button>
+              </div>
+            </form>
+          {/if}
+
+          <dialog bind:this={dialogs[row.id]} class="modal">
+            <div class="modal-box">
+              <h2 class="type-heading font-bold">Deny {row.householdName}'s request</h2>
+              <p class="py-2 type-body text-muted">This clears the case from the queue. The household automatically receives the reason below by email.</p>
+              <form method="dialog">
+                <input type="hidden" name="id" value={row.id} />
+                <CsrfField />
+                <fieldset class="fieldset">
+                  <legend class="fieldset-legend">Reason</legend>
+                  <textarea name="reason" class="textarea w-full" rows="3" required placeholder="Why this was denied"></textarea>
+                </fieldset>
+                <div class="modal-action">
+                  <!-- svelte-ignore a11y_autofocus -->
+                  <button type="submit" class="btn" autofocus formnovalidate>Cancel</button>
+                  <button type="submit" class="btn btn-error" formmethod="post" formaction="?/deny">Deny request</button>
+                </div>
+              </form>
+            </div>
+          </dialog>
+        </li>
+      {/each}
+    </ul>
+  {/if}
 </OfficeList>
+
+<style>
+  /* Below `sm`, a single column: content, then the action form, each full width. Overriding
+     daisyUI's own `.list-row` grid (`--list-grid-cols`) rather than fighting it -- see the
+     @component comment above for why the default two-column grid breaks at this width. */
+  .asset-request-row {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-flow: row;
+    align-items: start;
+  }
+
+  /* daisyUI pins every `.list-row` child to `grid-row-start: 1` unconditionally (its own
+     single-row-of-columns contract), which fights the stacked layout above by forcing an
+     implicit second column into existence for whichever child can't fit in row 1's one
+     explicit column. Releasing that pin below `sm` is what actually makes the stack real. */
+  .asset-request-row > div,
+  .asset-request-row > form {
+    grid-row-start: auto;
+  }
+
+  @media (min-width: 40rem) {
+    .asset-request-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-auto-flow: column;
+    }
+
+    .asset-request-row > div,
+    .asset-request-row > form {
+      grid-row-start: 1;
+    }
+  }
+</style>
