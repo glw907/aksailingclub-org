@@ -127,11 +127,44 @@ Both ship in the same package and both are claimed: the coverage contract states
 logic. So a tell that the capture claims to make a build failure shipped anyway, because its two
 halves do not agree on the boundary.
 
-**Proposed shape:** a ruling from Geoff on which model is right, then align the other to it. Not an
-implementation task until that lands. Worth noting the fix a builder reached for once told: cairn's
-own `btn-active`, already the selected-state treatment in `Pagination.svelte` and
-`ListToolbar.svelte`, which suggests the grader's reading is the intended one and the rule's
-partition is too generous.
+### The ruling (Geoff, 2026-07-30): tighten the rule, keep the grader
+
+**Settled. This is an implementation task now, not an open question.**
+
+The rule's partition becomes:
+
+- `nav` and `aside` partition a surface.
+- The topmost open dialog layer partitions, unchanged.
+- **`header` and `footer` nested inside `main` do NOT partition `main`.**
+- The grader prompt's item b is unchanged.
+
+The reasoning, recorded so the change is not re-litigated. The register rule exists to stop two
+controls both claiming to be the action. A DOM boundary between a page header and the card beneath
+it removes none of that harm, because both sit in the same visual column and compete for the same
+first look. A nav rail genuinely does remove it: persistent chrome, its own ground, its own spatial
+zone. The rule was partitioning on a boundary that does not correspond to the harm it was written
+to prevent.
+
+Loosening the grader to match the rule was the rejected alternative, because it would make the rule
+the definition of correct and a coherence read exists precisely to catch what the rules miss.
+
+**Blast radius, measured across nine admin pages on 2026-07-30 before the ruling:** only
+`/admin/club/members` carries accent fills in both `header` and `main` (an `Add household` in each).
+Every other page has fills in at most one landmark. So the tightening flags exactly one additional
+page today, and it looks like a genuine instance rather than a false positive.
+
+**The consequence to accept knowingly:** a screen with a filled action in its header and any filled
+action in a card below it now fails. That is two primaries by definition, and the card action
+should drop to ghost.
+
+**Validation available:** this pass's labeled corpus. The tightened rule should fire on the
+round-1 Assets captures (where the switcher carried `btn-primary` alongside the `Assign` submit) and
+go quiet on the round-2 captures (where the switcher moved to `btn-active`).
+
+Worth carrying into the change: the fix a builder reached for unprompted once told was cairn's own
+`btn-active`, already the selected-state treatment in `Pagination.svelte` and `ListToolbar.svelte`.
+The engine already had the right answer for a segmented control; nothing in the capture pointed at
+it.
 
 ## Finding 5: daisyUI pins every `.list-row` child to `grid-row-start: 1`
 
