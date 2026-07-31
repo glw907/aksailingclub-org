@@ -7,6 +7,21 @@ release / record a payment, including an offline check or cash payment), waitlis
 remove / move-to-end / promote the head), and the asset-type editor (name / fee / capacity, id
 immutable) all post through this route's own `+page.server.ts` actions.
 
+Every row in every view (assignment, held-asset, waitlist entry) shares one composition, a plain
+flex row inside a `<ul>` rather than a `<table>`: an identity block on the left, a chips-plus-verbs
+block on the right, wrapping onto its own line below the identity block once the two no longer fit
+one line (`.holding-row`'s own `flex-wrap`). A `<table>` cannot do this -- a table's own columns
+stay fixed width and either force the row's action buttons past the card's edge or crowd them
+against the identity text with no reflow, which is exactly the 390px-width defect this rebuild
+replaces. `/admin/club/asset-requests`'s own `<ul class="list">` review-inbox rows are the nearest
+sibling precedent for leaving `<table>` behind on a small, ungated result set; this file writes its
+own flex rows rather than daisyUI's `.list`/`.list-row` grid component because that component's
+column count is driven by nth-child position of a `.list-col-grow` marker, which is a poor fit for
+a row carrying a variable number of trailing actions (Record payment appears only when a payment
+is outstanding-eligible, waitlist rows carry two actions, assignment rows carry two different
+ones) -- the plain flex-wrap row reflows correctly regardless of how many trailing controls a given
+row happens to carry.
+
 Waitlist promotion is reachable from two places, deliberately not a third: the by-asset view's own
 type header (whenever that type currently carries any waitlist entries, independent of any release)
 and the release-confirm dialog (when the assignment being released belongs to a type that currently
@@ -19,7 +34,7 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
   import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
   import { FieldLabel, SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
   import { StatusChip, type StatusChipTone } from '@glw907/cairn-cms/admin-toolkit';
-  import { HEADER_CELL, formatCivilDate, formatDollars } from '$admin-club/lib/ui';
+  import { formatCivilDate, formatDollars } from '$admin-club/lib/ui';
   import {
     PAYMENT_METHODS,
     type AssetPaymentStanding,
@@ -237,38 +252,27 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
             </button>
           </div>
         </div>
-        <table class="table">
-          <caption class="sr-only">{group.type.name} assignments</caption>
-          <thead>
-            <tr>
-              <th class={HEADER_CELL}>Household</th>
-              <th class={HEADER_CELL}>Description</th>
-              <th class="{HEADER_CELL} w-28">Payment</th>
-              <th class="{HEADER_CELL} w-40"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each group.rows as row (row.id)}
-              {@const standing = HOLDING_STATUS[row.paymentStanding]}
-              <tr class="transition-colors hover:bg-base-200/60">
-                <td class="type-body">
-                  <span class="font-medium">{row.householdName}</span>
+        <ul class="holding-list">
+          {#each group.rows as row (row.id)}
+            {@const standing = HOLDING_STATUS[row.paymentStanding]}
+            <li class="holding-row">
+              <div class="min-w-0">
+                <p class="type-body font-medium">
+                  {row.householdName}
                   {#if row.primaryMemberName}<span class="text-muted"> &middot; {row.primaryMemberName}</span>{/if}
-                </td>
-                <td class="type-body text-muted">{row.description ?? '—'}</td>
-                <td><StatusChip tone={standing.tone} label={standing.label} size="xs" /></td>
-                <td class="flex justify-end gap-1">
-                  <button type="button" class="btn btn-ghost btn-xs" onclick={() => openPaymentDialog(row)}>Record payment</button>
-                  <button type="button" class="btn btn-ghost btn-xs text-error" onclick={() => openReleaseDialog(row)}>Release</button>
-                </td>
-              </tr>
-            {:else}
-              <tr>
-                <td colspan="4" class="px-6 py-6 text-center type-body text-muted">No one holds this asset right now.</td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
+                </p>
+                {#if row.description}<p class="type-meta text-muted">{row.description}</p>{/if}
+              </div>
+              <div class="holding-row-actions">
+                <StatusChip tone={standing.tone} label={standing.label} size="xs" />
+                <button type="button" class="btn btn-ghost btn-xs" onclick={() => openPaymentDialog(row)}>Record payment</button>
+                <button type="button" class="btn btn-ghost btn-xs text-error" onclick={() => openReleaseDialog(row)}>Release</button>
+              </div>
+            </li>
+          {:else}
+            <li class="py-6 text-center type-body text-muted">No one holds this asset right now.</li>
+          {/each}
+        </ul>
       </div>
     {/each}
 
@@ -286,66 +290,49 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
       </div>
     </form>
   {:else if view === 'by-person'}
-    <table class="table">
-      <caption class="sr-only">Active asset assignments by household</caption>
-      <thead>
-        <tr>
-          <th class={HEADER_CELL}>Household</th>
-          <th class={HEADER_CELL}>Assets held</th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each byPersonGroups as group (group.householdId)}
-          <tr class="row-top">
-            <td class="whitespace-nowrap type-body">
-              <span class="font-medium">{group.householdName}</span>
-              {#if group.primaryMemberName}<br /><span class="text-muted">{group.primaryMemberName}</span>{/if}
-            </td>
-            <td>
-              <ul class="flex flex-col gap-1">
-                {#each group.rows as row (row.id)}
-                  {@const standing = HOLDING_STATUS[row.paymentStanding]}
-                  <li class="flex flex-wrap items-center gap-2 type-body">
-                    <span class="font-medium">{row.assetTypeName}</span>
-                    {#if row.description}<span class="text-muted">{row.description}</span>{/if}
-                    <StatusChip tone={standing.tone} label={standing.label} size="xs" />
-                    <button type="button" class="btn btn-ghost btn-xs" onclick={() => openPaymentDialog(row)}>Record payment</button>
-                    <button type="button" class="btn btn-ghost btn-xs text-error" onclick={() => openReleaseDialog(row)}>Release</button>
-                  </li>
-                {/each}
-              </ul>
-            </td>
-          </tr>
-        {:else}
-          <tr>
-            <td colspan="2" class="px-6 py-10 text-center type-body text-muted">No household holds an asset right now.</td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+    {#each byPersonGroups as group (group.householdId)}
+      <div class="border-b border-[var(--cairn-card-border)] p-6">
+        <h2 class="mb-3 type-body font-semibold">
+          {group.householdName}
+          {#if group.primaryMemberName}<span class="count-qualifier font-normal text-muted">{group.primaryMemberName}</span>{/if}
+        </h2>
+        <ul class="holding-list">
+          {#each group.rows as row (row.id)}
+            {@const standing = HOLDING_STATUS[row.paymentStanding]}
+            <li class="holding-row">
+              <div class="min-w-0">
+                <p class="type-body font-medium">{row.assetTypeName}</p>
+                {#if row.description}<p class="type-meta text-muted">{row.description}</p>{/if}
+              </div>
+              <div class="holding-row-actions">
+                <StatusChip tone={standing.tone} label={standing.label} size="xs" />
+                <button type="button" class="btn btn-ghost btn-xs" onclick={() => openPaymentDialog(row)}>Record payment</button>
+                <button type="button" class="btn btn-ghost btn-xs text-error" onclick={() => openReleaseDialog(row)}>Release</button>
+              </div>
+            </li>
+          {/each}
+        </ul>
+      </div>
+    {:else}
+      <p class="px-6 py-10 text-center type-body text-muted">No household holds an asset right now.</p>
+    {/each}
   {:else}
-    <table class="table">
-      <caption class="sr-only">The asset waitlist, every type, position order</caption>
-      <thead>
-        <tr>
-          <th class="{HEADER_CELL} w-32">Asset</th>
-          <th class="{HEADER_CELL} w-16">#</th>
-          <th class={HEADER_CELL}>Member</th>
-          <th class="{HEADER_CELL} w-28">Requested</th>
-          <th class="{HEADER_CELL} w-40"></th>
-        </tr>
-      </thead>
-      <tbody>
+    <div class="p-6">
+      <ul class="holding-list">
         {#each data.waitlist as entry (entry.id)}
-          <tr class="transition-colors hover:bg-base-200/60">
-            <td><span class="badge badge-sm badge-neutral font-medium">{entry.assetTypeName}</span></td>
-            <td class="type-body tabular-nums text-muted">{entry.position}</td>
-            <td class="type-body">
-              <span class="font-medium">{entry.memberName}</span>
-              {#if entry.memberEmail}<span class="text-muted"> &middot; {entry.memberEmail}</span>{/if}
-            </td>
-            <td class="whitespace-nowrap type-body tabular-nums text-muted">{formatCivilDate(entry.requestedAt)}</td>
-            <td class="flex justify-end gap-1">
+          <li class="holding-row">
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="badge badge-sm badge-neutral font-medium">{entry.assetTypeName}</span>
+                <span class="type-meta tabular-nums text-muted">#{entry.position}</span>
+              </div>
+              <p class="mt-1 type-body font-medium">
+                {entry.memberName}
+                {#if entry.memberEmail}<span class="text-muted"> &middot; {entry.memberEmail}</span>{/if}
+              </p>
+              <p class="type-meta text-muted">Requested {formatCivilDate(entry.requestedAt)}</p>
+            </div>
+            <div class="holding-row-actions">
               <form method="post" action="?/waitlistMoveToEnd">
                 <CsrfField />
                 <input type="hidden" name="waitlistId" value={entry.id} />
@@ -356,15 +343,13 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
                 <input type="hidden" name="waitlistId" value={entry.id} />
                 <button type="submit" class="btn btn-ghost btn-xs text-error">Remove</button>
               </form>
-            </td>
-          </tr>
+            </div>
+          </li>
         {:else}
-          <tr>
-            <td colspan="5" class="px-6 py-10 text-center type-body text-muted">No one is waiting for an asset right now.</td>
-          </tr>
+          <li class="py-10 text-center type-body text-muted">No one is waiting for an asset right now.</li>
         {/each}
-      </tbody>
-    </table>
+      </ul>
+    </div>
 
     <form method="post" action="?/waitlistAdd" class="border-t border-[var(--cairn-card-border)] p-6">
       <h2 class="mb-3 type-body font-semibold">Add to the waitlist</h2>
@@ -454,14 +439,62 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
 
 <style>
   /* `/admin/**` renders against the precompiled `cairn-admin.css`, so a utility cairn's own admin
-     never uses does not exist here. `ml-1` and `align-top` were both in that category: each read
-     as live markup and compiled to nothing. Named scoped rules over package tokens instead, the
-     same escape `classes/[id]/+page.svelte` takes for its row dividers. */
+     never uses does not exist here (`.claude/skills/cairn-admin-screens/references/README.md`'s
+     own warning about this file's exemplars, and `src/admin-club/toolkit/README.md`'s "compiled-CSS
+     constraint"). Every rule below is either a named token-driven role this screen owns outright
+     (`.count-qualifier`) or the row composition that replaces the three raw `<table>` elements this
+     rebuild retires: `divide-y`, `divide-[...]`, and the `first:pt-0`/`last:pb-0` pair the toolkit's
+     own annotated exemplars quote are, verified against this project's own built stylesheet,
+     UNCOMPILED here (`npx cairn-audit` flags all four already, in the sibling admin-club screens
+     that reach for them) -- so the divider and edge-padding trim below are written by hand instead. */
   .count-qualifier {
     margin-left: var(--cairn-gap-label);
   }
 
-  .row-top {
-    vertical-align: top;
+  .holding-list {
+    display: flex;
+    flex-direction: column;
+    /* `.holding-row`'s own `display: flex` already suppresses its `<li>` marker box (a flex
+       display value carries no `::marker`), but the empty-state `<li>` in each view keeps the
+       UA default `display: list-item` (it needs no flex layout of its own), which would
+       otherwise draw a bare bullet with no compiled `list-style: none` reset to stop it --
+       Tailwind's Preflight reset lives in this site's OWN build, never in the precompiled
+       `cairn-admin.css` this route renders against (see this file's own top-of-style-block
+       comment). */
+    list-style: none;
+  }
+
+  /* The row every view (by-asset, by-person, waitlist) shares: an identity block on the left, a
+     chips-plus-verbs block on the right (`.holding-row-actions`), the same two-part register
+     `exemplar-detail.md` states for a detail screen's own related-data rows. `flex-wrap` is what a
+     `<table>` cannot do -- once the two blocks no longer fit one line, the actions block drops to
+     its own full-width line below the identity block instead of forcing the row past the card's
+     edge, which is the 390px defect this rebuild replaces. */
+  .holding-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--cairn-gap-group);
+    padding-block: var(--cairn-gap-group);
+  }
+
+  .holding-row:not(:first-child) {
+    border-top: 1px solid var(--cairn-card-border);
+  }
+
+  .holding-row:first-child {
+    padding-top: 0;
+  }
+
+  .holding-row:last-child {
+    padding-bottom: 0;
+  }
+
+  .holding-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--cairn-gap-control);
   }
 </style>
