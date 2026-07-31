@@ -208,7 +208,7 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
           type="button"
           role="tab"
           aria-selected={view === tab.id}
-          class="join-item btn btn-sm {view === tab.id ? 'btn-primary' : ''}"
+          class="join-item btn btn-sm {view === tab.id ? 'btn-active' : ''}"
           onclick={() => (view = tab.id)}
         >
           {tab.label}
@@ -279,10 +279,30 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
     <form method="post" action="?/assign" class="p-6">
       <h2 class="mb-3 type-body font-semibold">Assign an asset</h2>
       <div class="grid gap-3 sm:grid-cols-2">
-        <SelectField label="Asset type" name="assetType" bind:value={assignAssetType} options={assetTypeOptions} />
-        <TextField label="Search household" name="householdQuery" type="search" placeholder="Name" bind:value={householdQuery} />
-        <SelectField label="Household" name="membershipId" bind:value={assignMembershipId} options={membershipOptions} />
-        <TextField label="Description" name="description" placeholder="Buoy M-14" bind:value={assignDescription} />
+        <label class="flex flex-col gap-label">
+          <span class="type-body font-medium">Asset type</span>
+          <select class="select select-sm" name="assetType" bind:value={assignAssetType}>
+            {#each assetTypeOptions as option (option.value)}
+              <option value={option.value}>{option.label}</option>
+            {/each}
+          </select>
+        </label>
+        <label class="flex flex-col gap-label">
+          <span class="type-body font-medium">Search household</span>
+          <input class="input input-sm" type="search" name="householdQuery" placeholder="Name" bind:value={householdQuery} />
+        </label>
+        <label class="flex flex-col gap-label">
+          <span class="type-body font-medium">Household</span>
+          <select class="select select-sm" name="membershipId" bind:value={assignMembershipId}>
+            {#each membershipOptions as option (option.value)}
+              <option value={option.value}>{option.label}</option>
+            {/each}
+          </select>
+        </label>
+        <label class="flex flex-col gap-label">
+          <span class="type-body font-medium">Description</span>
+          <input class="input input-sm" name="description" placeholder="Buoy M-14" bind:value={assignDescription} />
+        </label>
       </div>
       <div class="mt-3 flex justify-end gap-2">
         <CsrfField />
@@ -421,13 +441,18 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
     <form method="post" action="?/editType" class="flex flex-col gap-3">
       <CsrfField />
       <input type="hidden" name="id" value={editTypeId} />
-      <TextField label="Name" name="name" bind:value={editTypeName} />
-      <FieldLabel label="Fee (USD)">
+      <label class="flex flex-col gap-label">
+        <span class="type-body font-medium">Name</span>
+        <input class="input input-sm" name="name" bind:value={editTypeName} />
+      </label>
+      <label class="flex flex-col gap-label">
+        <span class="type-body font-medium">Fee (USD)</span>
         <input class="input input-sm" type="number" min="0" step="1" name="fee" bind:value={editTypeFee} />
-      </FieldLabel>
-      <FieldLabel label="Capacity">
+      </label>
+      <label class="flex flex-col gap-label">
+        <span class="type-body font-medium">Capacity</span>
         <input class="input input-sm" type="number" min="1" step="1" name="capacity" placeholder="No limit" bind:value={editTypeCapacity} />
-      </FieldLabel>
+      </label>
       <p class="type-meta text-muted">Leave capacity blank for no limit.</p>
       <div class="modal-action">
         <button type="button" class="btn btn-sm" onclick={() => editTypeDialog?.close()}>Cancel</button>
