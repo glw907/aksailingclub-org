@@ -154,16 +154,30 @@ x=16 and its content began at x=73, about 57px of empty reserved column, while t
 the trailing action ran out to near the card's right edge at x=374. The block reads as pushed
 right, with wrapped text crowding the right edge against an empty left band.
 
-The cause is the component's leading slot (for an icon or avatar) going unoccupied. Three of three
-readers flagged the asymmetry, though they split on which checklist item it landed against, which
-is itself a signal that the grammar has no vocabulary for it.
+**The mechanism is not what this document first recorded, and the correction makes the finding
+larger.** The first reading attributed it to `.list-row`'s leading icon slot going unoccupied. The
+builder that fixed it walked the ancestor chain with `getBoundingClientRect` and found the real
+cause: a bare `<ul class="list">` keeps the user agent's own `padding-inline-start: 40px`, reserved
+for a bullet marker that never renders, because `cairn-admin.css` ships no list reset. Measured
+before: card edge x=16, `<ul>` at x=57, a 41px leak. After a scoped `padding-inline-start: 0`:
+`<ul>` at x=17.
 
-Classified against the coverage contract this is a **capture gap** rather than a miss: section 2
-explicitly disclaims axis-scoped gap variants, and nothing in the shipped material states that a
-component's own reserved leading column must be occupied or collapsed.
+**That makes findings 1 and 6 the same finding.** The textarea rendering monospace and the list
+carrying a phantom bullet indent are both `cairn-admin.css` shipping no user-agent reset layer.
+Tailwind's preflight is the conventional source of both (`font: inherit` on form controls, zeroed
+list padding), and the packaged admin stylesheet has neither. Every other UA default is presumably
+also live and simply has not been noticed yet on a screen that exposes it.
 
-**Proposed shape:** either collapse the slot when empty, or state the requirement in the list
-exemplar. Mechanically detectable as a container whose left inset materially exceeds its right.
+Three of three readers flagged the asymmetry, though they split on which checklist item it landed
+against, which is itself a signal that the grammar has no vocabulary for it.
+
+Classified against the coverage contract this is a **capture gap**: nothing in the shipped material
+claims that user-agent defaults are normalized.
+
+**Proposed shape:** treat this as finding 1's second symptom. A UA reset layer in `cairn-admin.css`
+closes both and whatever else is latent. Mechanically detectable in two forms: a container whose
+left inset materially exceeds its right, and a computed property on a bare semantic element
+diverging from the packaged stylesheet's own intent.
 
 ## A validation asset this pass produced
 
