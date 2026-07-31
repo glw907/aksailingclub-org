@@ -116,11 +116,9 @@ const NO_EMAIL_BINDING: SendClubEmailResult = { ok: false, error: 'EMAIL binding
 export async function sendAssetDecisionEmail(db: D1Database, env: EmailBindingEnv, args: AssetDecisionEmailArgs): Promise<SendClubEmailResult> {
   try {
     if (args.kind === 'slot_opened') {
-      let memberId: string;
-      let householdId: string;
-      let assetTypeName: string;
+      let resolved: SlotOpenedResolvedPayload;
       if (args.resolved) {
-        ({ memberId, householdId, assetTypeName } = args.resolved);
+        resolved = args.resolved;
       } else {
         const entry = await db
           .prepare(
@@ -133,12 +131,10 @@ export async function sendAssetDecisionEmail(db: D1Database, env: EmailBindingEn
           .bind(args.waitlistId)
           .first<{ member_id: string; household_id: string; asset_type_name: string }>();
         if (!entry) return { ok: false, error: 'No such waitlist entry to notify about.' };
-        memberId = entry.member_id;
-        householdId = entry.household_id;
-        assetTypeName = entry.asset_type_name;
+        resolved = { memberId: entry.member_id, householdId: entry.household_id, assetTypeName: entry.asset_type_name };
       }
 
-      const recipient = await resolveRecipient(db, memberId, householdId);
+      const recipient = await resolveRecipient(db, resolved.memberId, resolved.householdId);
       if (!recipient) return NO_RECIPIENT;
       if (!env.EMAIL) return NO_EMAIL_BINDING;
 
@@ -149,7 +145,7 @@ export async function sendAssetDecisionEmail(db: D1Database, env: EmailBindingEn
           subject: 'A {{assetTypeName}} spot is open for your household',
           body: 'A {{assetTypeName}} spot has opened for your household. See your place on the waitlist at {{link}}.',
         },
-        vars: { assetTypeName, link },
+        vars: { assetTypeName: resolved.assetTypeName, link },
         segment: assetSlotOpenedSegment(args.waitlistId),
       });
     }

@@ -73,43 +73,28 @@ against daisyUI's own `@layer`-wrapped declaration. -->
             {#if row.priorHolding}<p class="mt-1.5 type-meta text-muted">{row.priorHolding}</p>{/if}
           </div>
 
-          {#if row.kind === 'new'}
-            <form method="post" action="?/approveNew">
-              <input type="hidden" name="id" value={row.id} />
-              <CsrfField />
-              <div class="join">
-                <button type="submit" class="btn btn-sm join-item">
+          <form method="post" action={row.kind === 'new' ? '?/approveNew' : '?/approveRetention'}>
+            <input type="hidden" name="id" value={row.id} />
+            <CsrfField />
+            <div class="join">
+              <button type="submit" class="btn btn-sm join-item">
+                {#if row.kind === 'new'}
                   Approve<span class="sr-only"> {row.assetTypeName} for {row.householdName}</span>
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-ghost join-item"
-                  onclick={() => dialogs[row.id]?.showModal()}
-                >
-                  Deny<span class="sr-only"> {row.assetTypeName} request for {row.householdName}</span>
-                </button>
-              </div>
-            </form>
-          {:else}
-            <form method="post" action="?/approveRetention">
-              <input type="hidden" name="id" value={row.id} />
-              <CsrfField />
-              <div class="join">
-                <button type="submit" class="btn btn-sm join-item">
+                {:else}
                   Approve (opens pay task &mdash; {formatDollars(row.fee)})<span class="sr-only"> for {row.householdName}</span>
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-ghost join-item"
-                  onclick={() => dialogs[row.id]?.showModal()}
-                >
-                  Deny<span class="sr-only"> {row.assetTypeName} request for {row.householdName}</span>
-                </button>
-              </div>
-            </form>
-          {/if}
+                {/if}
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-ghost join-item"
+                onclick={() => dialogs[row.id]?.showModal()}
+              >
+                Deny<span class="sr-only"> {row.assetTypeName} request for {row.householdName}</span>
+              </button>
+            </div>
+          </form>
 
-          <dialog bind:this={dialogs[row.id]} class="modal">
+          <dialog bind:this={dialogs[row.id]} class="asset-request-dialog modal">
             <div class="modal-box">
               <h2 class="type-heading font-bold">Deny {row.householdName}'s request</h2>
               <p class="py-2 type-body text-muted">This clears the case from the queue. The household automatically receives the reason below by email.</p>
@@ -198,5 +183,14 @@ against daisyUI's own `@layer`-wrapped declaration. -->
   .deny-reason-textarea {
     font-family: inherit;
     resize: vertical;
+  }
+
+  /* Same missing reset, one level up. Chromium's UA stylesheet sets `dialog { border: solid }`,
+     which resolves to 3px of `currentColor`, and a modal `<dialog>` sizes itself to the whole
+     viewport, so the border paints a hard near-black rectangle around the entire screen whenever
+     this dialog opens. Measured at 3px solid oklch(0.26 0.014 75) on a 1440x900 box. Neither
+     daisyUI's `.modal` nor the packaged admin stylesheet clears it. */
+  .asset-request-dialog {
+    border: none;
   }
 </style>

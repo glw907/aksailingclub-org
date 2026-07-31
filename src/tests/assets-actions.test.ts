@@ -279,7 +279,7 @@ describe('assets actions: waitlistPromote', () => {
     expect(calls.some((c) => c.sql.includes('COUNT(*)'))).toBe(false);
   });
 
-  it("sends the slot-opened email even though the promotion has already deleted the waitlist row (the ordering defect this pass closes)", async () => {
+  it('sends the slot-opened email even though the promotion has already deleted the waitlist row (the ordering defect this pass closes)', async () => {
     const { db, calls } = fakeD1({ firstResults: PROMOTABLE_DB_FIXTURES });
     const send = vi.fn().mockResolvedValue(undefined);
     const result = await actions.waitlistPromote(postEvent(admin, { assetType: 'mooring' }, { db, email: { send } }));
