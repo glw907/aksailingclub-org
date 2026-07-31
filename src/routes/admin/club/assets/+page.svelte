@@ -374,10 +374,30 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
     <form method="post" action="?/waitlistAdd" class="border-t border-[var(--cairn-card-border)] p-6">
       <h2 class="mb-3 type-body font-semibold">Add to the waitlist</h2>
       <div class="grid gap-3 sm:grid-cols-2">
-        <SelectField label="Asset type" name="assetType" bind:value={waitlistAssetType} options={assetTypeOptions} />
-        <TextField label="Search member" name="memberQuery" type="search" placeholder="Name or email" bind:value={memberQuery} />
-        <SelectField label="Member" name="memberId" bind:value={waitlistMemberId} options={memberSelectOptions} />
-        <TextField label="Notes" name="notes" bind:value={waitlistNotes} />
+        <label class="flex flex-col gap-label">
+          <span class="type-body font-medium">Asset type</span>
+          <select class="select select-sm" name="assetType" bind:value={waitlistAssetType}>
+            {#each assetTypeOptions as option (option.value)}
+              <option value={option.value}>{option.label}</option>
+            {/each}
+          </select>
+        </label>
+        <label class="flex flex-col gap-label">
+          <span class="type-body font-medium">Search member</span>
+          <input class="input input-sm" type="search" name="memberQuery" placeholder="Name or email" bind:value={memberQuery} />
+        </label>
+        <label class="flex flex-col gap-label">
+          <span class="type-body font-medium">Member</span>
+          <select class="select select-sm" name="memberId" bind:value={waitlistMemberId}>
+            {#each memberSelectOptions as option (option.value)}
+              <option value={option.value}>{option.label}</option>
+            {/each}
+          </select>
+        </label>
+        <label class="flex flex-col gap-label">
+          <span class="type-body font-medium">Notes</span>
+          <input class="input input-sm" name="notes" bind:value={waitlistNotes} />
+        </label>
       </div>
       <div class="mt-3 flex justify-end gap-2">
         <CsrfField />
