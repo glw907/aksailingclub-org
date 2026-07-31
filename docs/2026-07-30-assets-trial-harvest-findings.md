@@ -71,6 +71,28 @@ preflight's `font: inherit` on form elements is the conventional form), plus a `
 own. Mechanically detectable, so it belongs in `cairn-audit`: a rendered rule comparing a form
 control's computed `font-family` against the body's would have caught it on any consuming site.
 
+### Two further symptoms of finding 1, both found in the fix rounds
+
+**The native `<dialog>` border paints around the whole viewport.** `dialog.modal` computes
+`border: 3px solid oklch(0.26 0.014 75)` and its own box is the full viewport (measured 1440x900 at
+0,0), so a hard near-black 3px frame draws at the viewport's outer edge whenever any modal opens.
+This is Chrome's user-agent `dialog { border: solid }` (medium width, `currentColor`), reset by
+neither daisyUI's `.modal` nor `cairn-admin.css`. **It is on every modal on every cairn admin
+screen.** Only one of six independent readers across two rounds named it, because it hides at the
+extreme edge of the frame, which is exactly why a rule should carry it rather than an eye.
+
+**Every field caps at 320px regardless of its container.** `cairn-admin.css` sets
+`width: clamp(3rem, 20rem, 100%)` on `.input`, `.select` and `.textarea`. The preferred value is
+20rem, so a field in a wider cell simply stops at 320px. Measured in the Edit-type dialog: a 512px
+box with roughly 448px of content width, fields stopping at 320px while the `Cancel`/`Save` footer
+aligned to the content edge, leaving a tall empty column beside the whole field stack. Two readers
+named the resulting measure disagreement on two different surfaces without identifying the cause.
+
+**This is also why one screen passed and the other did not.** The asset-requests builder happened to
+write `class="textarea w-full"`; the Assets builder used the same stacked markup without `w-full`.
+A default that every consumer must override on every field, with nothing in the capture saying so,
+is a trap rather than a default.
+
 ## Finding 2: `form-anatomy.md`'s own worked example does not compile
 
 The exemplar prescribes `gap-x-6 gap-y-4` for a two-column form grid. Neither class reaches the
