@@ -6,7 +6,7 @@ column called "category" here to match the schema's own CHECK-constrained column
 than the mockup's looser "type" wording.
 
 There is deliberately no "edited by" column, though the ratified mockup's triage table has one:
-`hooks.server.ts` now wires a persisted `event.locals.auditSink` for `/admin/club/**` (Task 6's
+`hooks.server.ts` now wires a persisted `event.locals.cairnAuditSink` for `/admin/club/**` (Task 6's
 rider 2), so a real `entity = 'event'` row lands per edit going forward, but every row up to that
 point is still only the ops-import script's own direct write (Task 2). Joining today would show
 "import:ops" for every never-yet-edited row, a misleading column, not an honest one, until enough
@@ -15,7 +15,7 @@ cheap, else omit and say so") for this same reason.
 -->
 <script lang="ts">
   import type { PageData } from './$types';
-  import { OfficeList } from '@glw907/cairn-cms/components';
+  import { OfficeList } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL, OPS_VISIBILITY_CHIP, formatCivilDate } from '$admin-club/lib/ui';
   import { EVENT_CATEGORY_LABEL, type EventCategory } from '$admin-club/lib/events-store';
 

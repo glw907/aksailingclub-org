@@ -9,8 +9,9 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { ActionData, PageData } from './$types';
-  import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
-  import { FieldLabel, TextField } from '@glw907/cairn-cms/admin-fields';
+  import { CsrfField } from '@glw907/cairn-cms/components';
+  import { OfficeList } from '@glw907/cairn-cms/admin-toolkit';
+  import { FieldLabel, TextInput } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL, formatClubTimestamp } from '$admin-club/lib/ui';
   import { renderTemplateWithVariables } from '$admin-club/lib/club-email';
   import { buildSampleVariables } from '$admin-club/lib/email-templates-store';
@@ -115,7 +116,7 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
     <form method="post" action="?/save">
       <div class="grid gap-section p-6 lg:grid-cols-2">
         <section class="flex flex-col gap-4">
-          <TextField label="Subject" name="subject" bind:value={subject} />
+          <TextInput label="Subject" name="subject" bind:value={subject} />
           <FieldLabel label="Body (markdown)">
             <textarea
               bind:this={bodyField}

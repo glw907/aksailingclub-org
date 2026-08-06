@@ -26,7 +26,7 @@ as the list screen's identical patch.
   import type { SubmitFunction } from '@sveltejs/kit';
   import type { ActionData, PageData } from './$types';
   import { CsrfField } from '@glw907/cairn-cms/components';
-  import { SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
+  import { SelectInput, TextInput } from '@glw907/cairn-cms/admin-toolkit';
   import { AdminTable, PageHeader, StatusChip, ageFromBirthdate } from '@glw907/cairn-cms/admin-toolkit';
   import ClassForm from '../ClassForm.svelte';
   import type { ClassTrack, ClassWithCounts, EnrollmentRow } from '$admin-club/lib/classes-store';
@@ -381,8 +381,8 @@ as the list screen's identical patch.
         <form method="post" action="?/recordPayment" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => paymentDialog)}>
           <CsrfField />
           <input type="hidden" name="enrollmentId" value={paymentTarget.id} />
-          <SelectField label="Source" name="source" bind:value={paymentSource} options={SOURCE_OPTIONS} />
-          <TextField label="Memo" name="memo" bind:value={paymentMemo} />
+          <SelectInput label="Source" name="source" bind:value={paymentSource} options={SOURCE_OPTIONS} />
+          <TextInput label="Memo" name="memo" bind:value={paymentMemo} />
           <div class="modal-action">
             <button type="button" class="btn btn-sm" onclick={() => paymentDialog?.close()}>Cancel</button>
             <button type="submit" class="btn btn-primary btn-sm">Record payment</button>

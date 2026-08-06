@@ -42,8 +42,9 @@ import { checkoutOrStub } from '$member-portal/lib/checkout';
 import { nextUnclaimedRenewalSeason } from '$member-portal/lib/renewal';
 import { loadSeasonHasLiveEvents } from '$theme/season-data';
 import { siteConfig } from '$theme/cairn.config';
-import { verifyTurnstile } from '$theme/turnstile';
-import { checkRateLimitKeys, RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
+import { verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
+import { checkRateLimitKeys } from '@glw907/cairn-cms/cloudflare';
+import { RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
 import { documents } from '$chassis/content';
 import { loadPublishedDocuments } from '$theme/documents';
 import { householdDocumentSigner, loadHouseholdRequirements, outstandingAssetDocuments, parseAssetKind } from '$member-portal/lib/waiver-requirements';
@@ -157,7 +158,7 @@ export const actions: Actions = {
     // `requestRenewLink`.
     const secret = event.platform?.env.TURNSTILE_SECRET_KEY;
     const token = String(form.get('cf-turnstile-response') ?? '');
-    if (secret && !(await verifyTurnstile(token, event.getClientAddress(), secret))) {
+    if (secret && !(await verifyTurnstile(token, secret, { ip: event.getClientAddress() }))) {
       return fail(400, { error: 'Spam check failed. Please try again.' });
     }
 

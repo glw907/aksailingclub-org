@@ -6,8 +6,9 @@ import { error, fail } from '@sveltejs/kit';
 import type { RateLimit } from '@cloudflare/workers-types';
 import type { Actions, PageServerLoad } from './$types';
 import { claimOffer, declineOffer, previewOffer, toSqliteDatetime } from '$admin-club/lib/offers';
-import { verifyTurnstile } from '$theme/turnstile';
-import { checkRateLimit, RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
+import { verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
+import { checkRateLimit } from '@glw907/cairn-cms/cloudflare';
+import { RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
 
 export const prerender = false;
 
@@ -45,7 +46,7 @@ async function verifiedOrTurnstileFailure(
   if (!secret) return null;
   const form = await request.formData();
   const token = String(form.get('cf-turnstile-response') ?? '');
-  if (!(await verifyTurnstile(token, getClientAddress(), secret))) return 'Spam check failed. Please try again.';
+  if (!(await verifyTurnstile(token, secret, { ip: getClientAddress() }))) return 'Spam check failed. Please try again.';
   return null;
 }
 

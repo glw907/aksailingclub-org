@@ -13,8 +13,9 @@ rather than asserting it.
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { ActionData, PageData } from './$types';
-  import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
-  import { FieldLabel, TextField } from '@glw907/cairn-cms/admin-fields';
+  import { CsrfField } from '@glw907/cairn-cms/components';
+  import { OfficeList } from '@glw907/cairn-cms/admin-toolkit';
+  import { FieldLabel, TextInput } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL, formatClubTimestamp } from '$admin-club/lib/ui';
   import { buildAnnouncementEmailContent } from '$admin-club/lib/announcements';
   import { renderTemplatePreviewHtml } from '$admin-club/lib/club-email';
@@ -77,7 +78,7 @@ rather than asserting it.
       <form method="post" action="?/send">
         <div class="grid gap-section p-6 lg:grid-cols-2">
           <section class="flex flex-col gap-4">
-            <TextField label="Subject (email only)" name="subject" bind:value={subject} />
+            <TextInput label="Subject (email only)" name="subject" bind:value={subject} />
             <FieldLabel label="Summary">
               <textarea class="textarea textarea-sm w-full" name="message" rows="6" bind:value={message}></textarea>
             </FieldLabel>

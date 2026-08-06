@@ -3,30 +3,18 @@ import type { ExecutionContext, D1Database, RateLimit } from '@cloudflare/worker
 // The binding-shaped types ship from the /sveltekit subpath, so the Platform block intersects
 // them rather than restating every engine binding by hand. CairnMediaBindings adds
 // MEDIA_BUCKET, present because this site turns media on.
-import type { CairnPlatformBindings, CairnMediaBindings, AdminActionAuditSink } from '@glw907/cairn-cms/sveltekit';
+import type { CairnPlatformBindings, CairnMediaBindings } from '@glw907/cairn-cms/sveltekit';
 import type { MemberRow } from '$member-auth/lib/auth';
-// App.Locals.editor (set by the engine's auth guard) ships with the engine.
+// The engine's own four `cairn*`-prefixed locals keys (`cairnEditor`, `cairnBackend`,
+// `cairnAuditSink`, `cairnAccess`) ship here, so nothing below restates one. `cairnAuditSink` in
+// particular is the engine's declaration, not this site's: hooks.server.ts writes it, and
+// duplicating the field here would have hidden the `0.94.0-rc.1` rename behind a site-owned type
+// that still compiled.
 import '@glw907/cairn-cms/ambient';
-import type { roles } from '$theme/cairn.config.js';
-
-// Narrows `locals.editor.role` (and any navLayout `roles` list) to the site's declared
-// vocabulary (initiative 5, docs/2026-07-14-admin-roles-navlayout-design.md#phase-1)
-// everywhere it's read, instead of the unaugmented `'owner' | 'editor'` pair. Read-side
-// only; it has no effect on which capability a role resolves to at runtime (that's
-// `resolveCapability`, reading the same `roles` declaration).
-declare module '@glw907/cairn-cms' {
-  interface CairnRolesRegister {
-    roles: typeof roles;
-  }
-}
 
 declare global {
   namespace App {
     interface Locals {
-      // Set by hooks.server.ts's wireClubAuditSink for /admin/club/** requests only (pass 2.1
-      // Task 6's rider 2): the Club section's own persisted audit_log sink, which adminAction
-      // calls per ctx.audit emit. Absent everywhere else; adminAction tolerates a missing sink.
-      auditSink?: AdminActionAuditSink;
       // Set by /my-account/+layout.server.ts's own session resolve (a member session, distinct
       // from the engine's own `locals.editor`; the two stores never blur). `null` when signed
       // out or the session has expired; absent (`undefined`) outside the /my-account route tree.

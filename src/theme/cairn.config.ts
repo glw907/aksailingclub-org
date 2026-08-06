@@ -3,7 +3,7 @@
 // (Task 3: the club-grounds chrome and the callout/passage/cards components), and the GitHub App
 // backend against the asc-site repo.
 import { defineAdapter, defineConcept, defineRoles, fieldset, fields, githubApp, createRenderer, parseSiteConfig } from '@glw907/cairn-cms';
-import { normalizeAssets, makeMediaResolver, readCommittedManifest } from '@glw907/cairn-cms/media';
+import { normalizeAssets, buildMediaResolver, readCommittedManifest } from '@glw907/cairn-cms/media';
 import type { NavLayout } from '@glw907/cairn-cms/sveltekit';
 import { buildAccess } from './access.js';
 import { ascRegistry } from './markdown/components.js';
@@ -145,7 +145,7 @@ export const mediaManifest = readCommittedManifest(
 // preview path injects its own resolveMedia from the edit page's mediaTargets; this default
 // keeps a published `media:` reference from throwing when no per-call resolver is supplied.
 const resolvedAssets = normalizeAssets({ bucketBinding: 'MEDIA_BUCKET' });
-export const publicMediaResolver = makeMediaResolver(mediaManifest, resolvedAssets);
+export const publicMediaResolver = buildMediaResolver(mediaManifest, resolvedAssets);
 
 // Whether media is configured on. The public route threads it as `assetsEnabled` so the engine
 // logs `media.resolver_absent` if a future edit drops the resolveMedia wiring while media stays
@@ -180,6 +180,13 @@ export const roles = defineRoles({
   Publisher: 'editor',
   Instructor: { capability: 'none' },
 });
+
+/** The site's own role names, narrowed to the six `roles` declares. cairn's `Role` type and the
+ *  `CairnRolesRegister` registry that narrowed it were removed in `0.94.0-rc.1`: role names are
+ *  open now, since each site names its own vocabulary, so the narrowing that mattered here is a
+ *  site-local type over the site's own declaration rather than an engine one. `defineRoles` is
+ *  generic over a `const` type parameter, so `keyof typeof roles` keeps the literal keys. */
+export type ClubRole = keyof typeof roles;
 
 // The site's access map (pass A T3, docs/plans/2026-07-19-asc-roles-adoption.md;
 // src/theme/access.ts carries the map itself and the comprehensiveness/carve-out reasoning).

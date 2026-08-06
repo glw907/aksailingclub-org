@@ -8,17 +8,17 @@
 // small here rather than importing the engine's auth internals, the same choice
 // `src/admin-club/lib/offers.ts` made for its own waitlist-offer tokens.
 import type { D1Database } from '@cloudflare/workers-types';
+import { tokensMatch } from '@glw907/cairn-cms/auth-crypto';
 import {
   generateMemberToken,
   generateMemberSessionId,
   generateMemberCsrfToken,
   hashMemberToken,
-  toSqliteDatetime,
-  sqliteDatetimeAfter,
   memberCsrfCookieName,
   MEMBER_TOKEN_TTL_MS,
   MEMBER_SESSION_TTL_MS,
 } from './crypto';
+import { toSqliteDatetime, sqliteDatetimeAfter } from './sqlite-datetime';
 import {
   findMemberByEmail,
   findMemberByTokenHash,
@@ -45,7 +45,7 @@ export interface MemberLinkMessage {
 /** The injected send, mirroring cairn's own `SendMagicLink` seam: production wraps
  *  `platform.env.EMAIL.send`, a test passes a sink, so `requestMemberLink` itself never touches a
  *  binding directly (testable with no D1 *or* Worker runtime beyond the `D1Database` param). */
-export type SendMemberLink = (message: MemberLinkMessage) => Promise<void>;
+export type SendMemberLink = (message: MemberLinkMessage) => Promise<unknown>;
 
 /** Per-site identity for the member magic-link email and the confirmation link's origin.
  *  `requestMemberLink`'s literal parameter list is `(db, email, sendEmail)`; this bag is the one
@@ -271,18 +271,10 @@ export function issueMemberCsrfToken(event: { url: URL; cookies: MemberCookieJar
   return token;
 }
 
-/** A length-checked constant-time compare, so the token check leaks no timing (mirrors cairn's
- *  own `tokensMatch`). */
-function tokensMatch(a: string, b: string): boolean {
-  if (a.length === 0 || a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
-
 /** Validate a member form POST's double-submit token: the cookie `issueMemberCsrfToken` sets,
- *  compared constant-time against the submitted `csrf` field (mirrors cairn's own
- *  `validateCsrfToken`). */
+ *  compared constant-time against the submitted `csrf` field with cairn's own `tokensMatch`
+ *  (`@glw907/cairn-cms/auth-crypto`), which this module reimplemented before that subpath
+ *  existed. */
 export async function validateMemberCsrfToken(event: {
   url: URL;
   request: Request;

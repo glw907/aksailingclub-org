@@ -13,8 +13,9 @@ import * as v from 'valibot';
 import { invalid } from '@sveltejs/kit';
 import { form, getRequestEvent } from '$app/server';
 import { donationAmountError } from '$theme/donate-pricing';
-import { verifyTurnstile } from '$theme/turnstile';
-import { checkRateLimit, RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
+import { verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
+import { checkRateLimit } from '@glw907/cairn-cms/cloudflare';
+import { RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
 import { createCheckout, CheckoutUnavailableError } from '$admin-club/lib/payments';
 
 const donateSchema = v.object({
@@ -40,7 +41,7 @@ export const createDonationCheckout = form(donateSchema, async ({ amount, note, 
   if (amountError) invalid(amountError);
 
   const secret = platform?.env?.TURNSTILE_SECRET_KEY;
-  if (secret && !(await verifyTurnstile(token, getClientAddress(), secret))) {
+  if (secret && !(await verifyTurnstile(token, secret, { ip: getClientAddress() }))) {
     invalid('Please complete the verification.');
   }
 

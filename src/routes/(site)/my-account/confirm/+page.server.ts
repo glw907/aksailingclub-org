@@ -10,8 +10,8 @@ import { confirmMemberToken, requestMemberLink, issueMemberCsrfToken, validateMe
 import { memberSessionCookieName } from '$member-auth/lib/crypto';
 import { resolveMemberDb } from '$member-auth/lib/db';
 import { siteConfig } from '$theme/cairn.config';
-import { verifyTurnstile } from '$theme/turnstile';
-import { checkRateLimit, checkRateLimitKeys } from '$theme/rate-limit';
+import { verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
+import { checkRateLimit, checkRateLimitKeys } from '@glw907/cairn-cms/cloudflare';
 import { isSafeNextPath, DEFAULT_NEXT_PATH } from '$member-portal/lib/return-path';
 
 export const prerender = false;
@@ -71,7 +71,7 @@ export const actions: Actions = {
 
     const secret = event.platform?.env.TURNSTILE_SECRET_KEY;
     const turnstileToken = String(form.get('cf-turnstile-response') ?? '');
-    if (secret && !(await verifyTurnstile(turnstileToken, event.getClientAddress(), secret))) {
+    if (secret && !(await verifyTurnstile(turnstileToken, secret, { ip: event.getClientAddress() }))) {
       return { ok: false as const, prefillEmail: null, error: SPAM_CHECK_MESSAGE };
     }
 
@@ -121,7 +121,7 @@ export const actions: Actions = {
 
     const secret = event.platform?.env.TURNSTILE_SECRET_KEY;
     const turnstileToken = String(form.get('cf-turnstile-response') ?? '');
-    if (secret && !(await verifyTurnstile(turnstileToken, event.getClientAddress(), secret))) {
+    if (secret && !(await verifyTurnstile(turnstileToken, secret, { ip: event.getClientAddress() }))) {
       return { ok: false as const, prefillEmail: email, resent: false as const, error: SPAM_CHECK_MESSAGE };
     }
 

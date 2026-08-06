@@ -18,7 +18,7 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
   import type { SubmitFunction } from '@sveltejs/kit';
   import type { ActionData, PageData } from './$types';
   import { CsrfField } from '@glw907/cairn-cms/components';
-  import { FieldLabel, SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
+  import { FieldLabel, SelectInput, TextInput } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL, formatCents, formatCivilDate, formatClubTimestamp, formatDollars } from '$admin-club/lib/ui';
   import { HOUSEHOLD_STANDING_CHIP, LINE_ITEM_LABEL, TIER_LABEL, TRANSACTION_KIND_LABEL, TRANSACTION_SOURCE_LABEL, VISIBILITY_CHIP } from '$admin-club/lib/member-format';
   import type { TransactionSource } from '$admin-club/lib/ledger';
@@ -410,9 +410,9 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
       <h2 id="household-dialog-title" class="type-heading font-bold">Edit household</h2>
       <form method="post" action="?/updateHousehold" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => householdDialog)}>
         <CsrfField />
-        <TextField label="Household name" name="name" bind:value={householdName} />
-        <TextField label="City" name="city" bind:value={householdCity} />
-        <SelectField
+        <TextInput label="Household name" name="name" bind:value={householdName} />
+        <TextInput label="City" name="city" bind:value={householdCity} />
+        <SelectInput
           label="Primary member"
           name="primaryMemberId"
           bind:value={householdPrimaryId}
@@ -443,7 +443,7 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
         use:enhance={closeDialogOnSettle(() => formerDialog)}
       >
         <CsrfField />
-        <TextField label="Reason" name="reason" bind:value={formerReason} />
+        <TextInput label="Reason" name="reason" bind:value={formerReason} />
         <div class="modal-action">
           <button type="button" class="btn btn-sm" onclick={() => formerDialog?.close()}>Cancel</button>
           <button type="submit" class="btn btn-primary btn-sm">{formerDialogMode === 'set' ? 'Mark Former' : 'Clear Former'}</button>
@@ -463,9 +463,9 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
       >
         <CsrfField />
         {#if memberDialogMode === 'edit'}<input type="hidden" name="memberId" value={memberId} />{/if}
-        <TextField label="Name" name="name" bind:value={memberName} />
-        <TextField label="Email" name="email" type="email" bind:value={memberEmail} />
-        <TextField label="Phone" name="phone" bind:value={memberPhone} />
+        <TextInput label="Name" name="name" bind:value={memberName} />
+        <TextInput label="Email" name="email" type="email" bind:value={memberEmail} />
+        <TextInput label="Phone" name="phone" bind:value={memberPhone} />
         <FieldLabel label="Birthdate">
           <input class="input input-sm" type="date" name="birthdate" bind:value={memberBirthdate} />
         </FieldLabel>
@@ -487,8 +487,8 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
       <form method="post" action="?/moveMember" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => moveDialog)}>
         <CsrfField />
         <input type="hidden" name="memberId" value={moveMemberId} />
-        <TextField label="Target household id" name="targetHouseholdId" bind:value={moveTargetHouseholdId} />
-        <SelectField
+        <TextInput label="Target household id" name="targetHouseholdId" bind:value={moveTargetHouseholdId} />
+        <SelectInput
           label="New primary (only if moving the primary)"
           name="newPrimaryId"
           bind:value={moveNewPrimaryId}
@@ -511,7 +511,7 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
       </p>
       <form method="post" action="?/mergeHousehold" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => mergeDialog)}>
         <CsrfField />
-        <TextField label="Household id to merge in" name="mergedHouseholdId" bind:value={mergedHouseholdId} />
+        <TextInput label="Household id to merge in" name="mergedHouseholdId" bind:value={mergedHouseholdId} />
         <div class="modal-action">
           <button type="button" class="btn btn-sm" onclick={() => mergeDialog?.close()}>Cancel</button>
           <button type="submit" class="btn btn-primary btn-sm">Merge</button>
@@ -527,7 +527,7 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
       <form method="post" action="?/changeTier" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => tierDialog)}>
         <CsrfField />
         <input type="hidden" name="membershipId" value={tierMembershipId} />
-        <SelectField label="Tier" name="tier" bind:value={tierValue} options={TIER_OPTIONS} />
+        <SelectInput label="Tier" name="tier" bind:value={tierValue} options={TIER_OPTIONS} />
         <div class="modal-action">
           <button type="button" class="btn btn-sm" onclick={() => tierDialog?.close()}>Cancel</button>
           <button type="submit" class="btn btn-primary btn-sm">Save</button>
@@ -545,12 +545,12 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
         <FieldLabel label="Season">
           <input class="input input-sm" type="number" name="season" min="2020" step="1" bind:value={paymentSeason} required />
         </FieldLabel>
-        <SelectField label="Tier" name="tier" bind:value={paymentTier} options={TIER_OPTIONS} />
+        <SelectInput label="Tier" name="tier" bind:value={paymentTier} options={TIER_OPTIONS} />
         <FieldLabel label="Amount (USD)">
           <input class="input input-sm" type="number" name="amount" min="0" step="1" bind:value={paymentAmount} required />
         </FieldLabel>
-        <SelectField label="Source" name="source" bind:value={paymentSource} options={SOURCE_OPTIONS} />
-        <TextField label="Memo" name="memo" bind:value={paymentMemo} />
+        <SelectInput label="Source" name="source" bind:value={paymentSource} options={SOURCE_OPTIONS} />
+        <TextInput label="Memo" name="memo" bind:value={paymentMemo} />
         <div class="modal-action">
           <button type="button" class="btn btn-sm" onclick={() => paymentDialog?.close()}>Cancel</button>
           <button type="submit" class="btn btn-primary btn-sm">Record payment</button>

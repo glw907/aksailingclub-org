@@ -198,21 +198,21 @@ describe('/classes/offer/[token] actions (the Turnstile/origin gate, 2026-07-15 
   });
 
   it('claim: rejects a missing token when a secret is configured', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: false }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: false }) }));
     const result = await actions.claim(eventFor('a-token', undefined, { turnstileSecret: 'secret' }));
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number; data: { error: string } }).data.error).toContain('Spam check failed');
   });
 
   it('claim: rejects an invalid token when a secret is configured', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: false }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: false }) }));
     const result = await actions.claim(eventFor('a-token', undefined, { turnstileSecret: 'secret', formEntries: { 'cf-turnstile-response': 'a-bad-token' } }));
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number; data: { error: string } }).data.error).toContain('Spam check failed');
   });
 
   it('claim: proceeds past the gate when a secret is configured and siteverify reports success', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: true }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: true }) }));
     const { db } = fakeD1({
       firstResults: {
         'FROM class_offers WHERE token': ACTIVE_OFFER_ROW,
@@ -243,14 +243,14 @@ describe('/classes/offer/[token] actions (the Turnstile/origin gate, 2026-07-15 
   });
 
   it('decline: rejects a missing token when a secret is configured', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: false }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: false }) }));
     const result = await actions.decline(eventFor('a-token', undefined, { turnstileSecret: 'secret' }));
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number; data: { error: string } }).data.error).toContain('Spam check failed');
   });
 
   it('decline: proceeds past the gate when a secret is configured and siteverify reports success', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: true }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: true }) }));
     const { db } = fakeD1({
       firstResults: { 'FROM class_offers WHERE token': { waitlist_id: 'wait-1', resolved: null } },
     });

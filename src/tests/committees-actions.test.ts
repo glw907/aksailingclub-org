@@ -38,7 +38,9 @@ function postEvent(
       delete: () => undefined,
     },
     platform: { env: { CLUB_DB: opts.db } },
-    locals: { editor, auditSink: opts.auditSink, cairnAccess: access },
+    route: { id: new URL(url).pathname },
+    setHeaders: () => undefined,
+    locals: { cairnEditor: editor, cairnAuditSink: opts.auditSink, cairnAccess: access },
   } as unknown as ActionEvent;
 }
 
@@ -69,7 +71,7 @@ describe('committees actions: createCommittee', () => {
     const result = await actions.createCommittee(postEvent(admin, { name: 'Fleet', kind: 'established' }, { db, auditSink: sink }));
     expect(result).toEqual({ ok: true });
     expect(calls.some((c) => c.sql.startsWith('INSERT INTO committees'))).toBe(true);
-    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'create', entity: 'committee', editor: admin.email }));
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'create', entity: 'committee', actor: admin.email }));
   });
 });
 
@@ -80,7 +82,7 @@ describe('committees actions: archiveCommittee', () => {
     const result = await actions.archiveCommittee(postEvent(admin, { committeeId: 'c-1', archived: 'true' }, { db, auditSink: sink }));
     expect(result).toEqual({ ok: true });
     expect(calls[0].sql).toContain("datetime('now')");
-    expect(sink).toHaveBeenCalledWith({ action: 'archive', entity: 'committee', entityId: 'c-1', editor: admin.email });
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'archive', entity: 'committee', entityId: 'c-1', actor: admin.email }));
   });
 
   it('restores and audits the restore verb when archived=false', async () => {
@@ -89,7 +91,7 @@ describe('committees actions: archiveCommittee', () => {
     const result = await actions.archiveCommittee(postEvent(admin, { committeeId: 'c-1', archived: 'false' }, { db, auditSink: sink }));
     expect(result).toEqual({ ok: true });
     expect(calls[0].sql).toContain('NULL');
-    expect(sink).toHaveBeenCalledWith({ action: 'restore', entity: 'committee', entityId: 'c-1', editor: admin.email });
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'restore', entity: 'committee', entityId: 'c-1', actor: admin.email }));
   });
 });
 
@@ -125,7 +127,7 @@ describe('committees actions: declineMember deletes the row', () => {
     const result = await actions.declineMember(postEvent(admin, { committeeMemberId: 'cm-1' }, { db, auditSink: sink }));
     expect(result).toEqual({ ok: true });
     expect(calls).toEqual([{ sql: 'DELETE FROM committee_members WHERE id = ?1', args: ['cm-1'] }]);
-    expect(sink).toHaveBeenCalledWith({ action: 'decline', entity: 'committee-member', entityId: 'cm-1', editor: admin.email });
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'decline', entity: 'committee-member', entityId: 'cm-1', actor: admin.email }));
   });
 
   it('fails 400 when no committeeMemberId is posted', async () => {
@@ -143,7 +145,7 @@ describe('committees actions: removeMember also deletes the row', () => {
     const result = await actions.removeMember(postEvent(admin, { committeeMemberId: 'cm-1' }, { db, auditSink: sink }));
     expect(result).toEqual({ ok: true });
     expect(calls).toEqual([{ sql: 'DELETE FROM committee_members WHERE id = ?1', args: ['cm-1'] }]);
-    expect(sink).toHaveBeenCalledWith({ action: 'remove', entity: 'committee-member', entityId: 'cm-1', editor: admin.email });
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'remove', entity: 'committee-member', entityId: 'cm-1', actor: admin.email }));
   });
 });
 
@@ -161,7 +163,7 @@ describe('committees actions: approveMember', () => {
     const result = await actions.approveMember(postEvent(admin, { committeeMemberId: 'cm-1' }, { db, auditSink: sink }));
     expect(result).toEqual({ ok: true });
     expect(calls[0].sql).toContain("SET status = 'active'");
-    expect(sink).toHaveBeenCalledWith({ action: 'approve', entity: 'committee-member', entityId: 'cm-1', editor: admin.email });
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'approve', entity: 'committee-member', entityId: 'cm-1', actor: admin.email }));
   });
 });
 
@@ -181,13 +183,13 @@ describe('committees actions: setMemberRole', () => {
     );
     expect(result).toEqual({ ok: true });
     expect(calls[0].args).toEqual(['co-chair', 'cm-1']);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'set-role',
       entity: 'committee-member',
       entityId: 'cm-1',
       detail: 'role=co-chair',
-      editor: admin.email,
-    });
+      actor: admin.email,
+    }));
   });
 });
 
@@ -219,7 +221,7 @@ describe('committees actions: removePosition', () => {
     const result = await actions.removePosition(postEvent(admin, { positionId: 'p-1' }, { db, auditSink: sink }));
     expect(result).toEqual({ ok: true });
     expect(calls).toEqual([{ sql: 'DELETE FROM member_positions WHERE id = ?1', args: ['p-1'] }]);
-    expect(sink).toHaveBeenCalledWith({ action: 'remove', entity: 'member-position', entityId: 'p-1', editor: admin.email });
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'remove', entity: 'member-position', entityId: 'p-1', actor: admin.email }));
   });
 });
 
@@ -237,12 +239,12 @@ describe('committees actions: movePosition', () => {
     const result = await actions.movePosition(postEvent(admin, { positionId: 'p-1' }, { db, auditSink: sink }));
     expect(result).toEqual({ ok: true });
     expect(calls.some((c) => c.sql.startsWith('UPDATE member_positions SET sort_order'))).toBe(true);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'reorder',
       entity: 'member-position',
       entityId: 'p-1',
       detail: 'direction=down',
-      editor: admin.email,
-    });
+      actor: admin.email,
+    }));
   });
 });

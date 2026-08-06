@@ -50,7 +50,9 @@ function postEvent(
       delete: () => undefined,
     },
     platform: { env: { CLUB_DB: opts.db } },
-    locals: { editor, auditSink: opts.auditSink, cairnAccess: access },
+    route: { id: new URL(url).pathname },
+    setHeaders: () => undefined,
+    locals: { cairnEditor: editor, cairnAuditSink: opts.auditSink, cairnAccess: access },
   } as unknown as NewActionEvent & DetailActionEvent;
 }
 
@@ -74,7 +76,7 @@ describe('events actions: club-role gate', () => {
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number }).status).toBe(403);
     expect(sink).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'create', entity: 'event', editor: noRole.email }),
+      expect.objectContaining({ action: 'create', entity: 'event', actor: noRole.email }),
     );
   });
 
@@ -121,12 +123,12 @@ describe('events actions: create', () => {
     expect(isRedirect(caught)).toBe(true);
     expect((caught as Redirect).location).toBe('/admin/club/events/board-meeting-2026-08');
     expect(calls.some((c) => c.sql.startsWith('INSERT INTO events'))).toBe(true);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'create',
       entity: 'event',
       entityId: 'board-meeting-2026-08',
-      editor: admin.email,
-    });
+      actor: admin.email,
+    }));
   });
 });
 
@@ -163,12 +165,12 @@ describe('events actions: update', () => {
     const result = await detailActions.update(postEvent(admin, VALID_FIELDS, { db, auditSink: sink }));
     expect(result).toEqual({ ok: true });
     expect(calls.some((c) => c.sql.startsWith('UPDATE events SET'))).toBe(true);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'update',
       entity: 'event',
       entityId: 'board-meeting-2026-08',
-      editor: admin.email,
-    });
+      actor: admin.email,
+    }));
   });
 });
 
@@ -200,11 +202,11 @@ describe('events actions: delete', () => {
     expect(isRedirect(caught)).toBe(true);
     expect((caught as Redirect).location).toBe('/admin/club/events');
     expect(calls.some((c) => c.sql.startsWith('DELETE FROM events'))).toBe(true);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'delete',
       entity: 'event',
       entityId: 'board-meeting-2026-08',
-      editor: admin.email,
-    });
+      actor: admin.email,
+    }));
   });
 });

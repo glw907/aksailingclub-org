@@ -12,7 +12,8 @@ import {
   handleRequestClassRenewLink,
   resolveClassEligibility,
 } from './class-signup-form';
-import { checkRateLimitKeys, RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
+import { checkRateLimitKeys } from '@glw907/cairn-cms/cloudflare';
+import { RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
 import { normalizeEmail } from '$admin-club/lib/member-normalize.js';
 
 export const joinClass = form(classSignupSchema, async (input) => {

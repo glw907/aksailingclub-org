@@ -58,9 +58,17 @@ describe('the per-tick send cap', () => {
     const sends = calls.filter((c) => c.sql.startsWith('INSERT INTO email_log'));
     expect(sends).toHaveLength(PER_TICK_SEND_CAP);
 
-    const capAudits = calls.filter((c) => c.sql.includes("'send_cap_hit'"));
+    // `job.send_cap_hit`, namespaced under `job.` and bound rather than inlined, since the row
+    // goes through cairn's packaged audit sink as of the `0.94.0-rc.1` migration.
+    const capAudits = calls.filter((c) => c.args?.[1] === 'job.send_cap_hit');
     expect(capAudits).toHaveLength(1);
-    expect(capAudits[0].args).toEqual(['system:cron', 'class-reminders', `cap=${PER_TICK_SEND_CAP} interrupted_job=class-reminders`]);
+    expect(capAudits[0].args).toEqual([
+      'system:cron',
+      'job.send_cap_hit',
+      'jobs',
+      'class-reminders',
+      `cap=${PER_TICK_SEND_CAP} interrupted_job=class-reminders`,
+    ]);
   });
 
   it('never writes a send_cap_hit row when every send fits under the cap', async () => {

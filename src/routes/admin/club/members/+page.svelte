@@ -26,8 +26,9 @@ everything the panel renders.
   import { untrack } from 'svelte';
   import type { ActionData, PageData } from './$types';
   import { goto } from '$app/navigation';
-  import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
-  import { TextField } from '@glw907/cairn-cms/admin-fields';
+  import { CsrfField } from '@glw907/cairn-cms/components';
+  import { OfficeList } from '@glw907/cairn-cms/admin-toolkit';
+  import { TextInput } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL } from '$admin-club/lib/ui';
   import { HOUSEHOLD_STANDING_CHIP, HOUSEHOLD_STANDING_TONE } from '$admin-club/lib/member-format';
   import type { HouseholdListRow, HouseholdMemberChip } from '$admin-club/lib/households-store';
@@ -377,11 +378,11 @@ everything the panel renders.
     <p class="py-2 type-body text-muted">The walk-up-join entry point: a household and its first, primary member. Record a payment from the new desk afterward.</p>
     <form method="post" action="?/addHousehold" class="flex flex-col gap-3">
       <CsrfField />
-      <TextField label="Household name" name="name" bind:value={newHouseholdName} />
-      <TextField label="City" name="city" bind:value={newHouseholdCity} />
-      <TextField label="Primary member's name" name="memberName" bind:value={newMemberName} />
-      <TextField label="Email" name="memberEmail" type="email" bind:value={newMemberEmail} />
-      <TextField label="Phone" name="memberPhone" bind:value={newMemberPhone} />
+      <TextInput label="Household name" name="name" bind:value={newHouseholdName} />
+      <TextInput label="City" name="city" bind:value={newHouseholdCity} />
+      <TextInput label="Primary member's name" name="memberName" bind:value={newMemberName} />
+      <TextInput label="Email" name="memberEmail" type="email" bind:value={newMemberEmail} />
+      <TextInput label="Phone" name="memberPhone" bind:value={newMemberPhone} />
       <label class="flex flex-col gap-1 type-body">
         Birthdate
         <input class="input input-sm" type="date" name="memberBirthdate" bind:value={newMemberBirthdate} />

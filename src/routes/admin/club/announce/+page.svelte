@@ -7,7 +7,7 @@ announced shows a plain dash rather than an empty cell that could read as a load
 -->
 <script lang="ts">
   import type { PageData } from './$types';
-  import { OfficeList } from '@glw907/cairn-cms/components';
+  import { OfficeList } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL, formatCivilDate, formatClubTimestamp } from '$admin-club/lib/ui';
   import { ANNOUNCE_CHANNEL_LABEL } from '$admin-club/lib/discord';
 

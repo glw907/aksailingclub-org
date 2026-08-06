@@ -21,8 +21,9 @@ forward-only check collapse into the one comparison).
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { PageData, ActionData } from './$types';
-  import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
-  import { TextField } from '@glw907/cairn-cms/admin-fields';
+  import { CsrfField } from '@glw907/cairn-cms/components';
+  import { OfficeList } from '@glw907/cairn-cms/admin-toolkit';
+  import { TextInput } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL } from '$admin-club/lib/ui';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -75,7 +76,7 @@ forward-only check collapse into the one comparison).
       </p>
       {#if data.isOwner}
         <form method="post" action="?/updateOfferWindow" class="mt-3 flex flex-wrap items-end gap-3">
-          <TextField label="Hours" name="offerWindowHours" bind:value={offerWindowHours} />
+          <TextInput label="Hours" name="offerWindowHours" bind:value={offerWindowHours} />
           <CsrfField />
           <button type="submit" class="btn btn-sm">Save</button>
         </form>
@@ -118,9 +119,9 @@ forward-only check collapse into the one comparison).
       </p>
       {#if data.isOwner}
         <form method="post" action="?/updateTierPrices" class="mt-3 flex flex-wrap items-end gap-3">
-          <TextField label="Individual" name="individual" bind:value={individualPrice} />
-          <TextField label="Family" name="family" bind:value={familyPrice} />
-          <TextField label="Young adult" name="youngAdult" bind:value={youngAdultPrice} />
+          <TextInput label="Individual" name="individual" bind:value={individualPrice} />
+          <TextInput label="Family" name="family" bind:value={familyPrice} />
+          <TextInput label="Young adult" name="youngAdult" bind:value={youngAdultPrice} />
           <CsrfField />
           <button type="submit" class="btn btn-sm">Save</button>
         </form>

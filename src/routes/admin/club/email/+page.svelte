@@ -8,7 +8,7 @@ and the header's own "Compose" entry point into the segment-targeted one-off Com
 -->
 <script lang="ts">
   import type { PageData } from './$types';
-  import { OfficeList } from '@glw907/cairn-cms/components';
+  import { OfficeList } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL, formatClubTimestamp } from '$admin-club/lib/ui';
 
   let { data }: { data: PageData } = $props();

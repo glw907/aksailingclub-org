@@ -11,7 +11,7 @@ screen yet, so the field only ever displays whatever image reference migration 0
 carried.
 -->
 <script lang="ts">
-  import { FieldLabel, SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
+  import { FieldLabel, SelectInput, TextInput } from '@glw907/cairn-cms/admin-toolkit';
   import { CLASS_TRACKS, CLASS_TRACK_LABEL, type ClassTrack } from '$admin-club/lib/classes-store';
 
   let {
@@ -52,9 +52,9 @@ carried.
 </script>
 
 <div class="grid gap-x-6 gap-y-4 p-6 sm:grid-cols-2">
-  <TextField label="Name" name="name" bind:value={name} />
-  <TextField label="Slug" name="slug" bind:value={slug} />
-  <SelectField label="Track" name="track" bind:value={track} options={trackOptions} />
+  <TextInput label="Name" name="name" bind:value={name} />
+  <TextInput label="Slug" name="slug" bind:value={slug} />
+  <SelectInput label="Track" name="track" bind:value={track} options={trackOptions} />
   <label class="flex items-center gap-1.5 type-body">
     <input type="checkbox" class="checkbox checkbox-sm" name="visible" bind:checked={visible} />
     Visible on the public calendar
@@ -80,7 +80,7 @@ carried.
   <FieldLabel label="End date">
     <input class="input input-sm" type="date" name="endDate" bind:value={endDate} />
   </FieldLabel>
-  <TextField label="Location" name="location" bind:value={location} />
+  <TextInput label="Location" name="location" bind:value={location} />
 </div>
 
 <div class="grid gap-4 border-t border-[var(--cairn-card-border)] p-6">

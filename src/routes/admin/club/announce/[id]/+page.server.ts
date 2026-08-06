@@ -108,8 +108,8 @@ export const actions: Actions = {
       }
 
       const url = `${ORIGIN}${entry.permalink}`;
-      // `event.platform?.env` types as the engine's own narrow `AuthEnv` here (`AdminActionEvent`
-      // extends `EventBase<AuthEnv>`), which shares no property names with either
+      // `event.platform?.env` types as cairn's own narrow `CairnEnv` here (a `CairnEvent`
+      // defaults its env parameter to it), which shares no property names with either
       // `EmailBindingEnv` or `DiscordBindingEnv` and so trips TypeScript's weak-type detection
       // ("has no properties in common") if passed to either as-is. The real runtime object always
       // carries the full `Platform.env` intersection (`app.d.ts`) regardless of this narrower

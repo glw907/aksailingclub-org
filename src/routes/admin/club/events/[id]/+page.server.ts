@@ -13,7 +13,7 @@ import { deleteEvent, getEvent, updateEvent, type EventRow } from '$admin-club/l
 import { parseEventForm } from '../event-form-input';
 
 /** `AdminActionEvent`'s own type is narrowed to what `adminAction` itself needs (cookies,
- *  locals, platform), the same way `AuthEnv` narrows `platform.env` elsewhere in this site (see
+ *  locals, platform), the same way `CairnEnv` narrows `platform.env` elsewhere in this site (see
  *  club-db.ts's `resolveClubDb` comment for the identical reasoning). The real underlying
  *  SvelteKit `RequestEvent` this dynamic route dispatches always carries `params.id`, so this is
  *  a narrow, explained cast, not a widening of the engine's own public event type. */

@@ -15,7 +15,7 @@ since (unlike the desk) this screen has no single household in its own URL.
   import type { SubmitFunction } from '@sveltejs/kit';
   import type { ActionData, PageData } from './$types';
   import { CsrfField } from '@glw907/cairn-cms/components';
-  import { FieldLabel, SelectField } from '@glw907/cairn-cms/admin-fields';
+  import { FieldLabel, SelectInput } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL, formatCents, formatCivilDate, formatClubTimestamp, formatDollars } from '$admin-club/lib/ui';
   import { LINE_ITEM_LABEL, TIER_LABEL, TRANSACTION_KIND_LABEL, TRANSACTION_SOURCE_LABEL } from '$admin-club/lib/member-format';
   import type { MembershipTier } from '$admin-club/lib/member-types';
@@ -271,15 +271,15 @@ since (unlike the desk) this screen has no single household in its own URL.
     <p class="py-2 type-body text-muted">A check, cash, or comp payment; creates the membership and the ledger entry together.</p>
     <form method="post" action="?/recordPayment" class="flex flex-col gap-3" use:enhance={closeDialogOnSettle(() => paymentDialog)}>
       <CsrfField />
-      <SelectField label="Household" name="householdId" bind:value={paymentHouseholdId} options={householdOptions} />
+      <SelectInput label="Household" name="householdId" bind:value={paymentHouseholdId} options={householdOptions} />
       <FieldLabel label="Season">
         <input class="input input-sm" type="number" name="season" min="2020" step="1" bind:value={paymentSeason} required />
       </FieldLabel>
-      <SelectField label="Tier" name="tier" bind:value={paymentTier} options={TIER_OPTIONS} />
+      <SelectInput label="Tier" name="tier" bind:value={paymentTier} options={TIER_OPTIONS} />
       <FieldLabel label="Amount (USD)">
         <input class="input input-sm" type="number" name="amount" min="0" step="1" bind:value={paymentAmount} required />
       </FieldLabel>
-      <SelectField label="Source" name="source" bind:value={paymentSource} options={SOURCE_OPTIONS} />
+      <SelectInput label="Source" name="source" bind:value={paymentSource} options={SOURCE_OPTIONS} />
       <FieldLabel label="Memo">
         <input class="input input-sm" type="text" name="memo" bind:value={paymentMemo} />
       </FieldLabel>

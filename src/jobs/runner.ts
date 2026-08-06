@@ -4,7 +4,17 @@
 // (registry.ts) independently: one throwing job is caught and audited as a failure, never
 // blocking the jobs after it, and every job (success or failure) writes exactly one `audit_log`
 // row for the tick, actor `'system:cron'`.
+//
+// Those rows go through cairn's own packaged `createD1AuditSink` rather than a hand-rolled insert
+// (`0.94.0-rc.1` sanctioned calling the sink directly with a site's own domain events; the sink
+// was already generic, and the ruling made the direct call supported rather than a workaround).
+// A scheduled tick has no signed-in editor and no `adminAction` wrapper behind it, so the actor is
+// this module's own `'system:cron'` rather than an editor email, and every action name this file
+// writes is namespaced under `job.` so a tick's rows stay distinguishable from admin-action rows
+// in the shared table.
 import type { D1Database } from '@cloudflare/workers-types';
+import { createD1AuditSink } from '@glw907/cairn-cms/sveltekit';
+import type { AdminActionAuditSink } from '@glw907/cairn-cms/sveltekit';
 import { resolveClubDb } from '$admin-club/lib/club-db';
 import { JOBS, type JobRunnerEnv, type SendBudget } from './registry';
 
@@ -15,44 +25,16 @@ const CRON_ACTOR = 'system:cron';
  *  cron outage) hits this ceiling long before it hits the account's own. */
 export const PER_TICK_SEND_CAP = 50;
 
-/** Insert one `audit_log` row for a job's own tick (mirrors `offers.ts`'s own `writeAudit`: a
- *  direct insert, not `ctx.audit`, since a scheduled tick has no signed-in editor or `adminAction`
- *  wrapper behind it). Never throws: a failed audit write must not take down the tick itself, the
- *  same tradeoff `offers.ts`'s `writeAudit` documents, just logged loudly instead. */
-async function writeJobAudit(db: D1Database, jobName: string, detail: string): Promise<void> {
-  try {
-    await db
-      .prepare("INSERT INTO audit_log (actor, action, entity, entity_id, detail) VALUES (?1, 'job.run', 'job', ?2, ?3)")
-      .bind(CRON_ACTOR, jobName, detail)
-      .run();
-  } catch (err) {
-    console.error(`jobs/runner: audit_log insert failed for job "${jobName}"`, err);
-  }
-}
-
-/** Insert the one `send_cap_hit` audit row a spent budget writes (never more than one per tick;
- *  {@link TickSendBudget} guards that). Same never-throws posture as `writeJobAudit`. */
-async function writeSendCapAudit(db: D1Database, cap: number, jobName: string): Promise<void> {
-  try {
-    await db
-      .prepare("INSERT INTO audit_log (actor, action, entity, entity_id, detail) VALUES (?1, 'send_cap_hit', 'jobs', ?2, ?3)")
-      .bind(CRON_ACTOR, jobName, `cap=${cap} interrupted_job=${jobName}`)
-      .run();
-  } catch (err) {
-    console.error(`jobs/runner: send_cap_hit audit_log insert failed for job "${jobName}"`, err);
-  }
-}
-
 /** The real, capped {@link SendBudget}: `reserve` grants up to `cap` sends total across every job
  *  sharing this instance, then returns `false` for the rest of the tick. The first caller to
- *  exhaust it writes the one `send_cap_hit` audit row (`capLogged` guards against a second job
+ *  exhaust it writes the one `job.send_cap_hit` audit row (`capLogged` guards against a second job
  *  also running dry against the same spent budget writing a duplicate). */
 class TickSendBudget implements SendBudget {
   private remaining: number;
   private capLogged = false;
 
   constructor(
-    private readonly db: D1Database,
+    private readonly audit: AdminActionAuditSink,
     private readonly cap: number,
   ) {
     this.remaining = cap;
@@ -65,7 +47,13 @@ class TickSendBudget implements SendBudget {
     }
     if (!this.capLogged) {
       this.capLogged = true;
-      await writeSendCapAudit(this.db, this.cap, jobName);
+      this.audit({
+        actor: CRON_ACTOR,
+        action: 'job.send_cap_hit',
+        entity: 'jobs',
+        entityId: jobName,
+        detail: `cap=${this.cap} interrupted_job=${jobName}`,
+      });
     }
     return false;
   }
@@ -73,9 +61,14 @@ class TickSendBudget implements SendBudget {
 
 /** Build the real per-tick send budget, shared by every job in one `runScheduledJobs` call.
  *  Exported so a test can exercise the cap directly against a job's own `run`, the same way
- *  `runner.ts` itself does. */
-export function createSendBudget(db: D1Database, cap: number = PER_TICK_SEND_CAP): SendBudget {
-  return new TickSendBudget(db, cap);
+ *  `runner.ts` itself does. `waitUntil` is passed straight through to the audit sink, so a test
+ *  that omits it accepts the same drop risk `createD1AuditSink` documents for that argument. */
+export function createSendBudget(
+  db: D1Database,
+  cap: number = PER_TICK_SEND_CAP,
+  waitUntil?: (promise: Promise<unknown>) => void,
+): SendBudget {
+  return new TickSendBudget(createD1AuditSink(db, waitUntil), cap);
 }
 
 /**
@@ -85,8 +78,13 @@ export function createSendBudget(db: D1Database, cap: number = PER_TICK_SEND_CAP
  * caller to satisfy the engine's full platform-binding shape). If `CLUB_DB` itself is not bound,
  * the whole tick is skipped (logged, never thrown): there is nowhere to write even a failure
  * audit row without it.
+ *
+ * `waitUntil` comes from the `scheduled` handler's own `ExecutionContext`
+ * (`scripts/wire-scheduled-handler.mjs` binds it before passing it), and every audit row this tick
+ * writes rides it. The audit sink returns before its insert settles, so without it the last rows a
+ * tick writes can be dropped when this function's own promise resolves.
  */
-export async function runScheduledJobs(env: unknown): Promise<void> {
+export async function runScheduledJobs(env: unknown, waitUntil?: (promise: Promise<unknown>) => void): Promise<void> {
   const platformEnv = env as JobRunnerEnv;
   const db = resolveClubDb(env);
   if (!db) {
@@ -95,17 +93,18 @@ export async function runScheduledJobs(env: unknown): Promise<void> {
   }
 
   const now = new Date();
-  const budget = createSendBudget(db);
+  const audit = createD1AuditSink(db, waitUntil);
+  const budget = createSendBudget(db, PER_TICK_SEND_CAP, waitUntil);
   for (const job of JOBS) {
+    let detail: string;
     try {
       const summary = await job.run(platformEnv, { db, now, budget });
-      const detail = `examined=${summary.examined} acted=${summary.acted}${summary.detail ? ` (${summary.detail})` : ''}`;
-      await writeJobAudit(db, job.name, detail);
+      detail = `examined=${summary.examined} acted=${summary.acted}${summary.detail ? ` (${summary.detail})` : ''}`;
       console.log(`jobs/runner: "${job.name}" ok -- ${detail}`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      await writeJobAudit(db, job.name, `FAILED: ${message}`);
+      detail = `FAILED: ${err instanceof Error ? err.message : String(err)}`;
       console.error(`jobs/runner: "${job.name}" threw`, err);
     }
+    audit({ actor: CRON_ACTOR, action: 'job.run', entity: 'job', entityId: job.name, detail });
   }
 }

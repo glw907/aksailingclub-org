@@ -42,7 +42,9 @@ function postEvent(
       delete: () => undefined,
     },
     platform: { env: { CLUB_DB: opts.db } },
-    locals: { editor, auditSink: opts.auditSink, cairnAccess: access },
+    route: { id: new URL(url).pathname },
+    setHeaders: () => undefined,
+    locals: { cairnEditor: editor, cairnAuditSink: opts.auditSink, cairnAccess: access },
   } as unknown as DetailActionEvent;
 }
 
@@ -89,7 +91,7 @@ describe('classes actions: offer', () => {
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number }).status).toBe(400);
     expect(sink).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'offer', entity: 'offer', editor: admin.email }),
+      expect.objectContaining({ action: 'offer', entity: 'offer', actor: admin.email }),
     );
   });
 
@@ -111,12 +113,12 @@ describe('classes actions: offer', () => {
       offered: { waitlistId: 'wait-1', token: expect.any(String), expiresAt: expect.any(String) },
     });
     expect(calls.some((c) => c.sql.startsWith('INSERT INTO class_offers'))).toBe(true);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'offer',
       entity: 'offer',
       entityId: 'wait-1',
-      editor: admin.email,
-    });
+      actor: admin.email,
+    }));
   });
 
   it('fails 400 when the waitlist entry is missing', async () => {
@@ -147,12 +149,12 @@ describe('classes actions: cancelOffer', () => {
     const result = await actions.cancelOffer(postEvent(admin, { waitlistId: 'wait-1' }, { db, auditSink: sink }));
     expect(result).toEqual({ ok: true });
     expect(calls.some((c) => c.sql.startsWith("UPDATE class_offers SET resolved = 'declined'"))).toBe(true);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'cancel-offer',
       entity: 'offer',
       entityId: 'wait-1',
-      editor: admin.email,
-    });
+      actor: admin.email,
+    }));
   });
 
   it('fails 400 when there is no active offer to cancel, auditing the rejected attempt', async () => {

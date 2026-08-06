@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isActionFailure } from '@sveltejs/kit';
 import type { RateLimit } from '@cloudflare/workers-types';
 import type { Editor } from '@glw907/cairn-cms';
-import type { AdminActionAuditRecord, AdminActionEvent } from '@glw907/cairn-cms/sveltekit';
+import type { AdminActionAuditRecord, CairnEvent } from '@glw907/cairn-cms/sveltekit';
 import { access } from '$theme/cairn.config.js';
 import { clubAdminAction } from '$admin-club/lib/club-action';
 
@@ -32,7 +32,12 @@ const CSRF_TOKEN = 'test-csrf-token';
  *  (`/admin/club/email`, `/admin/club/announce`) than the section default. `opts.omitAccessMap`
  *  drops `locals.cairnAccess` entirely -- the guard's own fail-closed branch for a map the layout
  *  guard never attached (a review-gate finding), which the default-attached map above can never
- *  exercise. */
+ *  exercise.
+ *
+ *  `route.id` carries `opts.path` too, and it is the field authorization actually reads as of
+ *  `0.94.0-rc.1`: `createSectionAction` derives its target from the route id, never the request
+ *  path, because on a catch-all route the path is attacker-chosen while the id is not. Both are
+ *  set to the same string here, which is what a static route really does. */
 function postEvent(
   editor: Editor,
   opts: {
@@ -42,7 +47,7 @@ function postEvent(
     path?: string;
     omitAccessMap?: boolean;
   } = {},
-): AdminActionEvent {
+): CairnEvent<App.Platform['env']> {
   const formData = new FormData();
   formData.set('csrf', CSRF_TOKEN);
   const url = `https://x.dev${opts.path ?? '/admin/club/widgets'}`;
@@ -56,8 +61,11 @@ function postEvent(
       delete: () => undefined,
     },
     platform: { env: { CLUB_DB: opts.db, RATE_LIMIT_ADMIN: opts.rateLimit } },
-    locals: { editor, auditSink: opts.auditSink, cairnAccess: opts.omitAccessMap ? undefined : access },
-  } as unknown as AdminActionEvent;
+    params: {},
+    route: { id: opts.path ?? '/admin/club/widgets' },
+    setHeaders: () => undefined,
+    locals: { cairnEditor: editor, cairnAuditSink: opts.auditSink, cairnAccess: opts.omitAccessMap ? undefined : access },
+  } as unknown as CairnEvent<App.Platform['env']>;
 }
 
 describe('clubAdminAction', () => {
@@ -73,7 +81,7 @@ describe('clubAdminAction', () => {
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number }).status).toBe(500);
     expect(handler).not.toHaveBeenCalled();
-    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'do', entity: 'widget', editor: clubAdmin.email }));
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'do', entity: 'widget', actor: clubAdmin.email }));
   });
 
   it('fails 403 and never runs the handler when the editor has no club role', async () => {
@@ -84,7 +92,7 @@ describe('clubAdminAction', () => {
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number }).status).toBe(403);
     expect(handler).not.toHaveBeenCalled();
-    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'do', entity: 'widget', editor: instructor.email }));
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'do', entity: 'widget', actor: instructor.email }));
   });
 
   it('fails closed (500) and never runs the handler when the access map is not attached, even for an Administrator', async () => {
@@ -101,7 +109,7 @@ describe('clubAdminAction', () => {
     expect((result as { status: number }).status).toBe(500);
     expect(handler).not.toHaveBeenCalled();
     expect(sink).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'do', entity: 'widget', editor: administrator.email, detail: 'rejected: access map not attached' }),
+      expect.objectContaining({ action: 'do', entity: 'widget', actor: administrator.email, detail: 'rejected: access map not attached' }),
     );
   });
 
@@ -145,7 +153,9 @@ describe('clubAdminAction', () => {
     expect((result as { status: number }).status).toBe(429);
     expect(handler).not.toHaveBeenCalled();
     expect(rateLimit.limit).toHaveBeenCalledWith({ key: `editor:${clubAdmin.email}` });
-    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ detail: 'rejected: rate limited' }));
+    // No audit row for a rate-limit refusal as of `0.94.0-rc.1`: `createSectionAction` treats
+    // back-pressure as back-pressure, not a domain-state change, and logs `admin.action.rate_limited`.
+    expect(sink).not.toHaveBeenCalled();
   });
 
   it('lets the handler run when RATE_LIMIT_ADMIN is present and under its limit', async () => {
@@ -198,7 +208,7 @@ describe('clubAdminAction reads the site access map', () => {
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number }).status).toBe(403);
     expect(handler).not.toHaveBeenCalled();
-    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'do', entity: 'widget', editor: editor.email }));
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'do', entity: 'widget', actor: editor.email }));
   };
 
   it('admits Publisher to the Email send action', async () => {

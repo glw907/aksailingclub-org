@@ -6,7 +6,8 @@ screen carries no confirm dialog, unlike the edit screen.
 -->
 <script lang="ts">
   import type { ActionData } from './$types';
-  import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
+  import { CsrfField } from '@glw907/cairn-cms/components';
+  import { OfficeList } from '@glw907/cairn-cms/admin-toolkit';
   import EventForm from '../EventForm.svelte';
   import type { EventCategory } from '$admin-club/lib/events-store';
 

@@ -7,8 +7,8 @@ per-document member-list drill-through. A plain GET season picker, matching Mone
 -->
 <script lang="ts">
   import type { PageData } from './$types';
-  import { OfficeList } from '@glw907/cairn-cms/components';
-  import { FieldLabel } from '@glw907/cairn-cms/admin-fields';
+  import { OfficeList } from '@glw907/cairn-cms/admin-toolkit';
+  import { FieldLabel } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL } from '$admin-club/lib/ui';
 
   let { data }: { data: PageData } = $props();

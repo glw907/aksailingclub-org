@@ -12,7 +12,7 @@ import { approveNewRequest, approveRetentionRequest, denyAssetRequest, listPendi
 
 /** The narrow bridge this route reads `EMAIL` off `event.platform.env` through, matching
  *  `sign/+page.server.ts`'s own precedent: `AdminActionEvent.platform.env` is typed by the
- *  engine's own narrow `AuthEnv`, which never expresses a site-only binding. */
+ *  cairn's own narrow `CairnEnv`, which never expresses a site-only binding. */
 function resolveEmailEnv(env: unknown): EmailBindingEnv {
   return (env as EmailBindingEnv | undefined) ?? {};
 }

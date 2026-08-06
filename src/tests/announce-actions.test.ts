@@ -36,13 +36,15 @@ type ListLoadResult = Exclude<Awaited<ReturnType<typeof listLoad>>, void>;
 type DetailLoadResult = Exclude<Awaited<ReturnType<typeof detailLoad>>, void>;
 
 function listEventFor(editor: Editor | null, db: unknown): ListLoadEvent {
-  return { locals: { editor }, platform: { env: { CLUB_DB: db } } } as unknown as ListLoadEvent;
+  return { locals: { cairnEditor: editor }, platform: { env: { CLUB_DB: db } } } as unknown as ListLoadEvent;
 }
 
 function detailLoadEventFor(editor: Editor | null, id: string, db: unknown, env: Record<string, unknown> = {}): DetailLoadEvent {
   return {
     params: { id },
-    locals: { editor },
+    route: { id: '/admin/club/announce/[id]' },
+    setHeaders: () => undefined,
+    locals: { cairnEditor: editor },
     platform: { env: { CLUB_DB: db, ...env } },
   } as unknown as DetailLoadEvent;
 }
@@ -76,7 +78,9 @@ function postEvent(
       delete: () => undefined,
     },
     platform: { env: { CLUB_DB: opts.db, ...opts.env } },
-    locals: { editor, auditSink: opts.auditSink, cairnAccess: access },
+    route: { id: new URL(url).pathname },
+    setHeaders: () => undefined,
+    locals: { cairnEditor: editor, cairnAuditSink: opts.auditSink, cairnAccess: access },
   } as unknown as SendActionEvent;
 }
 
@@ -205,7 +209,7 @@ describe('/admin/club/announce/[id] send action', () => {
     );
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number }).status).toBe(403);
-    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'announce', entity: 'post', editor: noRole.email }));
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'announce', entity: 'post', actor: noRole.email }));
   });
 
   it('404s an unknown post id', async () => {
@@ -262,7 +266,7 @@ describe('/admin/club/announce/[id] send action', () => {
     expect(insert?.args[5]).toBeNull(); // discord_channel
 
     expect(sink).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'announce', entity: 'post', entityId: REAL_POST.id, editor: admin.email }),
+      expect.objectContaining({ action: 'announce', entity: 'post', entityId: REAL_POST.id, actor: admin.email }),
     );
   });
 

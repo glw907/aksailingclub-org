@@ -49,7 +49,9 @@ function postEvent(
       delete: () => undefined,
     },
     platform: { env: { CLUB_DB: opts.db } },
-    locals: { editor, auditSink: opts.auditSink, cairnAccess: access },
+    route: { id: new URL(url).pathname },
+    setHeaders: () => undefined,
+    locals: { cairnEditor: editor, cairnAuditSink: opts.auditSink, cairnAccess: access },
   } as unknown as SaveActionEvent;
 }
 
@@ -65,7 +67,7 @@ describe('email template actions: role gate', () => {
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number }).status).toBe(403);
     expect(sink).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'update', entity: 'email-template', editor: noRole.email }),
+      expect.objectContaining({ action: 'update', entity: 'email-template', actor: noRole.email }),
     );
   });
 
@@ -82,7 +84,7 @@ describe('email template actions: role gate', () => {
     expect(result).toEqual({ ok: true, warning: null });
     expect(calls.some((c) => c.sql.startsWith('UPDATE email_templates SET subject'))).toBe(true);
     expect(sink).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'update', entity: 'email-template', entityId: 'class_offer', editor: admin.email }),
+      expect.objectContaining({ action: 'update', entity: 'email-template', entityId: 'class_offer', actor: admin.email }),
     );
   });
 });
@@ -144,12 +146,12 @@ describe('email template actions: reset', () => {
     const result = await actions.reset(postEvent(admin, {}, { db, auditSink: sink }));
     expect(result).toEqual({ ok: true, reset: true, template: expect.objectContaining({ id: 'class_offer' }) });
     expect(calls.some((c) => c.sql.startsWith('UPDATE email_templates SET subject = default_subject'))).toBe(true);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'reset',
       entity: 'email-template',
       entityId: 'class_offer',
-      editor: admin.email,
-    });
+      actor: admin.email,
+    }));
   });
 
   it('fails 400 and audits the rejection when no default is recorded', async () => {

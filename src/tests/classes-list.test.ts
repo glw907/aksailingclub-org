@@ -17,7 +17,9 @@ type LoadResult = Exclude<Awaited<ReturnType<typeof load>>, void>;
 
 function loadEventFor(db: unknown, search = ''): LoadEvent {
   return {
-    locals: { editor: editorWithRole('Club manager') },
+    route: { id: '/admin/club/classes' },
+    setHeaders: () => undefined,
+    locals: { cairnEditor: editorWithRole('Club manager') },
     platform: { env: { CLUB_DB: db } },
     url: new URL(`https://x.dev/admin/club/classes${search}`),
   } as unknown as LoadEvent;
@@ -194,7 +196,9 @@ function postEvent(editor: Editor | null, fields: Record<string, string>, db?: u
       delete: () => undefined,
     },
     platform: { env: { CLUB_DB: db } },
-    locals: { editor, cairnAccess: access },
+    route: { id: new URL(url).pathname },
+    setHeaders: () => undefined,
+    locals: { cairnEditor: editor, cairnAccess: access },
   } as unknown as ActionEvent;
 }
 

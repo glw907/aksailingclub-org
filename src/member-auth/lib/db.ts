@@ -5,7 +5,7 @@
 // member-facing identity, not the club-admin surface). `CLUB_DB` is the SAME asc-club database
 // both trees read (member auth tables live alongside the club-admin domain tables,
 // `migrations/asc-club/0008_member_auth/`), just through two separate accessors that happen to
-// agree, the same way the engine's own `AuthEnv` is a structural subset a caller casts to rather
+// agree, the same way cairn's own `CairnEnv` is a structural subset a caller casts to rather
 // than a shared import.
 import type { D1Database } from '@cloudflare/workers-types';
 

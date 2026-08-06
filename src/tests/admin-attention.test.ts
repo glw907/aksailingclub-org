@@ -159,7 +159,7 @@ describe('the Overview strip and the attention badges never disagree', () => {
       },
     });
     const event = {
-      locals: { editor: editorWithRole('Club manager') },
+      locals: { cairnEditor: editorWithRole('Club manager') },
       platform: { env: { CLUB_DB: db } },
     } as unknown as Parameters<typeof loadOverview>[0];
     const [stripData, badgeCounts] = await Promise.all([loadOverview(event), loadAttentionCounts(db)]);

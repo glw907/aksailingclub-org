@@ -95,13 +95,13 @@ describe('?/requestLink (the Turnstile gate, 2026-07-15 hardening pass)', () => 
   });
 
   it('rejects a missing token when a secret is configured', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: false }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: false }) }));
     const result = await actions.requestLink(requestLinkEvent({ email: 'jamie@example.com' }, undefined, { turnstileSecret: 'secret' }) as never);
     expect(result).toEqual(expect.objectContaining({ status: 400 }));
   });
 
   it('rejects an invalid token when a secret is configured', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: false }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: false }) }));
     const result = await actions.requestLink(
       requestLinkEvent({ email: 'jamie@example.com', 'cf-turnstile-response': 'a-bad-token' }, undefined, { turnstileSecret: 'secret' }) as never,
     );
@@ -109,7 +109,7 @@ describe('?/requestLink (the Turnstile gate, 2026-07-15 hardening pass)', () => 
   });
 
   it('proceeds when a secret is configured and siteverify reports success', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: true }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: true }) }));
     const { db } = fakeD1({ firstResults: { 'FROM members WHERE lower(email)': null } });
     const send = vi.fn().mockResolvedValue(undefined);
     const result = await actions.requestLink(
