@@ -24,7 +24,7 @@ function resolveMemberRateLimit(env: unknown): RateLimit | undefined {
 
 /** The minimal event shape `portalAction` reads: enough to verify CSRF, resolve the session
  *  cookie, and read the form once, mirroring the engine's own narrow-event trick
- *  (`club-action.ts`'s own `AdminActionEvent` reuse) so a wrapped function still satisfies
+ *  (`club-action.ts`'s own reuse of cairn's `CairnEvent`) so a wrapped function still satisfies
  *  SvelteKit's own `Actions` shape for a route's `$types`. */
 export interface PortalActionEvent {
   url: URL;

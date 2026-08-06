@@ -12,7 +12,7 @@ import { clubAdminAction } from '$admin-club/lib/club-action';
 import { deleteEvent, getEvent, updateEvent, type EventRow } from '$admin-club/lib/events-store';
 import { parseEventForm } from '../event-form-input';
 
-/** `AdminActionEvent`'s own type is narrowed to what `adminAction` itself needs (cookies,
+/** `CairnEvent`'s own type is narrowed to what `adminAction` itself needs (cookies,
  *  locals, platform), the same way `CairnEnv` narrows `platform.env` elsewhere in this site (see
  *  club-db.ts's `resolveClubDb` comment for the identical reasoning). The real underlying
  *  SvelteKit `RequestEvent` this dynamic route dispatches always carries `params.id`, so this is
