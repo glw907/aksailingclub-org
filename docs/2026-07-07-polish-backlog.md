@@ -168,3 +168,31 @@ not done today Geoff tackles on Opus tomorrow; hand this file to that session.
   `docs/2026-07-30-assets-substrate-harvest-findings.md`, finding 2.** ASC's retention control on
   `/my-account/renew` is the reference implementation and stays self-contained in that route
   until cairn ships; the site-side work is then dropping the local copy for the primitive.
+- **65 `no-uncompiled-class` findings on the Club admin screens** (found 2026-08-05, the cairn
+  `0.94.0-rc.1` migration). `npx cairn-audit` reports 65 static errors, every one of them a class
+  the markup writes that never compiles into the shipped admin stylesheet: `w-fit`,
+  `text-warning`/`text-success`, `max-w-none`, `ml-1`, `pl-4`, `gap-8`, `input-xs`, `btn-warning`,
+  `xl:grid-cols-4`, `border-error/30`, `bg-error/5`, `print:p-0`, and a handful more, concentrated
+  in Money, Members detail, Email, and Compose. These are classes in the author's mind and absent
+  from what ships, so each one is a style that silently does nothing.
+
+  **Pre-existing, not migration damage**, and verified rather than assumed: six of seven sampled
+  classes were already absent from `0.91.1`'s shipped sheet, and no release in the `0.92.0`
+  through `0.94.0-rc.1` window removed a class (the inventory has been a tested contract since
+  `0.91.1`). Deliberately left alone by the migration pass, which changed no class strings. Each
+  finding resolves one of three ways: onto an admin grammar token, into the screen's own scoped
+  `<style>`, or by deleting a class that was never doing anything. The `type-scale` rule is
+  already clean here and the rendered audit passes at 0 errors, so this is the one standing gate
+  the Club screens do not hold.
+- **`audit_log.created_at` still defaults to `datetime('now')`** (found 2026-08-05, same
+  migration). cairn's bundled `migrations/0002_audit.sql`, which is this table's own schema
+  carried into the engine, deliberately deviates on exactly this column: it defaults to
+  `strftime`'s ISO 8601 form, unambiguous UTC at millisecond resolution. asc-club's original
+  default writes a space-separated, second-resolution, no-`Z` string, which `new Date(...)` reads
+  as LOCAL time in a browser and which sorts several same-second audit rows non-deterministically.
+  Both matter for a table whose whole purpose is being read by people in order.
+
+  Not taken at the migration: SQLite cannot alter a column default in place, so this is a table
+  rebuild against live audit rows, which is a real migration with real risk and no business
+  sitting inside a dependency bump. Route it to a pass that is already touching asc-club, with
+  the usual scratch-proven forward/rollback/verify.

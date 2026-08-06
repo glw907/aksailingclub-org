@@ -381,6 +381,10 @@ focus because the page is important (Geoff, 2026-07-16). The probe-iteration pro
 governs the design work (HTML probes, verdicts, one rebuild per settle); the current
 events page's timeline/chips/season machinery is evidence of requirements, not a
 design to preserve.
+Rider from the 2026-08-05 engine-harvest sitting (cairn-cms
+`docs/superpowers/specs/2026-08-05-engine-harvest-decisions.md`, ruling 4): this brainstorm
+reopens the standing no-events-concept ruling deliberately or not at all, never as a side effect
+of designing the page.
 
 ### Member directory brainstorm & pass `member-directory`
 **BRAINSTORMED 2026-07-17** (combined sitting with member-waivers): spec
@@ -461,6 +465,9 @@ or partial, every one an audit row, and MUST FOLLOW THE ASC REFUND POLICY (Geoff
 2026-07-14) — the spec reads the club's actual policy from the site/governance content
 and encodes it, never invents refund rules; timing is 2027 READINESS, no season
 pressure.
+Rider from the 2026-08-05 engine-harvest sitting (ruling 4): once these screens exist, they get
+judged component by component against the mechanic-versus-domain test, so whatever is a mechanic
+goes to cairn rather than staying in this repo's theme.
 
 ### Season rollover `season-rollover`
 The annual transition designed as ONE operation — Geoff's 2026-07-13 ruling that
@@ -494,6 +501,14 @@ audit row) — the board runs the annual transition self-serve, no operator seat
 makes it a product feature, and Geoff flagged the design as needing a fair amount of
 interactive brainstorming — NOT overnight-eligible; the brainstorm runs live with him,
 like the class-management one.
+Rider from the 2026-08-05 engine-harvest sitting (ruling 4): the design states explicitly whether
+the season-stamped content edits sit inside the guarded operation, beside it manually, or out of
+scope. It inherits its answer rather than reopening the question — that record's "Position:
+programmatic content edits" rules that deliberate-publish binds every actor and that no engine
+surface will commit content to `main` programmatically, so a guarded operation that needs content
+edits stages each entry onto its ordinary `cairn/<concept>/<id>` branch and the owner publishes
+through the existing flow. The only open question is whether staging-plus-owner-publish beats a
+yearly checklist step.
 
 ### QuickBooks Online integration `qbo-integration`
 Sync the club's money events to QuickBooks Online: `qbo_ref` population, entity
