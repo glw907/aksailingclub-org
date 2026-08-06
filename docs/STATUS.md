@@ -8,8 +8,21 @@
 > entries beyond the top two or three to the archive — this file is @-imported into every
 > session's context, so its length is a per-session token tax.
 
-**THE CAIRN ADOPTION PASS LANDED ON BRANCH `cairn-0.94-migration`. WHAT IS OWED IS GEOFF'S
-BEFORE/AFTER ON THE ADMIN FORM FIELDS, THEN THE MERGE (2026-08-05).** What happened:
+**THE CAIRN ADOPTION PASS IS COMPLETE ON BRANCH `cairn-0.94-migration` AND HELD: `0.94.0-rc.1`
+DOES NOT START ON WORKERS, AND THIS SITE CANNOT MERGE UNTIL AN `rc.2` SHIPS (2026-08-05).**
+What happened:
+
+- **THE BLOCKER.** `@glw907/cairn-cms/auth-crypto` and `/cloudflare` publish a `browser` condition
+  pointing at a stub that throws, and `browser` is a condition a Workers build resolves too, so the
+  SERVER bundle gets the stub and the Worker dies at startup: `Uncaught Error:
+  @glw907/cairn-cms/auth-crypto is server-only`. It surfaces only at the Playwright gate, as 75 of
+  75 specs failing with `ERR_CONNECTION_REFUSED`; `check`, `test`, `build`, and `cairn-audit` are
+  all green ahead of it, because the stub is valid JavaScript that only throws when first
+  evaluated. The fix is a `worker` condition ahead of `browser` in both exports entries, verified
+  here by patching the installed copy (`wrangler dev` then serves 200). It is engine code and needs
+  a republish, so nothing in this repo can clear it. Filed in cairn as
+  `docs/internal/feedback/2026-08-05-rc1-worker-condition-defect.md` (`4b9a6469`). **This blocks
+  every site in the window that adopts either subpath, not just this one.**
 
 - **This site is on `@glw907/cairn-cms` `0.94.0-rc.1`, pinned exactly** (commit `fbb5908`),
   crossing `0.92.0`, `0.93.0`, and the RC window in one step. The pin is deliberate and must
@@ -24,20 +37,22 @@ BEFORE/AFTER ON THE ADMIN FORM FIELDS, THEN THE MERGE (2026-08-05).** What happe
   constant-time-compare copies in member-auth, offers, and the portal wrapper give way to
   `/auth-crypto`. The jobs runner's own audit inserts now go through the packaged sink too, under
   namespaced action names, since `0.94.0-rc.1` sanctioned direct domain-event calls.
-- **Gates all green**: `check` 0/0, 2057 tests, `build`, `cairn-audit` static and rendered (0
+- **Gates green up to the e2e suite**: `check` 0/0, 2057 tests, `build`, `cairn-audit` static and rendered (0
   errors, `one-filled-action` clean, run authenticated with `CAIRN_AUDIT_COOKIES` against a
   seeded local session — an unauthenticated rendered run measures the sign-in card twelve times
   and reports a fake pass). `cairn-doctor`'s two FAILs are the API token lacking Zone Settings
   Read, not zone findings; `http://` redirects to `https://` on both hosts, checked directly.
-- **OWED, and the only thing between here and the merge: Geoff's before/after on the admin form
-  fields.** The pass takes `0.92.0`'s new stacked field register (label above control) as the
+- **OWED, once the `rc.2` unblocks the merge: Geoff's before/after on the admin form fields.**
+  The visual baselines could not regenerate on this branch, since the `ci.yml` `update_snapshots`
+  dispatch runs the same Playwright suite the blocker kills; that step is owed too, after the bump. The pass takes `0.92.0`'s new stacked field register (label above control) as the
   default rather than passing `register="inline"` to hold the old horizontal rhythm. That is
   what this site's own ratified mockup asked for and what `EventForm.svelte` had been recording
   as a wanted future addition, but it is a visual change across thirteen admin screens and it
   gates on his eyes. Baselines regenerate on the branch via the `ci.yml` `update_snapshots`
-  dispatch. RESUME PROMPT: "Check the `cairn-0.94-migration` branch's CI, put the regenerated
-  admin baselines in front of Geoff as a before/after on the stacked field register, and merge
-  once he approves." Launch from ~/Projects/aksailingclub-org.
+  dispatch, once that suite can run. RESUME PROMPT: "cairn `0.94.0-rc.2` (or later) should carry
+  the `worker` export condition; bump this repo's pin to it, re-run the ci.yml update_snapshots
+  dispatch, put the regenerated admin baselines in front of Geoff as a before/after on the stacked
+  field register, and merge once he approves." Launch from ~/Projects/aksailingclub-org.
 - **Not taken, deliberately, both filed to `docs/2026-07-07-polish-backlog.md`**: the 65
   pre-existing `cairn-audit` `no-uncompiled-class` errors on the Club screens (verified
   pre-existing against `0.91.1`'s own shipped sheet), and `audit_log.created_at`'s
