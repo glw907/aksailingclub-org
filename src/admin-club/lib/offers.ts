@@ -164,8 +164,8 @@ export function toSqliteDatetime(date: Date): string {
  *  mechanism `claimOffer`, `declineOffer`, and the lazy sweep use in place of `ctx.audit`, since
  *  none of them run inside an `adminAction`-wrapped route (see this module's own header). Awaited
  *  by every call site (each already runs inside an `async` function its own caller awaits, unlike
- *  cairn's synchronous `AdminActionAuditSink`, which has no such chain to
- *  ride and needs `waitUntil` instead): an un-awaited `.run()` races the Worker's own response,
+ *  cairn's synchronous `AdminActionAuditSink`, which has no such chain to ride and needs
+ *  `waitUntil` instead): an un-awaited `.run()` races the Worker's own response,
  *  which can tear the request context down mid-write and silently drop the row. A failed write
  *  must still never break the state transition it is auditing, which already committed by the
  *  time this runs; it only logs loudly, the same tradeoff the packaged sink makes. */

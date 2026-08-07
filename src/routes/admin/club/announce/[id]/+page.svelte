@@ -14,8 +14,7 @@ rather than asserting it.
   import { untrack } from 'svelte';
   import type { ActionData, PageData } from './$types';
   import { CsrfField } from '@glw907/cairn-cms/components';
-  import { OfficeList } from '@glw907/cairn-cms/admin-toolkit';
-  import { FieldLabel, TextInput } from '@glw907/cairn-cms/admin-toolkit';
+  import { FieldLabel, OfficeList, TextInput } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL, formatClubTimestamp } from '$admin-club/lib/ui';
   import { buildAnnouncementEmailContent } from '$admin-club/lib/announcements';
   import { renderTemplatePreviewHtml } from '$admin-club/lib/club-email';

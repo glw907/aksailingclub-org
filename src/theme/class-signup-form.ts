@@ -8,6 +8,7 @@
 import * as v from 'valibot';
 import { invalid } from '@sveltejs/kit';
 import type { D1Database, RateLimit } from '@cloudflare/workers-types';
+import { checkRateLimitKeys, verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
 import { signUpForClass, type SignUpForClassInput, type SignUpResult } from '$admin-club/lib/enrollments';
 import type { EmailBindingEnv } from '$admin-club/lib/club-email';
 import { normalizeEmail } from '$admin-club/lib/member-normalize.js';
@@ -18,8 +19,6 @@ import { getCurrentSeason } from '$admin-club/lib/club-settings';
 import { documents } from '$chassis/content';
 import { loadPublishedDocuments } from '$theme/documents';
 import { hasSignedCurrentRelease, loadHouseholdRequirements } from '$member-portal/lib/waiver-requirements';
-import { verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
-import { checkRateLimitKeys } from '@glw907/cairn-cms/cloudflare';
 import { RATE_LIMIT_MESSAGE } from './rate-limit';
 
 /** The site's established from-address, matching `join-apply-form.ts`'s own copy of the same

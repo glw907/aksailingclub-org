@@ -8,10 +8,10 @@
 import { fail } from '@sveltejs/kit';
 import type { D1Database, RateLimit } from '@cloudflare/workers-types';
 import { tokensMatch } from '@glw907/cairn-cms/auth-crypto';
+import { checkRateLimit } from '@glw907/cairn-cms/cloudflare';
 import { getMemberSession, type MemberRow } from '$member-auth/lib/auth';
 import { memberCsrfCookieName, memberSessionCookieName } from '$member-auth/lib/crypto';
 import { resolveMemberDb } from '$member-auth/lib/db';
-import { checkRateLimit } from '@glw907/cairn-cms/cloudflare';
 import { RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
 
 /** The narrow, explained bridge this module uses to read the site's own `RATE_LIMIT_MEMBER`

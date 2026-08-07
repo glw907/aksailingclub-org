@@ -4,9 +4,13 @@
 // different axis entirely (docs/2026-07-07-member-portal-design.md's own "the auth surface"
 // section: "A signed-in EDITOR is not a member session and vice versa; the two stores never
 // blur"). Mirrors @glw907/cairn-cms's own auth discipline throughout (see each function's own
-// header for the specific correspondence to `~/Projects/cairn-cms/src/lib/auth/`), reimplemented
-// small here rather than importing the engine's auth internals, the same choice
-// `src/admin-club/lib/offers.ts` made for its own waitlist-offer tokens.
+// header for the specific correspondence to `~/Projects/cairn-cms/src/lib/auth/`). The
+// cryptographic primitives underneath are now the engine's own, from
+// `@glw907/cairn-cms/auth-crypto`: this module and `./crypto` reimplemented them small until the
+// `0.94.0-rc.1` migration, the same choice `src/admin-club/lib/offers.ts` made for its own
+// waitlist-offer tokens and retired at the same time. What stays site-owned is this domain's
+// policy, not its cryptography: the member cookie names, the 15-minute token TTL, and the
+// `member_sessions`/`member_tokens` store this file drives.
 import type { D1Database } from '@cloudflare/workers-types';
 import { tokensMatch } from '@glw907/cairn-cms/auth-crypto';
 import {

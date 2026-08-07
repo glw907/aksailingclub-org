@@ -32,9 +32,7 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
   import { untrack } from 'svelte';
   import type { ActionData, PageData } from './$types';
   import { CsrfField } from '@glw907/cairn-cms/components';
-  import { OfficeList } from '@glw907/cairn-cms/admin-toolkit';
-  import { FieldLabel, SelectInput, TextInput } from '@glw907/cairn-cms/admin-toolkit';
-  import { StatusChip, type StatusChipTone } from '@glw907/cairn-cms/admin-toolkit';
+  import { FieldLabel, OfficeList, SelectInput, StatusChip, TextInput, type StatusChipTone } from '@glw907/cairn-cms/admin-toolkit';
   import { formatCivilDate, formatDollars } from '$admin-club/lib/ui';
   import {
     PAYMENT_METHODS,

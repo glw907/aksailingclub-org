@@ -26,8 +26,7 @@ as the list screen's identical patch.
   import type { SubmitFunction } from '@sveltejs/kit';
   import type { ActionData, PageData } from './$types';
   import { CsrfField } from '@glw907/cairn-cms/components';
-  import { SelectInput, TextInput } from '@glw907/cairn-cms/admin-toolkit';
-  import { AdminTable, PageHeader, StatusChip, ageFromBirthdate } from '@glw907/cairn-cms/admin-toolkit';
+  import { AdminTable, PageHeader, SelectInput, StatusChip, TextInput, ageFromBirthdate } from '@glw907/cairn-cms/admin-toolkit';
   import ClassForm from '../ClassForm.svelte';
   import type { ClassTrack, ClassWithCounts, EnrollmentRow } from '$admin-club/lib/classes-store';
   import { HEADER_CELL, formatCivilDate, formatClubTimestamp, formatDollars } from '$admin-club/lib/ui';

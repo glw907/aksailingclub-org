@@ -7,8 +7,9 @@
 // `createSectionAction` (`0.93.0`), which packages exactly what this file used to hand-roll:
 // `adminAction`'s editor resolution, CSRF and single form read, then the per-editor rate limit,
 // the site access map's own `canReach` check, the `ownerOnly` capability stack, and the
-// `CLUB_DB` resolution, each refusal audited under this call site's own `action`/`entity`. The
-// composition this file argued for is the composition the engine now ships.
+// `CLUB_DB` resolution, with every refusal but the rate limit's audited under this call site's
+// own `action`/`entity`. The composition this file argued for is the composition the engine now
+// ships.
 //
 // Two behaviors moved with it, both deliberate. Authorization now derives its target from
 // `event.route.id` rather than `event.url.pathname`, so a POST to `/admin/club/classes/[id]`
@@ -17,7 +18,6 @@
 // switch. And the rate-limit refusal no longer writes an audit row: back-pressure is not a
 // domain-state change, and it logs `admin.action.rate_limited` instead.
 import { createSectionAction } from '@glw907/cairn-cms/sveltekit';
-import type { SectionActionContext, SectionActionOptions } from '@glw907/cairn-cms/sveltekit';
 import type { D1Database } from '@cloudflare/workers-types';
 import { resolveClubDb } from './club-db';
 
@@ -30,24 +30,18 @@ import { resolveClubDb } from './club-db';
  *  left to collapse to `{}`. */
 type ClubSectionEnv = App.Platform['env'];
 
-/** What a `clubAdminAction` handler receives: the engine's own verified `editor`/`audit`, plus the
- *  resolved `CLUB_DB` handle, already checked by the wrapper so no handler re-resolves it. A
- *  handler that needs the acting editor's role reads `ctx.editor.role`/`ctx.editor.capability`
- *  directly; both are already the wrapper-checked values by the time a handler runs. `ctx.audit`
- *  defaults its `action`/`entity` from the call site's own options, so the common emit names only
- *  `entityId`/`detail`. */
-export type ClubActionContext = SectionActionContext<D1Database>;
-
-/** This section's own options, `SectionActionOptions` under the name the section's call sites
- *  already use. `action`/`entity` are the audit verbs (reused on every denial and as `ctx.audit`'s
- *  own default), `ownerOnly` requires owner CAPABILITY on top of the map check rather than instead
- *  of it, and `deniedMessage` overrides the shared 403 copy with a domain-specific one. */
-export type ClubActionOptions = SectionActionOptions;
-
 /**
- * The Club section's guarded action factory. Coverage table item 3
- * (docs/2026-07-15-payments-live-smoke-design.md section 2b) is the rate limit below: every admin
- * POST, keyed per editor email, sharing one `RATE_LIMIT_ADMIN` budget across every club action.
+ * The Club section's guarded action factory: `clubAdminAction(handler, opts)` wraps one
+ * `/admin/club/**` form action. A handler receives `ctx.db` already resolved and its `ctx.audit`
+ * already defaulting `action`/`entity` from `opts`, so the common emit names only
+ * `entityId`/`detail`; a handler needing the acting editor reads `ctx.editor`, the wrapper-checked
+ * value by the time it runs. `SectionActionOptions` documents what a call site may declare
+ * (`action`, `entity`, `ownerOnly`, `deniedMessage`), and `createSectionAction` documents the
+ * check order and what each refusal audits.
+ *
+ * Coverage table item 3 (docs/2026-07-15-payments-live-smoke-design.md section 2b) is the rate
+ * limit below: every admin POST, keyed per editor email, sharing one `RATE_LIMIT_ADMIN` budget
+ * across every club action.
  */
 export const clubAdminAction = createSectionAction<ClubSectionEnv, D1Database>({
   resolveDb: (env) => resolveClubDb(env),

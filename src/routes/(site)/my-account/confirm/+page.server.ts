@@ -6,12 +6,11 @@
 // still be traced back to a member, with its own `resend` action to send a fresh link.
 import { redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { checkRateLimit, checkRateLimitKeys, verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
 import { confirmMemberToken, requestMemberLink, issueMemberCsrfToken, validateMemberCsrfToken, MEMBER_SESSION_TTL_MS } from '$member-auth/lib/auth';
 import { memberSessionCookieName } from '$member-auth/lib/crypto';
 import { resolveMemberDb } from '$member-auth/lib/db';
 import { siteConfig } from '$theme/cairn.config';
-import { verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
-import { checkRateLimit, checkRateLimitKeys } from '@glw907/cairn-cms/cloudflare';
 import { isSafeNextPath, DEFAULT_NEXT_PATH } from '$member-portal/lib/return-path';
 
 export const prerender = false;

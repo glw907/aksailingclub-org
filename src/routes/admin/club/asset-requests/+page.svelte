@@ -38,8 +38,7 @@ against daisyUI's own `@layer`-wrapped declaration. -->
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
   import { CsrfField } from '@glw907/cairn-cms/components';
-  import { OfficeList } from '@glw907/cairn-cms/admin-toolkit';
-  import { EmptyState, itemNoun } from '@glw907/cairn-cms/admin-toolkit';
+  import { EmptyState, OfficeList, itemNoun } from '@glw907/cairn-cms/admin-toolkit';
   import { formatClubTimestamp, formatDollars } from '$admin-club/lib/ui';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();

@@ -12,8 +12,7 @@ it stays intentionally small.
   import { untrack } from 'svelte';
   import type { ActionData, PageData } from './$types';
   import { CsrfField } from '@glw907/cairn-cms/components';
-  import { OfficeList } from '@glw907/cairn-cms/admin-toolkit';
-  import { FieldLabel, SelectInput, TextInput } from '@glw907/cairn-cms/admin-toolkit';
+  import { FieldLabel, OfficeList, SelectInput, TextInput } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL } from '$admin-club/lib/ui';
   import {
     COMMITTEE_KINDS,

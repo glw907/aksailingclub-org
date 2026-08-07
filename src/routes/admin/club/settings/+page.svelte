@@ -22,8 +22,7 @@ forward-only check collapse into the one comparison).
   import { untrack } from 'svelte';
   import type { PageData, ActionData } from './$types';
   import { CsrfField } from '@glw907/cairn-cms/components';
-  import { OfficeList } from '@glw907/cairn-cms/admin-toolkit';
-  import { TextInput } from '@glw907/cairn-cms/admin-toolkit';
+  import { OfficeList, TextInput } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL } from '$admin-club/lib/ui';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();

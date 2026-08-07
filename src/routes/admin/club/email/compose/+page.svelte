@@ -16,8 +16,7 @@ gate; nothing here trusts a count this component computed on its own.
   import type { SubmitFunction } from '@sveltejs/kit';
   import type { ActionData, PageData } from './$types';
   import { CsrfField } from '@glw907/cairn-cms/components';
-  import { OfficeList } from '@glw907/cairn-cms/admin-toolkit';
-  import { FieldLabel, SelectInput, TextInput } from '@glw907/cairn-cms/admin-toolkit';
+  import { FieldLabel, OfficeList, SelectInput, TextInput } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL, formatClubTimestamp } from '$admin-club/lib/ui';
   import { renderTemplateWithVariables } from '$admin-club/lib/club-email';
   import type { ComposeReviewResult, ComposeSendResult, ComposeTestResult } from './+page.server';

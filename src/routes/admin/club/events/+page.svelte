@@ -6,12 +6,12 @@ column called "category" here to match the schema's own CHECK-constrained column
 than the mockup's looser "type" wording.
 
 There is deliberately no "edited by" column, though the ratified mockup's triage table has one:
-`hooks.server.ts` now wires a persisted `event.locals.cairnAuditSink` for `/admin/club/**` (Task 6's
-rider 2), so a real `entity = 'event'` row lands per edit going forward, but every row up to that
-point is still only the ops-import script's own direct write (Task 2). Joining today would show
-"import:ops" for every never-yet-edited row, a misleading column, not an honest one, until enough
-real edits accumulate. Omitted per the task's own escape hatch ("edited-by from audit data if
-cheap, else omit and say so") for this same reason.
+`hooks.server.ts` now wires a persisted `event.locals.cairnAuditSink` for `/admin/club/**`
+(Task 6's rider 2), so a real `entity = 'event'` row lands per edit going forward, but every row
+up to that point is still only the ops-import script's own direct write (Task 2). Joining today
+would show "import:ops" for every never-yet-edited row, a misleading column, not an honest one,
+until enough real edits accumulate. Omitted per the task's own escape hatch ("edited-by from audit
+data if cheap, else omit and say so") for this same reason.
 -->
 <script lang="ts">
   import type { PageData } from './$types';

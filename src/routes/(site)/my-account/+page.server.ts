@@ -18,6 +18,7 @@
 // fireweed CTA is now a plain link to that route, never a form posting a hidden tier field.
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { checkRateLimitKeys, verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
 import { requestMemberLink, destroyMemberSession, issueMemberCsrfToken, validateMemberCsrfToken } from '$member-auth/lib/auth';
 import { memberSessionCookieName } from '$member-auth/lib/crypto';
 import { resolveMemberDb } from '$member-auth/lib/db';
@@ -42,8 +43,6 @@ import { checkoutOrStub } from '$member-portal/lib/checkout';
 import { nextUnclaimedRenewalSeason } from '$member-portal/lib/renewal';
 import { loadSeasonHasLiveEvents } from '$theme/season-data';
 import { siteConfig } from '$theme/cairn.config';
-import { verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
-import { checkRateLimitKeys } from '@glw907/cairn-cms/cloudflare';
 import { RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
 import { documents } from '$chassis/content';
 import { loadPublishedDocuments } from '$theme/documents';

@@ -24,8 +24,8 @@ import { ANNOUNCE_CHANNELS, buildStoryNotice, notifyDiscord, type DiscordBinding
 import type { EmailBindingEnv } from '$admin-club/lib/club-email';
 import { posts, ORIGIN } from '$chassis/content';
 
-/** `CairnEvent`'s own type is narrowed to what `adminAction` itself needs, the same
- *  explained cast `events/[id]/+page.server.ts`'s own `routeId` uses; the real underlying
+/** `CairnEvent`'s own type is narrowed to what `adminAction` itself needs, the same explained
+ *  cast `events/[id]/+page.server.ts`'s own `routeId` uses; the real underlying
  *  `RequestEvent` this dynamic route dispatches always carries `params.id`. */
 function routeId(event: unknown): string {
   return (event as { params: { id: string } }).params.id;
