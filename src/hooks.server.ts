@@ -4,15 +4,19 @@
 // session row directly instead (see the admin smoke-test process in the cairn-cms repo's
 // docs/internal/admin-smoke-test.md).
 //
-// `wireClubAuditSink` runs first in the sequence, before the guard, so `event.locals.auditSink`
-// is already set by the time a `/admin/club/**` action runs (pass 2.1 Task 6, rider 2: the
-// structural audit log existed, nothing persisted it). It is scoped by path so the rest of
-// `/admin` never resolves a binding it has no use for.
+// `wireClubAuditSink` runs first in the sequence, before the guard, so
+// `event.locals.cairnAuditSink` is already set by the time a `/admin/club/**` action runs (pass
+// 2.1 Task 6, rider 2: the structural audit log existed, nothing persisted it). It is scoped by
+// path so the rest of `/admin` never resolves a binding it has no use for. The sink itself is
+// cairn's packaged `createD1AuditSink` as of the `0.94.0-rc.1` migration; the site's own
+// hand-rolled copy is deleted. No migration comes with it: asc-club's `audit_log` table is the
+// one the packaged `migrations/0002_audit.sql` was derived from (0001_substrate), and its columns
+// already match what the sink binds, so applying that migration here would fail on an existing
+// table.
 import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle } from '@sveltejs/kit';
-import { createAuthGuard } from '@glw907/cairn-cms/sveltekit';
+import { createAuthGuard, createD1AuditSink } from '@glw907/cairn-cms/sveltekit';
 import { resolveClubDb } from '$admin-club/lib/club-db';
-import { createClubAuditSink } from '$admin-club/lib/audit-sink';
 import { roles, access } from '$theme/cairn.config.js';
 
 // The root `_headers` file covers static assets only: on Cloudflare, Worker-rendered (SSR)
@@ -30,11 +34,12 @@ const securityHeaders: Handle = async ({ event, resolve }) => {
 const wireClubAuditSink: Handle = ({ event, resolve }) => {
   if (event.url.pathname.startsWith('/admin/club')) {
     const db = resolveClubDb(event.platform?.env);
-    // `waitUntil` keeps the sink's fire-and-forget insert alive past this response (audit-sink.ts's
-    // own header); fall back to none outside a real execution context (e.g. a bare unit test),
-    // where the sink still runs, just without that extension.
+    // `waitUntil` keeps the sink's fire-and-forget insert alive past this response; fall back to
+    // none outside a real execution context (e.g. a bare unit test), where the sink still runs,
+    // just without that extension. The bind is required: an unbound `waitUntil` typechecks and
+    // then throws "Illegal invocation" in workerd.
     const waitUntil = event.platform?.context?.waitUntil?.bind(event.platform.context);
-    if (db) event.locals.auditSink = createClubAuditSink(db, waitUntil);
+    if (db) event.locals.cairnAuditSink = createD1AuditSink(db, waitUntil);
   }
   return resolve(event);
 };

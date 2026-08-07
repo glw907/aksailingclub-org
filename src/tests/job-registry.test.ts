@@ -42,6 +42,10 @@ describe('runScheduledJobs (the isolation contract)', () => {
     vi.restoreAllMocks();
   });
 
+  // 20s, not vitest's 5s default: both cases `await import('../jobs/runner')`, and that graph
+  // pulls in every registered job plus the cairn sveltekit barrel. On a loaded machine the
+  // import alone has taken past 5s and failed the case with a timeout that says nothing about
+  // what it asserts. The generous ceiling still catches a genuine hang.
   it('audits the throwing job as a failure and still runs and audits the job after it', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const { runScheduledJobs } = await import('../jobs/runner');
@@ -52,18 +56,41 @@ describe('runScheduledJobs (the isolation contract)', () => {
     const audits = calls.filter((c) => c.sql.startsWith('INSERT INTO audit_log'));
     expect(audits).toHaveLength(4);
 
-    const byJob = (name: string) => audits.find((a) => a.args[1] === name);
-    expect(byJob('expire-stale-offers')?.args).toEqual(['system:cron', 'expire-stale-offers', expect.stringContaining('FAILED: boom')]);
-    expect(byJob('renewal-reminders')?.args).toEqual(['system:cron', 'renewal-reminders', expect.stringContaining('examined=3 acted=1')]);
-    expect(byJob('class-reminders')?.args).toEqual(['system:cron', 'class-reminders', expect.stringContaining('examined=2 acted=1')]);
+    // Five bound columns, not three: the tick's rows go through cairn's own `createD1AuditSink`
+    // as of the `0.94.0-rc.1` migration, which binds `action` and `entity` rather than inlining
+    // them in the SQL the way this module's own hand-rolled insert did.
+    const byJob = (name: string) => audits.find((a) => a.args[3] === name);
+    expect(byJob('expire-stale-offers')?.args).toEqual([
+      'system:cron',
+      'job.run',
+      'job',
+      'expire-stale-offers',
+      expect.stringContaining('FAILED: boom'),
+    ]);
+    expect(byJob('renewal-reminders')?.args).toEqual([
+      'system:cron',
+      'job.run',
+      'job',
+      'renewal-reminders',
+      expect.stringContaining('examined=3 acted=1'),
+    ]);
+    expect(byJob('class-reminders')?.args).toEqual([
+      'system:cron',
+      'job.run',
+      'job',
+      'class-reminders',
+      expect.stringContaining('examined=2 acted=1'),
+    ]);
     expect(byJob('class-refund-window-notice')?.args).toEqual([
       'system:cron',
+      'job.run',
+      'job',
       'class-refund-window-notice',
       expect.stringContaining('examined=1 acted=0'),
     ]);
 
     errorSpy.mockRestore();
-  });
+  }, 20_000);
 
   it('skips the entire tick, writing no audit rows, when CLUB_DB is not bound', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -75,5 +102,5 @@ describe('runScheduledJobs (the isolation contract)', () => {
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('CLUB_DB is not bound'));
 
     errorSpy.mockRestore();
-  });
+  }, 20_000);
 });

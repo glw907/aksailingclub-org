@@ -11,8 +11,8 @@ it stays intentionally small.
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { ActionData, PageData } from './$types';
-  import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
-  import { FieldLabel, SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
+  import { CsrfField } from '@glw907/cairn-cms/components';
+  import { FieldLabel, OfficeList, SelectInput, TextInput } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL } from '$admin-club/lib/ui';
   import {
     COMMITTEE_KINDS,
@@ -250,8 +250,8 @@ it stays intentionally small.
     <form method="post" action="?/createCommittee" class="border-b border-[var(--cairn-card-border)] p-6">
       <h2 class="mb-3 type-body font-semibold">New committee</h2>
       <div class="grid gap-3 sm:grid-cols-2">
-        <TextField label="Name" name="name" bind:value={newName} />
-        <SelectField label="Kind" name="kind" bind:value={newKind} options={kindOptions} />
+        <TextInput label="Name" name="name" bind:value={newName} />
+        <SelectInput label="Kind" name="kind" bind:value={newKind} options={kindOptions} />
         <FieldLabel label="Sort order">
           <input class="input input-sm" type="number" step="1" name="sortOrder" bind:value={newSortOrder} />
         </FieldLabel>
@@ -268,10 +268,10 @@ it stays intentionally small.
     <form method="post" action="?/addMember" class="border-b border-[var(--cairn-card-border)] p-6">
       <h2 class="mb-3 type-body font-semibold">Add a committee member</h2>
       <div class="grid gap-3 sm:grid-cols-2">
-        <SelectField label="Committee" name="committeeId" bind:value={addCommitteeId} options={activeCommitteeOptions} />
-        <SelectField label="Role" name="role" bind:value={addRole} options={roleOptions} />
-        <TextField label="Search member" name="memberQuery" type="search" placeholder="Name, email, or household" bind:value={memberQuery} />
-        <SelectField label="Member" name="memberId" bind:value={addMemberId} options={memberSelectOptions} />
+        <SelectInput label="Committee" name="committeeId" bind:value={addCommitteeId} options={activeCommitteeOptions} />
+        <SelectInput label="Role" name="role" bind:value={addRole} options={roleOptions} />
+        <TextInput label="Search member" name="memberQuery" type="search" placeholder="Name, email, or household" bind:value={memberQuery} />
+        <SelectInput label="Member" name="memberId" bind:value={addMemberId} options={memberSelectOptions} />
       </div>
       <div class="mt-3 flex justify-end gap-2">
         <CsrfField />
@@ -355,10 +355,10 @@ it stays intentionally small.
     <form method="post" action="?/createPosition" class="p-6">
       <h2 class="mb-3 type-body font-semibold">New position</h2>
       <div class="grid gap-3 sm:grid-cols-2">
-        <TextField label="Search member" name="memberQuery" type="search" placeholder="Name, email, or household" bind:value={positionMemberQuery} />
-        <SelectField label="Member" name="memberId" bind:value={newPositionMemberId} options={positionMemberSelectOptions} />
-        <SelectField label="Kind" name="kind" bind:value={newPositionKind} options={positionKindOptions} />
-        <TextField label="Title" name="title" placeholder="Commodore" bind:value={newPositionTitle} />
+        <TextInput label="Search member" name="memberQuery" type="search" placeholder="Name, email, or household" bind:value={positionMemberQuery} />
+        <SelectInput label="Member" name="memberId" bind:value={newPositionMemberId} options={positionMemberSelectOptions} />
+        <SelectInput label="Kind" name="kind" bind:value={newPositionKind} options={positionKindOptions} />
+        <TextInput label="Title" name="title" placeholder="Commodore" bind:value={newPositionTitle} />
       </div>
       <div class="mt-3 flex justify-end gap-2">
         <CsrfField />
@@ -374,8 +374,8 @@ it stays intentionally small.
     <form method="post" action="?/updateCommittee" class="flex flex-col gap-3 py-2">
       <CsrfField />
       <input type="hidden" name="committeeId" value={editId} />
-      <TextField label="Name" name="name" bind:value={editName} />
-      <SelectField label="Kind" name="kind" bind:value={editKind} options={kindOptions} />
+      <TextInput label="Name" name="name" bind:value={editName} />
+      <SelectInput label="Kind" name="kind" bind:value={editKind} options={kindOptions} />
       <FieldLabel label="Sort order">
         <input class="input input-sm" type="number" step="1" name="sortOrder" bind:value={editSortOrder} />
       </FieldLabel>
@@ -397,8 +397,8 @@ it stays intentionally small.
       <CsrfField />
       <input type="hidden" name="positionId" value={editPositionId} />
       <input type="hidden" name="memberId" value={editPositionMemberId} />
-      <SelectField label="Kind" name="kind" bind:value={editPositionKind} options={positionKindOptions} />
-      <TextField label="Title" name="title" bind:value={editPositionTitle} />
+      <SelectInput label="Kind" name="kind" bind:value={editPositionKind} options={positionKindOptions} />
+      <TextInput label="Title" name="title" bind:value={editPositionTitle} />
       <div class="modal-action">
         <button type="button" class="btn btn-sm" onclick={() => editPositionDialog?.close()}>Cancel</button>
         <button type="submit" class="btn btn-primary btn-sm">Save</button>

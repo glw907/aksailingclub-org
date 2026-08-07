@@ -8,9 +8,9 @@
 import * as v from 'valibot';
 import { invalid } from '@sveltejs/kit';
 import { form, getRequestEvent } from '$app/server';
+import { checkRateLimitKeys, verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
 import { CONTACT_CATEGORIES, buildContactEmail } from '$theme/contact-routing';
-import { verifyTurnstile } from '$theme/turnstile';
-import { checkRateLimitKeys, RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
+import { RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
 
 const FROM_ADDRESS = 'noreply@aksailingclub.org';
 
@@ -38,7 +38,7 @@ export const sendMessage = form(contactSchema, async (input) => {
 
   const secret = platform?.env?.TURNSTILE_SECRET_KEY;
   const token = input['cf-turnstile-response'];
-  if (secret && !(await verifyTurnstile(token, getClientAddress(), secret))) {
+  if (secret && !(await verifyTurnstile(token, secret, { ip: getClientAddress() }))) {
     invalid('Spam check failed. Please try again.');
   }
 

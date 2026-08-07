@@ -43,8 +43,8 @@ import {
 } from './assets-form-input';
 
 /** The narrow bridge this route reads `EMAIL` off `event.platform.env` through, matching
- *  `asset-requests/+page.server.ts`'s own precedent: `AdminActionEvent.platform.env` is typed by
- *  the engine's own narrow `AuthEnv`, which never expresses a site-only binding. */
+ *  `asset-requests/+page.server.ts`'s own precedent: `CairnEvent`'s `platform.env` is typed by
+ *  cairn's own narrow `CairnEnv`, which never expresses a site-only binding. */
 function resolveEmailEnv(env: unknown): EmailBindingEnv {
   return (env as EmailBindingEnv | undefined) ?? {};
 }

@@ -5,6 +5,7 @@
 import * as v from 'valibot';
 import { error } from '@sveltejs/kit';
 import { form, query, getRequestEvent } from '$app/server';
+import { checkRateLimitKeys } from '@glw907/cairn-cms/cloudflare';
 import {
   classSignupSchema,
   handleClassSignup,
@@ -12,7 +13,7 @@ import {
   handleRequestClassRenewLink,
   resolveClassEligibility,
 } from './class-signup-form';
-import { checkRateLimitKeys, RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
+import { RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
 import { normalizeEmail } from '$admin-club/lib/member-normalize.js';
 
 export const joinClass = form(classSignupSchema, async (input) => {

@@ -24,7 +24,7 @@
 // T2/T3: no reader of either survives anywhere in this codebase. A household's terminal state is
 // Former, a recorded fact, never a re-derived elapsed-time window.
 import type { D1Database } from '@cloudflare/workers-types';
-import { toSqliteDatetime } from './crypto';
+import { toSqliteDatetime } from './sqlite-datetime';
 import { formatMemberDate, parseMemberDate } from './format';
 
 // REFUND-AWARE (migration 0023, docs/plans/2026-07-14-membership-admin.md Task 2): every

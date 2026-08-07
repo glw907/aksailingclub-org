@@ -16,7 +16,9 @@ type LayoutEvent = Parameters<typeof load>[0];
 function eventFor(editor: Editor | null, pathname = '/admin/club'): LayoutEvent {
   return {
     url: new URL(`https://x.dev${pathname}`),
-    locals: { editor, cairnAccess: access },
+    route: { id: pathname },
+    setHeaders: () => undefined,
+    locals: { cairnEditor: editor, cairnAccess: access },
   } as unknown as LayoutEvent;
 }
 

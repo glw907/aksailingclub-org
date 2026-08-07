@@ -2,18 +2,20 @@
 @component
 The Events detail/edit fields (Task 5), shared between the create screen (`events/new`) and the
 edit screen (`events/[id]`) so the field set has exactly one copy. Composed from the engine's
-`admin-fields` primitives (`TextField`/`SelectField`/`FieldLabel`), in the same horizontal
-label-beside-input rhythm the Settings screen (Task 4) already established for this site; the
-ratified mockup's stacked "label above input" detail-panel layout is a future `admin-fields`
-addition (per that subpath's own header comment: "a date field... likely the next addition"),
-not something this pass hand-rolls in parallel to the shipped primitives. The date/time fields
+`admin-toolkit` primitives (`TextInput`/`SelectInput`/`FieldLabel`).
+
+These render stacked, label above control, as of the `0.94.0-rc.1` migration. That is the
+ratified mockup's own detail-panel layout, which this file's earlier note called "a future
+`admin-fields` addition"; `0.92.0` shipped it as the `register` prop and made `'stacked'` the
+default, so the site takes the default rather than passing `register="inline"` to hold the
+horizontal label-beside-input rhythm it had been settling for. The date/time fields
 compose `FieldLabel` directly around a bare `<input type="date">`/`type="time">`, per that
 component's own header comment ("compose it directly around a bare custom control when a site's
-own field needs the admin's label rhythm with no bundled primitive to match"): `TextField`'s
+own field needs the admin's label rhythm with no bundled primitive to match"): `TextInput`'s
 `type` prop only accepts `text`/`search`/`email`/`url` today, not `date`/`time`.
 -->
 <script lang="ts">
-  import { FieldLabel, SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
+  import { FieldLabel, SelectInput, TextInput } from '@glw907/cairn-cms/admin-toolkit';
   import { EVENT_CATEGORIES, EVENT_CATEGORY_LABEL, type EventCategory } from '$admin-club/lib/events-store';
 
   let {
@@ -50,9 +52,9 @@ own field needs the admin's label rhythm with no bundled primitive to match"): `
 </script>
 
 <div class="grid gap-x-6 gap-y-4 p-6 sm:grid-cols-2">
-  <TextField label="Title" name="title" bind:value={title} />
-  <TextField label="Slug" name="slug" bind:value={slug} />
-  <SelectField label="Category" name="category" bind:value={category} options={categoryOptions} />
+  <TextInput label="Title" name="title" bind:value={title} />
+  <TextInput label="Slug" name="slug" bind:value={slug} />
+  <SelectInput label="Category" name="category" bind:value={category} options={categoryOptions} />
   <label class="flex items-center gap-1.5 type-body">
     <input type="checkbox" class="checkbox checkbox-sm" name="visible" bind:checked={visible} />
     Visible on the public calendar
@@ -69,7 +71,7 @@ own field needs the admin's label rhythm with no bundled primitive to match"): `
   <FieldLabel label="End time">
     <input class="input input-sm" type="time" name="endTime" bind:value={endTime} />
   </FieldLabel>
-  <TextField label="Location" name="location" bind:value={location} />
+  <TextInput label="Location" name="location" bind:value={location} />
 </div>
 
 <div class="grid gap-4 border-t border-[var(--cairn-card-border)] p-6">

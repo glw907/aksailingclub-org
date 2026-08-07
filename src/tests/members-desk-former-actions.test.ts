@@ -40,7 +40,9 @@ function postEvent(
       delete: () => undefined,
     },
     platform: { env: { CLUB_DB: opts.db } },
-    locals: { editor, auditSink: opts.auditSink, cairnAccess: access },
+    route: { id: new URL(url).pathname },
+    setHeaders: () => undefined,
+    locals: { cairnEditor: editor, cairnAuditSink: opts.auditSink, cairnAccess: access },
   } as unknown as ActionEvent;
 }
 
@@ -74,13 +76,13 @@ describe('members desk actions: setFormer', () => {
     expect(result).toEqual({ ok: true });
     const update = calls.find((c) => c.sql.startsWith('UPDATE households SET former_at'));
     expect(update?.args).toEqual(['hh-1', 'manual']);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'mark-former',
       entity: 'household',
       entityId: 'hh-1',
       detail: 'Moved away mid-season',
-      editor: admin.email,
-    });
+      actor: admin.email,
+    }));
   });
 });
 
@@ -114,12 +116,12 @@ describe('members desk actions: clearFormer', () => {
     expect(result).toEqual({ ok: true });
     const update = calls.find((c) => c.sql.startsWith('UPDATE households SET former_at = NULL'));
     expect(update?.args).toEqual(['hh-1']);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'clear-former',
       entity: 'household',
       entityId: 'hh-1',
       detail: "They're renewing",
-      editor: admin.email,
-    });
+      actor: admin.email,
+    }));
   });
 });

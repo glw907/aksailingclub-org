@@ -3,12 +3,12 @@
 // role-management table that module read went away with the roles collapse; CLUB_DB itself is not
 // going anywhere, so its accessor moved to a home of its own rather than retiring with the rest).
 import type { D1Database } from '@cloudflare/workers-types';
-import type { Role } from '@glw907/cairn-cms';
+import type { ClubRole } from '$theme/cairn.config';
 
 /** The narrow, explained bridge every server file in this section uses to read the site's own
- *  `CLUB_DB` binding off a platform env. The engine types the events it hands sites (`ContentEvent`,
- *  `AdminActionEvent`) narrowly by its own need (`BackendEnv`, `AuthEnv`), so `CLUB_DB`, a binding
- *  this site alone declares (`app.d.ts`, `wrangler.toml`), is never on those types; widening an
+ *  `CLUB_DB` binding off a platform env. `env` is `unknown` here because this function's callers
+ *  reach it from several shapes (a `CairnEvent`'s `platform.env`, the jobs runner's raw Worker
+ *  bindings, a test fixture), and a site-only binding is not on cairn's own `CairnEnv`; widening an
  *  engine type for one site's binding would be the wrong fix. The real runtime object always
  *  carries the full `Platform.env` intersection regardless of which narrower type a given engine
  *  seam declares for it, so this cast is safe, just not expressible without it. */
@@ -31,4 +31,4 @@ export function resolveClubDb(env: unknown): D1Database | undefined {
  *  repo imports it anymore as of that task. Left declared rather than deleted here (T6's own
  *  scope is the tree rewrite, not this cleanup); a future pass-close sweep can drop it once
  *  confirmed still unread. */
-export const CLUB_ROLES: Role[] = ['Administrator', 'Club manager'];
+export const CLUB_ROLES: ClubRole[] = ['Administrator', 'Club manager'];

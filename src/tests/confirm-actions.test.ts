@@ -53,7 +53,7 @@ describe('?/confirm (the Turnstile gate, 2026-07-15 hardening pass)', () => {
   });
 
   it('rejects a missing token when a secret is configured, never consuming the magic-link token, with the spam-check error shape (review fix)', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: false }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: false }) }));
     const { db, calls } = fakeD1({});
     const result = await actions.confirm(confirmEvent({ token: 'a-magic-link-token' }, db, { turnstileSecret: 'secret' }) as never);
     expect(result).toEqual({ ok: false, prefillEmail: null, error: SPAM_CHECK_MESSAGE });
@@ -61,7 +61,7 @@ describe('?/confirm (the Turnstile gate, 2026-07-15 hardening pass)', () => {
   });
 
   it('rejects an invalid token when a secret is configured, with the spam-check error shape (review fix)', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: false }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: false }) }));
     const { db } = fakeD1({});
     const result = await actions.confirm(
       confirmEvent({ token: 'a-magic-link-token', 'cf-turnstile-response': 'a-bad-token' }, db, { turnstileSecret: 'secret' }) as never,
@@ -81,7 +81,7 @@ describe('?/confirm (the Turnstile gate, 2026-07-15 hardening pass)', () => {
   });
 
   it('returns the plain expired shape (no error) for a genuinely invalid token, distinct from a spam-check failure (review fix)', async () => {
-    const fetchSpy = vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: true }) });
+    const fetchSpy = vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: true }) });
     vi.stubGlobal('fetch', fetchSpy);
     // consumeMemberToken's own conditional UPDATE matches zero rows for an already-used or
     // unknown token; findMemberByTokenHash then also finds nothing to pre-fill.
@@ -93,7 +93,7 @@ describe('?/confirm (the Turnstile gate, 2026-07-15 hardening pass)', () => {
   });
 
   it('proceeds when a secret is configured and siteverify reports success (redirects on to /my-account)', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: true }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: true }) }));
     const { db } = fakeD1({ firstResults: { 'FROM member_tokens t JOIN members m': MEMBER_ROW } });
     const caught = await catchThrown(
       actions.confirm(confirmEvent({ token: 'a-magic-link-token', 'cf-turnstile-response': 'a-good-token' }, db, { turnstileSecret: 'secret' }) as never),
@@ -137,7 +137,7 @@ describe('?/resend (the Turnstile gate, 2026-07-15 hardening pass)', () => {
   });
 
   it('rejects a missing token when a secret is configured, never sending the email, with the spam-check error shape (review fix)', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: false }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: false }) }));
     const { db } = fakeD1({ firstResults: { 'FROM members WHERE lower(email)': null } });
     const send = vi.fn().mockResolvedValue(undefined);
     const result = await actions.resend(confirmEvent({ email: MEMBER_ROW.email }, db, { emailBinding: { send }, turnstileSecret: 'secret' }) as never);
@@ -146,7 +146,7 @@ describe('?/resend (the Turnstile gate, 2026-07-15 hardening pass)', () => {
   });
 
   it('rejects an invalid token when a secret is configured, with the spam-check error shape (review fix)', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: false }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: false }) }));
     const { db } = fakeD1({ firstResults: { 'FROM members WHERE lower(email)': null } });
     const send = vi.fn().mockResolvedValue(undefined);
     const result = await actions.resend(
@@ -169,7 +169,7 @@ describe('?/resend (the Turnstile gate, 2026-07-15 hardening pass)', () => {
   });
 
   it('proceeds when a secret is configured and siteverify reports success', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: true }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: true }) }));
     const { db } = fakeD1({ firstResults: { 'FROM members WHERE lower(email)': null } });
     const send = vi.fn().mockResolvedValue(undefined);
     const result = await actions.resend(

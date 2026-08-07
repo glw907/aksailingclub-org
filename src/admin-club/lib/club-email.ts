@@ -26,7 +26,7 @@ import type { D1Database } from '@cloudflare/workers-types';
  *  object. */
 export interface EmailBindingEnv {
   EMAIL?: {
-    send(message: { to: string; from: string; subject: string; html: string; text: string }): Promise<void>;
+    send(message: { to: string; from: string; subject: string; html: string; text: string }): Promise<unknown>;
   };
 }
 

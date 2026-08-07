@@ -5,7 +5,8 @@ a bare form over `ClassForm`'s shared fields, posting to this route's own `creat
 -->
 <script lang="ts">
   import type { ActionData } from './$types';
-  import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
+  import { CsrfField } from '@glw907/cairn-cms/components';
+  import { OfficeList } from '@glw907/cairn-cms/admin-toolkit';
   import ClassForm from '../ClassForm.svelte';
   import type { ClassTrack } from '$admin-club/lib/classes-store';
 

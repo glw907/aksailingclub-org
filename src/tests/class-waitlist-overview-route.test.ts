@@ -17,7 +17,7 @@ type LoadResult = Exclude<Awaited<ReturnType<typeof load>>, void>;
 
 function eventFor(db: unknown): LoadEvent {
   return {
-    locals: { editor: editorWithRole('Club manager') },
+    locals: { cairnEditor: editorWithRole('Club manager') },
     platform: { env: { CLUB_DB: db } },
   } as unknown as LoadEvent;
 }

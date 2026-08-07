@@ -49,7 +49,7 @@ function main() {
 ${MARKER}
 import { runScheduledJobs } from '../../src/jobs/runner.ts';
 worker_default.scheduled = async function (controller, env, ctx) {
-  ctx.waitUntil(runScheduledJobs(env));
+  ctx.waitUntil(runScheduledJobs(env, ctx.waitUntil.bind(ctx)));
 };
 `;
   writeFileSync(WORKER_PATH, appended);

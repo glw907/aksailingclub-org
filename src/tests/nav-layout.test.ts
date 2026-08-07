@@ -6,7 +6,7 @@
 // itself; this file proves the tree renders correctly *against* it).
 import { describe, expect, it } from 'vitest';
 import { resolveNavLayout, type ResolvedLayoutChild, type ResolvedLayoutNode, type ResolvedLayoutSection } from '@glw907/cairn-cms/sveltekit';
-import type { Role } from '@glw907/cairn-cms';
+import type { ClubRole } from '$theme/cairn.config';
 import { access, navLayout } from '$theme/cairn.config.js';
 import { applyNavDefaults } from '$theme/nav-defaults.js';
 import { editorWithRole } from './_editor';
@@ -17,10 +17,9 @@ import { editorWithRole } from './_editor';
  *  since an engine ref with no relabel falls back to `concept.label` -- these are not arbitrary
  *  test fixtures, they pin the exact string the unlabeled Posts/Pages/Bulletins/Fragments doors
  *  resolve to. */
-function opts(role: Role) {
+function opts(role: ClubRole) {
   return {
     layout: navLayout,
-    adminNav: [],
     concepts: [
       { id: 'posts', label: 'Posts', routing: { dated: true } },
       { id: 'pages', label: 'Pages', routing: { dated: false } },

@@ -1,78 +1,58 @@
-// asc-club member auth: token/session id generation and hashing, mirroring
-// @glw907/cairn-cms's own src/lib/auth/crypto.ts (the same discipline, this site's own domain,
-// reimplemented small here rather than importing the engine's auth internals, the same choice
-// offers.ts made for its own waitlist-offer tokens). Timestamps everywhere else in this schema
-// are TEXT `datetime('now')`-shaped UTC strings, not epoch milliseconds
-// (`src/admin-club/lib/offers.ts`'s own `toSqliteDatetime`), so the TTL constants below are
-// durations in milliseconds, converted to a SQLite-comparable string at the call site, never
-// stored as a number.
+// asc-club member auth: token/session id generation, hashing, and cookie naming, all delegated to
+// cairn's own `@glw907/cairn-cms/auth-crypto` since the `0.94.0-rc.1` migration. Before that
+// subpath existed this module reimplemented the same four primitives small, the same choice
+// `offers.ts` made for its own waitlist-offer tokens; the engine now exports the cryptography its
+// own login proves in production, so the copies are gone and only this domain's own naming stays.
+//
+// What remains site-owned, and why: the cookie BASE names (the member store and the editor store
+// never blur, so they can never share a cookie), the token TTL (deliberately 15 minutes against
+// cairn's 10), and the SQLite datetime helpers (this schema's timestamps are TEXT
+// `datetime('now')`-shaped UTC strings, not epoch milliseconds, so a TTL is a duration in
+// milliseconds converted at the call site and never stored as a number, in ./sqlite-datetime).
+import { cookieName, generateToken, generateSessionId, generateCsrfToken, hashToken } from '@glw907/cairn-cms/auth-crypto';
 
-/** The member session cookie's base name, __Host- prefixed when the cookie is Secure. Distinct
- *  from cairn's own `cairn_session` (the content-editor cookie): the two stores never blur. */
+/** The member session cookie's base name. Distinct from cairn's own `cairn_session` (the
+ *  content-editor cookie): the two stores never blur. */
 const SESSION_COOKIE_BASE = 'asc-member';
 
-/** The member session cookie name. On https the cookie is Secure and takes the __Host- prefix
- *  (binds it to the origin); on local http dev the prefix is dropped, since __Host- requires
- *  Secure. Mirrors cairn's own `sessionCookieName`. */
+/** The member session cookie name. `cookieName` owns the `__Host-` prefix discipline: the prefix
+ *  applies on https and drops on local http dev, where a cookie cannot set Secure. */
 export function memberSessionCookieName(secure: boolean): string {
-  return secure ? `__Host-${SESSION_COOKIE_BASE}` : SESSION_COOKIE_BASE;
+  return cookieName(SESSION_COOKIE_BASE, secure);
 }
 
-/** The member CSRF double-submit cookie's base name, mirroring cairn's own `cairn_csrf`, with its
- *  own distinct name so the two token stores never collide. */
+/** The member CSRF double-submit cookie's base name, with its own distinct name so the two token
+ *  stores never collide. */
 const CSRF_COOKIE_BASE = 'asc-member-csrf';
 
 export function memberCsrfCookieName(secure: boolean): string {
-  return secure ? `__Host-${CSRF_COOKIE_BASE}` : CSRF_COOKIE_BASE;
+  return cookieName(CSRF_COOKIE_BASE, secure);
 }
 
 /** Magic-link tokens live 15 minutes (this pass's own ruling; cairn's own editor tokens live 10,
- *  a deliberate difference, not a drift). */
+ *  a deliberate difference, not a drift, which is why this is not cairn's `TOKEN_TTL_MS`). */
 export const MEMBER_TOKEN_TTL_MS = 15 * 60 * 1000;
 
 /** Sessions live 30 days, matching cairn's own `SESSION_TTL_MS`. */
 export const MEMBER_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-function randomBase64Url(byteLength: number): string {
-  const bytes = new Uint8Array(byteLength);
-  crypto.getRandomValues(bytes);
-  let binary = '';
-  for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
-}
-
 /** A fresh 256-bit magic-link token, url-safe. */
 export function generateMemberToken(): string {
-  return randomBase64Url(32);
+  return generateToken();
 }
 
 /** A fresh 256-bit session id, url-safe. */
 export function generateMemberSessionId(): string {
-  return randomBase64Url(32);
+  return generateSessionId();
 }
 
 /** A fresh 256-bit double-submit CSRF token, url-safe. */
 export function generateMemberCsrfToken(): string {
-  return randomBase64Url(32);
+  return generateCsrfToken();
 }
 
 /** The lowercase hex SHA-256 of a token, for storage and lookup. The store keeps only this, never
- *  the plaintext token (mirrors cairn's own `hashToken`). */
-export async function hashMemberToken(token: string): Promise<string> {
-  const data = new TextEncoder().encode(token);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-/** A SQLite `datetime('now')`-shaped UTC string ("YYYY-MM-DD HH:MM:SS", no offset), matching
- *  offers.ts's own `toSqliteDatetime`: every timestamp this domain writes or compares uses this
- *  exact shape, so lexicographic comparison against a database-read value stays safe. */
-export function toSqliteDatetime(date: Date): string {
-  return date.toISOString().slice(0, 19).replace('T', ' ');
-}
-
-/** `toSqliteDatetime`, offset forward by a duration in milliseconds: the shape every expiry
- *  column this migration writes wants. */
-export function sqliteDatetimeAfter(ms: number, from: Date = new Date()): string {
-  return toSqliteDatetime(new Date(from.getTime() + ms));
+ *  the plaintext token. */
+export function hashMemberToken(token: string): Promise<string> {
+  return hashToken(token);
 }

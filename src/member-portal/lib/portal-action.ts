@@ -7,10 +7,12 @@
 // (`$member-auth/lib/auth.ts`), never a second copy of either's own token logic.
 import { fail } from '@sveltejs/kit';
 import type { D1Database, RateLimit } from '@cloudflare/workers-types';
+import { tokensMatch } from '@glw907/cairn-cms/auth-crypto';
+import { checkRateLimit } from '@glw907/cairn-cms/cloudflare';
 import { getMemberSession, type MemberRow } from '$member-auth/lib/auth';
 import { memberCsrfCookieName, memberSessionCookieName } from '$member-auth/lib/crypto';
 import { resolveMemberDb } from '$member-auth/lib/db';
-import { checkRateLimit, RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
+import { RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
 
 /** The narrow, explained bridge this module uses to read the site's own `RATE_LIMIT_MEMBER`
  *  binding off a platform env, matching `$admin-club/lib/club-db.ts`'s own `resolveClubDb`
@@ -22,7 +24,7 @@ function resolveMemberRateLimit(env: unknown): RateLimit | undefined {
 
 /** The minimal event shape `portalAction` reads: enough to verify CSRF, resolve the session
  *  cookie, and read the form once, mirroring the engine's own narrow-event trick
- *  (`club-action.ts`'s own `AdminActionEvent` reuse) so a wrapped function still satisfies
+ *  (`club-action.ts`'s own reuse of cairn's `CairnEvent`) so a wrapped function still satisfies
  *  SvelteKit's own `Actions` shape for a route's `$types`. */
 export interface PortalActionEvent {
   url: URL;
@@ -48,16 +50,6 @@ export interface PortalActionContext {
    *  signing action needs it to trace the magic-link auth event backing the signature
    *  (`$member-portal/lib/signatures.ts`'s `resolveSessionAuthEvent`). */
   sessionId: string;
-}
-
-/** A length-checked constant-time compare (mirrors `$member-auth/lib/auth.ts`'s own private
- *  `tokensMatch`, reimplemented here rather than exported from that module purely for this one
- *  caller). */
-function tokensMatch(a: string, b: string): boolean {
-  if (a.length === 0 || a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
 }
 
 /**

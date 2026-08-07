@@ -96,7 +96,7 @@ describe('handleJoinApply', () => {
   });
 
   it('refuses when the turnstile check fails, writing nothing', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: false }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: false }) }));
     const { db, calls } = fakeD1();
 
     await expect(

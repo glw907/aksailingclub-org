@@ -4,9 +4,10 @@
 import * as v from 'valibot';
 import { error } from '@sveltejs/kit';
 import { form, query, getRequestEvent } from '$app/server';
+import { checkRateLimitKeys } from '@glw907/cairn-cms/cloudflare';
 import { joinApplySchema, handleJoinApply } from './join-apply-form';
 import { normalizeEmail } from '$admin-club/lib/member-normalize.js';
-import { checkRateLimitKeys, RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
+import { RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
 
 export const applyJoin = form(joinApplySchema, async (input) => {
   const { platform, getClientAddress, url } = getRequestEvent();

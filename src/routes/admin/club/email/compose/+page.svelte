@@ -15,8 +15,8 @@ gate; nothing here trusts a count this component computed on its own.
   import { enhance } from '$app/forms';
   import type { SubmitFunction } from '@sveltejs/kit';
   import type { ActionData, PageData } from './$types';
-  import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
-  import { FieldLabel, SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
+  import { CsrfField } from '@glw907/cairn-cms/components';
+  import { FieldLabel, OfficeList, SelectInput, TextInput } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL, formatClubTimestamp } from '$admin-club/lib/ui';
   import { renderTemplateWithVariables } from '$admin-club/lib/club-email';
   import type { ComposeReviewResult, ComposeSendResult, ComposeTestResult } from './+page.server';
@@ -199,13 +199,13 @@ gate; nothing here trusts a count this component computed on its own.
     <form method="post" action="?/review" use:enhance={onSettle()}>
       <div class="grid gap-section p-6 lg:grid-cols-2">
         <section class="flex flex-col gap-4">
-          <SelectField
+          <SelectInput
             label="Segment"
             name="segmentKey"
             bind:value={segmentKey}
             options={data.segmentOptions.map((option) => ({ value: option.key, label: option.label }))}
           />
-          <TextField label="Subject" name="subject" bind:value={subject} />
+          <TextInput label="Subject" name="subject" bind:value={subject} />
           <FieldLabel label="Body (markdown)">
             <textarea bind:this={bodyField} class="textarea textarea-sm w-full font-mono" name="body" rows="12" bind:value={body}
             ></textarea>

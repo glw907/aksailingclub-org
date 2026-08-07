@@ -8,10 +8,10 @@
 import * as v from 'valibot';
 import { invalid } from '@sveltejs/kit';
 import type { D1Database, RateLimit } from '@cloudflare/workers-types';
+import { checkRateLimit, verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
 import { getClass } from '$admin-club/lib/classes-store';
 import { createCheckout, CheckoutUnavailableError, type CreateCheckoutEnv, type CreateCheckoutResult } from '$admin-club/lib/payments';
-import { verifyTurnstile } from './turnstile';
-import { checkRateLimit, RATE_LIMIT_MESSAGE } from './rate-limit';
+import { RATE_LIMIT_MESSAGE } from './rate-limit';
 
 export const classFeeCheckoutSchema = v.object({
   enrollmentId: v.pipe(v.string(), v.trim(), v.nonEmpty()),
@@ -58,7 +58,7 @@ export async function handleClassFeeCheckout(
 
   const secret = platformEnv?.TURNSTILE_SECRET_KEY;
   const token = input['cf-turnstile-response'];
-  if (secret && !(await verifyTurnstile(token, clientAddress, secret))) {
+  if (secret && !(await verifyTurnstile(token, secret, { ip: clientAddress }))) {
     invalid('Spam check failed. Please try again.');
   }
 

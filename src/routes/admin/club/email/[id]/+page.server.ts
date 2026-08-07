@@ -17,7 +17,7 @@ import {
 } from '$admin-club/lib/email-templates-store';
 
 /** See `classes/[id]/+page.server.ts`'s identical `routeId` for why this narrow cast is safe:
- *  `AdminActionEvent` (the type `clubAdminAction`'s handler receives) is a structural subset that
+ *  `CairnEvent` (the type `clubAdminAction`'s handler receives) is a structural subset that
  *  drops `params`, even though the real SvelteKit event underneath always carries it. */
 function routeId(event: unknown): string {
   return (event as { params: { id: string } }).params.id;

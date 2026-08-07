@@ -51,7 +51,9 @@ function postEvent(
       delete: () => undefined,
     },
     platform: { env: { CLUB_DB: opts.db } },
-    locals: { editor, auditSink: opts.auditSink, cairnAccess: access },
+    route: { id: new URL(url).pathname },
+    setHeaders: () => undefined,
+    locals: { cairnEditor: editor, cairnAuditSink: opts.auditSink, cairnAccess: access },
   } as unknown as NewActionEvent & DetailActionEvent;
 }
 
@@ -75,7 +77,7 @@ describe('classes actions: club-role gate', () => {
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number }).status).toBe(403);
     expect(sink).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'create', entity: 'class', editor: noRole.email }),
+      expect.objectContaining({ action: 'create', entity: 'class', actor: noRole.email }),
     );
   });
 
@@ -127,12 +129,12 @@ describe('classes actions: create', () => {
     expect((caught as Redirect).location).toBe('/admin/club/classes/fleet-tune-up-weekend');
     const insert = calls.find((c) => c.sql.startsWith('INSERT INTO classes'));
     expect(insert?.args[1]).toBe(2026);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'create',
       entity: 'class',
       entityId: 'fleet-tune-up-weekend',
-      editor: admin.email,
-    });
+      actor: admin.email,
+    }));
   });
 });
 
@@ -169,12 +171,12 @@ describe('classes actions: update', () => {
     const result = await detailActions.update(postEvent(admin, VALID_FIELDS, { db, auditSink: sink }));
     expect(result).toEqual({ ok: true });
     expect(calls.some((c) => c.sql.startsWith('UPDATE classes SET'))).toBe(true);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'update',
       entity: 'class',
       entityId: 'fleet-tune-up-weekend',
-      editor: admin.email,
-    });
+      actor: admin.email,
+    }));
   });
 });
 
@@ -206,12 +208,12 @@ describe('classes actions: delete', () => {
     expect(isRedirect(caught)).toBe(true);
     expect((caught as Redirect).location).toBe('/admin/club/classes');
     expect(calls.some((c) => c.sql.startsWith('DELETE FROM classes'))).toBe(true);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'delete',
       entity: 'class',
       entityId: 'fleet-tune-up-weekend',
-      editor: admin.email,
-    });
+      actor: admin.email,
+    }));
   });
 });
 
@@ -236,12 +238,12 @@ describe('classes actions: instructor assignment', () => {
     const insert = calls.find((c) => c.sql.startsWith('INSERT INTO class_instructors'));
     expect(insert?.args).toEqual(['fleet-tune-up-weekend', 'mem-1', 'Coach']);
     expect(calls.some((c) => c.sql.startsWith('UPDATE') || c.sql.startsWith('DELETE'))).toBe(false);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'assign',
       entity: 'assignment',
       entityId: 'fleet-tune-up-weekend:coach@example.com',
-      editor: admin.email,
-    });
+      actor: admin.email,
+    }));
   });
 
   it('fails 400 when the email is missing, auditing the rejected attempt', async () => {
@@ -268,12 +270,12 @@ describe('classes actions: instructor assignment', () => {
         args: ['fleet-tune-up-weekend', 'coach@example.com'],
       },
     ]);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'unassign',
       entity: 'assignment',
       entityId: 'fleet-tune-up-weekend:coach@example.com',
-      editor: admin.email,
-    });
+      actor: admin.email,
+    }));
   });
 
   it('refuses an editor with no club role (403), never touching class_instructors', async () => {

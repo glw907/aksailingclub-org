@@ -8,13 +8,13 @@
 // sections that survive the map's own visibility filtering, never adds or removes an item. The
 // per-user `cairn-admin-nav-collapsed` cookie still wins once a visitor's first toggle sets it
 // (cairn-cms's own shell behavior, untouched here).
-import type { Role } from '@glw907/cairn-cms';
+import type { ClubRole } from '$theme/cairn.config';
 import type { ResolvedLayoutNode, ResolvedLayoutSection } from '@glw907/cairn-cms/sveltekit';
 
 /** The group labels a role starts with open, keyed by the exact `NavLayoutSection.label` string
  *  cairn.config.ts declares. A role with no entry here (Instructor, the phantom `owner`, or any
  *  future role) is left alone: its sections keep the declared static defaults exactly. */
-const OPEN_GROUPS_BY_ROLE: Partial<Record<Role, readonly string[]>> = {
+const OPEN_GROUPS_BY_ROLE: Partial<Record<ClubRole, readonly string[]>> = {
   Administrator: ['Club', 'Communication'],
   'Club manager': ['Club', 'Communication'],
   Webmaster: ['Communication', 'Website'],
@@ -33,8 +33,13 @@ function isSection(item: ResolvedLayoutNode): item is ResolvedLayoutSection {
  * it only sets `collapsed: false` for the role's open groups and `collapsed: true` for every other
  * section still present. A role absent from {@link OPEN_GROUPS_BY_ROLE} returns `items` unchanged.
  */
-export function applyNavDefaults(items: ResolvedLayoutNode[], role: Role): ResolvedLayoutNode[] {
-  const openGroups = OPEN_GROUPS_BY_ROLE[role];
+export function applyNavDefaults(items: ResolvedLayoutNode[], role: string): ResolvedLayoutNode[] {
+  // `role` is a plain `string` because role names are open as of `0.94.0-rc.1`: the engine hands
+  // this whatever name the session's editor row carries, which need not be one this site declares
+  // (a stale grant, a hand-edited row). The lookup below is total over `ClubRole` and answers
+  // `undefined` for anything else, which is the documented leave-it-alone case, so the cast
+  // narrows for the index without asserting the value is really one of the six.
+  const openGroups = OPEN_GROUPS_BY_ROLE[role as ClubRole];
   if (!openGroups) {
     return items;
   }

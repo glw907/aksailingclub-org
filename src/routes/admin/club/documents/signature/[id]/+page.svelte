@@ -6,7 +6,7 @@ Evidence, not a document editor -- there is nothing here to change.
 -->
 <script lang="ts">
   import type { PageData } from './$types';
-  import { OfficeList } from '@glw907/cairn-cms/components';
+  import { OfficeList } from '@glw907/cairn-cms/admin-toolkit';
   import { formatCivilDate } from '$admin-club/lib/ui';
 
   let { data }: { data: PageData } = $props();

@@ -103,7 +103,7 @@ describe('handleClassSignup (the Turnstile degrade path)', () => {
   it('blocks the submission when a secret is configured and siteverify reports failure', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: false }) }),
+      vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: false }) }),
     );
     const { db } = freeCapacityDb();
 
@@ -117,12 +117,15 @@ describe('handleClassSignup (the Turnstile degrade path)', () => {
   it('proceeds when a secret is configured and siteverify reports success', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: true }) }),
+      vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: true }) }),
     );
     const { db } = freeCapacityDb();
 
+    // A real token, not `INPUT`'s empty one: cairn's packaged `verifyTurnstile` refuses a blank
+    // token pre-flight rather than posting it to siteverify, so the empty string this case used
+    // to carry only reached a mocked success because the site's own copy never checked.
     const result = await handleClassSignup(
-      INPUT,
+      { ...INPUT, 'cf-turnstile-response': 'a-good-token' },
       { CLUB_DB: db, TURNSTILE_SECRET_KEY: 'secret' },
       '203.0.113.5',
     );
@@ -359,7 +362,7 @@ describe('handleRequestClassRenewLink (the Turnstile gate)', () => {
   });
 
   it('rejects a missing token when a secret is configured', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: false }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: false }) }));
     await expect(
       handleRequestClassRenewLink(RENEW_INPUT, { TURNSTILE_SECRET_KEY: 'secret' }, IP, ORIGIN),
     ).rejects.toSatisfy(
@@ -368,7 +371,7 @@ describe('handleRequestClassRenewLink (the Turnstile gate)', () => {
   });
 
   it('rejects an invalid token when a secret is configured', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: false }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: false }) }));
     const input = { ...RENEW_INPUT, 'cf-turnstile-response': 'a-bad-token' };
     await expect(
       handleRequestClassRenewLink(input, { TURNSTILE_SECRET_KEY: 'secret' }, IP, ORIGIN),
@@ -378,7 +381,7 @@ describe('handleRequestClassRenewLink (the Turnstile gate)', () => {
   });
 
   it('proceeds when a secret is configured and siteverify reports success', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success: true }) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ success: true }) }));
     const input = { ...RENEW_INPUT, 'cf-turnstile-response': 'a-good-token' };
     const result = await handleRequestClassRenewLink(input, { TURNSTILE_SECRET_KEY: 'secret' }, IP, ORIGIN);
     expect(result).toEqual({ sent: true });

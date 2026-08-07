@@ -37,8 +37,8 @@ Svelte `<style>` rule targeting the same class needs no `!important` and no spec
 against daisyUI's own `@layer`-wrapped declaration. -->
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
-  import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
-  import { EmptyState, itemNoun } from '@glw907/cairn-cms/admin-toolkit';
+  import { CsrfField } from '@glw907/cairn-cms/components';
+  import { EmptyState, OfficeList, itemNoun } from '@glw907/cairn-cms/admin-toolkit';
   import { formatClubTimestamp, formatDollars } from '$admin-club/lib/ui';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();

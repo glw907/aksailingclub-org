@@ -40,7 +40,9 @@ function postEvent(
       delete: () => undefined,
     },
     platform: { env: { CLUB_DB: opts.db, EMAIL: opts.email } },
-    locals: { editor, auditSink: opts.auditSink, cairnAccess: access },
+    route: { id: new URL(url).pathname },
+    setHeaders: () => undefined,
+    locals: { cairnEditor: editor, cairnAuditSink: opts.auditSink, cairnAccess: access },
   } as unknown as ActionEvent;
 }
 
@@ -75,7 +77,7 @@ describe('assets actions: assign', () => {
     const insert = calls.find((c) => c.sql.startsWith('INSERT INTO asset_assignments'));
     expect(insert?.args).toEqual([insert?.args[0], 'mooring', 'ms-1', 'Buoy M-14', 'active']);
     expect(sink).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'assign', entity: 'assignment', editor: admin.email }),
+      expect.objectContaining({ action: 'assign', entity: 'assignment', actor: admin.email }),
     );
   });
 });
@@ -100,7 +102,7 @@ describe('assets actions: release', () => {
     const result = await actions.release(postEvent(admin, { assignmentId: 'a-1' }, { db, auditSink: sink }));
     expect(result).toEqual({ ok: true });
     expect(calls.some((c) => c.sql.startsWith('UPDATE asset_assignments SET status'))).toBe(true);
-    expect(sink).toHaveBeenCalledWith({ action: 'release', entity: 'assignment', entityId: 'a-1', editor: admin.email });
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'release', entity: 'assignment', entityId: 'a-1', actor: admin.email }));
   });
 });
 
@@ -139,13 +141,13 @@ describe('assets actions: recordPayment', () => {
     expect(result).toEqual({ ok: true });
     const insert = calls.find((c) => c.sql.startsWith('INSERT INTO asset_payments'));
     expect(insert?.args.slice(1)).toEqual(['a-1', 2026, 300, 'check', 'Check #1234']);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'record-payment',
       entity: 'asset-payment',
       entityId: 'a-1',
       detail: 'method=check',
-      editor: admin.email,
-    });
+      actor: admin.email,
+    }));
   });
 });
 
@@ -179,7 +181,7 @@ describe('assets actions: waitlist', () => {
     // clubAdminAction's role gate no longer queries club_roles (initiative 5 Task 2): it is the
     // only DB call this handler makes.
     expect(calls).toEqual([{ sql: 'DELETE FROM asset_waitlist WHERE id = ?1', args: ['w-1'] }]);
-    expect(sink).toHaveBeenCalledWith({ action: 'remove', entity: 'asset-waitlist', entityId: 'w-1', editor: admin.email });
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'remove', entity: 'asset-waitlist', entityId: 'w-1', actor: admin.email }));
   });
 
   it('waitlistMoveToEnd fails 404 for an unknown entry', async () => {
@@ -195,7 +197,7 @@ describe('assets actions: waitlist', () => {
     const result = await actions.waitlistMoveToEnd(postEvent(admin, { waitlistId: 'w-1' }, { db, auditSink: sink }));
     expect(result).toEqual({ ok: true });
     expect(calls.some((c) => c.sql.startsWith('UPDATE asset_waitlist SET position') && c.args.includes('mooring'))).toBe(true);
-    expect(sink).toHaveBeenCalledWith({ action: 'reorder', entity: 'asset-waitlist', entityId: 'w-1', editor: admin.email });
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'reorder', entity: 'asset-waitlist', entityId: 'w-1', actor: admin.email }));
   });
 });
 
@@ -318,7 +320,7 @@ describe('assets actions: editType', () => {
     expect(result).toEqual({ ok: true });
     const update = calls.find((c) => c.sql.startsWith('UPDATE asset_types'));
     expect(update?.args).toEqual(['Mooring (renamed)', 350, 15, 'mooring']);
-    expect(sink).toHaveBeenCalledWith({ action: 'edit', entity: 'asset-type', entityId: 'mooring', editor: admin.email });
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'edit', entity: 'asset-type', entityId: 'mooring', actor: admin.email }));
   });
 
   it('clears capacity to null without error', async () => {

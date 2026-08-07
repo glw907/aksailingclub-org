@@ -8,6 +8,7 @@
 import * as v from 'valibot';
 import { invalid } from '@sveltejs/kit';
 import type { D1Database, RateLimit } from '@cloudflare/workers-types';
+import { checkRateLimitKeys, verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
 import { signUpForClass, type SignUpForClassInput, type SignUpResult } from '$admin-club/lib/enrollments';
 import type { EmailBindingEnv } from '$admin-club/lib/club-email';
 import { normalizeEmail } from '$admin-club/lib/member-normalize.js';
@@ -18,8 +19,7 @@ import { getCurrentSeason } from '$admin-club/lib/club-settings';
 import { documents } from '$chassis/content';
 import { loadPublishedDocuments } from '$theme/documents';
 import { hasSignedCurrentRelease, loadHouseholdRequirements } from '$member-portal/lib/waiver-requirements';
-import { verifyTurnstile } from './turnstile';
-import { checkRateLimitKeys, RATE_LIMIT_MESSAGE } from './rate-limit';
+import { RATE_LIMIT_MESSAGE } from './rate-limit';
 
 /** The site's established from-address, matching `join-apply-form.ts`'s own copy of the same
  *  constant (kept as this module's own copy for the same reason that file gives). */
@@ -145,7 +145,7 @@ export async function handleClassSignup(
 
   const secret = platformEnv?.TURNSTILE_SECRET_KEY;
   const token = input['cf-turnstile-response'];
-  if (secret && !(await verifyTurnstile(token, clientAddress, secret))) {
+  if (secret && !(await verifyTurnstile(token, secret, { ip: clientAddress }))) {
     invalid('Spam check failed. Please try again.');
   }
 
@@ -240,7 +240,7 @@ export async function handleRequestClassRenewLink(
 
   const secret = platformEnv?.TURNSTILE_SECRET_KEY;
   const token = input['cf-turnstile-response'];
-  if (secret && !(await verifyTurnstile(token, clientAddress, secret))) {
+  if (secret && !(await verifyTurnstile(token, secret, { ip: clientAddress }))) {
     invalid('Spam check failed. Please try again.');
   }
 

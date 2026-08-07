@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { canReach, type Role } from '@glw907/cairn-cms';
+import { canReach } from '@glw907/cairn-cms';
+import type { ClubRole } from '$theme/cairn.config';
 import { access } from '$theme/cairn.config.js';
 import { editorWithRole } from './_editor';
 
@@ -18,7 +19,7 @@ const WEBMASTER = 'Webmaster';
 const PUBLISHER = 'Publisher';
 const INSTRUCTOR = 'Instructor';
 
-const ROLES = [ADMINISTRATOR, CLUB_MANAGER, WEBMASTER, PUBLISHER, INSTRUCTOR] as const satisfies readonly Role[];
+const ROLES = [ADMINISTRATOR, CLUB_MANAGER, WEBMASTER, PUBLISHER, INSTRUCTOR] as const satisfies readonly ClubRole[];
 
 // The engine screens and club routes pass A enforces (design spec's "Roles matrix", translated
 // from its group rows to per-function cells; plan T3 names this exact map). `/admin/club` stands
@@ -49,7 +50,7 @@ const FUNCTIONS = [
 // - Publisher: true only for the Communication group's mapped functions plus the two widened
 //   club routes.
 // - Instructor: false everywhere (`none` capability).
-const ADMITTED: Record<(typeof FUNCTIONS)[number], readonly Role[]> = {
+const ADMITTED: Record<(typeof FUNCTIONS)[number], readonly ClubRole[]> = {
   posts: [ADMINISTRATOR, CLUB_MANAGER, WEBMASTER, PUBLISHER],
   bulletins: [ADMINISTRATOR, CLUB_MANAGER, WEBMASTER, PUBLISHER],
   pages: [ADMINISTRATOR, CLUB_MANAGER, WEBMASTER],

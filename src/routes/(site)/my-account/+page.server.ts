@@ -18,6 +18,7 @@
 // fireweed CTA is now a plain link to that route, never a form posting a hidden tier field.
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { checkRateLimitKeys, verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
 import { requestMemberLink, destroyMemberSession, issueMemberCsrfToken, validateMemberCsrfToken } from '$member-auth/lib/auth';
 import { memberSessionCookieName } from '$member-auth/lib/crypto';
 import { resolveMemberDb } from '$member-auth/lib/db';
@@ -42,8 +43,7 @@ import { checkoutOrStub } from '$member-portal/lib/checkout';
 import { nextUnclaimedRenewalSeason } from '$member-portal/lib/renewal';
 import { loadSeasonHasLiveEvents } from '$theme/season-data';
 import { siteConfig } from '$theme/cairn.config';
-import { verifyTurnstile } from '$theme/turnstile';
-import { checkRateLimitKeys, RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
+import { RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
 import { documents } from '$chassis/content';
 import { loadPublishedDocuments } from '$theme/documents';
 import { householdDocumentSigner, loadHouseholdRequirements, outstandingAssetDocuments, parseAssetKind } from '$member-portal/lib/waiver-requirements';
@@ -157,7 +157,7 @@ export const actions: Actions = {
     // `requestRenewLink`.
     const secret = event.platform?.env.TURNSTILE_SECRET_KEY;
     const token = String(form.get('cf-turnstile-response') ?? '');
-    if (secret && !(await verifyTurnstile(token, event.getClientAddress(), secret))) {
+    if (secret && !(await verifyTurnstile(token, secret, { ip: event.getClientAddress() }))) {
       return fail(400, { error: 'Spam check failed. Please try again.' });
     }
 

@@ -31,9 +31,8 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { ActionData, PageData } from './$types';
-  import { CsrfField, OfficeList } from '@glw907/cairn-cms/components';
-  import { FieldLabel, SelectField, TextField } from '@glw907/cairn-cms/admin-fields';
-  import { StatusChip, type StatusChipTone } from '@glw907/cairn-cms/admin-toolkit';
+  import { CsrfField } from '@glw907/cairn-cms/components';
+  import { FieldLabel, OfficeList, SelectInput, StatusChip, TextInput, type StatusChipTone } from '@glw907/cairn-cms/admin-toolkit';
   import { formatCivilDate, formatDollars } from '$admin-club/lib/ui';
   import {
     PAYMENT_METHODS,
@@ -445,8 +444,8 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
       <FieldLabel label="Amount (USD)">
         <input class="input input-sm" type="number" min="1" step="1" name="amount" bind:value={paymentAmount} />
       </FieldLabel>
-      <SelectField label="Method" name="method" bind:value={paymentMethod} options={paymentMethodOptions} />
-      <TextField label="Reference" name="reference" placeholder="Check #1234" bind:value={paymentReference} />
+      <SelectInput label="Method" name="method" bind:value={paymentMethod} options={paymentMethodOptions} />
+      <TextInput label="Reference" name="reference" placeholder="Check #1234" bind:value={paymentReference} />
       <div class="modal-action">
         <button type="button" class="btn btn-sm" onclick={() => paymentDialog?.close()}>Cancel</button>
         <button type="submit" class="btn btn-primary btn-sm">Record payment</button>
@@ -561,8 +560,8 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
      grid, the Edit-type dialog, and the Record-payment dialog alike -- stopped at 320px
      regardless of its own container's width, leaving a visible empty gutter beside the filled
      submit button, which aligns to the container's real edge. `:global` is needed because the
-     Record-payment dialog's Method/Reference fields render through the packaged `SelectField`/
-     `TextField` components, a separate component instance a scoped selector can't reach; this
+     Record-payment dialog's Method/Reference fields render through the packaged `SelectInput`/
+     `TextInput` components, a separate component instance a scoped selector can't reach; this
      rule still ships only inside this route's own code-split stylesheet, so its reach stays this
      page. */
   :global(.input),

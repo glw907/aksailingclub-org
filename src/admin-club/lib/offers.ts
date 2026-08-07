@@ -13,9 +13,10 @@
 // contract). `claimOffer`, `declineOffer`, and `expireStaleOffers` have no such wrapper available:
 // a token-bearer's claim or decline is a public request with no signed-in editor, and the lazy
 // sweep runs from a page `load`, which `adminAction` never wraps either. All three write their
-// own `audit_log` row directly (the same insert shape `audit-sink.ts` uses), as `'public:claim'`,
+// own `audit_log` row directly (the same insert shape the packaged sink uses), as `'public:claim'`,
 // `'public:decline'`, or `'system'` respectively.
 import type { D1Database } from '@cloudflare/workers-types';
+import { generateToken, hashToken } from '@glw907/cairn-cms/auth-crypto';
 import { getClass, getClassWithCounts } from './classes-store';
 import { getOfferWindowHours } from './club-settings';
 import { ensureMember } from './people';
@@ -138,24 +139,16 @@ export async function listOutstandingOffers(db: D1Database): Promise<OfferRow[]>
   return results.map(toOfferRow);
 }
 
-function randomBase64Url(byteLength: number): string {
-  const bytes = new Uint8Array(byteLength);
-  crypto.getRandomValues(bytes);
-  let binary = '';
-  for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
-}
-
-/** A fresh 256-bit claim token, url-safe: the plaintext the admin surfaces once, never stored. */
+/** A fresh 256-bit claim token, url-safe: the plaintext the admin surfaces once, never stored.
+ *  cairn's own `generateToken` since the `0.94.0-rc.1` migration; this module hand-rolled the same
+ *  CSPRNG-and-base64url pair before `@glw907/cairn-cms/auth-crypto` existed. */
 function generateOfferToken(): string {
-  return randomBase64Url(32);
+  return generateToken();
 }
 
 /** The lowercase hex SHA-256 of a token, the only form `class_offers.token` ever stores. */
-export async function hashOfferToken(token: string): Promise<string> {
-  const data = new TextEncoder().encode(token);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+export function hashOfferToken(token: string): Promise<string> {
+  return hashToken(token);
 }
 
 /** A SQLite `datetime('now')`-shaped UTC string ("YYYY-MM-DD HH:MM:SS", no offset), so an offer's
@@ -167,15 +160,15 @@ export function toSqliteDatetime(date: Date): string {
   return date.toISOString().slice(0, 19).replace('T', ' ');
 }
 
-/** Insert one `audit_log` row directly (mirrors `audit-sink.ts`'s own insert shape): the
+/** Insert one `audit_log` row directly (the same insert shape `createD1AuditSink` binds): the
  *  mechanism `claimOffer`, `declineOffer`, and the lazy sweep use in place of `ctx.audit`, since
  *  none of them run inside an `adminAction`-wrapped route (see this module's own header). Awaited
  *  by every call site (each already runs inside an `async` function its own caller awaits, unlike
- *  `audit-sink.ts`'s engine-typed, synchronous `AdminActionAuditSink`, which has no such chain to
- *  ride and needs `waitUntil` instead): an un-awaited `.run()` races the Worker's own response,
+ *  cairn's synchronous `AdminActionAuditSink`, which has no such chain to ride and needs
+ *  `waitUntil` instead): an un-awaited `.run()` races the Worker's own response,
  *  which can tear the request context down mid-write and silently drop the row. A failed write
  *  must still never break the state transition it is auditing, which already committed by the
- *  time this runs; it only logs loudly, the same tradeoff `audit-sink.ts` makes. */
+ *  time this runs; it only logs loudly, the same tradeoff the packaged sink makes. */
 async function writeAudit(db: D1Database, actor: string, action: string, entityId: string, detail?: string): Promise<void> {
   try {
     await db

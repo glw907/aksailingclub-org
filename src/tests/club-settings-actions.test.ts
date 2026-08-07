@@ -42,7 +42,9 @@ function postEvent(
       delete: () => undefined,
     },
     platform: { env: { CLUB_DB: opts.db } },
-    locals: { editor, auditSink: opts.auditSink, cairnAccess: access },
+    route: { id: new URL(url).pathname },
+    setHeaders: () => undefined,
+    locals: { cairnEditor: editor, cairnAuditSink: opts.auditSink, cairnAccess: access },
   } as unknown as SettingsActionEvent;
 }
 
@@ -63,7 +65,7 @@ describe('club settings actions: owner gate', () => {
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number }).status).toBe(400);
     expect(sink).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'update-offer-window', entity: 'setting', editor: owner.email }),
+      expect.objectContaining({ action: 'update-offer-window', entity: 'setting', actor: owner.email }),
     );
   });
 
@@ -75,13 +77,13 @@ describe('club settings actions: owner gate', () => {
     );
     expect(result).toEqual({ ok: true });
     expect(calls.some((c) => c.sql.startsWith('UPDATE settings') && c.args[0] === '48')).toBe(true);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'update-offer-window',
       entity: 'setting',
       entityId: 'offer_window_hours',
       detail: '48',
-      editor: owner.email,
-    });
+      actor: owner.email,
+    }));
   });
 
   it('updateClassRegistrationOpens refuses a club admin (403)', async () => {
@@ -102,7 +104,7 @@ describe('club settings actions: owner gate', () => {
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number }).status).toBe(400);
     expect(sink).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'update-class-registration-opens', entity: 'setting', editor: owner.email }),
+      expect.objectContaining({ action: 'update-class-registration-opens', entity: 'setting', actor: owner.email }),
     );
     expect(calls.some((c) => c.sql.startsWith('UPDATE settings'))).toBe(false);
   });
@@ -115,13 +117,13 @@ describe('club settings actions: owner gate', () => {
     );
     expect(result).toEqual({ ok: true });
     expect(calls.some((c) => c.sql.startsWith('UPDATE settings') && c.args[0] === '2026-03-15')).toBe(true);
-    expect(sink).toHaveBeenCalledWith({
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
       action: 'update-class-registration-opens',
       entity: 'setting',
       entityId: 'class_registration_opens',
       detail: '2026-03-15',
-      editor: owner.email,
-    });
+      actor: owner.email,
+    }));
   });
 
   it('updateClassRegistrationOpens succeeds for an owner clearing the gate to an empty string', async () => {
@@ -133,7 +135,7 @@ describe('club settings actions: owner gate', () => {
     expect(result).toEqual({ ok: true });
     expect(calls.some((c) => c.sql.startsWith('UPDATE settings') && c.args[0] === '')).toBe(true);
     expect(sink).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'update-class-registration-opens', detail: 'cleared', editor: owner.email }),
+      expect.objectContaining({ action: 'update-class-registration-opens', detail: 'cleared', actor: owner.email }),
     );
   });
 
@@ -154,7 +156,7 @@ describe('club settings actions: owner gate', () => {
     );
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number }).status).toBe(400);
-    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'update-tier-prices', editor: owner.email }));
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'update-tier-prices', actor: owner.email }));
     expect(calls.some((c) => c.sql.startsWith('UPDATE settings'))).toBe(false);
   });
 
@@ -173,7 +175,7 @@ describe('club settings actions: owner gate', () => {
         action: 'update-tier-prices',
         entity: 'setting',
         detail: 'individual=275, family=525, young-adult=110',
-        editor: owner.email,
+        actor: owner.email,
       }),
     );
   });
@@ -193,7 +195,7 @@ describe('club settings actions: owner gate', () => {
     const result = await actions.rollover(postEvent(owner, { typedYear: '2099' }, { db, auditSink: sink }));
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number }).status).toBe(400);
-    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'season-rollover', editor: owner.email }));
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'season-rollover', actor: owner.email }));
     expect(calls.some((c) => c.sql.startsWith('UPDATE settings') || c.sql.startsWith('INSERT INTO audit_log'))).toBe(
       false,
     );
@@ -212,7 +214,7 @@ describe('club settings actions: owner gate', () => {
     expect(calls.some((c) => c.sql.startsWith('UPDATE settings') && c.args[0] === '2027')).toBe(true);
     expect(calls.some((c) => c.sql.startsWith('INSERT INTO audit_log') && c.args[1] === 'season-rollover')).toBe(true);
     expect(sink).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'season-rollover', entityId: '2027', editor: owner.email }),
+      expect.objectContaining({ action: 'season-rollover', entityId: '2027', actor: owner.email }),
     );
   });
 });

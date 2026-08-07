@@ -27,7 +27,9 @@ type LoadResult = Exclude<Awaited<ReturnType<typeof load>>, void>;
 
 function loadEventFor(editor: Editor | null, db: unknown, search = ''): LoadEvent {
   return {
-    locals: { editor },
+    route: { id: '/admin/club/email/compose' },
+    setHeaders: () => undefined,
+    locals: { cairnEditor: editor },
     platform: { env: { CLUB_DB: db } },
     url: new URL(`https://x.dev/admin/club/email/compose${search}`),
   } as unknown as LoadEvent;
@@ -52,7 +54,9 @@ function postEvent(
       delete: () => undefined,
     },
     platform: { env: { CLUB_DB: opts.db, ...opts.env } },
-    locals: { editor, auditSink: opts.auditSink, cairnAccess: access },
+    route: { id: new URL(url).pathname },
+    setHeaders: () => undefined,
+    locals: { cairnEditor: editor, cairnAuditSink: opts.auditSink, cairnAccess: access },
   } as unknown as ActionEvent;
 }
 
@@ -173,7 +177,7 @@ describe('/admin/club/email/compose review action', () => {
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number }).status).toBe(403);
     expect(sink).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'compose-review', entity: 'email-blast', editor: noRole.email }),
+      expect.objectContaining({ action: 'compose-review', entity: 'email-blast', actor: noRole.email }),
     );
   });
 
@@ -277,7 +281,7 @@ describe('/admin/club/email/compose send action', () => {
     expect(isActionFailure(result)).toBe(true);
     expect((result as { status: number }).status).toBe(403);
     expect(sink).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'compose-send', entity: 'email-blast', editor: noRole.email }),
+      expect.objectContaining({ action: 'compose-send', entity: 'email-blast', actor: noRole.email }),
     );
   });
 });

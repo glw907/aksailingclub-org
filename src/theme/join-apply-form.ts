@@ -22,6 +22,7 @@
 import * as v from 'valibot';
 import { invalid } from '@sveltejs/kit';
 import type { D1Database, RateLimit } from '@cloudflare/workers-types';
+import { checkRateLimitKeys, verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
 import { validateJoinInput } from '$member-signup/lib/validate.js';
 import { computeJoinPricing } from '$member-signup/lib/pricing.js';
 import { buildJoinStatements } from '$member-signup/lib/statements.js';
@@ -45,8 +46,7 @@ import {
 } from '$member-portal/lib/waiver-requirements';
 import { householdSignatureGate } from '$member-portal/lib/household-signature-gate';
 import { siteConfig } from '$theme/cairn.config';
-import { verifyTurnstile } from './turnstile';
-import { checkRateLimitKeys, RATE_LIMIT_MESSAGE } from './rate-limit';
+import { RATE_LIMIT_MESSAGE } from './rate-limit';
 
 /** The site's established from-address, matching `/my-account`'s own `+page.server.ts` copy of
  *  the same constant (kept as this module's own copy for the same reason that file gives: the
@@ -329,7 +329,7 @@ export async function handleJoinApply(input: JoinApplySubmission, env: unknown, 
 
   const secret = platformEnv?.TURNSTILE_SECRET_KEY;
   const token = input['cf-turnstile-response'];
-  if (secret && !(await verifyTurnstile(token, clientAddress, secret))) {
+  if (secret && !(await verifyTurnstile(token, secret, { ip: clientAddress }))) {
     invalid('Spam check failed. Please try again.');
   }
 

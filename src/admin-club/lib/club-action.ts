@@ -1,128 +1,52 @@
 // The Club section's own action wrapper (pass 2.1 Task 6, rider 1): every `/admin/club/**`
 // write needs the club-role precondition, not just the section's layout guard, because
 // SvelteKit dispatches a matched form action directly and never re-runs an ancestor layout's
-// `load` first. Tasks 4/5 each hand-rolled the same three lines (resolve `CLUB_DB`, check the
-// role, `fail` cleanly) at the top of every action; this is the one place that check lives now,
-// so a new screen cannot forget it.
-// The roles-adoption pass's T4 (docs/2026-07-19-asc-roles-adoption.md): the role decision reads
-// the site's `access` map via `canReach`, not the hardcoded `CLUB_ROLES` array — this wrapper
-// COMPOSES `canReach` rather than collapsing onto the engine's own `requireAccess`, because it
-// carries responsibilities `requireAccess` has no notion of (the `CLUB_DB` binding resolution,
-// the per-editor admin rate-limit below, an audited denial, and injecting the resolved `db` into
-// the handler `ctx`) and runs inside a form action (POST), not a load. Reading the map here means
-// a POST to `/admin/club/email/*` or `/admin/club/announce/*` admits Publisher through the map's
-// deeper keys with no bespoke per-action role list, while every other club POST stays
-// Administrator/Club manager through the `/admin/club` section default — the same enforcement the
-// layout guard's `requireAccess` call now performs for loads.
-import { fail } from '@sveltejs/kit';
-import type { D1Database, RateLimit } from '@cloudflare/workers-types';
-import { adminAction } from '@glw907/cairn-cms/sveltekit';
-import type { AdminActionContext, AdminActionEvent } from '@glw907/cairn-cms/sveltekit';
-import { canReach, type AccessMap } from '@glw907/cairn-cms';
+// `load` first.
+//
+// Since the `0.94.0-rc.1` migration this is a thin naming layer over cairn's own
+// `createSectionAction` (`0.93.0`), which packages exactly what this file used to hand-roll:
+// `adminAction`'s editor resolution, CSRF and single form read, then the per-editor rate limit,
+// the site access map's own `canReach` check, the `ownerOnly` capability stack, and the
+// `CLUB_DB` resolution, with every refusal but the rate limit's audited under this call site's
+// own `action`/`entity`. The composition this file argued for is the composition the engine now
+// ships.
+//
+// Two behaviors moved with it, both deliberate. Authorization now derives its target from
+// `event.route.id` rather than `event.url.pathname`, so a POST to `/admin/club/classes/[id]`
+// authorizes against the bracket route id; the site's access map keys on path prefixes
+// (`/admin/club`, and the two Communication widenings), and a prefix match is unaffected by the
+// switch. And the rate-limit refusal no longer writes an audit row: back-pressure is not a
+// domain-state change, and it logs `admin.action.rate_limited` instead.
+import { createSectionAction } from '@glw907/cairn-cms/sveltekit';
+import type { D1Database } from '@cloudflare/workers-types';
 import { resolveClubDb } from './club-db';
-import { checkRateLimit, RATE_LIMIT_MESSAGE } from '$theme/rate-limit';
 
-/** The narrow, explained bridge this module uses to read the site's own `RATE_LIMIT_ADMIN`
- *  binding off a platform env, matching `resolveClubDb`'s own precedent one field below: the
- *  engine types `AdminActionEvent.platform.env` by its own narrow `AuthEnv`, so a site-only
- *  binding is never expressible on it without a cast. */
-function resolveAdminRateLimit(env: unknown): RateLimit | undefined {
-  return (env as { RATE_LIMIT_ADMIN?: RateLimit } | undefined)?.RATE_LIMIT_ADMIN;
-}
-
-/** The same narrow-bridge pattern as `resolveAdminRateLimit`, for `locals.cairnAccess`:
- *  `AdminActionEvent.locals` is typed to `adminAction`'s own minimal need (`editor`/`auditSink`),
- *  not the guard's full `EventBase.locals`, so the map the guard actually attaches at
- *  `locals.cairnAccess` (`hooks.server.ts`) is never expressible on it without a cast. */
-function resolveCairnAccess(locals: unknown): AccessMap | undefined {
-  return (locals as { cairnAccess?: AccessMap } | undefined)?.cairnAccess;
-}
-
-/** What a `clubAdminAction` handler receives: the engine's own verified `editor`/`audit`, plus
- *  the resolved `CLUB_DB` handle, already checked by the wrapper so no handler re-resolves it.
- *  A handler that needs the acting editor's role reads `ctx.editor.role`/`ctx.editor.capability`
- *  directly; both are already the wrapper-checked values by the time a handler runs. */
-export interface ClubActionContext extends AdminActionContext {
-  db: D1Database;
-}
-
-export interface ClubActionOptions {
-  /** Require owner CAPABILITY rather than any club role (Administrator or Club manager).
-   *  Defaults to false, the routine-domain gate Task 5's events and this task's classes both
-   *  use; Settings' own role-management and offer-window writes are the owner-only case. */
-  ownerOnly?: boolean;
-  /** The audit action verb this call site's successful path uses, reused for a guard
-   *  rejection (a missing `CLUB_DB` binding or an insufficient role) so a refused attempt reads
-   *  the same in the audit log as the write it was refused from. */
-  action: string;
-  /** The audit entity this call site's successful path uses, reused the same way. */
-  entity: string;
-  /** The `fail(403)` message shown when the role check refuses. Defaults to a generic message
-   *  per `ownerOnly`; a call site names its own domain ("...to manage events") for a clearer
-   *  refusal than the generic default. */
-  deniedMessage?: string;
-}
+/** The platform bindings a club action's handler sees on `event.platform.env`. This is the site's
+ *  whole `App.Platform['env']`, not a narrow slice of it: `createSectionAction` types
+ *  `CairnEvent<Env>['platform']['env']` as whatever `Env` says, so naming only what this factory
+ *  itself reads (`CLUB_DB`, `RATE_LIMIT_ADMIN`) would hide `PUBLIC_ORIGIN`, `EMAIL`, and the
+ *  Discord webhooks that the section's own handlers read off the same object. `Env` does not infer
+ *  from `resolveDb`'s parameter alone, so it is annotated on the factory call below rather than
+ *  left to collapse to `{}`. */
+type ClubSectionEnv = App.Platform['env'];
 
 /**
- * Compose the engine's `adminAction` with the Club section's own role precondition. In order:
+ * The Club section's guarded action factory: `clubAdminAction(handler, opts)` wraps one
+ * `/admin/club/**` form action. A handler receives `ctx.db` already resolved and its `ctx.audit`
+ * already defaulting `action`/`entity` from `opts`, so the common emit names only
+ * `entityId`/`detail`; a handler needing the acting editor reads `ctx.editor`, the wrapper-checked
+ * value by the time it runs. `SectionActionOptions` documents what a call site may declare
+ * (`action`, `entity`, `ownerOnly`, `deniedMessage`), and `createSectionAction` documents the
+ * check order and what each refusal audits.
  *
- * 1. `adminAction` itself resolves the editor, verifies CSRF, and reads the form once (see its
- *    own doc comment).
- * 2. `CLUB_DB` must resolve off `event.platform.env`, or the action fails closed (500) with an
- *    audited rejection: a missing binding is a deployment misconfiguration, not a normal denial.
- * 3. `locals.cairnAccess` (the site's `access` map, resolved via `resolveCairnAccess`) must be
- *    present, or the action fails closed (500) with an audited rejection, the same stance as the
- *    `CLUB_DB` branch: `canReach(undefined, ...)` admits any editor-capability session, and a form
- *    action never re-runs the ancestor layout's `load`, so an unwired map here would leave the POST
- *    path unprotected -- a deployment misconfiguration, never a normal 403 denial.
- * 4. The acting editor must be admitted by the now-guaranteed-present map for this request's path
- *    (`canReach(accessMap, ctx.editor, event.url.pathname)` — the same map the layout guard's
- *    `requireAccess` reads for loads, so a POST and its section's load can never disagree);
- *    `opts.ownerOnly` additionally requires owner CAPABILITY (`ctx.editor.capability === 'owner'`),
- *    the design's distinction between "may act in this section" and "may act as its owner", and
- *    stacks on top of the `canReach` check rather than replacing it. Either failure fails closed
- *    (403), audited.
- * 5. The handler runs with `ctx` extended by the resolved `db`, so it never re-resolves it.
+ * Coverage table item 3 (docs/2026-07-15-payments-live-smoke-design.md section 2b) is the rate
+ * limit below: every admin POST, keyed per editor email, sharing one `RATE_LIMIT_ADMIN` budget
+ * across every club action.
  */
-export function clubAdminAction<T>(
-  handler: (args: { event: AdminActionEvent; form: FormData; ctx: ClubActionContext }) => Promise<T>,
-  opts: ClubActionOptions,
-) {
-  const deniedMessage = opts.deniedMessage ?? (opts.ownerOnly ? 'Only a club owner can do this.' : 'A club role is required.');
-
-  return adminAction(async ({ event, form, ctx }) => {
-    // Coverage table item 3 (docs/2026-07-15-payments-live-smoke-design.md section 2b): every
-    // admin POST, keyed per editor email. `adminAction` has already verified `ctx.editor` by the
-    // time this callback runs, so the key is available before any other work.
-    if (!(await checkRateLimit(resolveAdminRateLimit(event.platform?.env), `editor:${ctx.editor.email}`))) {
-      ctx.audit({ action: opts.action, entity: opts.entity, detail: 'rejected: rate limited' });
-      return fail(429, { error: RATE_LIMIT_MESSAGE });
-    }
-
-    const db = resolveClubDb(event.platform?.env);
-    if (!db) {
-      ctx.audit({ action: opts.action, entity: opts.entity, detail: 'rejected: CLUB_DB not bound' });
-      return fail(500, { error: 'CLUB_DB is not bound.' });
-    }
-    const accessMap = resolveCairnAccess(event.locals);
-    if (!accessMap) {
-      // Fail closed, matching the CLUB_DB branch above: `canReach(undefined, ...)` admits any
-      // editor-capability session (see its own doc comment), and a form action never re-runs the
-      // ancestor layout's `load`, so an unwired map here is a deployment misconfiguration, not a
-      // normal denial -- never fall through to `canReach` with an absent map.
-      ctx.audit({ action: opts.action, entity: opts.entity, detail: 'rejected: access map not attached' });
-      return fail(500, { error: 'The access map is not attached.' });
-    }
-    const hasClubRole = canReach(accessMap, ctx.editor, event.url.pathname);
-    const satisfiesOwnerOnly = !opts.ownerOnly || ctx.editor.capability === 'owner';
-    if (!hasClubRole || !satisfiesOwnerOnly) {
-      ctx.audit({
-        action: opts.action,
-        entity: opts.entity,
-        detail: opts.ownerOnly ? 'rejected: not owner' : 'rejected: no club role',
-      });
-      return fail(403, { error: deniedMessage });
-    }
-    return handler({ event, form, ctx: { ...ctx, db } });
-  });
-}
+export const clubAdminAction = createSectionAction<ClubSectionEnv, D1Database>({
+  resolveDb: (env) => resolveClubDb(env),
+  rateLimit: {
+    resolve: (env) => env?.RATE_LIMIT_ADMIN,
+    key: (ctx) => `editor:${ctx.editor.email}`,
+  },
+});
