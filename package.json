@@ -42,7 +42,7 @@
     "wrangler": "^4.93.1"
   },
   "dependencies": {
-    "@glw907/cairn-cms": "0.94.0-rc.1",
+    "@glw907/cairn-cms": "0.94.0-rc.2",
     "valibot": "^1.4.2"
   }
 }
