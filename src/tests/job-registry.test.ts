@@ -42,6 +42,10 @@ describe('runScheduledJobs (the isolation contract)', () => {
     vi.restoreAllMocks();
   });
 
+  // 20s, not vitest's 5s default: both cases `await import('../jobs/runner')`, and that graph
+  // pulls in every registered job plus the cairn sveltekit barrel. On a loaded machine the
+  // import alone has taken past 5s and failed the case with a timeout that says nothing about
+  // what it asserts. The generous ceiling still catches a genuine hang.
   it('audits the throwing job as a failure and still runs and audits the job after it', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const { runScheduledJobs } = await import('../jobs/runner');
@@ -86,7 +90,7 @@ describe('runScheduledJobs (the isolation contract)', () => {
     ]);
 
     errorSpy.mockRestore();
-  });
+  }, 20_000);
 
   it('skips the entire tick, writing no audit rows, when CLUB_DB is not bound', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -98,5 +102,5 @@ describe('runScheduledJobs (the isolation contract)', () => {
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('CLUB_DB is not bound'));
 
     errorSpy.mockRestore();
-  });
+  }, 20_000);
 });

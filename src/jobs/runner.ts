@@ -61,14 +61,11 @@ class TickSendBudget implements SendBudget {
 
 /** Build the real per-tick send budget, shared by every job in one `runScheduledJobs` call.
  *  Exported so a test can exercise the cap directly against a job's own `run`, the same way
- *  `runner.ts` itself does. `waitUntil` is passed straight through to the audit sink, so a test
- *  that omits it accepts the same drop risk `createD1AuditSink` documents for that argument. */
-export function createSendBudget(
-  db: D1Database,
-  cap: number = PER_TICK_SEND_CAP,
-  waitUntil?: (promise: Promise<unknown>) => void,
-): SendBudget {
-  return new TickSendBudget(createD1AuditSink(db, waitUntil), cap);
+ *  `runner.ts` itself does. Takes the audit sink rather than the database it writes to, so one
+ *  tick builds exactly one sink and hands it to everything that audits, instead of this function
+ *  standing up a second one over the same handle. */
+export function createSendBudget(audit: AdminActionAuditSink, cap: number = PER_TICK_SEND_CAP): SendBudget {
+  return new TickSendBudget(audit, cap);
 }
 
 /**
@@ -94,7 +91,7 @@ export async function runScheduledJobs(env: unknown, waitUntil?: (promise: Promi
 
   const now = new Date();
   const audit = createD1AuditSink(db, waitUntil);
-  const budget = createSendBudget(db, PER_TICK_SEND_CAP, waitUntil);
+  const budget = createSendBudget(audit);
   for (const job of JOBS) {
     let detail: string;
     try {

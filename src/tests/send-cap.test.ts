@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { fakeD1 } from './_fake-d1';
 import { classRemindersJob } from '../jobs/class-reminders';
+import { createD1AuditSink } from '@glw907/cairn-cms/sveltekit';
 import { createSendBudget, PER_TICK_SEND_CAP } from '../jobs/runner';
 
 const START = new Date('2026-08-15T00:00:00Z');
@@ -40,7 +41,7 @@ describe('the per-tick send cap', () => {
 
     // Exactly one touch (week_out) is due at 7 days before start: day_before and followup are not
     // yet due, so every one of the 60 sends this test counts comes from that one touch.
-    const budget = createSendBudget(db, PER_TICK_SEND_CAP);
+    const budget = createSendBudget(createD1AuditSink(db, undefined), PER_TICK_SEND_CAP);
     const summary = await classRemindersJob.run(
       { EMAIL: { send: async () => undefined } },
       { db, now: daysBefore(START, 7), budget },
@@ -93,7 +94,7 @@ describe('the per-tick send cap', () => {
       },
     });
 
-    const budget = createSendBudget(db, PER_TICK_SEND_CAP);
+    const budget = createSendBudget(createD1AuditSink(db, undefined), PER_TICK_SEND_CAP);
     const summary = await classRemindersJob.run(
       { EMAIL: { send: async () => undefined } },
       { db, now: daysBefore(START, 7), budget },
