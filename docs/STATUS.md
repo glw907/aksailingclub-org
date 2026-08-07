@@ -9,9 +9,9 @@
 > session's context, so its length is a per-session token tax.
 
 **THE CAIRN ADOPTION PASS IS COMPLETE AND VERIFIED ON BRANCH `cairn-0.94-migration`, PINNED TO
-`0.94.0-rc.2` (commit `d71ff1e`). IT IS NOT MERGED AND NOT DEPLOYED. **GEOFF APPROVED THE STACKED
-FIELD REGISTER ON 2026-08-06**, so the only remaining gate is the engine: IMMEDIATE NEXT ACTION is
-to flip the pin to `^0.94.0` once `0.94.0` stable publishes, re-run the gates, and merge.**
+`0.94.0-rc.2` (commit `d71ff1e`). IT IS NOT MERGED AND NOT DEPLOYED. GEOFF APPROVED THE STACKED
+FIELD REGISTER ON 2026-08-06, so the only remaining gate is the engine. IMMEDIATE NEXT ACTION: flip
+the pin to `^0.94.0` once `0.94.0` stable publishes, re-run the gates, and merge.**
 
 - **The rc.1 Workers blocker is gone, and the fix is proven against the registry artifact.**
   `0.94.0-rc.2` carries `worker` ahead of `browser` on both `./auth-crypto` and `./cloudflare`.
@@ -25,7 +25,7 @@ to flip the pin to `^0.94.0` once `0.94.0` stable publishes, re-run the gates, a
 - **The pin must stay an exact pin until `0.94.0` ships.** A caret range never resolves a
   prerelease, so `^0.94.0-rc.2` would silently hold the site on `0.91.x`. At the time of writing npm
   `latest` is `0.93.0` and `next` is `0.94.0-rc.2`. **Move to `^0.94.0` when the stable publishes**,
-  which is the one action this branch is waiting on besides Geoff.
+  which is now the only thing this branch is waiting on.
 - **The visual baselines regenerated on the branch** via the `ci.yml` `update_snapshots` dispatch
   (runs `31141539971` → `873a3bb`, then `31148708255` → `e509b28` after the alignment fix). Read from
   the step log rather than the job conclusion, since that workflow reports success when it commits
@@ -82,9 +82,9 @@ to flip the pin to `^0.94.0` once `0.94.0` stable publishes, re-run the gates, a
   2026-08-06 as `3101993b`, beside the both-axes filing `00eb7436`; they are one class and should be
   worked as one pass.
 - RESUME PROMPT: "cairn `0.94.0` stable should be published; flip this repo's pin from
-  `0.94.0-rc.2` to `^0.94.0`, re-run `check`/`test`/`build`/`test:e2e` plus `cairn-audit`, and merge
-  once Geoff has approved the field-register before/after." Launch from
-  ~/Projects/aksailingclub-org.
+  `0.94.0-rc.2` to `^0.94.0`, re-run `check`/`test`/`build`/`test:e2e` plus `cairn-audit` and
+  `cairn-doctor`, then merge. Geoff approved the field register on 2026-08-06; no further review
+  gate stands between this branch and `main`." Launch from ~/Projects/aksailingclub-org.
 - **Not taken, deliberately, both filed to `docs/2026-07-07-polish-backlog.md`**: the 65
   pre-existing `cairn-audit` `no-uncompiled-class` errors on the Club screens (verified
   pre-existing against `0.91.1`'s own shipped sheet), and `audit_log.created_at`'s
