@@ -20,7 +20,11 @@ per-document member-list drill-through. A plain GET season picker, matching Mone
     <h1 class="type-title font-bold">Waivers &amp; acknowledgements</h1>
     <p class="type-body text-muted">Every signable document for {data.selectedSeason}, and who has signed it.</p>
   </div>
-  <form method="get" class="flex items-center gap-2">
+  <!-- items-END, not items-center: the stacked register puts a label above the control, so this
+       row's two children are a two-line field block and a bare button. Centring the block hangs
+       the button half a label-height above the control it acts on. Aligning the bottom edges puts
+       the button back on the control's own line. -->
+  <form method="get" class="flex items-end gap-2">
     <FieldLabel label="Season">
       <input class="input input-sm w-24" type="number" name="season" min="2020" step="1" value={data.selectedSeason} />
     </FieldLabel>

@@ -182,7 +182,9 @@ since (unlike the desk) this screen has no single household in its own URL.
     <div class={cardCls}>
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class={HEADER_CELL}>Memberships by season</h2>
-        <form method="get" class="flex items-center gap-2">
+        <!-- items-END: see the same season row in admin/club/documents. A stacked field beside a
+             bare button needs its bottom edges aligned, not its blocks centred. -->
+        <form method="get" class="flex items-end gap-2">
           <FieldLabel label="Season">
             <input class="input input-sm w-24" type="number" name="season" min="2020" step="1" value={data.selectedSeason} />
           </FieldLabel>
