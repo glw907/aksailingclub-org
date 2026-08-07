@@ -26,8 +26,9 @@ the pin to `^0.94.0` when the stable publishes, then merge on Geoff's approval (
   `latest` is `0.93.0` and `next` is `0.94.0-rc.2`. **Move to `^0.94.0` when the stable publishes**,
   which is the one action this branch is waiting on besides Geoff.
 - **The visual baselines regenerated on the branch** via the `ci.yml` `update_snapshots` dispatch
-  (run `31141539971`, commit `873a3bb`). Read from the step log rather than the job conclusion: the
-  regen ran 75 specs and the commit step staged all three snapshot dirs. **Eight of 63 baselines
+  (runs `31141539971` → `873a3bb`, then `31148708255` → `e509b28` after the alignment fix). Read from
+  the step log rather than the job conclusion, since that workflow reports success when it commits
+  nothing: both regens ran 75 specs and staged all three snapshot dirs. **Twelve of 63 baselines
   changed**, across exactly two surfaces. A local `test:e2e` run reports ~60 visual failures against
   CI baselines; that gap is the documented workstation-versus-runner rendering delta, not breakage.
 - **All four brief seams are consumed and every site copy is deleted.**
@@ -48,8 +49,8 @@ the pin to `^0.94.0` when the stable publishes, then merge on Geoff's approval (
 - **STILL OWED, and it gates the merge: Geoff's before/after on the stacked field register.**
   Composed and waiting at
   https://claude.ai/code/artifact/f30398c5-351a-4568-b914-676e61821715 — the flip in
-  place at 1440 and 390 in both themes, the alignment finding below, and the fixture drift
-  separated out so it does not read as cairn's doing. The pass takes `0.92.0`'s stacked register
+  place at 1440 and 390 in both themes with the alignment break below already fixed in every frame,
+  and the fixture drift separated out so it does not read as cairn's doing. The pass takes `0.92.0`'s stacked register
   (label above control) as the default rather than passing `register="inline"` to hold the old
   horizontal rhythm, which is what this site's ratified mockup asked for and what
   `EventForm.svelte` recorded as a wanted addition. **Scope correction to the prior entry: ten
@@ -57,14 +58,29 @@ the pin to `^0.94.0` when the stable publishes, then merge on Geoff's approval (
   baseline**, so the regeneration proves the flip on one screen and says nothing about announce,
   assets, classes, committees, compose, email detail, events, members detail, or money. Covering
   those is a separate pass if Geoff wants it before the merge rather than after.
-- **A REAL FINDING THE FLIP SURFACED, filed engine-side, not patched here.** The stacked register
-  drops a field's control by the label's height; a sibling control in the same row with no label
-  does not move, so the row's two halves stop lining up. On the `/admin/club/documents` season
-  picker the input's vertical centre goes 145.0px → 157.0px while the `View` button stays at
-  144.5px, a **12.5px offset identical at 390 and 1440 and in both themes**. That makes it layout
-  rather than theme spacing, and a mechanic rather than this site's design choice, so it went to
-  cairn's ROADMAP Now tier (`3d622521`) rather than into this repo's theme. Geoff's call on the
-  register should be read together with it.
+- **AN ALIGNMENT BREAK THE FLIP CAUSED: FIXED HERE (`f0f79bb`), MECHANIC FILED IN CAIRN.** The
+  stacked register drops a field's control by the label's height; a bare sibling control in the same
+  row does not move, so the row's two halves stop lining up. On the `/admin/club/documents` season
+  picker the input's vertical centre went 145.0px → 157.0px while the `View` button stayed at
+  144.5px, a 12.5px offset at 390 and 1440 in both themes. Cause: `items-center` on a row holding a
+  two-line field block and a bare button. Fix: `items-end`, on `documents` and `money`;
+  `admin/club/settings` already composed it correctly, which is the tell that the right composition
+  is not discoverable from `FieldLabel`. Verified against real renders and then against the
+  regenerated baselines (`e509b28`): the offset is back to 0.5px. **Geoff's standing instruction
+  (2026-08-06): never put a before/after in front of him with a visible alignment defect in the
+  "after"; fix it first.**
+- **WHY THIS CLASS KEEPS RECURRING, answered from the record 2026-08-06 and refiled.** Three
+  structural gaps plus a process one. Cairn ships compound blocks (label + control) but never names
+  which element is the row's alignment anchor. The type layer leaves ascent/descent allowance the
+  glyphs do not fill, so CSS-correct centring and looks-centred diverge on every padded label.
+  `cairn-audit`'s fifteen rendered rules measure only the horizontal axis (`field-edge-alignment`
+  compares left edges, `container-inset-asymmetry` left inset against right); none compares two
+  vertical centres. And Geoff's 2026-07-30 request for an engine-level centring default
+  (`docs/2026-07-30-assets-substrate-harvest-findings.md`, finding 1, with `text-box-trim` named as
+  the mechanism and the measurements taken) was parked in the design-ratchet plan's "next pass seed"
+  paragraph, that plan closed 2026-07-31, and it never reached cairn's ROADMAP. Refiled there
+  2026-08-06 as `3101993b`, beside the both-axes filing `00eb7436`; they are one class and should be
+  worked as one pass.
 - RESUME PROMPT: "cairn `0.94.0` stable should be published; flip this repo's pin from
   `0.94.0-rc.2` to `^0.94.0`, re-run `check`/`test`/`build`/`test:e2e` plus `cairn-audit`, and merge
   once Geoff has approved the field-register before/after." Launch from
