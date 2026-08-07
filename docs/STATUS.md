@@ -9,8 +9,9 @@
 > session's context, so its length is a per-session token tax.
 
 **THE CAIRN ADOPTION PASS IS COMPLETE AND VERIFIED ON BRANCH `cairn-0.94-migration`, PINNED TO
-`0.94.0-rc.2` (commit `d71ff1e`). IT IS NOT MERGED AND NOT DEPLOYED. IMMEDIATE NEXT ACTION: flip
-the pin to `^0.94.0` when the stable publishes, then merge on Geoff's approval (2026-08-06).**
+`0.94.0-rc.2` (commit `d71ff1e`). IT IS NOT MERGED AND NOT DEPLOYED. **GEOFF APPROVED THE STACKED
+FIELD REGISTER ON 2026-08-06**, so the only remaining gate is the engine: IMMEDIATE NEXT ACTION is
+to flip the pin to `^0.94.0` once `0.94.0` stable publishes, re-run the gates, and merge.**
 
 - **The rc.1 Workers blocker is gone, and the fix is proven against the registry artifact.**
   `0.94.0-rc.2` carries `worker` ahead of `browser` on both `./auth-crypto` and `./cloudflare`.
@@ -46,13 +47,12 @@ the pin to `^0.94.0` when the stable publishes, then merge on Geoff's approval (
   `cairn-doctor`'s two FAILs are the API token lacking Zone Settings Read, not zone findings;
   `http://` redirects to `https://` on both hosts, checked directly. **Neither was re-run on the
   `rc.2` pin**, since the bump changed only an exports condition; re-run both before the merge.
-- **STILL OWED, and it gates the merge: Geoff's before/after on the stacked field register.**
-  Composed and waiting at
-  https://claude.ai/code/artifact/f30398c5-351a-4568-b914-676e61821715 — the flip in
-  place at 1440 and 390 in both themes with the alignment break below already fixed in every frame,
-  and the fixture drift separated out so it does not read as cairn's doing. The pass takes `0.92.0`'s stacked register
-  (label above control) as the default rather than passing `register="inline"` to hold the old
-  horizontal rhythm, which is what this site's ratified mockup asked for and what
+- **APPROVED 2026-08-06 ("that looks good now"): the stacked field register.** The before/after he
+  read is https://claude.ai/code/artifact/f30398c5-351a-4568-b914-676e61821715, showing the flip at
+  1440 and 390 in both themes with the alignment break below already fixed in every frame, and the
+  fixture drift separated out so it does not read as cairn's doing. The pass takes `0.92.0`'s
+  stacked register (label above control) as the default rather than passing `register="inline"` to
+  hold the old horizontal rhythm, which is what this site's ratified mockup asked for and what
   `EventForm.svelte` recorded as a wanted addition. **Scope correction to the prior entry: ten
   admin surfaces carry cairn fields, and exactly one of them (`/admin/club/documents`) has a visual
   baseline**, so the regeneration proves the flip on one screen and says nothing about announce,
