@@ -184,6 +184,13 @@ not done today Geoff tackles on Opus tomorrow; hand this file to that session.
   `<style>`, or by deleting a class that was never doing anything. The `type-scale` rule is
   already clean here and the rendered audit passes at 0 errors, so this is the one standing gate
   the Club screens do not hold.
+- **Two more pre-existing static audit findings on `/admin/club`** (found 2026-08-07, the
+  `^0.94.0` caret flip). `src/routes/admin/club/+page.svelte` carries a `reduced-motion` error
+  (line 50: `.cell` transitions with no `prefers-reduced-motion` guard) and a `focus-parity`
+  error (line 63: `.cell:hover` with no matching `:focus-visible`). Both rules have shipped in
+  cairn-audit since `0.91.0` and the file has not changed since before the migration branch, so
+  these are site-side and pre-existing, adjacent to the 65 above rather than caused by the
+  `0.94.0` adoption. Fix is local to that overview screen's scoped styles.
 - **`audit_log.created_at` still defaults to `datetime('now')`** (found 2026-08-05, same
   migration). cairn's bundled `migrations/0002_audit.sql`, which is this table's own schema
   carried into the engine, deliberately deviates on exactly this column: it defaults to
