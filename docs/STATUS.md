@@ -8,26 +8,28 @@
 > entries beyond the top two or three to the archive — this file is @-imported into every
 > session's context, so its length is a per-session token tax.
 
-**THE CAIRN ADOPTION PASS IS COMPLETE ON BRANCH `cairn-0.94-migration` AND HELD: `0.94.0-rc.1`
-DOES NOT START ON WORKERS, AND THIS SITE CANNOT MERGE UNTIL AN `rc.2` SHIPS (2026-08-05).**
-What happened:
+**THE CAIRN ADOPTION PASS IS COMPLETE AND VERIFIED ON BRANCH `cairn-0.94-migration`, PINNED TO
+`0.94.0-rc.2` (commit `d71ff1e`). IT IS NOT MERGED AND NOT DEPLOYED. IMMEDIATE NEXT ACTION: flip
+the pin to `^0.94.0` when the stable publishes, then merge on Geoff's approval (2026-08-06).**
 
-- **THE BLOCKER.** `@glw907/cairn-cms/auth-crypto` and `/cloudflare` publish a `browser` condition
-  pointing at a stub that throws, and `browser` is a condition a Workers build resolves too, so the
-  SERVER bundle gets the stub and the Worker dies at startup: `Uncaught Error:
-  @glw907/cairn-cms/auth-crypto is server-only`. It surfaces only at the Playwright gate, as 75 of
-  75 specs failing with `ERR_CONNECTION_REFUSED`; `check`, `test`, `build`, and `cairn-audit` are
-  all green ahead of it, because the stub is valid JavaScript that only throws when first
-  evaluated. The fix is a `worker` condition ahead of `browser` in both exports entries, verified
-  here by patching the installed copy (`wrangler dev` then serves 200). It is engine code and needs
-  a republish, so nothing in this repo can clear it. Filed in cairn as
-  `docs/internal/feedback/2026-08-05-rc1-worker-condition-defect.md` (`4b9a6469`). **This blocks
-  every site in the window that adopts either subpath, not just this one.**
-
-- **This site is on `@glw907/cairn-cms` `0.94.0-rc.1`, pinned exactly** (commit `fbb5908`),
-  crossing `0.92.0`, `0.93.0`, and the RC window in one step. The pin is deliberate and must
-  stay a pin: a caret range never resolves a prerelease, so `^0.94.0-rc.1` would silently hold
-  the site on `0.91.x`. **Move to `^0.94.0` when the stable publishes.**
+- **The rc.1 Workers blocker is gone, and the fix is proven against the registry artifact.**
+  `0.94.0-rc.2` carries `worker` ahead of `browser` on both `./auth-crypto` and `./cloudflare`.
+  Verified on a clean `npm ci` after deleting `node_modules`, so nothing of the diagnosis-time patch
+  survived into the measurement. **The Playwright suite started a Worker and ran all 75 specs, where
+  rc.1 had allowed none of them to reach a request**: zero `ERR_CONNECTION_REFUSED`, zero
+  `is server-only`, zero `Workers runtime failed to start`. Every functional spec passed (admin
+  session, both join paths, both portal sessions, all four waivers signing specs, both `.ics`
+  feeds), which exercises both subpaths server-side under `workerd`. `check` 0/0, 2057 tests,
+  `build` clean. Recorded engine-side in cairn `90b87511`.
+- **The pin must stay an exact pin until `0.94.0` ships.** A caret range never resolves a
+  prerelease, so `^0.94.0-rc.2` would silently hold the site on `0.91.x`. At the time of writing npm
+  `latest` is `0.93.0` and `next` is `0.94.0-rc.2`. **Move to `^0.94.0` when the stable publishes**,
+  which is the one action this branch is waiting on besides Geoff.
+- **The visual baselines regenerated on the branch** via the `ci.yml` `update_snapshots` dispatch
+  (run `31141539971`, commit `873a3bb`). Read from the step log rather than the job conclusion: the
+  regen ran 75 specs and the commit step staged all three snapshot dirs. **Eight of 63 baselines
+  changed**, across exactly two surfaces. A local `test:e2e` run reports ~60 visual failures against
+  CI baselines; that gap is the documented workstation-versus-runner rendering delta, not breakage.
 - **All four brief seams are consumed and every site copy is deleted.**
   `admin-club/lib/audit-sink.ts` gives way to `createD1AuditSink`, with no migration: asc-club's
   `audit_log` is the table cairn's packaged `migrations/0002_audit.sql` was derived from, and its
@@ -37,28 +39,47 @@ What happened:
   constant-time-compare copies in member-auth, offers, and the portal wrapper give way to
   `/auth-crypto`. The jobs runner's own audit inserts now go through the packaged sink too, under
   namespaced action names, since `0.94.0-rc.1` sanctioned direct domain-event calls.
-- **Gates green up to the e2e suite**: `check` 0/0, 2057 tests, `build`, `cairn-audit` static and rendered (0
-  errors, `one-filled-action` clean, run authenticated with `CAIRN_AUDIT_COOKIES` against a
-  seeded local session — an unauthenticated rendered run measures the sign-in card twelve times
-  and reports a fake pass). `cairn-doctor`'s two FAILs are the API token lacking Zone Settings
-  Read, not zone findings; `http://` redirects to `https://` on both hosts, checked directly.
-- **OWED, once the `rc.2` unblocks the merge: Geoff's before/after on the admin form fields.**
-  The visual baselines could not regenerate on this branch, since the `ci.yml` `update_snapshots`
-  dispatch runs the same Playwright suite the blocker kills; that step is owed too, after the bump. The pass takes `0.92.0`'s new stacked field register (label above control) as the
-  default rather than passing `register="inline"` to hold the old horizontal rhythm. That is
-  what this site's own ratified mockup asked for and what `EventForm.svelte` had been recording
-  as a wanted future addition, but it is a visual change across thirteen admin screens and it
-  gates on his eyes. Baselines regenerate on the branch via the `ci.yml` `update_snapshots`
-  dispatch, once that suite can run. RESUME PROMPT: "cairn `0.94.0-rc.2` (or later) should carry
-  the `worker` export condition; bump this repo's pin to it, re-run the ci.yml update_snapshots
-  dispatch, put the regenerated admin baselines in front of Geoff as a before/after on the stacked
-  field register, and merge once he approves." Launch from ~/Projects/aksailingclub-org.
+- **`cairn-audit` static and rendered was green at the rc.1 state** (0 errors, `one-filled-action`
+  clean, run authenticated with `CAIRN_AUDIT_COOKIES` against a seeded local session — an
+  unauthenticated rendered run measures the sign-in card twelve times and reports a fake pass).
+  `cairn-doctor`'s two FAILs are the API token lacking Zone Settings Read, not zone findings;
+  `http://` redirects to `https://` on both hosts, checked directly. **Neither was re-run on the
+  `rc.2` pin**, since the bump changed only an exports condition; re-run both before the merge.
+- **STILL OWED, and it gates the merge: Geoff's before/after on the stacked field register.**
+  Composed and waiting at
+  https://claude.ai/code/artifact/f30398c5-351a-4568-b914-676e61821715 — the flip in
+  place at 1440 and 390 in both themes, the alignment finding below, and the fixture drift
+  separated out so it does not read as cairn's doing. The pass takes `0.92.0`'s stacked register
+  (label above control) as the default rather than passing `register="inline"` to hold the old
+  horizontal rhythm, which is what this site's ratified mockup asked for and what
+  `EventForm.svelte` recorded as a wanted addition. **Scope correction to the prior entry: ten
+  admin surfaces carry cairn fields, and exactly one of them (`/admin/club/documents`) has a visual
+  baseline**, so the regeneration proves the flip on one screen and says nothing about announce,
+  assets, classes, committees, compose, email detail, events, members detail, or money. Covering
+  those is a separate pass if Geoff wants it before the merge rather than after.
+- **A REAL FINDING THE FLIP SURFACED, filed engine-side, not patched here.** The stacked register
+  drops a field's control by the label's height; a sibling control in the same row with no label
+  does not move, so the row's two halves stop lining up. On the `/admin/club/documents` season
+  picker the input's vertical centre goes 145.0px → 157.0px while the `View` button stays at
+  144.5px, a **12.5px offset identical at 390 and 1440 and in both themes**. That makes it layout
+  rather than theme spacing, and a mechanic rather than this site's design choice, so it went to
+  cairn's ROADMAP Now tier (`3d622521`) rather than into this repo's theme. Geoff's call on the
+  register should be read together with it.
+- RESUME PROMPT: "cairn `0.94.0` stable should be published; flip this repo's pin from
+  `0.94.0-rc.2` to `^0.94.0`, re-run `check`/`test`/`build`/`test:e2e` plus `cairn-audit`, and merge
+  once Geoff has approved the field-register before/after." Launch from
+  ~/Projects/aksailingclub-org.
 - **Not taken, deliberately, both filed to `docs/2026-07-07-polish-backlog.md`**: the 65
   pre-existing `cairn-audit` `no-uncompiled-class` errors on the Club screens (verified
   pre-existing against `0.91.1`'s own shipped sheet), and `audit_log.created_at`'s
   `datetime('now')` default, whose fix is a table rebuild against live rows.
 - The engine-side half of this pass lives in cairn-cms, not here: the upgrade-guide corrections
-  (`30d6fbbe`) and the migration report (`bb37c809`).
+  (`30d6fbbe`), the migration report (`bb37c809`, amended to the rc.2 result in `90b87511`), and
+  the alignment mechanic on the ROADMAP (`3d622521`).
+- **Fixture drift rode along in the baseline regeneration and is not cairn's doing.** The assets
+  fixture (2026-07-30) seeds five directory-visible members; the directory baseline had not been
+  reminted since 2026-07-20, so `/my-account/directory` goes 5 → 10 rows, the waivers rollup's
+  outstanding counts go 8 → 13, and an asset-requests badge appears. Data, not design.
 
 **PRIOR ENTRY (2026-08-01) — the pass above executed its NEXT. One rider survives it, still
 undone: Announce list recency via `publishedAt`, since the picker sorts by frontmatter `date`
