@@ -7,6 +7,16 @@ compatibility_flags = ["nodejs_compat"]
 
 main = ".svelte-kit/cloudflare/_worker.js"
 
+# Scoped to the job runner's raw-esbuild bundling path (see
+# src/jobs/wrangler-app-environment-shim.ts's own header): `scripts/wire-scheduled-handler.mjs`
+# appends an un-Vite-processed import of `src/jobs/runner.ts` to the built Worker, and that file's
+# `@glw907/cairn-cms/sveltekit` import pulls in cairn 0.95's `previewLoad`, which reads
+# `$app/environment`, a SvelteKit virtual module wrangler's own esbuild pass cannot resolve. Every
+# other `$app/environment` import in this app goes through Vite's SvelteKit plugin, unaffected by
+# this alias (Vite never reads wrangler.toml).
+[alias]
+"$app/environment" = "./src/jobs/wrangler-app-environment-shim.ts"
+
 # Workers Logs ingests and indexes every console record, including cairn-cms's structured
 # diagnostic events (auth, commit, guard). Query them by `event` or `editor` in the dashboard
 # Logs tab. See ../cairn-cms/docs/guides/read-cairn-logs.md.
