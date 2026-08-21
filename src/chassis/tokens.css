@@ -12,6 +12,30 @@
      - Tailwind and the DaisyUI plugin MECHANISM activate here (`@plugin "daisyui" { themes: false }`);
        the actual named themes (`@plugin "daisyui/theme"`, the DaisyUI role colors and geometry) are
        100% a theme's own choice and never declared here.
+     - The COMPONENT SET is scoped to what this site's own public template genuinely renders, not
+       DaisyUI's full library. The `exclude` list below started from the showcase's full list and
+       subtracted every family with a live use: this site's public template is much larger than the
+       showcase's (a member portal, auth forms, a join form, class registration, the season list,
+       plus every content page), so button, badge, alert, and card are joined by dropdown, radio,
+       select, modal, hero, fieldset, textarea, input, and menu, all in real use in
+       `src/routes/(site)`, `src/theme`, `src/member-portal`, `src/member-auth`, and
+       `src/member-signup`. Method: build once, extract the compiled public `theme.css`'s
+       class-selector set, add the showcase's full exclude list, build again, diff the two sets.
+       Every class that vanished got grepped against the site's own public template directories and
+       the engine's delivery render markup (`node_modules/@glw907/cairn-cms/dist/render` and
+       `dist/delivery`, plus `PreviewBanner`, which carries no DaisyUI class at all); a family with a
+       live use came back out of the exclude list. `typography` is one: this repo's own hand-built
+       `.prose` (prose.css) never reads Tailwind Typography's `--tw-prose-*` variables, but the
+       family also carries the inline-code rule (`:root .prose :where(code):not(pre > code)`) the
+       prose surface renders against, in `@layer utilities`, which out-layers prose.css's own
+       `@layer components` rule regardless of specificity, so excluding it would have changed
+       rendering on every prose page. `glass` and `join` stay excluded: neither the glass utility nor
+       the button-group `.join` class appears anywhere in the public template (`.join` is live in
+       `/admin/club`'s own screens, but those routes render inside CairnAdminShell against the
+       packaged cairn-admin.css, a separate compiled sheet this exclude list never reaches). Excluding
+       the rest leaves the compiled public `theme.css` about a third smaller. A theme that adopts a
+       currently-excluded component drops its key from the list; this is chassis-level, shared by
+       every theme, since it is about the template's markup, not a theme's look.
      - The design-SCALE keys (`--font-*`, `--text-step-*`, `--spacing-*`, `--leading-*`,
        `--tracking-*`, `--container-measure*`, `--color-muted`, `--color-card-border`) get generic
        defaults here, inside `@theme`, so Tailwind still generates every named utility
@@ -35,6 +59,16 @@
 
 @plugin "daisyui" {
   themes: false;
+
+  /* Every DaisyUI component key this site's public template does not render, computed per the
+     OWNERSHIP SPLIT note above (button, badge, alert, card, dropdown, radio, select, modal, hero,
+     fieldset, textarea, input, menu, and typography stay in). */
+  exclude: footer, status, collapse, avatar, textrotate, otp, chat, toast, drawer,
+    checkbox, diff, swap, calendar, label, toggle, validator, filter, skeleton, fileinput, countdown,
+    link, mask, hovergallery, progress, table, indicator, list, megamenu, rating, kbd,
+    radialprogress, range, aura, stack, stat, tooltip, breadcrumbs, loading, mockup,
+    timeline, tab, divider, carousel, hover3d, navbar, steps, fab, dock,
+    glass, join;
 }
 
 @theme {
