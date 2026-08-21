@@ -14,6 +14,7 @@ before the photography existed, never a broken image. -->
   import type { PageData } from './$types';
   import { CairnHead } from '@glw907/cairn-cms/delivery/head';
   import type { SeasonDotKind } from '$theme/season-data';
+  import { formatDate } from '$chassis/date.js';
   import SeasonList from '$theme/components/SeasonList.svelte';
   import NotificationStrip from '$theme/components/NotificationStrip.svelte';
 
@@ -39,12 +40,6 @@ before the photography existed, never a broken image. -->
     );
     return SEASON_LEGEND.filter((item) => present.has(item.kind));
   });
-
-  const dateFmt = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-
-  function formatDate(iso: string): string {
-    return dateFmt.format(new Date(iso));
-  }
 
   // The What-do-we-do band's three tiles. Design candidate A (the triptych, landed on main by
   // the wdwd-final pass, 2026-07-07; contained to the page's own measure in round-5): Geoff

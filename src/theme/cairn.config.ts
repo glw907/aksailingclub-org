@@ -8,6 +8,7 @@ import type { NavLayout } from '@glw907/cairn-cms/sveltekit';
 import { buildAccess } from './access.js';
 import { ascRegistry } from './markdown/components.js';
 import { ICON_PATHS } from './markdown/icons.js';
+import { proseTypography } from '$chassis/render.js';
 import ContactForm from './components/ContactForm.svelte';
 import DonateForm from './components/DonateForm.svelte';
 import ClassSchedule from './components/ClassSchedule.svelte';
@@ -25,8 +26,10 @@ import siteCss from './site.css?url';
 // rendering inert (Task 2's migration authored the content against this vocabulary already).
 // Exported so a site-owned, non-content markdown source (the events deep-look pass's D1
 // `long_description` rows, `$theme/events-data.ts`) renders through the same sanitized pipeline as
-// ordinary content, rather than a second, weaker renderer.
-export const { renderMarkdown } = createRenderer(ascRegistry);
+// ordinary content, rather than a second, weaker renderer. The chassis's `proseTypography` remark
+// plugin smartens quotes, dashes, and ellipses in body prose; wiring it here, at the one
+// createRenderer call, means both the public render and the editor's live preview inherit it.
+export const { renderMarkdown } = createRenderer(ascRegistry, { remarkPlugins: proseTypography });
 
 // The ratified four-group sidebar (pass-B sidebar-build T6,
 // docs/plans/2026-07-19-asc-sidebar-build.md; icons/order/collapsed-defaults settled by the T1

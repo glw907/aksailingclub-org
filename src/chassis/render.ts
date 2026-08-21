@@ -5,10 +5,14 @@
 // touches a component's build() function. Copied verbatim from cairn-cms's showcase per the
 // chassis's own subtractability rule (src/chassis/README.md): Task 1's scaffold omitted this file
 // since zero components were registered at scaffold time; Task 3 re-adds it now that the club
-// content's migrated directives (passage, callout, cards/card) need real icons.
+// content's migrated directives (passage, callout, cards/card) need real icons. It also holds the
+// prose-typography seam: a createRenderer remarkPlugins entry a theme composes in once, so every
+// render call inherits it.
 import { glyph, type IconSet } from '@glw907/cairn-cms';
 import { iconSpan } from '@glw907/cairn-cms/render';
 import type { Element } from 'hast';
+import remarkSmartypants from 'remark-smartypants';
+import type { PluggableList } from 'unified';
 
 /**
  * Wires a theme's icon set into the engine's glyph-rendering helpers, returning a function that
@@ -19,3 +23,15 @@ import type { Element } from 'hast';
 export function makeIconRenderer(icons: IconSet): (name: string, role?: string) => Element {
   return (name, role) => iconSpan(glyph(name, icons), role);
 }
+
+/**
+ * The chassis's prose-typography seam: a `createRenderer` `remarkPlugins` entry that smartens
+ * straight quotes into curly ones, `--`/`---` into en/em dashes, and `...` into a real ellipsis.
+ * It runs over the mdast tree, before the remark-to-rehype conversion, visiting only text nodes,
+ * so inline code, fenced code blocks, and link URLs (held as node attributes, never as text) are
+ * structurally exempt, and already-curly input passes through unchanged (it only rewrites
+ * straight ASCII marks). A theme wires it once through
+ * `createRenderer(registry, { remarkPlugins: proseTypography })`; both the public render and the
+ * editor's live preview read the one `renderMarkdown` that composes, so both inherit it.
+ */
+export const proseTypography: PluggableList = [[remarkSmartypants, { dashes: 'oldschool' }]];

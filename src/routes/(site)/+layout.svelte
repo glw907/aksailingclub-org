@@ -16,7 +16,7 @@
   <link rel="stylesheet" href={siteCss} />
 </svelte:head>
 
-<div class="flex min-h-dvh flex-col bg-base-100 font-body text-base-content">
+<div class="site-shell flex min-h-dvh flex-col bg-base-100 font-body text-base-content">
   <a
     href="#main"
     class="skip-link absolute left-s top-[-3rem] z-50 rounded-field bg-primary px-[0.9rem] py-[0.5rem] font-semibold text-primary-content no-underline focus:top-s"

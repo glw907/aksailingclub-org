@@ -34,7 +34,7 @@ state. -->
   import { page } from '$app/state';
   import { browser } from '$app/environment';
   import { extractMenu, type NavNode } from '@glw907/cairn-cms';
-  import { resolveTheme, toggleTheme as chassisToggleTheme, type ThemeToggleConfig } from '$chassis/theme-toggle.js';
+  import { resolveTheme, toggleThemeWithTransition, type ThemeToggleConfig } from '$chassis/theme-toggle.js';
   import { siteConfig } from '$theme/cairn.config';
   import SearchModal from './SearchModal.svelte';
 
@@ -120,9 +120,10 @@ state. -->
   // Never called during SSR (`browser` guards every call site).
   let theme = $state<Theme>(browser ? resolveTheme(themeConfig) : 'asc');
 
-  /** Flips the explicit theme via the chassis mechanism, which also persists the choice. */
+  /** Flips the explicit theme via the chassis mechanism (a short color cross-fade, instant under
+   *  prefers-reduced-motion), which also persists the choice. */
   function toggleTheme(): void {
-    theme = chassisToggleTheme(themeConfig, theme);
+    theme = toggleThemeWithTransition(themeConfig, theme);
   }
 </script>
 

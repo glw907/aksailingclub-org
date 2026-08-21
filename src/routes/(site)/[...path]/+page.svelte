@@ -4,6 +4,7 @@
   import { siteConfig } from '$theme/cairn.config';
   import { GOVERNANCE_SUBPAGE_SLUGS } from '$theme/redirects';
   import { isPrimaryPage } from '$theme/page-tiers';
+  import { formatDate } from '$chassis/date.js';
 
   let { data }: { data: PageData } = $props();
 
@@ -31,18 +32,6 @@
   // title, not stacked full-width above it the way a post's hero (`.hero` below) already does.
   // Posts and bulletins keep that existing contained treatment untouched.
   const isPageHero = $derived(data.entry.concept === 'pages' && Boolean(data.heroImage));
-
-  const dateFmt = new Intl.DateTimeFormat('en-US', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
-
-  /** Render an ISO `YYYY-MM-DD` date as "14 May 2026". */
-  function formatDate(iso: string): string {
-    return dateFmt.format(new Date(iso));
-  }
 
   /** One heading captured from the rendered article, for the table of contents. rehype-slug (the
    *  render pipeline's default) gives every h2/h3 an id; this reads that id back off the

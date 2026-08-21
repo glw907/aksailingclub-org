@@ -5,14 +5,9 @@
   import type { PageData } from './$types';
   import { CairnHead } from '@glw907/cairn-cms/delivery/head';
   import { siteConfig } from '$theme/cairn.config';
+  import { formatDate } from '$chassis/date.js';
 
   let { data }: { data: PageData } = $props();
-
-  const dateFmt = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-
-  function formatDate(iso: string): string {
-    return dateFmt.format(new Date(iso));
-  }
 </script>
 
 <CairnHead seo={data.seo} titleTemplate={(title) => `${title} — ${siteConfig.siteName}`} />

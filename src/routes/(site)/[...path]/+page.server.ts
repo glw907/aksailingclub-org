@@ -3,7 +3,7 @@ import type { PageServerLoad, EntryGenerator } from './$types';
 import { site } from '$chassis/content';
 import { REDIRECTS } from '$theme/redirects';
 import { isRoutable } from '$theme/routable-concepts';
-import { routes } from '$theme/public-routes';
+import { routes } from '$chassis/public-routes';
 
 export const prerender = true;
 

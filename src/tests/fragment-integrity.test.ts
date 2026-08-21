@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 import { fragments } from '$chassis/content';
-import { routes } from '$theme/public-routes';
+import { routes } from '$chassis/public-routes';
 
 // Closes three fragments-migration gaps (docs/2026-07-17-fragments-migration-design.md, probes
 // P2/P3/P4) that today all pass check/test/build while being wrong for a real reader or editor:
@@ -66,7 +66,7 @@ describe('fragment integrity', () => {
   });
 
   // Gap 2 (probe P2): render a real consuming page through the site's own configured render path
-  // (routes.entryLoad, from $theme/public-routes.ts, the exact call the (site) catch-all route
+  // (routes.entryLoad, from $chassis/public-routes.ts, the exact call the (site) catch-all route
   // makes) and prove the include actually spliced rather than passing the directive through as
   // literal text.
   describe('a real ::include resolves through the site render path', () => {

@@ -320,3 +320,27 @@
   --cairn-cta-btn-bg: var(--color-primary);
   --cairn-cta-btn-content: var(--color-primary-content);
 }
+
+/* The toggle flip: `.theme-flip-transition` lands on `<html>` for one flip only (theme-toggle.ts),
+   so a scheme switch that came from the OS (the media-query block above) or from first paint never
+   animates, only an explicit click does. Scoped to the token-consuming chrome surfaces this site
+   actually declares: `.site-shell` (the (site) layout's own root wrapper, `src/routes/(site)/
+   +layout.svelte`, which paints the page ground via `bg-base-100` -- without it the ground snapped
+   instantly while the header/main/footer text cross-faded, a brief dark-text-on-dark-ground flash
+   on a light-to-dark flip), `.site-header`, `.site-main`, `.site-footer`; rather than the whole
+   document, so an `<img>` or embed never cross-fades its own paint alongside the surrounding color
+   change. */
+:root.theme-flip-transition .site-shell,
+:root.theme-flip-transition .site-header,
+:root.theme-flip-transition .site-main,
+:root.theme-flip-transition .site-footer {
+  transition: background-color 0.2s ease-out, color 0.2s ease-out, border-color 0.2s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root.theme-flip-transition .site-shell,
+  :root.theme-flip-transition .site-header,
+  :root.theme-flip-transition .site-main,
+  :root.theme-flip-transition .site-footer {
+    transition: none;
+  }
+}
