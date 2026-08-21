@@ -6,7 +6,6 @@
 // stores never blur). Built directly on `validateMemberCsrfToken`/`getMemberSession`
 // (`$member-auth/lib/auth.ts`), never a second copy of either's own token logic.
 import { fail } from '@sveltejs/kit';
-import type { D1Database, RateLimit } from '@cloudflare/workers-types';
 import { tokensMatch } from '@glw907/cairn-cms/auth-crypto';
 import { checkRateLimit } from '@glw907/cairn-cms/cloudflare';
 import { getMemberSession, type MemberRow } from '$member-auth/lib/auth';

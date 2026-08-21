@@ -7,7 +7,6 @@
 // mismatched pair refuses rather than silently charging for the wrong class.
 import * as v from 'valibot';
 import { invalid } from '@sveltejs/kit';
-import type { D1Database, RateLimit } from '@cloudflare/workers-types';
 import { checkRateLimit, verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
 import { getClass } from '$admin-club/lib/classes-store';
 import { createCheckout, CheckoutUnavailableError, type CreateCheckoutEnv, type CreateCheckoutResult } from '$admin-club/lib/payments';

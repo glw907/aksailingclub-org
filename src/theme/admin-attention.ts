@@ -17,7 +17,6 @@
 // through its exported seams" boundary read in the chassis-to-site direction too), so it resolves
 // `CLUB_DB` and builds the engine's `AttentionItem[]` here rather than reaching into
 // `$admin-club/lib/club-db.ts` itself.
-import type { D1Database } from '@cloudflare/workers-types';
 import type { AttentionItem } from '@glw907/cairn-cms/sveltekit';
 import { listPendingAssetRequests } from '$member-portal/lib/assets';
 import { getCurrentSeason } from '$admin-club/lib/club-settings';

@@ -4,7 +4,6 @@
 // (`src/jobs/class-reminders.ts`, `src/jobs/class-refund-window-notice.ts`). One shared resolver
 // so "who does a class-related email about this participant go to" is answered identically
 // everywhere, rather than four places each reimplementing the same guardian rule.
-import type { D1Database } from '@cloudflare/workers-types';
 import type { ClassTrack } from './classes-store';
 
 export interface ClassContact {

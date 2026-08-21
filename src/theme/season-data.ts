@@ -33,7 +33,6 @@
 // `--color-muted` and the original pale sage tint both had to give way to more saturated,
 // dot-specific tokens (Geoff's own follow-up finding: the grey and sage dots read "almost
 // indistinguishable" at 8px).
-import type { D1Database } from '@cloudflare/workers-types';
 
 /** The home Season band's per-category dot kind (see the header comment): `class` for the gold
  *  mission-first accent, `social` for a green dot, `business` for a neutral gray dot marking the

@@ -7,7 +7,6 @@
 // PAID enrollments only: `class_enrollments.fee_paid` is `class_enrollments`' own boolean flag for
 // "a real fee was paid, not covered by a credit" (0001_substrate's own column comment), and a
 // free-clinic or fully-credit-covered enrollee has nothing to refund.
-import type { D1Database } from '@cloudflare/workers-types';
 import { sendClubEmail } from '$admin-club/lib/club-email';
 import { formatCivilDate } from '$admin-club/lib/ui';
 import { getRefundWindowDays, getRefundNoticeLeadDays } from '$admin-club/lib/club-settings';

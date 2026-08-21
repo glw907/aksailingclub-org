@@ -14,7 +14,6 @@
 // constructs {@link PersistedJoinApplication} in memory, the resume path reconstructs the
 // byte-identical shape from the persisted rows ({@link loadJoinApplication}), and neither the
 // covered-vs-paid credit split nor the snapshotted cents can drift between the two.
-import type { D1Database } from '@cloudflare/workers-types';
 import type { MembershipTier } from '$admin-club/lib/member-types';
 import type { CreateCheckoutArgs } from '$admin-club/lib/payments';
 import { CREDIT_GRANT_AMOUNT } from './pricing.js';

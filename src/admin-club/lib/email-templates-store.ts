@@ -4,7 +4,6 @@
 // (`listEmailTemplates`, `getEmailTemplate`) and the send-time render (`sendClubEmail`,
 // `renderTemplateWithVariables`); this module only adds the admin-write concerns pass 2.2's
 // read-only screen had no need for.
-import type { D1Database } from '@cloudflare/workers-types';
 import { getEmailTemplate, type EmailTemplateRow } from './club-email';
 
 /**

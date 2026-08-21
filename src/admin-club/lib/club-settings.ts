@@ -9,7 +9,6 @@
 // own read of "the season closing" (`rollover.ts`); the rollover itself writes `current_season`
 // directly rather than through a setter here, since its write must ride the same `db.batch()` as
 // its audit row (see `rollover.ts`'s own header on why).
-import type { D1Database } from '@cloudflare/workers-types';
 import type { MembershipTier } from './member-types';
 
 /** The ratified default (Geoff, 2026-07-07), also the migration's own seed value: used only if

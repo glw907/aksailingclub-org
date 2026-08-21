@@ -21,7 +21,6 @@
 // history to protect.
 import * as v from 'valibot';
 import { invalid } from '@sveltejs/kit';
-import type { D1Database, RateLimit } from '@cloudflare/workers-types';
 import { checkRateLimitKeys, verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
 import { validateJoinInput } from '$member-signup/lib/validate.js';
 import { computeJoinPricing } from '$member-signup/lib/pricing.js';

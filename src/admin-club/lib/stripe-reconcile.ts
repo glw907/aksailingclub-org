@@ -34,7 +34,6 @@
 // safe there and nowhere else because neither carries a wrong-`refId` poison case -- malformed
 // metadata is already rejected 400 before any database touch -- so a retry can never get stuck
 // retrying forever against a request that will never succeed.
-import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types';
 import { PAYMENT_KINDS, type PaymentKind } from './payments';
 import { sendClubEmail, type EmailBindingEnv } from './club-email';
 import { getCurrentSeason } from './club-settings';

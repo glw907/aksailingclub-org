@@ -7,7 +7,6 @@
 // other consumer of that module does: per-recipient failures are counted, never fatal
 // (`sendClubEmail`'s own never-throws contract), and every send's variable substitution runs
 // through that module's own `raw` path rather than a parallel renderer.
-import type { D1Database } from '@cloudflare/workers-types';
 import { sendClubEmail, type EmailBindingEnv } from './club-email';
 import type { ResolvedSegment } from './segments';
 

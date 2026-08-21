@@ -13,7 +13,6 @@
 // on the signing page links here, and the resumption email (`waiver-notify.ts`) deep-links here
 // through `/my-account/confirm`'s allowlist once the last household signature lands.
 import { fail, redirect } from '@sveltejs/kit';
-import type { D1Database } from '@cloudflare/workers-types';
 import type { Actions, PageServerLoad } from './$types';
 import { issueMemberCsrfToken } from '$member-auth/lib/auth';
 import { resolveMemberDb } from '$member-auth/lib/db';

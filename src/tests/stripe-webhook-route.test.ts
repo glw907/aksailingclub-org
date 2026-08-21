@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import type { D1Database } from '@cloudflare/workers-types';
 import { POST } from '../routes/(site)/api/stripe/webhook/+server';
 import { fakeD1 } from './_fake-d1';
 

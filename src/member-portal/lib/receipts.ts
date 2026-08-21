@@ -18,7 +18,6 @@
 // (`src/routes/(site)/my-account/+page.svelte`) divides by 100 before formatting, matching that
 // file's own `assignment.feeCents / 100` precedent, rather than converting to dollars here and
 // inventing a second unit convention for this module alone.
-import type { D1Database } from '@cloudflare/workers-types';
 
 export interface ReceiptRow {
   /** The transaction's own id: one row per transaction, never per line (see the header). */

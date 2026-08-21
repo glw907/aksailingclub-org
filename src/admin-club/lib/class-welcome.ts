@@ -5,7 +5,6 @@
 // enrollment yet to welcome) and `offers.ts`'s `claimOffer` (a waitlisted person accepting a
 // later offer). One shared function so both call sites send identically rather than each
 // reimplementing the template call and the `class_reminders_sent` marker.
-import type { D1Database } from '@cloudflare/workers-types';
 import { sendClubEmail, type EmailBindingEnv } from './club-email';
 import { resolveClassContact } from './class-contact';
 import type { ClassTrack } from './classes-store';

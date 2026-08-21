@@ -14,7 +14,6 @@
 // `listAssignments` below (Task 3) is the single "who holds what" query every admin lens shares:
 // this file's own `listActiveAssignments`, and the Members-list/household-desk reads in
 // `households-store.ts`, which imports from here, never the reverse.
-import type { D1Database } from '@cloudflare/workers-types';
 
 /** One `asset_types` row, camelCased. */
 export interface AssetTypeRow {

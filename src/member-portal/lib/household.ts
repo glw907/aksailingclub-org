@@ -3,7 +3,6 @@
 // the same way `standing.ts` already reads them for real. `directory_visibility` lives on
 // `members` (0005's own schema); this module is the one place that reads and writes it from the
 // member-facing side.
-import type { D1Database } from '@cloudflare/workers-types';
 import { normalizeEmail, normalizeNameCaps, normalizePhoneE164 } from '$admin-club/lib/member-normalize.js';
 
 /** The schema's own three-state directory visibility (0005_member_domain's `CHECK`). */

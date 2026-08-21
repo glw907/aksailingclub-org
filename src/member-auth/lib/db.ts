@@ -7,7 +7,6 @@
 // `migrations/asc-club/0008_member_auth/`), just through two separate accessors that happen to
 // agree, the same way cairn's own `CairnEnv` is a structural subset a caller casts to rather
 // than a shared import.
-import type { D1Database } from '@cloudflare/workers-types';
 
 /** Read the site's `CLUB_DB` binding off a platform env, or `undefined` if it is not configured
  *  (a misconfigured environment fails closed rather than throwing). */

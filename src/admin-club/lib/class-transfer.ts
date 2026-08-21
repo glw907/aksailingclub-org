@@ -11,7 +11,6 @@
 // `$member-portal/lib/classes.ts`'s `withdrawFromClass`), never a second copy of that pairing. The
 // destination may be over its own capacity: the design doc's own "soft capacity, admin override
 // is normal life" ruling, so this never gates on it.
-import type { D1Database } from '@cloudflare/workers-types';
 import { getClassWithCounts } from './classes-store';
 import { buildTransactionStatements } from './ledger';
 import { triggerFreedSpotOffer } from './offers';

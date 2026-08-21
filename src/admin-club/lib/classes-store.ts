@@ -20,7 +20,6 @@
 // (`people.ts`) before writing or matching `member_id`. This module's `ClassInstructor` type still
 // names its email field `email`, not `memberId`: the admin screen never has to know a real id
 // exists underneath, since every read here joins back to `members` for the address to show.
-import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types';
 import { ensureMember } from './people';
 import { buildTransactionStatements, type TransactionSource } from './ledger';
 

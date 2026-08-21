@@ -23,7 +23,6 @@
 // The prior grace-window vocabulary and its per-club-configurable settings row retired fully in
 // T2/T3: no reader of either survives anywhere in this codebase. A household's terminal state is
 // Former, a recorded fact, never a re-derived elapsed-time window.
-import type { D1Database } from '@cloudflare/workers-types';
 import { toSqliteDatetime } from './sqlite-datetime';
 import { formatMemberDate, parseMemberDate } from './format';
 

@@ -5,7 +5,6 @@
 // table. This module is the one place that resolves "a name and an email" into that id, upserting
 // by email so the same person's second signup or a repeat instructor assignment finds their
 // existing row rather than minting a duplicate.
-import type { D1Database } from '@cloudflare/workers-types';
 import { normalizeEmail, normalizeNameCaps, normalizePhoneE164 } from './member-normalize.js';
 
 /** `ensureMember`'s input: the minimal shape a public form or an admin action can supply. `phone`

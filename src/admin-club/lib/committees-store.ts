@@ -10,7 +10,6 @@
 // Decline and remove both delete a `committee_members` row outright (never a soft archive): the
 // roles spec's own ratified rule (decision 4), since a declined request or a departed member
 // carries no roster history worth keeping.
-import type { D1Database } from '@cloudflare/workers-types';
 
 /** The two `committees.kind` values migration 0027's CHECK allows. */
 export const COMMITTEE_KINDS = ['standing', 'established'] as const;

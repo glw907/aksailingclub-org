@@ -18,7 +18,6 @@
 // switch. And the rate-limit refusal no longer writes an audit row: back-pressure is not a
 // domain-state change, and it logs `admin.action.rate_limited` instead.
 import { createSectionAction } from '@glw907/cairn-cms/sveltekit';
-import type { D1Database } from '@cloudflare/workers-types';
 import { resolveClubDb } from './club-db';
 
 /** The platform bindings a club action's handler sees on `event.platform.env`. This is the site's

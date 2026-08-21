@@ -157,13 +157,17 @@ npm run build                                        # build to .svelte-kit/clou
 npm run build:search                                 # build + Pagefind search index
 npx wrangler dev --remote                            # real D1/R2 bindings (EVENTS_DB, MEDIA_BUCKET)
 npm run check                                         # svelte-check, 0 errors/0 warnings
+npm run types    # regenerate worker-configuration.d.ts after any wrangler.toml change (bindings, compatibility_date)
 npm test                                              # vitest
 npm run test:e2e                                      # Playwright, the pixel-diff visual suite
 ```
 
 `npm run cairn:manifest` regenerates `src/content/.cairn/index.json` after any content edit made
 outside the admin (a direct file edit, a migration script); the admin's own save path regenerates
-it automatically.
+it automatically. `worker-configuration.d.ts` is committed, and it must be generated from a clean
+tree (no `.svelte-kit/cloudflare/_worker.js` present, which `npm run types` itself enforces),
+because wrangler embeds the built worker's module type into `GlobalProps` when that file exists,
+which cascades through `checkJs` into thousands of `svelte-check` errors.
 
 ## New Post
 

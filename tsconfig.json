@@ -8,7 +8,30 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "sourceMap": true,
-    "strict": true,
-    "types": ["@cloudflare/workers-types"]
-  }
+    "strict": true
+  },
+  // "files" adds to the extended .svelte-kit/tsconfig.json's own "include" list rather than
+  // replacing it (an "include" key here would clobber that list entirely, since TS does not
+  // merge include/exclude/files arrays across an extends chain, only overrides them). The
+  // generated worker-configuration.d.ts (`npm run types` / `wrangler types`) sits at the repo
+  // root, outside every glob the parent config lists, so it needs an explicit reference here to
+  // be picked up by svelte-check.
+  //
+  // Caveat: wrangler.toml's `main` points at the BUILT worker (.svelte-kit/cloudflare/_worker.js).
+  // If a `wrangler types` run ever happens while that file exists on disk (after `npm run build`
+  // or the e2e webServer), it embeds `Cloudflare.GlobalProps.mainModule: typeof
+  // import(".../_worker")` in the generated file, and checkJs then pulls the whole built worker
+  // (and its own dependency graph) into the type-check, producing hundreds of implicit-any errors
+  // on generated JS. `exclude` does not help: TypeScript still type-checks a file reached via
+  // `import`/`typeof import` even when it matches an `exclude` pattern, since `exclude` only
+  // prunes `include`-glob candidates, not the import graph. `check` deliberately does NOT
+  // regenerate types itself (a `check` that quietly deleted `.svelte-kit/cloudflare` would hand a
+  // stale-looking deploy nothing to ship if it ran between `build` and `wrangler deploy`);
+  // regeneration is the explicit, rarely-run `npm run types` (see CLAUDE.md's Build & Dev
+  // section), which clears .svelte-kit/output, .svelte-kit/cloudflare, and
+  // .svelte-kit/cloudflare-tmp immediately before `wrangler types` runs so the entrypoint never
+  // resolves and `GlobalProps.mainModule` is never emitted. The committed worker-configuration.d.ts
+  // was generated that way, so its `GlobalProps` block is empty and `npm run check` stays 0/0
+  // regardless of whether build output happens to exist when it runs.
+  "files": ["worker-configuration.d.ts"]
 }

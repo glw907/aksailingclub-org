@@ -10,7 +10,6 @@
 // request or make someone else leave. The manager and board actions reuse `committees-store.ts`'s
 // own write functions (the admin CRUD data layer, T6) after the guard, so the portal and the admin
 // screen can never drift on the actual SQL a promotion or a removal runs.
-import type { D1Database } from '@cloudflare/workers-types';
 import {
   addCommitteeMember,
   approveCommitteeMember,

@@ -11,7 +11,6 @@
 // refund engine's own `buildRefundPlan(charge: TimelineTransaction, ...)` input. `refundable` and
 // `apiEligible` are computed once, here, off every transaction read through this module, so a
 // caller never re-derives Task 6's own eligibility rule in two places.
-import type { D1Database } from '@cloudflare/workers-types';
 import type { MembershipTier } from './member-types';
 import type { LineItem, TransactionKind, TransactionSource } from './ledger';
 

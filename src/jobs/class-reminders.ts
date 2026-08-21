@@ -9,7 +9,6 @@
 // per-entity once-marker table, `sendClubEmail`, one `audit_log` row for the tick), one level
 // finer: PER ENROLLMENT (a participant's own seat), not per household, and guardian-routed
 // through `class-contact.ts` for a youth-track class.
-import type { D1Database } from '@cloudflare/workers-types';
 import { sendClubEmail } from '$admin-club/lib/club-email';
 import { formatCivilDate } from '$admin-club/lib/ui';
 import { resolveClassContact } from '$admin-club/lib/class-contact';
