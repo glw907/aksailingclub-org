@@ -78,7 +78,7 @@ composition, not decoration wrapped around prose. -->
     <EventsGovernance rows={data.events.governance} />
   {:else}
     <div class="ev-measure">
-      <p class="ev-empty">The season calendar is quiet for now. Check back soon, or ask in <a href="/discord-server/">#racing or #general</a> on Discord.</p>
+      <p class="ev-empty">No events are on the calendar right now. Check back soon.</p>
     </div>
   {/if}
 </div>
