@@ -19,3 +19,7 @@ at June 1 so the Register and fireweed states show); `build.py` rebuilds them fr
   the year and range derived from the rows at build time); alternative offered: bare "Events"
   with no second line. Nothing else changed. Awaiting the title verdict; if kept, the arc
   settles.
+- 2026-08-22 probe 2 verdict: still a marketing cadence (a sentence in the italic slot).
+  Probe 3 A/B: bare "Events" h1 vs eyebrow plus a two-word label. Geoff's pick: the eyebrow
+  with "The 2026 Season", the year derived from the rows each season. RATIFIED; the arc
+  settles here. Final probe: `events-probe-3.html` (and `-june`).

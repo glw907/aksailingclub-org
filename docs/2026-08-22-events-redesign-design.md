@@ -35,8 +35,12 @@ generic page.
 
 The route is `/events`, server-rendered on each request (it reads `CLUB_DB`). Top to bottom:
 
-1. The light promise hero the page already has. The image standard assigns Events no hero
-   photo, and the season's own photographs follow immediately.
+1. The light hero, without a promise sentence (probe rounds 2 and 3 found any sentence in
+   the italic slot reads as marketing cadence): the "Events" eyebrow over the title "The
+   2026 Season", the year derived at request time from the rows on the page (the classes'
+   `season` column, else the year of the first dated event), so it updates itself each
+   season and keeps naming last season through the winter until new rows land. The image
+   standard assigns Events no hero photo; the season's own photographs follow immediately.
 2. The calendar-subscribe bar, widened from two links to four (see "Calendar subscription").
 3. The month index: one line of in-page links, one per month that has at least one event,
    plus "Meetings". Rendered a step below body. Sticky at 1440 only if the probe round
