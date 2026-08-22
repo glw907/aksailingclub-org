@@ -140,6 +140,12 @@ the cairn-cms project's agent memory.
   `asc-site` Worker. **That Worker is bound to `dev.aksailingclub.org`, not the production apex.**
   A push to `main` is a dev deploy; it is not gated on Geoff's review by the deploy mechanism
   itself, only by the one-check rule above as a practice.
+- **Merging and deploying to dev is default behavior until the apex cutover (Geoff,
+  2026-08-22).** When a pass's PR is green on its final commit (baselines regenerated through
+  CI), merge it and let `deploy.yml` run without asking; report the merge and the deploy in the
+  recap. A PR run on a bot-authored baseline commit sits at `action_required` until approved
+  (`gh api -X POST repos/glw907/aksailingclub-org/actions/runs/<id>/approve`). This standing
+  authorization ends at the `mw-cutover` pass; the production path stays Geoff's explicit go.
 - **`.github/workflows/ci.yml`** is the pull-request gate: `check`, `test`, `build`, and the
   pixel-diff `test:e2e` suite, with a `workflow_dispatch` mode to regenerate visual baselines.
 - **The production apex cutover (`aksailingclub.org` itself) is a separate, deliberate DNS

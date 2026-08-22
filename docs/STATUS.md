@@ -29,15 +29,13 @@ the theme-flip cross-fade on `/` and a 404, a minted "Share preview" link in a p
 is gone. Riders still open from 0.94: announce-list recency via `publishedAt`; baseline
 coverage for the stacked field register; the `asset_requests` uniqueness race (needs a unique index, so a migration).
 
-**events-redesign (built, awaiting Geoff; 2026-08-22).** PR #6 (`events-redesign-build`)
-carries the whole pass: contract `docs/2026-08-22-events-redesign-design.md`, plan
+**events-redesign (merged and deployed to dev, 2026-08-22).** PR #6 is merged (`dad4821`)
+and `deploy.yml` pushed it to dev.aksailingclub.org; the pass's record: contract `docs/2026-08-22-events-redesign-design.md`, plan
 `docs/plans/2026-08-22-events-redesign.md`, ledger entry in `docs/HISTORY.md`. Gates green
 (check 0/0, 2105 tests, build); the four domain reviews' findings are fixed. Geoff's steps:
-(1) the before/after on dev once `deploy.yml` runs after merge, or on the PR's preview of the
-branch: `/events` at 1440 and 390, the June-clock states are gone from the live page so judge
-Register on a real open class when one exists; (2) the fresh-context coherence read is owed
-(session closed at its ceiling); (3) the `fleet_tuneup` data call (drop-in or registration);
-(4) merge. Harvest to cairn: `docs/2026-08-22-events-redesign-harvest-findings.md` (eight
+(1) the before/after on dev, `/events` at 1440 and 390 (Register shows only on a real open
+class); (2) the fresh-context coherence read is owed (session closed at its ceiling); (3) the
+`fleet_tuneup` data call (drop-in or registration). Harvest to cairn: `docs/2026-08-22-events-redesign-harvest-findings.md` (eight
 findings, incl. site-wide smooth scroll as an engine default and the dead-body content entry).
 
 **Next pass (prep, 2026-08-22; Geoff's pick 2026-08-22: the admin series gates the cutover).**
