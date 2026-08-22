@@ -5,8 +5,7 @@
 // `/events` page. It 404s on an unknown id, builds a noindex `seo` whose canonical points at
 // `/events` (a canonical cannot carry a fragment), and hands the page its scroll target. It 404s
 // only on a genuinely absent row; a failed database read is a 503 with a `Retry-After` instead.
-// The
-// unfurl itself still has to look like the real event, since that is the whole point of sharing
+// The unfurl itself still has to look like the real event, since that is the whole point of sharing
 // the link: the description prefers the row's own `short_description`, falling back to the first
 // ~160 characters of its `long_description` (`deriveExcerpt`, the same plain-text markdown strip
 // `/posts` uses for its own og:description) and then the site default, and the image is the row's

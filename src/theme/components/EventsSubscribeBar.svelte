@@ -34,7 +34,7 @@ constraint. -->
   let copyStatus = $state('');
   let copyTimeout: ReturnType<typeof setTimeout> | undefined;
 
-  async function copyFeedAddress() {
+  async function copyFeedAddress(): Promise<void> {
     try {
       await navigator.clipboard.writeText(icsUrl);
       copyStatus = 'Copied the feed address';

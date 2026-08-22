@@ -120,7 +120,9 @@ const CURRENT_SEASON_QUERY = `SELECT value FROM settings WHERE key = 'current_se
  *  testable steps. */
 export async function readCurrentSeason(db: D1Database): Promise<number | null> {
   const seasonRow = await db.prepare(CURRENT_SEASON_QUERY).first<{ value: string }>();
-  return seasonRow ? Number(seasonRow.value) : null;
+  const season = seasonRow ? Number(seasonRow.value) : Number.NaN;
+  // A non-numeric setting quiets the season filters rather than binding "NaN" into them.
+  return Number.isFinite(season) ? season : null;
 }
 
 /** The best available date for ordering an event with no current-year `start_date`: its most
