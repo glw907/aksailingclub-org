@@ -34,11 +34,12 @@ the `asset_requests` uniqueness race (needs a unique index, so a migration).
 **events-redesign (in flight, 2026-08-22).** Contract ratified and committed:
 `docs/2026-08-22-events-redesign-design.md` (one long anchorable season page, alternating photo
 bands, quieted past events, governance coda, four-entry subscribe bar, thin link-preview detail
-route; events stay D1 and the no-events-concept ruling stays closed). Probe 1 is built and
-open for Geoff's verdicts; arc log `docs/design-benchmark/events-redesign-round-1-arc.md`,
-probe files machine-local at `~/.local/asc-data/probes/events-redesign/`. Next: fold Geoff's
-verdicts into probe 2 or settle; at settle, write the pass plan and build on a branch. Open
-data question for Geoff: `classes.fleet_tuneup` says `drop_in = 0` while its copy says no
+route; events stay D1 and the no-events-concept ruling stays closed). Probe arc settled on
+probe 3 (title "The 2026 Season"); arc log `docs/design-benchmark/events-redesign-round-1-arc.md`,
+probe files machine-local at `~/.local/asc-data/probes/events-redesign/`. Build plan:
+`docs/plans/2026-08-22-events-redesign.md` (five tasks, ceiling 1.5M, branch
+`events-redesign-build`), awaiting Geoff's plan approval, the pass's one human gate. Open data
+question for Geoff: `classes.fleet_tuneup` says `drop_in = 0` while its copy says no
 registration is required.
 
 **Geoff's review queue (full entries in docs/status-archive.md).** Before/afters on dev: the
