@@ -26,7 +26,6 @@
 // current scale (149 households, a few hundred members/holdings/enrollments total) the resulting
 // payload is small; a future scale where that stops holding is the point to revisit this call
 // into a lazy per-row read.
-import type { D1Database } from '@cloudflare/workers-types';
 import { listAssignments, type AssetPaymentStanding } from './assets-store';
 import type { DirectoryVisibility, MembershipTier } from './member-types';
 import { classifyHouseholdStanding, type HouseholdStandingStatus } from '$member-auth/lib/standing';

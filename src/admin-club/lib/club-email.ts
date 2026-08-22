@@ -15,7 +15,6 @@
 // helper (neither is a public export subpath); this module reads `env.EMAIL.send(...)` directly,
 // the same durable shape CLAUDE.md's own "Cloudflare email" note documents, rather than reaching
 // into engine internals for a function it cannot import anyway.
-import type { D1Database } from '@cloudflare/workers-types';
 
 /** The Cloudflare Email Sending binding shape this module needs: a structural subset of
  *  `CairnPlatformBindings['EMAIL']`, read loosely (optional) rather than trusting that type's own

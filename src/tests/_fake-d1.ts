@@ -4,7 +4,6 @@
 // the same shape cairn-cms's own `fakeD1` (src/tests/unit/cairn-admin-actions.test.ts) uses for its
 // auth-store tests, since this site's Club screens are the first consumer of a real D1 binding of
 // their own.
-import type { D1Database } from '@cloudflare/workers-types';
 
 /** A canned response, or a function of the call's bound args, for a query whose result must
  *  vary within one test even though its SQL text matches the same substring key (a `... WHERE

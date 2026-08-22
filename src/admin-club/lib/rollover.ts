@@ -21,7 +21,6 @@
 // Asset waitlists and memberships are not read or written here at all: an asset queue is
 // multi-year and continuous by design (never resets), and a membership's standing is rolling, not
 // season-bound, so neither one has anything for a season boundary to mean.
-import type { D1Database } from '@cloudflare/workers-types';
 import { getCurrentSeason } from './club-settings';
 
 /** Thrown when the typed confirmation does not read back exactly `currentSeason + 1`: the single

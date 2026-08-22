@@ -2,7 +2,6 @@
 // read the site's own CLUB_DB binding (initiative 5 Task 2: this lived in club-roles.ts until the
 // role-management table that module read went away with the roles collapse; CLUB_DB itself is not
 // going anywhere, so its accessor moved to a home of its own rather than retiring with the rest).
-import type { D1Database } from '@cloudflare/workers-types';
 import type { ClubRole } from '$theme/cairn.config';
 
 /** The narrow, explained bridge every server file in this section uses to read the site's own

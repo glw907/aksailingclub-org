@@ -8,7 +8,6 @@
 // (the ruling below): `ensureMember` (public signup) and `addHouseholdMember` stay lenient because
 // blocking a stranger's signup or a primary adding a covered dependent over a phone format is the
 // wrong trade; a member editing their own profile can take a moment to fix a malformed number.
-import type { D1Database } from '@cloudflare/workers-types';
 import { normalizeEmail, normalizePhoneE164 } from '$admin-club/lib/member-normalize.js';
 
 /** A user-facing refusal, matching `offers.ts`/`enrollments.ts`'s own `{ error }` shape so every

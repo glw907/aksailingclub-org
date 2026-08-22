@@ -30,7 +30,7 @@
   <title>{page.status} — {siteConfig.siteName}</title>
 </svelte:head>
 
-<div class="flex min-h-dvh flex-col bg-base-100 font-body text-base-content">
+<div class="site-shell flex min-h-dvh flex-col bg-base-100 font-body text-base-content">
   <SiteHeader />
 
   <main id="main" class="site-main flex-1">

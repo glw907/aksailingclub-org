@@ -1,7 +1,6 @@
 // The portal's own real-D1 reads/writes against the credit ledger (0005_member_domain's
 // `credit_grants`/`credit_redemptions`): grants minus redemptions, computed fresh, never stored
 // (that migration's own header).
-import type { D1Database } from '@cloudflare/workers-types';
 
 /** A household's class-credit balance: total granted minus total redeemed. Deliberately does not
  *  check the household's standing: the published promise is that credits never expire, not even

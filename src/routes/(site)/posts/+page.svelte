@@ -7,14 +7,9 @@
   import { CairnHead } from '@glw907/cairn-cms/delivery/head';
   import { siteConfig } from '$theme/cairn.config';
   import { ICON_PATHS } from '$theme/markdown/icons';
+  import { formatDayMonth } from '$chassis/date.js';
 
   let { data }: { data: PageData } = $props();
-
-  const dateFmt = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long', timeZone: 'UTC' });
-
-  function formatDate(iso: string): string {
-    return dateFmt.format(new Date(iso));
-  }
 
   // A glyph per vocabulary topic, for the Browse-by-Topic grid. `compass` is the fallback for a
   // future vocabulary value this map has not caught up with yet, so a new tag never renders blank.
@@ -103,7 +98,7 @@
       {#each entries as post (post.id)}
         <li class="flex flex-col gap-3xs sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-xs">
           <a href={post.permalink} class="font-semibold text-primary">{post.title}</a>
-          {#if post.date}<time datetime={post.date} class="text-step--1 text-muted">{formatDate(post.date)}</time>{/if}
+          {#if post.date}<time datetime={post.date} class="text-step--1 text-muted">{formatDayMonth(post.date)}</time>{/if}
         </li>
       {/each}
     </ul>

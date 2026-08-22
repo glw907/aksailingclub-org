@@ -7,7 +7,6 @@
 // this task's own scope is `my-account/**` and `member-portal/lib/` only (matching the prior
 // welcome-back task's own precedent for keeping a small route-adjacent helper local instead of
 // reaching across a route boundary for it).
-import type { D1Database } from '@cloudflare/workers-types';
 import type { MembershipTier } from '$member-auth/lib/standing';
 
 interface ReclaimableMembershipRow {

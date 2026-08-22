@@ -20,7 +20,6 @@
 // Audience 'youth-class' documents (the youth medical form) resolve but derive no requirement here
 // (rule 1): the structured per-class medical-data flow is post-v1, so this engine only ever
 // recognizes that such a document exists, never requires it.
-import type { D1Database } from '@cloudflare/workers-types';
 import type { DocumentAudience, SignableDocument } from '$theme/documents';
 import { computeAge } from './age-gate';
 import { getHouseholdInfo, listHouseholdMembers } from './household';

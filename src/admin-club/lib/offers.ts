@@ -15,7 +15,6 @@
 // sweep runs from a page `load`, which `adminAction` never wraps either. All three write their
 // own `audit_log` row directly (the same insert shape the packaged sink uses), as `'public:claim'`,
 // `'public:decline'`, or `'system'` respectively.
-import type { D1Database } from '@cloudflare/workers-types';
 import { generateToken, hashToken } from '@glw907/cairn-cms/auth-crypto';
 import { getClass, getClassWithCounts } from './classes-store';
 import { getOfferWindowHours } from './club-settings';

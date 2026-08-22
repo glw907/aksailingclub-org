@@ -10,7 +10,6 @@
 // `ContentIndex`, never a row in `CLUB_DB`; `announcements` (migrations/asc-club/0017) only
 // records that a send happened, keyed by the post's own content id as a plain string, not a
 // foreign key (the same reasoning `events`/`classes` never reference a git-owned concept).
-import type { D1Database } from '@cloudflare/workers-types';
 import { deriveExcerpt } from '@glw907/cairn-cms/delivery/data';
 import { resolveSegment } from './segments';
 import { chunkRecipients, RECIPIENT_CHUNK_SIZE } from './bulk-email';

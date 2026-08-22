@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isActionFailure } from '@sveltejs/kit';
-import type { RateLimit } from '@cloudflare/workers-types';
 import type { Editor } from '@glw907/cairn-cms';
 import type { AdminActionAuditRecord, CairnEvent } from '@glw907/cairn-cms/sveltekit';
 import { access } from '$theme/cairn.config.js';

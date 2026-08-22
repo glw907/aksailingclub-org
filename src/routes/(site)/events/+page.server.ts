@@ -1,14 +1,14 @@
 // Task 4's dedicated /events route: it shadows the general (site)/[...path] catch-all for this
 // one literal path (SvelteKit always prefers a literal segment route over a rest-parameter one),
 // so the "events" pages content entry keeps its editable editorial intro (rendered through the
-// exact same plumbing the catch-all uses, via the shared `routes` in $theme/public-routes), while
+// exact same plumbing the catch-all uses, via the shared `routes` in $chassis/public-routes), while
 // the full calendar below it is the events deep-look pass's own detailed listing
 // ($theme/events-data.ts, against docs/events-manifest.md's re-enumeration of the live page).
 // Repointed to asc-club by pass 2.1's Task 9: the listing and every class's signup link now read
 // one database (CLUB_DB), so the separate slug-join Task 8 needed against a second read is gone
 // (see events-data.ts's own header on the query that now computes it directly).
 import type { PageServerLoad } from './$types';
-import { routes } from '$theme/public-routes';
+import { routes } from '$chassis/public-routes';
 import { ORIGIN } from '$chassis/content';
 import { publicMediaResolver, renderMarkdown } from '$theme/cairn.config';
 import { buildEventsPage, readEventRows } from '$theme/events-data';

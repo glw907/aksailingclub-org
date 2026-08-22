@@ -8,7 +8,6 @@
 // wrapper around it (the same builder/executor split `ledger.ts`'s `buildTransactionStatements`/
 // `recordTransaction` already establishes): call Stripe first in API mode and write nothing on a
 // failure, then fold the ledger refund and every unwind into one `db.batch()`.
-import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types';
 import type { TimelineLine, TimelineTransaction } from './money-store';
 import { buildTransactionStatements, type TransactionHeader, type TransactionLineInput } from './ledger';
 import { buildRefundIdempotencyKey, issueStripeRefund, type CreateCheckoutEnv } from './payments';

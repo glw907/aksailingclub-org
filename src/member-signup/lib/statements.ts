@@ -13,7 +13,6 @@
 // This is the one function in the engine's pure core that takes a `db`: a waitlist row's
 // `position` needs the class's current queue length, a fact only D1 has, so `buildJoinStatements`
 // reads that (never writes) before returning the statement list.
-import type { D1Database } from '@cloudflare/workers-types';
 import type { BuildJoinStatementsOptions, BuildJoinStatementsResult, JoinPricingResult, NormalizedJoinInput } from './types.js';
 
 /**

@@ -13,7 +13,6 @@
 // not a pure function of `paid_at` any more), and the guardian-aware class-contact resolver
 // (`class-contact.ts`'s `resolveClassContact`) for a class roster, the same resolver every other
 // class-related send already routes through.
-import type { D1Database } from '@cloudflare/workers-types';
 import { classifyHouseholdStanding } from '$member-auth/lib/standing';
 import { resolveClassContact } from './class-contact';
 import { getClass, listEnrollments, type ClassRow } from './classes-store';

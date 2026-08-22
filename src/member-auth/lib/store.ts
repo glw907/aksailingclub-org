@@ -2,7 +2,6 @@
 // src/lib/auth/store.ts at the shape level, adapted to this schema's TEXT-datetime convention and
 // its consumed_at-column single-use discipline (offers.ts's own compare-and-set lesson) rather
 // than cairn's delete-on-consume (see migrations/asc-club/0008_member_auth/README.md).
-import type { D1Database } from '@cloudflare/workers-types';
 
 /** One `members` row, camelCased, as far as this store's own callers need it. */
 export interface MemberRow {

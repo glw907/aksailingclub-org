@@ -14,7 +14,6 @@
 // `admin-club/lib/households-store.ts`'s own `HOUSEHOLD_GROUNDING_SQL`, plus the household's own
 // `former_at`), never a per-member standing lookup: the directory's read stays four queries
 // regardless of club size.
-import type { D1Database } from '@cloudflare/workers-types';
 import { classifyHouseholdStanding } from '$member-auth/lib/standing';
 import type { DirectoryVisibility } from './household';
 

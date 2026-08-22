@@ -10,7 +10,6 @@
 // status label maps, hero-image resolution, and the month/off-season/meetings grouping (a
 // governance row is pulled out of the month and off-season buckets entirely, by type, regardless
 // of its date, mirroring the legacy main-site Worker's own `buildEventsPage`).
-import type { D1Database } from '@cloudflare/workers-types';
 import type { MediaResolve } from '@glw907/cairn-cms/media';
 import {
   categorize,

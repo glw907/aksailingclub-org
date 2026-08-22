@@ -11,7 +11,6 @@
 // waitlist-offer tokens and retired at the same time. What stays site-owned is this domain's
 // policy, not its cryptography: the member cookie names, the 15-minute token TTL, and the
 // `member_sessions`/`member_tokens` store this file drives.
-import type { D1Database } from '@cloudflare/workers-types';
 import { tokensMatch } from '@glw907/cairn-cms/auth-crypto';
 import {
   generateMemberToken,

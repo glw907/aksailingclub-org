@@ -14,7 +14,6 @@
 // first attempt was missed, but never spam the same outstanding adult), the resumption email is
 // sent-once-ever per household/season (the loop closes exactly once, whichever signature happens
 // to land last).
-import type { D1Database } from '@cloudflare/workers-types';
 import { mintMemberSignInLink } from '$member-auth/lib/auth';
 import { sendClubEmail, type EmailBindingEnv } from '$admin-club/lib/club-email';
 import type { SigningContext } from './signatures';

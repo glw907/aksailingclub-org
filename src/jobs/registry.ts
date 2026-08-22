@@ -2,7 +2,6 @@
 // adversarial-review.md's "structural gap: nothing can act on time"): a small, typed contract
 // every cron-driven job implements, so `runner.ts` can run each one independently, audit it, and
 // never let one job's failure block the next.
-import type { D1Database } from '@cloudflare/workers-types';
 import type { EmailBindingEnv } from '$admin-club/lib/club-email';
 import { expireStaleOffersJob } from './expire-stale-offers';
 import { renewalRemindersJob } from './renewal-reminders';

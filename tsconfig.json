@@ -8,7 +8,31 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "sourceMap": true,
-    "strict": true,
-    "types": ["@cloudflare/workers-types"]
-  }
+    "strict": true
+  },
+  // "files" adds to the extended .svelte-kit/tsconfig.json's own "include" list rather than
+  // replacing it (an "include" key here would clobber that list entirely, since TS does not
+  // merge include/exclude/files arrays across an extends chain, only overrides them). The
+  // generated worker-configuration.d.ts (`npm run types` / `wrangler types`) sits at the repo
+  // root, outside every glob the parent config lists, so it needs an explicit reference here to
+  // be picked up by svelte-check.
+  //
+  // Caveat: wrangler.toml's `main` points at the BUILT worker (.svelte-kit/cloudflare/_worker.js).
+  // A plain `wrangler types` run, with that file present on disk (after `npm run build` or the
+  // e2e webServer), embeds `Cloudflare.GlobalProps.mainModule: typeof import(".../_worker")` in
+  // the generated file, and checkJs then pulls the whole built worker (and its own dependency
+  // graph) into the type-check, producing hundreds of implicit-any errors on generated JS.
+  // `npm run types` passes `--include-env=false`, which (verified empirically, not just per its
+  // name) suppresses both the project's own `Env` interface AND `GlobalProps.mainModule`
+  // regardless of whether build output exists, so the entrypoint typeof-import is never emitted
+  // and the flag alone is deterministic with no directory deletion required. `exclude` would not
+  // have helped here: TypeScript still type-checks a file reached via `import`/`typeof import`
+  // even when it matches an `exclude` pattern, since `exclude` only prunes `include`-glob
+  // candidates, not the import graph. This site deliberately does not use `wrangler types`'s own
+  // `Env` interface (see src/app.d.ts's header comment for why: the explicit `Platform.env` shape
+  // there also carries Worker secrets, which wrangler.toml never lists), so `--include-env=false`
+  // costs this site nothing. The committed worker-configuration.d.ts was generated that way, so
+  // its `GlobalProps` block is empty and `npm run check` stays 0/0 regardless of whether build
+  // output happens to exist when `npm run types` runs.
+  "files": ["worker-configuration.d.ts"]
 }

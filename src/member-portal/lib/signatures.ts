@@ -12,7 +12,6 @@
 // documents apply and whether each is already signed; this module is the WRITE path, and it
 // re-checks the already-signed condition itself so a double submit (a member double-clicks Sign,
 // or reloads a stale page) is a no-op rather than a duplicate row.
-import type { D1Database } from '@cloudflare/workers-types';
 import type { DocumentKind, SignableDocument } from '$theme/documents';
 import { normalizeEmail, normalizePhoneE164 } from '$admin-club/lib/member-normalize.js';
 

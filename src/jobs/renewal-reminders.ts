@@ -23,7 +23,6 @@
 // action and the public claim page both already call), so its query and send logic lives here
 // directly rather than in a new `$admin-club/lib` module a second caller would have to be
 // invented to justify.
-import type { D1Database } from '@cloudflare/workers-types';
 import { clearSequenceFormer, formerBoundaryFrom, markHouseholdFormer, renewalExpiryFrom } from '$member-auth/lib/standing';
 import { sendClubEmail } from '$admin-club/lib/club-email';
 import { formatCivilDate } from '$admin-club/lib/ui';

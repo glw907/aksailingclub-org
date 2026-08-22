@@ -22,7 +22,6 @@
 // real signature lands now, and this module writes no waiver row of any shape -- the signature
 // gate itself lives one layer up, in `class-signup-form.ts`'s own `handleClassSignup` (fix round),
 // which never reaches `signUpForClass` for a member whose current-season release is unsigned.
-import type { D1Database } from '@cloudflare/workers-types';
 import { getClassWithCounts, isPubliclyOpen } from './classes-store';
 import { hasActiveOfferForClass } from './offers';
 import { ensureMember } from './people';

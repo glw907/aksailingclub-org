@@ -11,7 +11,6 @@
 // reconcilers write sequentially instead, for reasons that module's header states); `recordTransaction`
 // is the convenience path for a caller with no domain write of its own (donations, a future manual
 // admin payment).
-import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types';
 
 export type TransactionKind = 'charge' | 'refund' | 'void';
 export type TransactionSource = 'stripe' | 'paypal' | 'check' | 'cash' | 'comp' | 'other';

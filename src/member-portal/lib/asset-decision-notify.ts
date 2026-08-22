@@ -28,7 +28,6 @@
 // `catch`, so a D1 failure anywhere in the lookup, mint, or log step degrades to `{ ok: false }`
 // the same way an expected refusal does, keeping this module's own "never throws" promise true
 // for every failure mode, not just the two named lookups.
-import type { D1Database } from '@cloudflare/workers-types';
 import { mintMemberSignInLink } from '$member-auth/lib/auth';
 import { formatMemberCents } from '$member-auth/lib/format';
 import { sendClubEmail, type EmailBindingEnv, type SendClubEmailResult } from '$admin-club/lib/club-email';

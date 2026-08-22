@@ -5,7 +5,6 @@
 // `credits.ts`, never a second copy of any of their logic — the portal's own contribution is
 // composing them behind a signed-in member's own identity, where the public routes
 // (`enrollments.ts`, `offers.ts`) instead resolve identity from a raw email or a bearer token.
-import type { D1Database } from '@cloudflare/workers-types';
 import { getClassWithCounts, isPubliclyOpen, type ClassTrack } from '$admin-club/lib/classes-store';
 import { hasActiveOfferForClass, triggerFreedSpotOffer } from '$admin-club/lib/offers';
 import { sendClubEmail, type EmailBindingEnv } from '$admin-club/lib/club-email';

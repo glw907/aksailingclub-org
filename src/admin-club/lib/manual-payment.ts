@@ -5,7 +5,6 @@
 // non-refunded membership refuses (the `UNIQUE(household_id, season)` constraint this module
 // never wants a caller to hit at write time); a REFUNDED row for the same season reclaims in
 // place instead of inserting (ruling 4, "rejoining the same season reclaims the row").
-import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types';
 import type { MembershipTier } from './member-types';
 import { buildTransactionStatements, type TransactionSource } from './ledger';
 import { toSqliteDatetime } from './offers';

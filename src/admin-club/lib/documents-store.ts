@@ -8,7 +8,6 @@
 //
 // Every read in this file is READ-ONLY: T6's own spec line is "no edit paths to signature rows --
 // they are evidence; no delete anywhere". Nothing here writes.
-import type { D1Database } from '@cloudflare/workers-types';
 import type { DocumentAudience, DocumentKind, SignableDocument } from '$theme/documents';
 import {
   deriveHouseholdRequirements,

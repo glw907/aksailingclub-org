@@ -3,7 +3,6 @@
 // builders on the `households-store.ts` pattern (this module's own header on why a merge conflict
 // check needs `db` reads before it can decide): a caller runs the returned statements in one
 // `db.batch()` alongside its own `clubAdminAction` audit, never executing anything here itself.
-import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types';
 
 /** A move or merge plan's own success shape: unrun statements for the caller's `db.batch()`. */
 export interface SurgeryPlan {

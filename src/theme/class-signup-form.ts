@@ -7,7 +7,6 @@
 // `contact.remote.ts`'s own handler stays untested at this layer.
 import * as v from 'valibot';
 import { invalid } from '@sveltejs/kit';
-import type { D1Database, RateLimit } from '@cloudflare/workers-types';
 import { checkRateLimitKeys, verifyTurnstile } from '@glw907/cairn-cms/cloudflare';
 import { signUpForClass, type SignUpForClassInput, type SignUpResult } from '$admin-club/lib/enrollments';
 import type { EmailBindingEnv } from '$admin-club/lib/club-email';

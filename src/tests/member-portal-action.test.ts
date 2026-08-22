@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { RateLimit } from '@cloudflare/workers-types';
 import { fakeD1 } from './_fake-d1';
 import { portalAction } from '$member-portal/lib/portal-action';
 

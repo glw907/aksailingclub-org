@@ -8,7 +8,6 @@
 // write functions: unlike `settings.updated_by`, the ratified `events` table (migrations/asc-club/
 // 0001_substrate/forward.sql) carries no per-row attribution column, so there is nowhere for one
 // to go; the acting editor's identity lives only in the audit record the action layer emits.
-import type { D1Database } from '@cloudflare/workers-types';
 
 /** The `events.category` CHECK constraint's exact vocabulary (forward.sql), owned here since
  *  every consumer (the list's chip, the detail form's select) reads the same five values. */

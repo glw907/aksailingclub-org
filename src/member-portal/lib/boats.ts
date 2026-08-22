@@ -4,7 +4,6 @@
 // scoped to the signed-in member's own rows, never a household-wide reach. The household screen
 // only ever READS boats, grouped by owner (`listHouseholdBoatsGroupedByOwner`), to answer "who has
 // what" without granting anyone edit rights over a boat they do not own.
-import type { D1Database } from '@cloudflare/workers-types';
 
 /** `boats.kept_on`'s own `CHECK` values (migration 0028_boats_model). */
 export type BoatKeptOn = 'trailer' | 'mooring';

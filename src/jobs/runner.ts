@@ -12,7 +12,6 @@
 // this module's own `'system:cron'` rather than an editor email, and every action name this file
 // writes is namespaced under `job.` so a tick's rows stay distinguishable from admin-action rows
 // in the shared table.
-import type { D1Database } from '@cloudflare/workers-types';
 import { createD1AuditSink } from '@glw907/cairn-cms/sveltekit';
 import type { AdminActionAuditSink } from '@glw907/cairn-cms/sveltekit';
 import { resolveClubDb } from '$admin-club/lib/club-db';

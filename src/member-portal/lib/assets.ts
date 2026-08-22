@@ -6,7 +6,6 @@
 // rather than a second copy of any of them; this module's own contribution is the small state
 // machine in front of them (`asset_requests`) and the household-scoped reads the admin's
 // household-agnostic store never needed.
-import type { D1Database } from '@cloudflare/workers-types';
 import { assignAsset, addToWaitlist, listAssetTypes, releaseAssignment, type AssetTypeRow } from '$admin-club/lib/assets-store';
 import { getCurrentSeason } from '$admin-club/lib/club-settings';
 import type { EmailBindingEnv } from '$admin-club/lib/club-email';
