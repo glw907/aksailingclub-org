@@ -108,7 +108,7 @@ was sent to rather than from the top of the document. -->
           <span class="sr-only">Class or clinic: </span>
         {/if}{card.title}
       </h2>
-      <p class="ev-facts">{factsLine}{#if card.isPast} · <span class="sr-only">Status: </span>Past{/if}</p>
+      <p class="ev-facts">{factsLine}{#if card.isPast}{' · '}<span class="sr-only">Status: </span>Past{/if}</p>
       {#if card.longHtml}<div class="ev-body">{@html card.longHtml}</div>{/if}
       {#if action === 'register'}
         <a class={primary ? 'ev-cta' : 'ev-link'} href={card.registrationUrl}>Register <span aria-hidden="true">→</span></a>
@@ -128,12 +128,13 @@ was sent to rather than from the top of the document. -->
   /* No `scroll-margin-top` here: `site.css` sets `scroll-padding-top` on the scroll container
      itself (the sticky header's own clearance), which covers every anchor target on the site at
      once, this band included. */
-  .ev-band:focus-visible {
-    /* The band takes focus programmatically when a jump link lands on it (`tabindex="-1"`). The
-       ring is drawn inside the band, since a section this wide would otherwise paint its outline
-       off the viewport's own edges. */
-    outline: 2px solid var(--color-primary);
-    outline-offset: -2px;
+  .ev-band:focus {
+    /* The band takes focus programmatically (`tabindex="-1"`) when the page opens at the next
+       upcoming event or a jump link lands here, so the tab order continues from the viewport.
+       A landing target paints no ring: the scroll position already shows where the reader is,
+       and a ring around a full-width band on every page load would read as a defect. The
+       band's own controls keep their rings. */
+    outline: none;
   }
   .ev-month-anchor {
     height: 0;
