@@ -268,6 +268,18 @@
   --cairn-cta-border: transparent;
   --cairn-cta-btn-bg: var(--color-base-100);
   --cairn-cta-btn-content: var(--color-base-content);
+
+  /* The engine's PreviewBanner (cairn-cms's dist/components/PreviewBanner.svelte, mounted by
+     the share-a-draft preview route) reads exactly these four custom properties for its own
+     colors and keys its own dark palette off `prefers-color-scheme`, not this site's
+     `data-theme` toggle. Declaring them from the site's own tokens here (and again in both dark
+     blocks below) keeps the banner following the toggle instead of the OS setting. Star gold is
+     deliberately not used: the engine exposes no separate accent-edge property, and the story
+     reserves gold for marks, never body text or a link. */
+  --cairn-preview-bg: var(--color-base-200);
+  --cairn-preview-fg: var(--color-base-content);
+  --cairn-preview-border: var(--color-card-border);
+  --cairn-preview-link: var(--color-primary);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -299,6 +311,12 @@
     --cairn-cta-border: var(--color-base-300);
     --cairn-cta-btn-bg: var(--color-primary);
     --cairn-cta-btn-content: var(--color-primary-content);
+
+    /* See the light `:root` block's own comment above: the engine's PreviewBanner dark palette. */
+    --cairn-preview-bg: var(--color-base-200);
+    --cairn-preview-fg: var(--color-base-content);
+    --cairn-preview-border: var(--color-card-border);
+    --cairn-preview-link: var(--color-primary);
   }
 }
 
@@ -319,6 +337,13 @@
   --cairn-cta-border: var(--color-base-300);
   --cairn-cta-btn-bg: var(--color-primary);
   --cairn-cta-btn-content: var(--color-primary-content);
+
+  /* See the light `:root` block's own comment above: the engine's PreviewBanner dark palette,
+     the explicit-toggle path for the same values. */
+  --cairn-preview-bg: var(--color-base-200);
+  --cairn-preview-fg: var(--color-base-content);
+  --cairn-preview-border: var(--color-card-border);
+  --cairn-preview-link: var(--color-primary);
 }
 
 /* The toggle flip: `.theme-flip-transition` lands on `<html>` for one flip only (theme-toggle.ts),

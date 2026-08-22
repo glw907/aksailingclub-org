@@ -157,17 +157,26 @@ npm run build                                        # build to .svelte-kit/clou
 npm run build:search                                 # build + Pagefind search index
 npx wrangler dev --remote                            # real D1/R2 bindings (EVENTS_DB, MEDIA_BUCKET)
 npm run check                                         # svelte-check, 0 errors/0 warnings
-npm run types    # regenerate worker-configuration.d.ts after any wrangler.toml change (bindings, compatibility_date)
+npm run types    # regenerate worker-configuration.d.ts (wrangler types --include-env=false) after any wrangler.toml change
 npm test                                              # vitest
 npm run test:e2e                                      # Playwright, the pixel-diff visual suite
 ```
 
 `npm run cairn:manifest` regenerates `src/content/.cairn/index.json` after any content edit made
 outside the admin (a direct file edit, a migration script); the admin's own save path regenerates
-it automatically. `worker-configuration.d.ts` is committed, and it must be generated from a clean
-tree (no `.svelte-kit/cloudflare/_worker.js` present, which `npm run types` itself enforces),
-because wrangler embeds the built worker's module type into `GlobalProps` when that file exists,
-which cascades through `checkJs` into thousands of `svelte-check` errors.
+it automatically. `worker-configuration.d.ts` is committed; `npm run types` runs `wrangler types
+--include-env=false`, which keeps the generated file machine-independent, since without that flag
+wrangler embeds the built worker's module type into `GlobalProps` whenever
+`.svelte-kit/cloudflare/_worker.js` happens to exist on whichever machine regenerates it (a stray
+local build left over from an earlier session, say), which cascades through `checkJs` into
+thousands of `svelte-check` errors. `--include-env=false` also means the generated `Env` interface
+never appears; this site declares its bindings explicitly instead, in `src/app.d.ts`'s
+`Platform.env`, because that shape also names Worker secrets (`TURNSTILE_SECRET_KEY`,
+`STRIPE_*`, `DISCORD_WEBHOOK_*`) that wrangler.toml never lists and `wrangler types` therefore
+never could generate. `@cloudflare/workers-types` stays a devDependency even though nothing in
+this site's own source imports from it directly: cairn's own dist `.d.ts` files do
+(`D1Database`/`R2Bucket`/`RateLimit`), and with it absent those degrade to an unresolved-import
+`any` that `skipLibCheck: true` hides from `svelte-check` entirely.
 
 ## New Post
 

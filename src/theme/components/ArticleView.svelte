@@ -5,13 +5,15 @@ entry route) and `(site)/preview/[token]/+page.svelte` (the share-a-draft previe
 0.95's preview feature) both render this one component, so the two surfaces cannot structurally
 drift: the same markup, the same styling, the same data shape.
 
-The `preview` flag is the one behavior difference the two callers need: a preview link is a
-bearer credential (whoever holds the URL can read the draft with no session), so on preview this
-component strips `canonical` from `seo.links` and `og:url` from `seo.meta` before `CairnHead`.
-This page passes no markdown-twin URL to `CairnHead` on either route, so there is no twin link to
-suppress here (`ArticleView`'s public caller has never carried one). It changes no other
-rendering: the fidelity claim (a minted preview and its eventual public page render identically)
-depends on everything else staying byte-for-byte the same. -->
+The `preview` flag is the one behavior difference the two callers need: on preview, this
+component strips the entry's eventual permalink from the head data (`canonical`, `og:url`,
+`jsonLd.url`) before `CairnHead`, via `previewSafeSeo` (`$theme/preview-seo`), so a crawler or
+unfurler cannot consolidate the preview onto a not-yet-live URL and the page never
+self-canonicalizes while it is `noindex`ed. This page passes no markdown-twin URL to `CairnHead`
+on either route, so there is no twin link to suppress here (`ArticleView`'s public caller has
+never carried one). It changes no other rendering: the fidelity claim (a minted preview and its
+eventual public page render identically) depends on everything else staying byte-for-byte the
+same. -->
 <script lang="ts">
   import type { EntryData } from '@glw907/cairn-cms/delivery';
   import { CairnHead } from '@glw907/cairn-cms/delivery/head';
@@ -19,6 +21,7 @@ depends on everything else staying byte-for-byte the same. -->
   import { GOVERNANCE_SUBPAGE_SLUGS } from '$theme/redirects';
   import { isPrimaryPage } from '$theme/page-tiers';
   import { formatDate } from '$chassis/date.js';
+  import { previewSafeSeo } from '$theme/preview-seo';
 
   interface Props {
     /** The composed entry data: the public route's own `PageData` and the preview route's
@@ -32,20 +35,13 @@ depends on everything else staying byte-for-byte the same. -->
 
   let { data, preview = false }: Props = $props();
 
-  // On preview, strip the canonical link and the og:url meta from the head data before it
-  // reaches CairnHead: the URL is the credential, and a site's own chrome otherwise exports it to
-  // every third party the site reports to (analytics, social unfurl crawlers). Every other head
-  // field (title, description, the rest of the OG/Twitter tags) is unchanged, so the tab title
-  // and any manual share still read sensibly.
-  const seo = $derived(
-    preview
-      ? {
-          ...data.seo,
-          meta: data.seo.meta.filter((m) => m.property !== 'og:url'),
-          links: data.seo.links.filter((l) => l.rel !== 'canonical'),
-        }
-      : data.seo,
-  );
+  // On preview, strip the entry's eventual permalink (canonical link, og:url meta, jsonLd.url)
+  // from the head data before it reaches CairnHead. The token's own containment is the engine's
+  // preview response headers; this strip is the separate, narrower precaution of keeping the
+  // not-yet-live permalink out of anything a crawler or unfurler reads. Every other head field
+  // (title, description, the rest of the OG/Twitter tags) is unchanged, so the tab title and any
+  // manual share still read sensibly.
+  const seo = $derived(preview ? previewSafeSeo(data.seo) : data.seo);
 
   const isPost = $derived(data.entry.concept === 'posts');
   // Bulletins are dated the same as posts (a bulletin's date is its whole point), but carry no
