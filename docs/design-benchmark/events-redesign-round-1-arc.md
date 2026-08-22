@@ -12,3 +12,10 @@ at June 1 so the Register and fireweed states show); `build.py` rebuilds them fr
 - Data finding, not design: `classes.fleet_tuneup` has `drop_in = 0` while its description
   says "No registration required", so it renders a Register button. Geoff to rule which is
   right; the build honors `drop_in`.
+- 2026-08-22 Geoff's verdict on probe 1: keep everything ("a remarkably good first pass");
+  the one change is the title line, which read as marketing. Process lesson recorded in agent
+  memory (`feedback_probe_from_real_shell`).
+- 2026-08-22 probe 2: the title line is plain fact ("The 2026 season, May through November.",
+  the year and range derived from the rows at build time); alternative offered: bare "Events"
+  with no second line. Nothing else changed. Awaiting the title verdict; if kept, the arc
+  settles.
