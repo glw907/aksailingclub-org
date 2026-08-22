@@ -6,6 +6,33 @@
 > than the ones here live in `docs/status-archive.md` (the pre-2026-08-21 rolling status,
 > moved whole).
 
+## 2026-08-22: cairn 0.96.0 adoption (the floors release)
+
+Sheet: `docs/2026-08-22-cairn-0.96-update-instructions.md`. Branch `cairn-0.96-adoption`. A
+small update run straight through the gates, no plan.
+
+**What landed.** The pin went `^0.95.0` to `^0.96.0` with the peer floors the release raises:
+`@sveltejs/kit ^2.70`, `svelte ^5.56.10`, `wrangler ^4.125.0`, `engines.node >=24`. The
+lockfile was regenerated from a clean install. Three 0.95 workarounds came out because the
+engine fixed what they covered: the `$app/environment` wrangler alias and its shim module
+(`src/jobs/wrangler-app-environment-shim.ts`; the barrel's import is now a guarded dynamic
+one, proven by a dry-run deploy before the delete), `src/theme/preview-seo.ts` with its test
+and `ArticleView`'s `preview` prop (`previewLoad` strips the permalink itself), and the 0.95
+harvest doc (all five findings fixed upstream). `/preview/[token]` now passes `PreviewBanner`
+a fixed-zone `formatExpiry` (long month plus the hour, Alaska time) so the expiry reads in the
+site's vocabulary and cannot hydration-mismatch. Tidy moves to `claude-sonnet-5` by default.
+
+**What the gates caught.** `svelte-check` found two errors the sheet did not predict: the
+regenerated lockfile pulled `@types/hast` 3.0.5, which types `ariaLabelledBy` and
+`ariaDescribedBy` as `string[]`; `buildTable` in `src/theme/markdown/components.ts` now
+assigns the array form, and the existing table test proves the serialized attribute is
+unchanged.
+
+**What a later pass should not rediscover.** A transitive type bump rides every lockfile
+regeneration; "the sheet said nothing else changes" covers cairn's contract, never
+`node_modules`. `formatExpiry` is the PreviewBanner seam for a site's date vocabulary; the
+chassis `date.ts` stays date-only on purpose, and an expiry wants the hour.
+
 ## 2026-08-21: cairn 0.95.0 adoption and chassis sync
 
 Plan: `docs/plans/2026-08-21-cairn-0.95-adoption.md`. Branch `cairn-0.95-adoption`, PR #4.
