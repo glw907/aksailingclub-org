@@ -7,9 +7,10 @@
 > moving to one of those, never deleting.
 
 **Current state (2026-08-22).** The site runs cairn `^0.96.0` (the floors release: Node 24,
-Kit 2.70, Svelte 5.56.10) on branch `cairn-0.96-adoption`, awaiting its PR onto `main`;
-`main` itself carries 0.95, deployed to dev.aksailingclub.org by `deploy.yml`. No initiative is
-in flight. The apex cutover remains its own deliberate DNS change, never bundled with a push.
+Kit 2.70, Svelte 5.56.10) on `main`, merged through PR #5 and deployed to dev.aksailingclub.org
+by `deploy.yml`. In flight: the `events-redesign` build pass on branch `events-redesign-build`,
+executing `docs/plans/2026-08-22-events-redesign.md` through the pass-execute workflow. The
+apex cutover remains its own deliberate DNS change, never bundled with a push.
 
 **Immediate next action (Geoff's).** Two before/afters on dev from the 0.95 pass, both
 rendering changes under the one-check rule: the smartypants typography on any prose page
@@ -38,7 +39,7 @@ route; events stay D1 and the no-events-concept ruling stays closed). Probe arc 
 probe 3 (title "The 2026 Season"); arc log `docs/design-benchmark/events-redesign-round-1-arc.md`,
 probe files machine-local at `~/.local/asc-data/probes/events-redesign/`. Build plan:
 `docs/plans/2026-08-22-events-redesign.md` (five tasks, ceiling 1.5M, branch
-`events-redesign-build`), awaiting Geoff's plan approval, the pass's one human gate. Open data
+`events-redesign-build`), approved by Geoff 2026-08-22 and executing. Open data
 question for Geoff: `classes.fleet_tuneup` says `drop_in = 0` while its copy says no
 registration is required.
 
