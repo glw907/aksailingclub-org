@@ -6,6 +6,48 @@
 > than the ones here live in `docs/status-archive.md` (the pre-2026-08-21 rolling status,
 > moved whole).
 
+## 2026-08-22: events-redesign, the season page
+
+Contract: `docs/2026-08-22-events-redesign-design.md`. Plan:
+`docs/plans/2026-08-22-events-redesign.md`. Branch `events-redesign-build`, PR #6. Harvest:
+`docs/2026-08-22-events-redesign-harvest-findings.md`. Ceiling 1.5M, raised to 2.2M at the
+close; spend about 2.1M. Human interaction points: the brainstorm's six questions, three
+probe verdicts, the plan approval, the ceiling raise, and two design asides (the title, smooth
+scrolling). Tokens ran over the plan's estimate because the four domain reviews found more than
+the plan anticipated (below).
+
+**What landed.** `/events` is one long season page: the "Events" eyebrow over "The {year}
+Season", a four-entry subscribe bar (Apple, Google, Outlook, a copy button with the feed URL
+beside it), a month index, alternating 3:2 photo bands from live `asc-club` rows with past
+events quieted in place and the page opening at the next upcoming one, and a "Meetings and
+governance" coda table. `/events/[id]` is a link-preview stub (the event's own OG title,
+photo, and description; noindex; meta refresh plus a client-side bounce to the anchor).
+`events-data.ts` carries the band fields and the page facts; the spine components are gone.
+Site-wide smooth scrolling with `scroll-padding-top` for the sticky header. The design probe
+and the e2e spec cover the page; the e2e server runs on a fixed Alaska clock.
+
+**What the gates caught.** The workflow's `diff-reviewer` caught the stub unfurling the
+generic site description with no photo (the route's one purpose). The pass-end fan-out
+caught more: an unguarded second D1 read that turned a blip into a 500; "past" computed on
+the Worker's UTC clock (eight hours early in Alaska; this repo had already solved it in
+`class-schedule.remote.ts`); the events query carrying no season bound, so a 2027 row would
+render under "The 2026 Season"; the fireweed Register computed on the scroll target instead
+of the first open class, so it almost never rendered; the on-load scroll moving the sequential
+focus start past the skip link and the whole nav; the governance Where column dropped with
+`display: none` below 48rem (reflow data loss); band titles self-linking; every band a
+landmark; the star on the 2.26:1 gold rather than the 3:1 dot token; facts separators losing
+their spaces to Svelte's block trimming. All fixed in two rounds.
+
+**What a later pass should not rediscover.** Task 1's implementer overreached its file list
+(deleted the spine and pre-built the stub) to keep the gate green; a data-shape task in a
+data-then-UI split should name the UI it strands, or the plan should order the UI task
+first with a shim. Probe 1 landed first pass because it was built inside the deployed page's
+own shell with live rows (`feedback_probe_from_real_shell`); the build's defects were all in
+the layers the probe does not exercise (D1 degradation, clocks, focus, landmarks), which is
+where the reviewer fan-out earns its cost. Visual baselines are date-dependent on any page
+that renders "past": `ASC_FIXED_TODAY` on the e2e server is the seam. A CI `update_snapshots`
+run fails its push if anything lands on the branch after it checks out; dispatch it last.
+
 ## 2026-08-22: cairn 0.96.0 adoption (the floors release)
 
 Sheet: `docs/2026-08-22-cairn-0.96-update-instructions.md`. Branch `cairn-0.96-adoption`. A

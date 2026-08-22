@@ -36,10 +36,12 @@ the design.
    initiative once cairn 0.86.0 landed; see the initiative entries below).
 
 Then converge: once directory, waivers, and events have shipped to dev with Geoff's
-before/afters, the pre-cutover member surface is complete. Clear the accumulated review
-queue (portal, payments, and these), run the `mw-cutover` apex cutover, and phase-2
-absorption follows, with directory and waivers already down-payments on the MW
-retirement.
+before/afters, the pre-cutover member surface is complete. Correction (Geoff, 2026-08-22):
+the cutover also waits on the `admin-screen-passes` series, since the club cannot leave
+MembershipWorks before the admin functionality is complete. So the order is: the remaining
+admin screens (Events admin next), then clear the accumulated review queue (portal,
+payments, and these), then the `mw-cutover` apex cutover, and phase-2 absorption follows,
+with directory and waivers already down-payments on the MW retirement.
 
 Batching (Geoff confirmed, 2026-07-17): the directory and waivers brainstorms run in
 ONE sitting — they share the membership/portal surface and the member-record data seam.
@@ -373,7 +375,13 @@ against each other. The schema is fully evolvable (CLAUDE.md), so the context CH
 dimension are real migrations, never worked around in code. Interactive brainstorm with Geoff;
 not overnight-eligible (legal exposure plus a product fork on what signing means).
 
-### Events page from-scratch redesign `events-redesign`
+### Events page from-scratch redesign `events-redesign` — DONE 2026-08-22
+Shipped on PR #6 (branch `events-redesign-build`): contract
+`docs/2026-08-22-events-redesign-design.md`, plan `docs/plans/2026-08-22-events-redesign.md`,
+one long anchorable season page with alternating photo bands, a governance coda, a
+four-entry subscribe bar, and a link-preview stub for shared links. The brainstorm ruled on
+the no-events-concept rider: events stay D1, the ruling stays closed. Geoff's before/after on
+dev gates the merge. Original entry follows.
 A full from-scratch design of the events page, OPENING WITH A FUNCTIONAL BRAINSTORM
 (what the page must do for members and visitors before any visual work), interactive
 with Geoff. Licensed its own template and one-time design features; deserves special
