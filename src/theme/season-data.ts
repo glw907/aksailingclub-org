@@ -110,7 +110,7 @@ const EVENTS_QUERY = `SELECT id, title, slug, category AS event_type, start_date
  *  duplicate, wrong-dated entries. `events` carries no `season` column and needs no such filter. */
 const CLASSES_QUERY = `SELECT id, name AS title, slug, 'class' AS event_type, start_date, end_date, NULL AS date_history
                         FROM classes WHERE visible = 1 AND season = ?1`;
-const CURRENT_SEASON_QUERY = `SELECT value FROM settings WHERE key = 'current_season'`;
+const CURRENT_SEASON_QUERY = `SELECT value FROM settings WHERE key = 'current_season' LIMIT 1`;
 
 /** The current season, read from `settings` the same way `class-schedule.remote.ts`'s
  *  `getClassSchedule` already does; `null` when `current_season` is unset. Shared by the full

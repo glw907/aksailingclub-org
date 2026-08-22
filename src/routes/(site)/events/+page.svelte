@@ -8,7 +8,7 @@ the member portal landing already use) since the alternating bands are the page'
 composition, not decoration wrapped around prose. -->
 <script lang="ts">
   import type { PageData } from './$types';
-  import { browser } from '$app/environment';
+  import { afterNavigate } from '$app/navigation';
   import { CairnHead } from '@glw907/cairn-cms/delivery/head';
   import { siteConfig } from '$theme/cairn.config';
   import EventsSubscribeBar from '$theme/components/EventsSubscribeBar.svelte';
@@ -32,14 +32,24 @@ composition, not decoration wrapped around prose. -->
 
   const hasSeason = $derived(bands.length > 0 || data.events.governance.length > 0);
 
-  // On load, when the URL carries no fragment of its own, land the reader on the next upcoming
+  // On arrival, when the URL carries no fragment of its own, land the reader on the next upcoming
   // band instead of the page's top (the design contract's own "opens at the next upcoming
-  // event"). `behavior: 'instant'` keeps the first paint and the landing position in agreement;
-  // a smooth scroll here would visibly jump after paint instead.
-  $effect(() => {
-    if (!browser) return;
+  // event"). This runs after hydration, so it is a jump the reader sees, not the first paint;
+  // `behavior: 'instant'` is what keeps it a single jump rather than a visible glide down the
+  // page (site.css turns smooth scrolling on site-wide).
+  //
+  // `afterNavigate` with the `'enter'` guard, not an `$effect`: only a fresh entry into the page
+  // should move the reader, never a client-side navigation back to it from elsewhere, and never
+  // a re-run when the data changes under an already-settled reader. Focus follows the scroll, so
+  // the next Tab continues from the band in view; without it the first Tab went back to the skip
+  // link and the whole masthead, above everything the reader can see.
+  afterNavigate(({ type }) => {
+    if (type !== 'enter') return;
     if (window.location.hash || !data.events.nextUpcomingId) return;
-    document.getElementById(data.events.nextUpcomingId)?.scrollIntoView({ behavior: 'instant' });
+    const target = document.getElementById(data.events.nextUpcomingId);
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'instant' });
+    target.focus({ preventScroll: true });
   });
 </script>
 
@@ -47,7 +57,7 @@ composition, not decoration wrapped around prose. -->
 
 <div class="events-shell">
   <div class="ev-measure">
-    <header class="events-hero not-prose">
+    <header class="events-hero">
       <p class="events-hero-eyebrow">Events</p>
       <h1 class="events-hero-title">The {data.events.seasonYear} Season</h1>
     </header>
@@ -60,19 +70,14 @@ composition, not decoration wrapped around prose. -->
     />
 
     {#if hasSeason}
-      <EventsIndex months={data.events.months} />
+      <EventsIndex months={data.events.months} hasGovernance={data.events.governance.length > 0} />
     {/if}
   </div>
 
   {#if hasSeason}
     <div class="ev-season">
       {#each bands as { card, showMonth }, i (card.routeId)}
-        <EventBand
-          {card}
-          flip={i % 2 === 1}
-          {showMonth}
-          primary={card.routeId === data.events.nextUpcomingId && card.registrationState === 'open' && !card.dropIn}
-        />
+        <EventBand {card} index={i} flip={i % 2 === 1} {showMonth} primary={card.routeId === data.events.primaryClassId} />
       {/each}
     </div>
     <EventsGovernance rows={data.events.governance} />

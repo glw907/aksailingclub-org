@@ -67,6 +67,7 @@ const GOVERNANCE_ROW = card({
 const EVENTS: EventsPageData = {
   seasonYear: 2026,
   nextUpcomingId: 'class-1',
+  primaryClassId: 'class-1',
   months: [
     { name: 'May', id: 'may', events: [PAST_EVENT] },
     { name: 'June', id: 'june', events: [OPEN_CLASS_1, OPEN_CLASS_2] },
@@ -74,15 +75,11 @@ const EVENTS: EventsPageData = {
   governance: [GOVERNANCE_ROW],
 };
 
+// The load returns `seo` and nothing else from the content entry: the season page renders no
+// part of the "events" entry's own body.
 function fixtureData(events: EventsPageData): PageData {
   return {
-    concept: 'pages',
-    entry: { title: 'Events', frontmatter: {} } as PageData['entry'],
-    html: '',
-    canonicalUrl: 'https://dev.aksailingclub.org/events',
     seo: SEO,
-    newer: undefined,
-    older: undefined,
     events,
     icsUrl: 'https://dev.aksailingclub.org/events/calendar.ics',
     webcalUrl: 'webcal://dev.aksailingclub.org/events/calendar.ics',
@@ -159,8 +156,54 @@ describe('/events season page', () => {
     expect(body).toContain('The 2026 Season');
   });
 
+  it('renders no fireweed control at all when no class is taking registrations', () => {
+    const noOpenClass: EventsPageData = { ...EVENTS, primaryClassId: undefined };
+    const { body } = render(Page, { props: { data: fixtureData(noOpenClass) } });
+    expect(body).not.toContain('ev-cta');
+  });
+
+  it('gives a closed, upcoming class the calendar action, and a past row none', () => {
+    const closedClass = { ...OPEN_CLASS_1, registrationState: 'closed' as const };
+    const data: EventsPageData = {
+      seasonYear: 2026,
+      months: [{ name: 'June', id: 'june', events: [closedClass, PAST_EVENT] }],
+      governance: [],
+    };
+    const { body } = render(Page, { props: { data: fixtureData(data) } });
+    const closedSection = body.slice(body.indexOf('id="class-1"'), body.indexOf('id="past-regatta"'));
+    expect(closedSection).toContain('Add to calendar');
+    const pastSection = body.slice(body.indexOf('id="past-regatta"'));
+    expect(pastSection).not.toContain('Add to calendar');
+  });
+
+  it('makes every band and governance row a focusable anchor target', () => {
+    const { body } = render(Page, { props: { data: fixtureData(EVENTS) } });
+    expect(body).toMatch(/<section[^>]*id="class-1"[^>]*tabindex="-1"/);
+    expect(body).toMatch(/<section[^>]*id="meetings"[^>]*tabindex="-1"/);
+    expect(body).toMatch(/<tr[^>]*id="annual-meeting"[^>]*tabindex="-1"/);
+  });
+
+  it('renders a band title as plain text, never as a link to its own anchor', () => {
+    const { body } = render(Page, { props: { data: fixtureData(EVENTS) } });
+    expect(body).not.toContain('href="#class-1"');
+    expect(body).not.toContain('href="#annual-meeting"');
+  });
+
+  it('omits the month index\'s Meetings link, and the coda itself, with no governance rows', () => {
+    const noGovernance: EventsPageData = { ...EVENTS, governance: [] };
+    const { body } = render(Page, { props: { data: fixtureData(noGovernance) } });
+    expect(body).not.toContain('href="#meetings"');
+    expect(body).not.toContain('Meetings and governance');
+  });
+
+  it('carries each governance row\'s location in the markup at every width', () => {
+    const { body } = render(Page, { props: { data: fixtureData(EVENTS) } });
+    // Two placements, one shown per breakpoint: the data is never dropped from the page.
+    expect(body.match(/Clubhouse/g) ?? []).toHaveLength(2);
+  });
+
   it('renders the honest empty-state line when the season holds nothing', () => {
-    const empty: EventsPageData = { seasonYear: 2026, nextUpcomingId: undefined, months: [], governance: [] };
+    const empty: EventsPageData = { seasonYear: 2026, months: [], governance: [] };
     const { body } = render(Page, { props: { data: fixtureData(empty) } });
     expect(body).not.toContain('ev-band');
     expect(body.toLowerCase()).toContain('season');

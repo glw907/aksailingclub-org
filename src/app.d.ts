@@ -75,6 +75,12 @@ declare global {
           DISCORD_WEBHOOK_BUCCANEER_18?: string;
           DISCORD_WEBHOOK_HARBOR?: string;
           DISCORD_WEBHOOK_TECHNOLOGY?: string;
+          // The visual suite's fixed clock (`YYYY-MM-DD`), set only on the e2e server
+          // (playwright.config.ts passes it to `wrangler dev --var`), never in wrangler.toml and
+          // never in production. `/events` reads it so its past/upcoming judgments hold still
+          // between baseline runs. A binding, not a request header or a query parameter, so
+          // nothing a visitor sends can shift what the public page calls past.
+          ASC_FIXED_TODAY?: string;
         };
       context: ExecutionContext;
       caches: CacheStorage & { default: Cache };

@@ -1,8 +1,8 @@
 // The events-redesign pass: /events/[id]'s own thin link-preview `load`. Mirrors
 // class-signup-route.test.ts's fakeD1 pattern (both routes read CLUB_DB directly), keyed on the
-// two SQL substrings `readEventRows` issues (`$theme/events-data.ts`'s EVENTS_QUERY/
-// CLASSES_QUERY).
-import { describe, expect, it } from 'vitest';
+// two SQL substrings `readEventRow` issues (`$theme/events-data.ts`'s EVENT_BY_SLUG_QUERY/
+// CLASS_BY_ID_QUERY, batched).
+import { describe, expect, it, vi } from 'vitest';
 import { isHttpError } from '@sveltejs/kit';
 import { render } from 'svelte/server';
 import { SITE_DESCRIPTION } from '$chassis/content';
@@ -15,7 +15,7 @@ type LoadEvent = Parameters<typeof load>[0];
 type LoadResult = Exclude<Awaited<ReturnType<typeof load>>, void>;
 
 function eventFor(id: string, db: unknown): LoadEvent {
-  return { params: { id }, platform: { env: { CLUB_DB: db } } } as unknown as LoadEvent;
+  return { params: { id }, platform: { env: { CLUB_DB: db } }, setHeaders: () => {} } as unknown as LoadEvent;
 }
 
 async function runLoad(id: string, db: unknown): Promise<LoadResult> {
@@ -46,15 +46,22 @@ const EVENT_ROW = {
 
 const HIDDEN_EVENT_ROW = { ...EVENT_ROW, id: 'hidden-uuid', slug: 'hidden-event', title: 'Hidden Event' };
 
+/** Keyed on the two targeted single-row statements `readEventRow` batches. */
 function dbWith(eventRows: unknown[], classRows: unknown[] = []) {
   return fakeD1({
     firstResults: { "FROM settings WHERE key = 'current_season'": { value: '2026' } },
     allResults: {
-      'FROM events WHERE visible': eventRows,
-      'FROM classes WHERE visible': classRows,
+      'FROM events WHERE slug = ?1': eventRows,
+      'FROM classes WHERE id = ?1': classRows,
     },
   }).db;
 }
+
+/** A database whose every read throws, standing in for D1 being down mid-request. */
+const FAILING_DB = {
+  prepare: () => ({ bind: () => ({ first: async () => { throw new Error('D1 is down'); } }) }),
+  batch: async () => { throw new Error('D1 is down'); },
+} as unknown as D1Database;
 
 describe('/events/[id] load', () => {
   it('503s when CLUB_DB is not bound', async () => {
@@ -64,16 +71,32 @@ describe('/events/[id] load', () => {
   });
 
   it('404s an id matching no visible row', async () => {
-    const db = dbWith([EVENT_ROW]);
+    // Both targeted statements answer empty, which is exactly what the real `WHERE slug = ?1` /
+    // `WHERE id = ?1` reads return for an id nothing matches.
+    const db = dbWith([], []);
     await expect(load(eventFor('no-such-event', db))).rejects.toSatisfy(
       (err: unknown) => isHttpError(err) && err.status === 404,
     );
   });
 
-  it('404s an invisible row: readEventRows\' own "visible = 1" filter excludes it before this route ever sees it', async () => {
-    // fakeD1 stands in for the real query's own WHERE clause: an invisible row's id simply never
-    // appears in the rows a real read would return, so this exercises the same 404 path.
-    const db = dbWith([EVENT_ROW]); // HIDDEN_EVENT_ROW deliberately absent, standing in for visible = 0
+  it('503s a failed read rather than 404ing it, and asks the caller back in a minute', async () => {
+    const setHeaders = vi.fn();
+    const event = { params: { id: 'bnac' }, platform: { env: { CLUB_DB: FAILING_DB } }, setHeaders } as unknown as LoadEvent;
+    await expect(load(event)).rejects.toSatisfy((err: unknown) => isHttpError(err) && err.status === 503);
+    expect(setHeaders).toHaveBeenCalledWith({ 'retry-after': '60' });
+  });
+
+  it('caches the stub for an hour', async () => {
+    const setHeaders = vi.fn();
+    const event = { params: { id: 'bnac' }, platform: { env: { CLUB_DB: dbWith([EVENT_ROW]) } }, setHeaders } as unknown as LoadEvent;
+    await load(event);
+    expect(setHeaders).toHaveBeenCalledWith({ 'cache-control': 'public, max-age=3600' });
+  });
+
+  it('404s an invisible row: readEventRow\'s own "visible = 1" filter excludes it before this route ever sees it', async () => {
+    // fakeD1 stands in for the real query's own WHERE clause: an invisible row simply never comes
+    // back from a real read, so this exercises the same 404 path.
+    const db = dbWith([], []); // HIDDEN_EVENT_ROW deliberately absent, standing in for visible = 0
     await expect(load(eventFor(HIDDEN_EVENT_ROW.slug, db))).rejects.toSatisfy(
       (err: unknown) => isHttpError(err) && err.status === 404,
     );
@@ -97,7 +120,9 @@ describe('/events/[id] load', () => {
       registration_url: '/classes/class-row-id/signup',
       registration_status: 'open',
     };
-    const db = dbWith([EVENT_ROW], [classRow]);
+    // The events statement answers empty: no event carries this id as its slug, which is the
+    // whole reason a class routes on its own id.
+    const db = dbWith([], [classRow]);
     const result = await runLoad('class-row-id', db);
     expect(result.title).toBe('Adult Intro Class');
     expect(result.target).toBe('/events#class-row-id');

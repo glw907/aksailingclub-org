@@ -48,12 +48,25 @@ export interface EventDetailRow {
  *  0001_substrate/`) carries no `registration_url` column (ops-only, per
  *  `scripts/import/ops-events.README.md`'s field mapping), so it selects as a literal `NULL`,
  *  keeping `EventDetailRow`'s shape unchanged for `buildEventsPage`'s date helpers. */
-const EVENTS_QUERY = `SELECT id, title, slug, category AS event_type, start_date, start_time,
-                              end_date, end_time, NULL AS date_history, location,
-                              short_description, long_description, hero_image, hero_image_alt,
-                              NULL AS registration_url, NULL AS registration_status, NULL AS fee,
-                              NULL AS track, NULL AS drop_in
-                       FROM events WHERE visible = 1`;
+const EVENTS_COLUMNS = `SELECT id, title, slug, category AS event_type, start_date, start_time,
+                               end_date, end_time, NULL AS date_history, location,
+                               short_description, long_description, hero_image, hero_image_alt,
+                               NULL AS registration_url, NULL AS registration_status, NULL AS fee,
+                               NULL AS track, NULL AS drop_in
+                        FROM events`;
+/** Every visible event of the current season. `events` carries no `season` column of its own
+ *  (only `classes` does), so the season is read off the stored `start_date`'s own year, as text:
+ *  `substr` yields a string, and SQLite never equates a string to an integer, so the caller binds
+ *  the season as text too. An undated row has no year to test and always stays: a TBD event is
+ *  the club announcing something for the season now under way, never a leftover from a past one.
+ *  `?1 IS NULL` is the unset-`current_season` arm, which reads every event rather than none: an
+ *  unconfigured setting should quiet the season filter, not empty the page. */
+const EVENTS_QUERY = `${EVENTS_COLUMNS} WHERE visible = 1
+                        AND (?1 IS NULL OR start_date IS NULL OR substr(start_date, 1, 4) = ?1)`;
+/** One event by its public route segment (its slug), for the per-event stub and its `.ics`
+ *  sibling: a targeted read, never the whole table filtered in JavaScript. No season filter here,
+ *  since a shared link to a past season's event should still unfurl rather than 404. */
+const EVENT_BY_SLUG_QUERY = `${EVENTS_COLUMNS} WHERE slug = ?1 AND visible = 1 LIMIT 1`;
 /** The classes table's full-detail SELECT, tagged with the synthesized `'class'` category. Two
  *  differences from the events query above, both forced by the ratified `classes` schema
  *  (`migrations/asc-club/0001_substrate/`), which was never designed to carry the public listing's
@@ -74,7 +87,7 @@ const EVENTS_QUERY = `SELECT id, title, slug, category AS event_type, start_date
  *  `classes` row per season, so an unfiltered read leaked prior-season instances of the same class
  *  into the listing as duplicate, wrong-dated entries; `events` carries no `season` column and
  *  needs no such filter. */
-const CLASSES_QUERY = `SELECT id, name AS title, slug, 'class' AS event_type, start_date,
+const CLASSES_COLUMNS = `SELECT id, name AS title, slug, 'class' AS event_type, start_date,
                                NULL AS start_time, end_date, NULL AS end_time,
                                NULL AS date_history, location, NULL AS short_description,
                                description AS long_description, hero_image, hero_image_alt,
@@ -92,25 +105,71 @@ const CLASSES_QUERY = `SELECT id, name AS title, slug, 'class' AS event_type, st
                                  ELSE 'open'
                                END AS registration_status,
                                fee, track, drop_in
-                        FROM classes WHERE visible = 1 AND season = ?1`;
+                        FROM classes`;
+const CLASSES_QUERY = `${CLASSES_COLUMNS} WHERE visible = 1 AND season = ?1`;
+/** One class by its public route segment (its own id, since a class slug is only unique within
+ *  its season), for the per-event stub and its `.ics` sibling. */
+const CLASS_BY_ID_QUERY = `${CLASSES_COLUMNS} WHERE id = ?1 AND visible = 1 AND season = ?2 LIMIT 1`;
 
-/** Read every visible event and class row, full detail. Degrades to an empty list on any D1
- *  failure, the same safe failure `season-data.ts`'s `loadSeasonMonths` uses. The classes arm reads
- *  no rows at all when `current_season` is missing from `settings` (`readCurrentSeason`), rather
- *  than falling back to every season. */
-export async function readEventRows(db: D1Database): Promise<EventDetailRow[]> {
+/** The whole season's rows plus the season they were read for. The season comes back with the
+ *  rows because the caller needs it too (it titles the page), and reading it a second time in the
+ *  route would put a second D1 failure outside this function's own degrade-to-empty guard: a
+ *  `settings` read that throws there would 500 the page instead of quieting it. */
+export interface EventRowsRead {
+  rows: EventDetailRow[];
+  /** `settings.current_season`, or `null` when unset OR when the read failed outright. */
+  season: number | null;
+}
+
+/** Read every visible event and class row of the current season, full detail. Degrades to an
+ *  empty list on any D1 failure, the same safe failure `season-data.ts`'s `loadSeasonMonths` uses.
+ *  The classes arm reads no rows at all when `current_season` is missing from `settings`
+ *  (`readCurrentSeason`), rather than falling back to every season; the events arm quiets its own
+ *  season filter instead (see `EVENTS_QUERY`), since an event row's season is inferred from its
+ *  date rather than stored. */
+export async function readEventRows(db: D1Database): Promise<EventRowsRead> {
   try {
     const season = await readCurrentSeason(db);
     const [events, classes] = await Promise.all([
-      db.prepare(EVENTS_QUERY).all<EventDetailRow>(),
+      // Bound as text, not as a number: the filter compares against `substr(start_date, 1, 4)`,
+      // and SQLite never equates a string to an integer.
+      db.prepare(EVENTS_QUERY).bind(season === null ? null : String(season)).all<EventDetailRow>(),
       season === null
         ? Promise.resolve({ results: [] as EventDetailRow[] })
         : db.prepare(CLASSES_QUERY).bind(season).all<EventDetailRow>(),
     ]);
-    return [...(events.results ?? []), ...(classes.results ?? [])];
+    return { rows: [...(events.results ?? []), ...(classes.results ?? [])], season };
   } catch (err) {
     console.error('events-data: CLUB_DB read failed', err);
-    return [];
+    return { rows: [], season: null };
+  }
+}
+
+/** One row's read outcome, keyed by what the caller must do with it: serve the row, 404 (the id
+ *  names nothing visible), or 503 (the database itself did not answer). The two failure arms are
+ *  deliberately distinct, since collapsing them would tell a crawler that a live event is gone
+ *  whenever D1 hiccups. */
+export type EventRowRead =
+  | { status: 'found'; row: EventDetailRow }
+  | { status: 'absent' }
+  | { status: 'failed' };
+
+/** Read the one event or class a public route segment names (`routeIdOf`: an event's slug, a
+ *  class's id). Two targeted statements in a single `db.batch` round trip, not the whole of both
+ *  tables filtered in JavaScript: the id can only ever match one of them, and the batch means the
+ *  miss costs no second trip. The class statement is skipped entirely when `current_season` is
+ *  unset, since it has no season to bind. */
+export async function readEventRow(db: D1Database, routeId: string): Promise<EventRowRead> {
+  try {
+    const season = await readCurrentSeason(db);
+    const statements = [db.prepare(EVENT_BY_SLUG_QUERY).bind(routeId)];
+    if (season !== null) statements.push(db.prepare(CLASS_BY_ID_QUERY).bind(routeId, season));
+    const results = await db.batch<EventDetailRow>(statements);
+    const row = results.flatMap((result) => result.results ?? [])[0];
+    return row ? { status: 'found', row } : { status: 'absent' };
+  } catch (err) {
+    console.error('events-data: CLUB_DB single-row read failed', err);
+    return { status: 'failed' };
   }
 }
 
@@ -187,14 +246,21 @@ export interface MonthGroup {
 }
 
 /** The full `/events` page's data: the season year for the hero title, the route id of the next
- *  upcoming band (for the page's scroll-on-load and its one fireweed Register button), every
- *  month that has at least one non-governance row, and the governance coda. */
+ *  upcoming band (the page's scroll-on-load target), the route id of the one band allowed to
+ *  render the fireweed Register button, every month that has at least one non-governance row, and
+ *  the governance coda. */
 export interface EventsPageData {
   seasonYear: number;
   /** The route id of the first dated, non-governance row that has not already happened;
    *  undefined when every dated row is past. An undated row never wins this slot: it is never
    *  provably past, but it is also never a real scroll target. */
   nextUpcomingId?: string;
+  /** The route id of the first non-past class whose registration is open and which is not a
+   *  drop-in: the one band allowed to render the fireweed Register button. Undefined when no
+   *  class on the page is taking registrations, in which case the page spends no fireweed at all.
+   *  Deliberately independent of `nextUpcomingId`, which answers a different question (where the
+   *  reader lands). */
+  primaryClassId?: string;
   months: MonthGroup[];
   governance: EventCard[];
 }
@@ -240,15 +306,21 @@ function formatTimeLabel(time: string): string | undefined {
   return minute === 0 ? `${hour12} ${suffix}` : `${hour12}:${match[2]} ${suffix}`;
 }
 
+/** Today as a calendar date (`YYYY-MM-DD`) in the club's own timezone. A Worker's clock is UTC,
+ *  and an Alaska evening is already tomorrow in UTC, so a UTC "today" would quiet an event that
+ *  has not happened yet, nine hours early. Same one-line Intl derivation
+ *  `class-schedule.remote.ts` uses for the same reason. */
+export function anchorageTodayIso(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Anchorage' }).format(new Date());
+}
+
 /** True when `dateStr` (a row's end date, or its start date when it has none) falls strictly
- *  before `today`'s own calendar date; false for a row with no date at all. Compares local
- *  midnight to local midnight, the same date-only parsing every other helper in this module
- *  uses, so a stray timezone offset can never shift a "today" event into yesterday. */
-function isRowPast(dateStr: string | null, today: Date): boolean {
+ *  before `today`; false for a row with no date at all. Both sides are `YYYY-MM-DD` calendar
+ *  dates, which sort lexicographically the same way they sort chronologically, so the comparison
+ *  needs no `Date` at all and cannot pick up a timezone offset on the way through. */
+function isRowPast(dateStr: string | null, today: string): boolean {
   if (!dateStr) return false;
-  const rowDate = new Date(`${dateStr}T00:00:00`);
-  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  return rowDate.getTime() < todayDate.getTime();
+  return dateStr < today;
 }
 
 /** Render a row's markdown field and resolve its photo, the two async steps a bare D1 row needs
@@ -256,7 +328,7 @@ function isRowPast(dateStr: string | null, today: Date): boolean {
  *  direct unit testing, since it is the one place all of a card's field mappings live. */
 export async function toEventCard(
   row: EventDetailRow,
-  today: Date,
+  today: string,
   resolveMedia: MediaResolve,
   renderMarkdown: (md: string) => Promise<string>,
 ): Promise<EventCard> {
@@ -279,7 +351,11 @@ export async function toEventCard(
     isPast: isRowPast(row.end_date ?? row.start_date, today),
     registrationUrl: row.registration_url ?? undefined,
     registrationState: row.registration_status ? REGISTRATION_STATE[row.registration_status] : undefined,
-    image: imageUrl && row.hero_image ? { url: imageUrl, alt: row.hero_image_alt ?? row.title } : undefined,
+    // An empty alt, not the title, when the row carries none: the band's own h2 already names the
+    // event right beside the photo, so repeating it in the alt reads the same thing twice to a
+    // screen reader. An unlabelled decorative photo is the honest answer until an editor writes
+    // real alt text.
+    image: imageUrl && row.hero_image ? { url: imageUrl, alt: row.hero_image_alt ?? '' } : undefined,
   };
   if (longSource) card.longHtml = await renderMarkdown(longSource);
   return card;
@@ -298,6 +374,30 @@ function firstDatedYear(rows: EventDetailRow[]): number | undefined {
   return new Date(`${earliest}T00:00:00`).getFullYear();
 }
 
+/** Drop any row whose route id a preceding row already claimed. A route id is a slug from
+ *  `events` or an id from `classes`, two independently-keyed tables, so nothing at the schema
+ *  level stops one table's value from colliding with the other's. The collision would otherwise
+ *  reach the page as two `<section>`s sharing one DOM id (a dead anchor, a doubled `.ics` link)
+ *  and, on the keyed `{#each}`, as a Svelte duplicate-key crash that 500s the whole page. The
+ *  first row wins and the later one is logged, since one visible row is a far better outcome than
+ *  none. */
+function dedupeByRouteId<T extends { card: EventCard; row: EventDetailRow }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  const kept: T[] = [];
+  for (const item of items) {
+    if (seen.has(item.card.routeId)) {
+      console.warn('events_data.duplicate_route_id', {
+        routeId: item.card.routeId,
+        droppedTitle: item.row.title,
+      });
+      continue;
+    }
+    seen.add(item.card.routeId);
+    kept.push(item);
+  }
+  return kept;
+}
+
 /** Build the full `/events` page's data from every visible row: the enriched cards, grouped by
  *  calendar month (a governance row pulled out of the chronology entirely, by category,
  *  regardless of its date), the season year for the hero title, and the route id of the next
@@ -305,9 +405,10 @@ function firstDatedYear(rows: EventDetailRow[]): number | undefined {
 export async function buildEventsPage(
   rows: EventDetailRow[],
   opts: {
-    /** The "now" every past/upcoming judgment is made against; defaults to the real clock so a
-     *  caller need not pass it, but every test does, for a deterministic result. */
-    today?: Date;
+    /** The `YYYY-MM-DD` calendar date every past/upcoming judgment is made against; defaults to
+     *  today in the club's own timezone (`anchorageTodayIso`) so a caller need not pass it, but
+     *  every test does, for a deterministic result. */
+    today?: string;
     /** `settings.current_season`, already read by the caller (`readCurrentSeason`); `null` when
      *  unset, in which case the season year falls back to the first dated row's own year. */
     currentSeason: number | null;
@@ -315,8 +416,8 @@ export async function buildEventsPage(
     renderMarkdown: (md: string) => Promise<string>;
   },
 ): Promise<EventsPageData> {
-  const today = opts.today ?? new Date();
-  const currentYear = today.getFullYear();
+  const today = opts.today ?? anchorageTodayIso();
+  const currentYear = Number(today.slice(0, 4));
 
   const enriched = await Promise.all(
     rows.map(async (row) => ({
@@ -326,8 +427,9 @@ export async function buildEventsPage(
     })),
   );
 
-  const governanceRows = enriched.filter((item) => item.row.event_type === 'governance');
-  const seasonRows = enriched.filter((item) => item.row.event_type !== 'governance');
+  const unique = dedupeByRouteId(enriched);
+  const governanceRows = unique.filter((item) => item.row.event_type === 'governance');
+  const seasonRows = unique.filter((item) => item.row.event_type !== 'governance');
   seasonRows.sort(byMonthThenDay);
   governanceRows.sort(byMonthThenDay);
 
@@ -354,9 +456,18 @@ export async function buildEventsPage(
   // win this search whenever every dated row has already passed.
   const nextUpcoming = seasonRows.find((item) => item.row.start_date && !item.card.isPast);
 
+  // The page's one fireweed control, chosen independently of `nextUpcomingId`: the next band the
+  // reader lands on is often a regatta or a work party, and the register button has to follow the
+  // registration, not the scroll. A drop-in class takes no registration at all, so it never wins
+  // the slot.
+  const primaryClass = seasonRows.find(
+    (item) => !item.card.isPast && item.card.registrationState === 'open' && !item.card.dropIn,
+  );
+
   return {
     seasonYear: opts.currentSeason ?? firstDatedYear(rows) ?? currentYear,
     nextUpcomingId: nextUpcoming?.card.routeId,
+    primaryClassId: primaryClass?.card.routeId,
     months,
     governance: governanceRows.map((r) => r.card),
   };

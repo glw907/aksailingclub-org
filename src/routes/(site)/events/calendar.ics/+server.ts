@@ -13,7 +13,7 @@ export const prerender = false;
 
 export const GET: RequestHandler = async ({ platform }) => {
   const db = platform?.env.CLUB_DB;
-  const rows = db ? await readEventRows(db) : [];
+  const { rows } = db ? await readEventRows(db) : { rows: [] };
   const body = buildIcs(rows, ORIGIN);
   return new Response(body, {
     headers: {

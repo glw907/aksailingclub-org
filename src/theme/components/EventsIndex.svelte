@@ -3,18 +3,26 @@ The season page's month index (docs/2026-08-22-events-redesign-design.md, "Page 
 item 3): one line of in-page links, one per month that carries at least one row plus a trailing
 "Meetings" link to the governance coda. NN/g's scrolling-page research is the reason this exists
 at all: a page this long needs a visible index of in-page links up top. Never sticky, at any
-width. -->
+width. The trailing "Meetings" link renders only when the governance coda it targets does. -->
 <script lang="ts">
   import type { MonthGroup } from '$theme/events-data';
 
-  let { months }: { months: MonthGroup[] } = $props();
+  interface Props {
+    months: MonthGroup[];
+    /** Whether the governance coda renders at all. The "Meetings" link is the one entry here
+     *  that does not come from `months`, so it has to be told: the coda stands down when the club
+     *  has no governance rows, and a link to a section that is not on the page is a dead jump. */
+    hasGovernance: boolean;
+  }
+
+  let { months, hasGovernance }: Props = $props();
 </script>
 
 <nav class="ev-index" aria-label="Jump to a month">
   {#each months as month (month.id)}
     <a href="#{month.id}">{month.name}</a>
   {/each}
-  <a href="#meetings">Meetings</a>
+  {#if hasGovernance}<a href="#meetings">Meetings</a>{/if}
 </nav>
 
 <style>

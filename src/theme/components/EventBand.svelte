@@ -10,14 +10,21 @@ reaching in with `:global()`.
 
 Exactly one action renders per band (never two): `Register` (or `Join the waitlist`) for a class
 that takes registration and is not past, the fireweed treatment reserved for the one `primary`
-band the page names; `Add to calendar` for everything else that is not past; nothing for a past
-band or a closed class. -->
+band the page names; `Add to calendar` for every other row that is not past, a closed class
+included; nothing at all for a past band.
+
+The band is its own anchor target (`id`, `tabindex="-1"`): following a month-index link or a
+shared `/events/[id]` link moves focus here, so the next Tab continues from the band the reader
+was sent to rather than from the top of the document. -->
 <script lang="ts">
   import type { EventCard } from '$theme/events-data';
   import { ICON_PATHS } from '$theme/markdown/icons';
 
   interface Props {
     card: EventCard;
+    /** The band's position down the whole page, across month boundaries: it drives the photo's
+     *  own loading priority, nothing else. */
+    index: number;
     /** Alternates the photo to the row's right (the home page's own Fleet/Facilities device). */
     flip: boolean;
     /** The one register button the whole page may render in fireweed; every other action stays
@@ -28,25 +35,33 @@ band or a closed class. -->
     showMonth?: { name: string; id: string };
   }
 
-  let { card, flip, primary = false, showMonth }: Props = $props();
+  let { card, index, flip, primary = false, showMonth }: Props = $props();
+
+  /** How many bands from the top load their photo at full priority. Three covers the landing
+   *  band and its neighbours at every viewport; the rest are deprioritized rather than dropped,
+   *  since a reader scrolling the season page will reach them. */
+  const EAGER_BANDS = 3;
 
   type Action = 'register' | 'waitlist' | 'calendar' | 'none';
 
   // The design contract's own action rule: a class with open registration that isn't a drop-in
-  // gets Register; waitlisted gets the waitlist link; a closed class or any past row gets no
-  // action at all (never a calendar fallback, unlike a plain event); everything else that isn't
-  // past falls back to the per-event .ics download.
+  // gets Register; waitlisted gets the waitlist link; a past row gets no action at all; every
+  // other row, a closed class included, falls back to the per-event .ics download. The
+  // registration arms also require a real `registrationUrl`, so a row whose status says open but
+  // whose link is missing degrades to the calendar action instead of rendering a dead link.
   const action: Action = $derived.by(() => {
     if (card.isPast) return 'none';
-    if (card.dotKind === 'class' && !card.dropIn) {
+    if (card.dotKind === 'class' && !card.dropIn && card.registrationUrl) {
       if (card.registrationState === 'open') return 'register';
       if (card.registrationState === 'waitlisted') return 'waitlist';
-      return 'none';
     }
     return 'calendar';
   });
 
-  const facts: string[] = $derived.by(() => {
+  /** The facts line as one string. Joined here rather than interleaved with per-item separator
+   *  spans in the template: a middot between two spans is decoration a screen reader should not
+   *  read, and a plain joined string is also what a copy-paste of the line yields. */
+  const factsLine: string = $derived.by(() => {
     const list = [card.dateLabel];
     if (card.time) list.push(card.time);
     if (card.location) list.push(card.location);
@@ -54,7 +69,7 @@ band or a closed class. -->
       if (card.fee !== undefined) list.push(card.fee === 0 ? 'Free' : `$${card.fee}`);
       list.push(card.track === 'youth' ? 'Ages 8–12' : 'Adults and teens 13+');
     }
-    return list;
+    return list.join(' · ');
   });
 </script>
 
@@ -64,33 +79,43 @@ band or a closed class. -->
   class:is-past={card.isPast}
   class:no-photo={!card.image}
   id={card.routeId}
-  aria-labelledby="h-{card.routeId}"
+  tabindex="-1"
 >
+  <!-- The month's anchor sits on its own zero-height marker at the band's top edge, not on the
+       running head inside the text column: the running head sits partway down a band that is
+       taller than the viewport at narrow widths, so a month jump that targeted it would land
+       mid-band with the band's own photo scrolled off above. -->
+  {#if showMonth}<div class="ev-month-anchor" id={showMonth.id}></div>{/if}
   <div class="ev-inner">
     {#if card.image}
-      <figure class="ev-photo"><img src={card.image.url} alt={card.image.alt} /></figure>
+      <div class="ev-photo">
+        <img
+          src={card.image.url}
+          alt={card.image.alt}
+          data-crop="3/2"
+          loading={index < EAGER_BANDS ? 'eager' : 'lazy'}
+          fetchpriority={index < EAGER_BANDS ? undefined : 'low'}
+        />
+      </div>
     {/if}
     <div class="ev-text">
-      {#if showMonth}<p class="ev-month" id={showMonth.id}>{showMonth.name}</p>{/if}
-      <h2 class="ev-title" id="h-{card.routeId}">
+      {#if showMonth}<p class="ev-month">{showMonth.name}</p>{/if}
+      <h2 class="ev-title">
         {#if card.dotKind === 'class'}
           <svg class="ev-star" viewBox="0 0 24 24" aria-hidden="true">
             <path fill="currentColor" d="M12 2.5l2.9 6.2 6.8.8-5 4.7 1.3 6.8L12 17.6 5.9 21l1.3-6.8-5-4.7 6.8-.8z" />
           </svg>
-        {/if}
-        <a href="#{card.routeId}">{card.title}</a>
+          <span class="sr-only">Class or clinic: </span>
+        {/if}{card.title}
       </h2>
-      <p class="ev-facts">
-        {#each facts as fact, i (i)}{#if i > 0} <span class="ev-sep" aria-hidden="true">·</span> {/if}{fact}{/each}
-        {#if card.isPast} <span class="ev-sep" aria-hidden="true">·</span> Past{/if}
-      </p>
+      <p class="ev-facts">{factsLine}{#if card.isPast} · <span class="sr-only">Status: </span>Past{/if}</p>
       {#if card.longHtml}<div class="ev-body">{@html card.longHtml}</div>{/if}
       {#if action === 'register'}
         <a class={primary ? 'ev-cta' : 'ev-link'} href={card.registrationUrl}>Register <span aria-hidden="true">→</span></a>
       {:else if action === 'waitlist'}
         <a class="ev-link" href={card.registrationUrl}>Join the waitlist <span aria-hidden="true">→</span></a>
       {:else if action === 'calendar'}
-        <a class="ev-link" href="/events/{card.routeId}.ics">
+        <a class="ev-link" href="/events/{encodeURIComponent(card.routeId)}.ics">
           <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d={ICON_PATHS['calendar-dots']} /></svg>
           Add to calendar
         </a>
@@ -100,8 +125,18 @@ band or a closed class. -->
 </section>
 
 <style>
-  .ev-band {
-    scroll-margin-top: var(--spacing-m);
+  /* No `scroll-margin-top` here: `site.css` sets `scroll-padding-top` on the scroll container
+     itself (the sticky header's own clearance), which covers every anchor target on the site at
+     once, this band included. */
+  .ev-band:focus-visible {
+    /* The band takes focus programmatically when a jump link lands on it (`tabindex="-1"`). The
+       ring is drawn inside the band, since a section this wide would otherwise paint its outline
+       off the viewport's own edges. */
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
+  }
+  .ev-month-anchor {
+    height: 0;
   }
   .ev-inner {
     max-width: var(--container-measure-wide);
@@ -124,9 +159,6 @@ band or a closed class. -->
       order: 2;
     }
   }
-  .ev-photo {
-    margin: 0;
-  }
   .ev-photo img {
     display: block;
     width: 100%;
@@ -146,7 +178,6 @@ band or a closed class. -->
     text-transform: uppercase;
     letter-spacing: var(--tracking-eyebrow);
     color: var(--color-muted);
-    scroll-margin-top: var(--spacing-m);
   }
   .ev-title {
     margin: 0;
@@ -161,23 +192,15 @@ band or a closed class. -->
     align-items: baseline;
     gap: 0.45em;
   }
-  .ev-title a {
-    color: inherit;
-    text-decoration: none;
-  }
-  .ev-title a:hover {
-    text-decoration: underline;
-    text-decoration-color: var(--color-star-gold);
-    text-underline-offset: 4px;
-    text-decoration-thickness: 2px;
-  }
   /* The C7 gold-star taxonomy: a class or clinic's own mark, education being the club's mission
-     (CLAUDE.md: gold marks only, never body text). */
+     (CLAUDE.md: gold marks only, never body text). The dot variant of the token, not the plain
+     one: this mark is the same 8px-scale glyph the home Season list's own dots are, and the
+     plain gold reads washed out at that size (theme.css's own derivation comment). */
   .ev-star {
     width: 0.78em;
     height: 0.78em;
     flex: none;
-    color: var(--color-star-gold);
+    color: var(--color-star-gold-dot);
     transform: translateY(-0.02em);
   }
   .ev-facts {
@@ -186,9 +209,6 @@ band or a closed class. -->
     font-weight: 500;
     color: var(--color-muted);
     font-variant-numeric: tabular-nums;
-  }
-  .ev-sep {
-    opacity: 0.5;
   }
   .ev-body {
     margin-top: var(--spacing-xs);
@@ -230,7 +250,9 @@ band or a closed class. -->
     padding: 0.55rem 1rem;
     font-weight: 600;
     font-size: var(--text-step--1);
-    color: white;
+    /* The paired content token for the accent ramp `--color-fireweed` sits on, not a literal
+       white: the pair re-skins together if the accent ever moves. */
+    color: var(--color-accent-content);
     background: var(--color-fireweed);
     border-radius: var(--radius-field);
     text-decoration: none;
@@ -256,7 +278,7 @@ band or a closed class. -->
     filter: saturate(0.72);
     opacity: 0.85;
   }
-  .ev-band.is-past .ev-title a {
+  .ev-band.is-past .ev-title {
     color: color-mix(in oklab, var(--color-base-content) 78%, transparent);
   }
 

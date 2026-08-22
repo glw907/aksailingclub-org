@@ -92,6 +92,14 @@ test('education — long-form pipeline renders no duplicate section', async ({ p
   await expect(dividerLabels.nth(2)).toHaveText('Policies & questions');
 });
 
+// The season page lands the reader on the next upcoming band on arrival (its own
+// `afterNavigate`), so every screenshot here scrolls back to the top first: a full-page capture
+// taken mid-page renders the sticky masthead over a different band each run.
+async function resetScroll(page: import('@playwright/test').Page) {
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(100);
+}
+
 // The D1-backed /events template: the events-redesign pass's one long, anchorable season page
 // (the light hero without a promise sentence, the calendar-subscribe bar, the month index, the
 // alternating photo bands, and the governance coda), reading from the seeded fixture rows.
@@ -107,11 +115,18 @@ test('events — light', async ({ page }) => {
   await expect(page.locator('.events-hero-eyebrow', { hasText: 'Events' })).toBeVisible();
   // A season band, proving the full read/group/render pipeline, not just the shell.
   await expect(page.locator('.ev-band').first()).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Test Regatta' })).toBeVisible();
+  // A band title is plain text inside its h2, not a self-link (the close-out review round).
+  await expect(page.getByRole('heading', { level: 2, name: 'Test Regatta' })).toBeVisible();
   // The governance coda, still reachable off the month index's own "Meetings" link.
   await expect(page.locator('#meetings')).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Meetings and governance' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Apple Calendar' })).toBeVisible();
+  // The fixed clock (ASC_FIXED_TODAY=2026-08-22, playwright.config.ts) puts the fixture's fall
+  // clinic ahead of "today" and its June class behind it, so the page renders exactly one
+  // Register action, in fireweed, and the June rows read as past.
+  await expect(page.getByRole('link', { name: /^Register/ })).toHaveCount(1);
+  await expect(page.locator('.ev-cta')).toHaveCount(1);
+  await resetScroll(page);
   await expect(page).toHaveScreenshot('events-light.png', { fullPage: true });
 });
 
@@ -120,6 +135,7 @@ for (const width of FAMILY_WIDTHS) {
     await page.setViewportSize({ width, height: 900 });
     await page.emulateMedia({ colorScheme: 'light' });
     await page.goto('/events/');
+    await resetScroll(page);
     await expect(page).toHaveScreenshot(`events-light-${width}.png`, { fullPage: true });
   });
 }

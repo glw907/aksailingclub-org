@@ -61,13 +61,17 @@ Each event or class is a `<section id={slug}>` on the sage band ground. Inside i
 two-column grid holds the photo and the text column, and the photo's side alternates band by
 band down the page, the composition the home page's Fleet and Facilities bands already use.
 
-The photo is the row's `hero_image` (a class's own image from migration 0003) at its native
-3:2, never cropped, taking five of twelve columns at 1440 (about 480 by 320 px). The text
-column carries, in order:
+The photo is the row's `hero_image` (a class's own image from migration 0003), taking five of
+twelve columns at 1440 (about 480 by 320 px). The band declares a 3:2 crop (`data-crop="3/2"` on
+the `<img>`, this repo's own declared-crop convention), so a source that is not already 3:2 is
+center-cropped to it rather than letterboxed: the band's rhythm down the page depends on every
+photo holding the same shape. The text column carries, in order:
 
 - the month as a small running head at the band's top edge, only on the first band of a month;
-- the title at the h2 step, preceded by the gold star when the row is a class or clinic (C7);
-  races, work parties, and socials carry no mark;
+- the title at the h2 step, plain text rather than a link (the `<section id>` around it is the
+  share anchor, and a heading that links to its own anchor is a dead end for anyone who follows
+  it), preceded by the gold star when the row is a class or clinic (C7); races, work parties, and
+  socials carry no mark;
 - a facts line: weekday and date (or the date range), the time when `start_time` is set, the
   location when set, and the fee for a class;
 - the long description (`long_description`, or a class's `description`), four to six lines at
@@ -92,6 +96,9 @@ One heading, "Meetings and governance", then a plain table: date, meeting, place
 and no bands; the quiet hairline register the portal's committees section already uses. Every
 row with `category = 'governance'` lands here, regardless of date, so the Annual Meeting
 leaves the chronology. Its anchor works the same way as a band's.
+
+Each row also carries the meeting's own short description under its name, and below 48rem the
+place restacks as a second muted line there rather than dropping out with the column.
 
 ## Calendar subscription
 

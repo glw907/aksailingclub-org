@@ -1,9 +1,9 @@
 // A scriptable D1 stand-in for the Club section's own tests (Task 4 onward): `first()` and
-// `all()` answer from a SQL-substring-keyed map, `run()` and `batch()` resolve and record, so a
-// module's real prepared-statement calls execute against fixed data with no live database. Mirrors
-// the same shape cairn-cms's own `fakeD1` (src/tests/unit/cairn-admin-actions.test.ts) uses for its
-// auth-store tests, since this site's Club screens are the first consumer of a real D1 binding of
-// their own.
+// `all()` answer from a SQL-substring-keyed map, `batch()` answers each of its statements from
+// that same map, and `run()` resolves and records, so a module's real prepared-statement calls
+// execute against fixed data with no live database. Mirrors the same shape cairn-cms's own
+// `fakeD1` (src/tests/unit/cairn-admin-actions.test.ts) uses for its auth-store tests, since this
+// site's Club screens are the first consumer of a real D1 binding of their own.
 
 /** A canned response, or a function of the call's bound args, for a query whose result must
  *  vary within one test even though its SQL text matches the same substring key (a `... WHERE
@@ -78,7 +78,14 @@ export function fakeD1(opts: FakeD1Options = {}) {
     prepare: statement,
     async batch(stmts: ReturnType<typeof statement>[]) {
       for (const stmt of stmts) calls.push({ sql: stmt.sql, args: stmt.args });
-      return stmts.map(() => ({ results: [], success: true, meta: {} }));
+      // Each statement answers from the same `allResults` table `.all()` reads, so a module that
+      // batches two SELECTs (events-data.ts's single-row read) is testable at all; a statement
+      // with no matching key still answers the empty result every write-shaped batch expects.
+      return stmts.map((stmt) => ({
+        results: matchingResult<unknown[]>(stmt.sql, opts.allResults, stmt.args, []),
+        success: true,
+        meta: {},
+      }));
     },
   };
 

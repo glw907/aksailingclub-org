@@ -15,9 +15,12 @@
 -- rather than the actual photograph; the DOM shape and the query path are still exercised end to
 -- end, matching the suite's own already-documented limitation on a real event photo).
 --
--- Fixed dates, not "whenever CI runs": events-data.ts groups by the real calendar year at request
--- time, so this fixture must be refreshed to the current year whenever the site-visual baselines
--- are regenerated (the same annual upkeep any date-bearing fixture in this family needs).
+-- Fixed dates against a FIXED CLOCK: the suite's own server runs with ASC_FIXED_TODAY=2026-08-22
+-- (playwright.config.ts passes it to `wrangler dev --var`; src/app.d.ts declares the binding), so
+-- every past/upcoming judgment on /events holds still between baseline runs instead of moving with
+-- the real calendar. The rows below are dated around that fixed day on purpose: the June regatta
+-- and the June class read as past, the September clinic reads as upcoming and open. Rebasing the
+-- suite to a later season means moving BOTH this file's dates and that one variable together.
 --
 -- DELETE, not DROP/CREATE (amended for the unified-signup arc, Task 8): this file used to own a
 -- narrower, hand-copied subset of the real DDL, missing `classes.season`/`track` (settings-
@@ -76,6 +79,14 @@ INSERT INTO events (
 -- list, the class-door signup route, and the education page's class-schedule island. track
 -- 'adult-teen' and capacity 8 with zero enrollments read as open (isPubliclyOpen), the simplest
 -- case both the class-door pivot spec and (indirectly) the join spec's own class-pick list need.
+--
+-- test-fall-clinic is dated AFTER the fixed clock, so it is the one row on /events that is both a
+-- class and still upcoming: it renders the Register action and, as the page's `primaryClassId`,
+-- the single fireweed CTA the design contract allows (design-probe.mjs's fireweed check reads
+-- exactly one `.ev-cta` against this fixture). Its `hero_image` names one of the 14 catalogued
+-- filenames in src/theme/event-images.ts, so it resolves to a real /media URL exactly the way the
+-- home page's own photos do; the local R2 replica carries no objects, so the bytes are missing on
+-- CI for both alike (this file's header note).
 INSERT INTO classes (
   id, season, name, slug, track, capacity, fee, start_date, end_date, location, description, hero_image, hero_image_alt, visible
 ) VALUES
@@ -86,5 +97,12 @@ INSERT INTO classes (
 Covers the fundamentals of dinghy sailing over a long weekend.',
     'adult-intro-class-1.jpg',
     'Student at the tiller of a club Buccaneer sailboat with an instructor, sailing on the lake during class',
+    1
+  ),
+  (
+    'test-fall-clinic', 2026, 'Test Fall Clinic', 'test-fall-clinic', 'youth', 6, 0, '2026-09-12', '2026-09-13', 'Alaska Sailing Club',
+    'Two-day fixture clinic for the visual suite, open for registration.',
+    'youth-intro-class-1.jpg',
+    'Two young sailors in life jackets rigging a club dinghy on the beach before class',
     1
   );

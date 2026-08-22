@@ -25,6 +25,12 @@ html {
      offset, so the two stay in lockstep with no duplicated math. */
   --header-clearance: calc(2.75rem + 2 * var(--spacing-xs) + 1rem);
   scroll-padding-top: var(--header-clearance);
+
+  /* Site-wide, not per page: every in-page jump (a prose page's table of contents, the season
+     page's month index, a skip link) glides instead of teleporting, so a reader keeps their place
+     in the document. Declared once here rather than in each component that owns a jump link, and
+     the blanket reduced-motion rule further down this sheet already forces it back to `auto`. */
+  scroll-behavior: smooth;
 }
 
 .site-main {

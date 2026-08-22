@@ -59,6 +59,14 @@ const BAND_COMPOSED_PAGES = [HOME_PATH];
 // ratio rather than a tolerance band, a fireweed-singleton rule, season-section id/h2 coverage,
 // and month-index link resolution) instead of a superset of them.
 const EVENTS_PATH = '/events';
+// Whether the season page under test is expected to carry a class with open registration, which
+// is what mints the page's single fireweed Register button. The e2e fixture
+// (e2e/fixtures/events-seed.sql, against the suite's fixed clock) always does, so a run pointed at
+// that server passes EVENTS_EXPECT_OPEN_CLASS=1 and the fireweed check tightens from "at most one"
+// to "exactly one": a Register button that quietly stopped rendering is otherwise indistinguishable
+// from a page that legitimately has no open class. A run against a live database in the off-season
+// leaves it unset.
+const EVENTS_EXPECT_OPEN_CLASS = process.env.EVENTS_EXPECT_OPEN_CLASS === '1';
 
 const OVERFLOW_WIDTHS = [320, 390, 1440];
 const RATIO_TOLERANCE = 0.12;
@@ -262,12 +270,19 @@ async function checkEventPhotoRatio(page, path, offenders) {
 }
 
 /** Check (j): at most one element on /events carries the fireweed background (CLAUDE.md: the
- *  color spends at most once per page, on the single primary Register button). Resolves
- *  `--color-fireweed` through a throwaway probe element rather than string-comparing the raw
- *  `oklch()` custom property, so the comparison matches whatever `rgb()`/`oklch()` form the
- *  browser actually resolves computed backgrounds to. */
-async function checkFireweedSingleton(page, path, offenders) {
+ *  color spends at most once per page, on the single primary Register button), and exactly one
+ *  `.ev-cta` when the page under test is expected to hold an open class
+ *  (`EVENTS_EXPECT_OPEN_CLASS`). Resolves `--color-fireweed` through a throwaway probe element
+ *  rather than string-comparing the raw `oklch()` custom property, so the comparison matches
+ *  whatever `rgb()`/`oklch()` form the browser actually resolves computed backgrounds to. */
+async function checkFireweedSingleton(page, path, offenders, expectOpenClass) {
   if (!(await requireEventBands(page, path, offenders))) return;
+  if (expectOpenClass) {
+    const ctaCount = await page.evaluate(() => document.querySelectorAll('.ev-cta').length);
+    if (ctaCount !== 1) {
+      offenders.push(`${path}: expected exactly one .ev-cta (the fixture seeds an open class), found ${ctaCount}`);
+    }
+  }
   const matches = await page.evaluate(() => {
     const probe = document.createElement('div');
     probe.style.backgroundColor = 'var(--color-fireweed)';
@@ -433,7 +448,13 @@ function collectInteractionRules() {
 /** Check (f): every class-targeted `:hover` rule must have a matching `:focus-visible` rule
  *  reaching the same class somewhere in the site's own CSS. A bare-tag prose anchor styled
  *  only through an ancestor class (`.jump-links a:hover`) is not "a class selector" by this
- *  rule's own reading and relies on the chassis's shared `a:focus-visible` instead. */
+ *  rule's own reading and relies on the chassis's shared `a:focus-visible` instead.
+ *
+ *  KNOWN GAP, deliberately not closed here: a bare-tag hover rule (`.ev-gov-table td a:hover`,
+ *  `td:hover`) contributes no class to match on, so this check skips it entirely and a bare-tag
+ *  hover with no focus sibling passes green. Closing it needs the rule collector to model
+ *  descendant selectors, which is engine-level work for `cairn-audit` rather than one site's own
+ *  probe script (CLAUDE.md, "Engine-level UI mechanics"). */
 function checkHoverFocusParity(offenders) {
   const rules = collectInteractionRules();
   const focusVisibleClasses = new Set();
@@ -556,13 +577,16 @@ async function main() {
     // the overflow check at 320.
     const events1440 = await open(browser, EVENTS_PATH, { width: 1440, height: 900 });
     await checkEventPhotoRatio(events1440, EVENTS_PATH, offenders);
-    await checkFireweedSingleton(events1440, EVENTS_PATH, offenders);
+    await checkFireweedSingleton(events1440, EVENTS_PATH, offenders, EVENTS_EXPECT_OPEN_CLASS);
     await checkSeasonSections(events1440, EVENTS_PATH, offenders);
     await checkMonthIndexLinks(events1440, EVENTS_PATH, offenders);
     await events1440.close();
 
     const events390 = await open(browser, EVENTS_PATH, { width: 390, height: 900 });
     await checkEventPhotoRatio(events390, EVENTS_PATH, offenders);
+    // Check (h) on the season page's own controls: the subscribe bar's four entries and each
+    // band's single action are the narrowest hit areas the site ships outside the masthead.
+    await checkTouchTargets(events390, EVENTS_PATH, warnings);
     await events390.close();
 
     const events320 = await open(browser, EVENTS_PATH, { width: 320, height: 900 });
