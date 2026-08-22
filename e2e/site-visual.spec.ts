@@ -92,27 +92,26 @@ test('education — long-form pipeline renders no duplicate section', async ({ p
   await expect(dividerLabels.nth(2)).toHaveText('Policies & questions');
 });
 
-// The D1-backed /events template: the events-redesign pass's season spine (month waypoints,
-// Off-Season and Meetings & Governance as the spine's own closing waypoints, the calendar-
-// subscribe bar) reading from the seeded fixture rows in every row shape the manifest
-// (docs/events-manifest.md) and the redesign brief describe. Content assertions over a screenshot
-// here: the redesign intentionally breaks the prior card-grid baseline, which regenerates on CI
-// post-merge rather than being hand-verified pixel-by-pixel in this suite.
+// The D1-backed /events template: the events-redesign pass's one long, anchorable season page
+// (the light hero without a promise sentence, the calendar-subscribe bar, the month index, the
+// alternating photo bands, and the governance coda), reading from the seeded fixture rows.
+// Content assertions over a screenshot here: the redesign intentionally breaks the prior
+// card-grid baseline, which regenerates on CI post-merge rather than being hand-verified
+// pixel-by-pixel in this suite.
 test('events — light', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/events/');
-  // The 2026-07-12 template pass gave /events/ the light promise hero: the page title is the
-  // eyebrow line and the h1 carries the promise (686060c).
-  await expect(page.getByRole('heading', { level: 1, name: "There's always something happening at the club." })).toBeVisible();
+  // The events-redesign pass's own title: the "Events" eyebrow over "The {seasonYear} Season"
+  // (no promise sentence). 2026 matches migration 0001_substrate's seeded `current_season` row.
+  await expect(page.getByRole('heading', { level: 1, name: 'The 2026 Season' })).toBeVisible();
   await expect(page.locator('.events-hero-eyebrow', { hasText: 'Events' })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 2, name: 'Off-Season' })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 2, name: 'Meetings & Governance' })).toBeVisible();
-  // A spine row from each section, proving the full read/group/render pipeline, not just the
-  // shell: each row's name links to its own /events/[id] page.
+  // A season band, proving the full read/group/render pipeline, not just the shell.
+  await expect(page.locator('.ev-band').first()).toBeVisible();
   await expect(page.getByRole('link', { name: 'Test Regatta' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Test Off-Season Social' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Test Annual Meeting' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'iCal / Apple' })).toBeVisible();
+  // The governance coda, still reachable off the month index's own "Meetings" link.
+  await expect(page.locator('#meetings')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Meetings and governance' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Apple Calendar' })).toBeVisible();
   await expect(page).toHaveScreenshot('events-light.png', { fullPage: true });
 });
 
@@ -136,27 +135,18 @@ test('events calendar.ics — real feed', async ({ page }) => {
   expect(body).toContain('UID:test-regatta@aksailingclub.org');
 });
 
-// The per-event page (a real event, with a photo-less placeholder in this fixture): the facts
-// slab, the description, and the register/signup action zone all render off the same seeded row.
-test('event detail — light', async ({ page }) => {
-  await page.emulateMedia({ colorScheme: 'light' });
-  await page.goto('/events/test-regatta');
-  await expect(page.getByRole('heading', { level: 1, name: 'Test Regatta' })).toBeVisible();
-  await expect(page.getByText('10:00 AM')).toBeVisible();
-  await expect(page.getByRole('definition').getByText('Alaska Sailing Club', { exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Add to calendar' })).toBeVisible();
-  await expect(page).toHaveScreenshot('event-detail-light.png', { fullPage: true });
-});
-
-// The per-class page: the same route, keyed by the class's own id (never its season-scoped slug),
-// carrying the fee fact and its internal signup-route action instead of an outbound register link.
-test('class detail — light', async ({ page }) => {
-  await page.emulateMedia({ colorScheme: 'light' });
-  await page.goto('/events/test-intro-class');
-  await expect(page.getByRole('heading', { level: 1, name: 'Test Intro Class' })).toBeVisible();
-  await expect(page.getByText('$150')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Sign up' })).toHaveAttribute('href', '/classes/test-intro-class/signup');
-  await expect(page).toHaveScreenshot('class-detail-light.png', { fullPage: true });
+// The events-redesign pass's link-preview stub (/events/[id]): a shared link to a season row
+// still unfurls with its own title and a noindex robots tag, then forwards a real browser on to
+// the row's own anchor on the season page. Uses the fixture's seeded 'test-regatta' id (the
+// design contract's own illustrative "Governor's Cup" example names no row this suite's fixture
+// actually seeds); the two prior full-page "event detail — light" / "class detail — light" tests
+// this replaces checked a per-event template that the events-redesign pass retired.
+test('events detail stub — redirects', async ({ page }) => {
+  const res = await page.request.get('/events/test-regatta');
+  expect(res.status()).toBe(200);
+  const body = await res.text();
+  expect(body).toContain('<meta http-equiv="refresh" content="0; url=/events#test-regatta"');
+  expect(body).toContain('<meta name="robots" content="noindex"');
 });
 
 // The public join door (plan Task 8, the unified-signup arc): tier selection with live

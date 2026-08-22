@@ -52,6 +52,14 @@ const REPO_ROOT = new URL('..', import.meta.url).pathname;
 const HOME_PATH = '/';
 const BAND_COMPOSED_PAGES = [HOME_PATH];
 
+// The events-redesign pass (2026-08-22): /events earns its own dedicated checks below rather
+// than joining BAND_COMPOSED_PAGES, since its band-composition root marker is `.events-shell`,
+// not `.home-shell` (checkBandAlternation's own marker), and its acceptance criteria are a
+// different, more specific set than the four generic band checks above (a fixed 3:2 photo
+// ratio rather than a tolerance band, a fireweed-singleton rule, season-section id/h2 coverage,
+// and month-index link resolution) instead of a superset of them.
+const EVENTS_PATH = '/events';
+
 const OVERFLOW_WIDTHS = [320, 390, 1440];
 const RATIO_TOLERANCE = 0.12;
 const CORNER_BOX = { width: 200, height: 200 };
@@ -212,6 +220,90 @@ async function checkBandAlternation(page, path, warnings) {
   if (repeats.length > 0) {
     warnings.push(`${path}: WARN adjacent bands repeat the identical background at position(s) ${repeats.join(', ')}`);
   }
+}
+
+// ─── The events-redesign pass's own checks (i-l below), against /events specifically ────────
+
+/** Check (i): every `.ev-photo img` on /events renders at exactly a 3:2 ratio, within 1px (the
+ *  design contract's uncropped-photo rule). This reads the rendered box, not the natural image
+ *  size: `aspect-ratio` is a layout property of the `<img>` element itself, so the box holds this
+ *  ratio even against the CI runner's photo-less local R2 replica (this file's own header note),
+ *  unlike the natural-size comparison `checkImageRatios` above needs a loaded image for. */
+async function checkEventPhotoRatio(page, path, offenders) {
+  const boxes = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('.ev-photo img')).map((img) => {
+      const r = img.getBoundingClientRect();
+      return { width: r.width, height: r.height };
+    }),
+  );
+  for (const { width, height } of boxes) {
+    if (width === 0 || height === 0) continue;
+    const divergence = Math.abs(height - width / 1.5);
+    if (divergence > 1) {
+      offenders.push(
+        `${path}: .ev-photo img renders ${width.toFixed(1)}x${height.toFixed(1)}, ` +
+          `${divergence.toFixed(2)}px off the 3:2 ratio`,
+      );
+    }
+  }
+}
+
+/** Check (j): at most one element on /events carries the fireweed background (CLAUDE.md: the
+ *  color spends at most once per page, on the single primary Register button). Resolves
+ *  `--color-fireweed` through a throwaway probe element rather than string-comparing the raw
+ *  `oklch()` custom property, so the comparison matches whatever `rgb()`/`oklch()` form the
+ *  browser actually resolves computed backgrounds to. */
+async function checkFireweedSingleton(page, path, offenders) {
+  const matches = await page.evaluate(() => {
+    const probe = document.createElement('div');
+    probe.style.backgroundColor = 'var(--color-fireweed)';
+    document.body.appendChild(probe);
+    const fireweedRgb = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    const hits = [];
+    for (const el of document.querySelectorAll('body *')) {
+      if (getComputedStyle(el).backgroundColor === fireweedRgb) {
+        hits.push(el.tagName + (el.className ? `.${String(el.className).split(' ').join('.')}` : ''));
+      }
+    }
+    return hits;
+  });
+  if (matches.length > 1) {
+    offenders.push(`${path}: fireweed background on ${matches.length} elements (at most one allowed): ${matches.join(', ')}`);
+  }
+}
+
+/** Check (k): every `<section>` in the events page's own composition (each event/class band, the
+ *  governance coda) carries both an `id` (the anchor `EventsIndex` and the calendar links target)
+ *  and an `h2` (the season page's own outline). */
+async function checkSeasonSections(page, path, offenders) {
+  const issues = await page.evaluate(() => {
+    const found = [];
+    for (const section of document.querySelectorAll('.events-shell section')) {
+      const label = section.id ? `#${section.id}` : '(no id)';
+      if (!section.id) found.push(`section ${label} has no id`);
+      if (!section.querySelector('h2')) found.push(`section ${label} has no h2`);
+    }
+    return found;
+  });
+  for (const issue of issues) offenders.push(`${path}: ${issue}`);
+}
+
+/** Check (l): every month-index link (`EventsIndex`) resolves to a real element id somewhere on
+ *  the page, so a jump link is never dead. */
+async function checkMonthIndexLinks(page, path, offenders) {
+  const issues = await page.evaluate(() => {
+    const found = [];
+    for (const a of document.querySelectorAll('.ev-index a')) {
+      const href = a.getAttribute('href') ?? '';
+      const id = href.startsWith('#') ? href.slice(1) : null;
+      if (!id || !document.getElementById(id)) {
+        found.push(`link "${a.textContent?.trim()}" (${href}) has no matching element id`);
+      }
+    }
+    return found;
+  });
+  for (const issue of issues) offenders.push(`${path}: ${issue}`);
 }
 
 // ─── Standing gates from the 2026-07-15 invisible-polish pass (checks f, g, h below) ───────
@@ -442,6 +534,24 @@ async function main() {
         await overflowPage.close();
       }
     }
+
+    // The events-redesign pass's own checks: the 3:2 photo ratio at both 1440 and 390, the
+    // fireweed-singleton/season-section/month-index checks at 1440 (viewport-independent), and
+    // the overflow check at 320.
+    const events1440 = await open(browser, EVENTS_PATH, { width: 1440, height: 900 });
+    await checkEventPhotoRatio(events1440, EVENTS_PATH, offenders);
+    await checkFireweedSingleton(events1440, EVENTS_PATH, offenders);
+    await checkSeasonSections(events1440, EVENTS_PATH, offenders);
+    await checkMonthIndexLinks(events1440, EVENTS_PATH, offenders);
+    await events1440.close();
+
+    const events390 = await open(browser, EVENTS_PATH, { width: 390, height: 900 });
+    await checkEventPhotoRatio(events390, EVENTS_PATH, offenders);
+    await events390.close();
+
+    const events320 = await open(browser, EVENTS_PATH, { width: 320, height: 900 });
+    await checkOverflow(events320, EVENTS_PATH, 320, offenders);
+    await events320.close();
   } finally {
     await browser.close();
     if (server) server.kill();
