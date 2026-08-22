@@ -31,18 +31,15 @@ formatting, and cairn's `.d.ts` importing `@cloudflare/workers-types`. Riders st
 0.94: announce-list recency via `publishedAt`; baseline coverage for the stacked field register;
 the `asset_requests` uniqueness race (needs a unique index, so a migration).
 
-**Next pass (prep, 2026-08-21; the pick is Geoff's).** Recommended: `events-redesign`, the
-public events page from scratch on its own template. ROADMAP's "then converge" paragraph makes
-it the last member-surface pass before the cutover queue clears (directory and waivers are
-shipped). Resume prompt: "Start the events-redesign pass: read ROADMAP.md's events-redesign
-entry and docs/STATUS.md, then open the functional brainstorm with Geoff
-(superpowers:brainstorming) before any visual work; the current page's timeline, chips, and
-season machinery are requirements evidence, not a design to keep." Alternative: the next
-`admin-screen-passes` screen (Events admin, or Email + Announce as one pass), same shape:
-functional brainstorm first, toolkit harvest to cairn at close. Inputs either way:
-`docs/2026-07-06-asc-phase-1-design.md`, `docs/image-standard.md`, `docs/design-benchmark/`,
-`docs/events-integration-findings.md` (the read-only `EVENTS_DB` shape), and the 0.95 harvest
-doc's open engine findings. Launch a fresh session from this repo.
+**events-redesign (in flight, 2026-08-22).** Contract ratified and committed:
+`docs/2026-08-22-events-redesign-design.md` (one long anchorable season page, alternating photo
+bands, quieted past events, governance coda, four-entry subscribe bar, thin link-preview detail
+route; events stay D1 and the no-events-concept ruling stays closed). Probe 1 is built and
+open for Geoff's verdicts; arc log `docs/design-benchmark/events-redesign-round-1-arc.md`,
+probe files machine-local at `~/.local/asc-data/probes/events-redesign/`. Next: fold Geoff's
+verdicts into probe 2 or settle; at settle, write the pass plan and build on a branch. Open
+data question for Geoff: `classes.fleet_tuneup` says `drop_in = 0` while its copy says no
+registration is required.
 
 **Geoff's review queue (full entries in docs/status-archive.md).** Before/afters on dev: the
 rebuilt Assets screens (gates the apex), Classes, the pass-B sidebar walkthrough per role, the
