@@ -246,3 +246,15 @@ treatment. Sub-threshold observation recorded, not a tell: the menu facet's disc
 caret differs from native select carets at ~4x zoom (a consequence of the ratified
 two-variant grammar). Excluded per triage: the facet-border 3:1 contrast question, on
 the owner's queue.
+
+## Events page, events-redesign close (2026-08-22)
+
+- **Composition against probe 3** — RIGHT, per the CI-rendered 1440 baseline read in the main
+  loop: hero, subscribe bar, index, alternating bands, coda match the ratified probe. The
+  fresh-context whole-page coherence read at 390 and 1440 is OWED on dev after the baseline
+  regeneration and rides Geoff's before/after (the session closed at its token ceiling).
+- **Facts-line separators** — APPLIED (the close-out round): joined in the derived string, no
+  per-item span, so Svelte's block trimming cannot eat the spaces.
+- **Class mark contrast** — APPLIED: `--color-star-gold-dot` (3.70:1) with an sr-only label.
+- **Subscribe targets** — APPLIED: padded to about 30px; `checkTouchTargets` now runs on
+  `/events` at 390.

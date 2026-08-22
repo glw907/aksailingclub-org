@@ -407,6 +407,31 @@ Dates are 2026-07-07/08 (the home convergence arc) unless noted.
   quiet hairline, so it stands pending his ruling; a stronger `--input-color` mix in a
   cairn patch would clear it.
 
+- **Events page (Geoff, 2026-08-22, the events-redesign brainstorm and probe arc; contract
+  `docs/2026-08-22-events-redesign-design.md`)**: ONE LONG PAGE carries the whole season, each
+  event its own anchored section; NN/g's scrolling research supports it when every section
+  serves one task, and a dozen annually recurring events is one task. CHRONOLOGICAL through the
+  season, then a photo-less "Meetings and governance" coda (a hairline table, the portal's
+  committees register). A PAST EVENT STAYS IN PLACE, QUIETED (desaturated photo, a "Past"
+  status, no action) and the page opens at the next upcoming event, because annual recurrence
+  makes "what is the Governor's Cup" a March question. BAND COMPOSITION is the home page's
+  Fleet/Facilities alternation: a 3:2 photo at five of twelve columns beside the text, sides
+  alternating, sage and white bands by position; measured against live copy lengths (four to six
+  lines balances the photo with no padding). The TITLE is the "Events" eyebrow over "The
+  {year} Season", year derived from the rows; probes 1 and 2 proved any sentence in the italic
+  promise slot reads as marketing cadence, so the slot carries a label, never a sentence (dose
+  words: "marketing-copy-cadence", rejected twice). The STAR stays the only class mark, on the
+  3:1 `--color-star-gold-dot` token with a screen-reader label. FIREWEED appears at most once:
+  the Register on the first upcoming open class, computed independently of the scroll target.
+  The DETAIL ROUTE survives only as a link-preview stub (the event's own OG title, photo, and
+  description, noindex, meta refresh to the anchor), because a URL fragment never reaches an
+  unfurler. The SUBSCRIBE BAR offers four entries (Apple, Google, Outlook, copy the feed URL).
+  Band titles are PLAIN TEXT: a self-link is a broken promise to a screen reader; the section id
+  is the share anchor. SMOOTH SCROLLING is site-wide (`html { scroll-behavior: smooth }` with
+  the standing reduced-motion override and `scroll-padding-top` for the sticky header); the
+  on-load jump stays instant, since only reader-initiated motion should be seen. Events stay D1
+  records; cairn's no-events-concept ruling was considered and left closed on purpose.
+
 ## Benchmark provenance
 
 Pinned by the owner 2026-07-08 ("that's our new design benchmark"): the home page at commit

@@ -1,16 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import {
-  buildEventOrder,
-  buildEventsPage,
-  readEventRows,
-  toEventCard,
-  truncateSummary,
-  type EventDetailRow,
-} from '$theme/events-data';
+import { describe, it, expect, vi } from 'vitest';
+import { buildEventsPage, readEventRow, readEventRows, toEventCard, type EventDetailRow } from '$theme/events-data';
 import type { MediaRef } from '@glw907/cairn-cms/media';
 import { fakeD1 } from './_fake-d1';
 
-const CURRENT_YEAR = 2026;
+const TODAY = '2026-06-15'; // June 15, 2026, as an Alaska calendar date
 
 const NO_IMAGE = (_ref: MediaRef) => undefined;
 const IDENTITY_MARKDOWN = async (md: string) => `<p>${md}</p>`;
@@ -34,294 +27,380 @@ function row(overrides: Partial<EventDetailRow>): EventDetailRow {
     registration_url: null,
     registration_status: null,
     fee: null,
+    track: null,
+    drop_in: null,
     ...overrides,
   };
 }
 
-describe('buildEventsPage', () => {
-  it('pulls a governance row out of its month bucket entirely, regardless of date', async () => {
-    const data = await buildEventsPage(
-      [row({ title: 'June Meeting', slug: 'june-meeting', event_type: 'governance', start_date: '2026-06-10' })],
-      { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+describe('toEventCard: dateLabel', () => {
+  it('formats a single day with its weekday', async () => {
+    const card = await toEventCard(
+      row({ start_date: '2026-05-23' }),
+      TODAY,
+      NO_IMAGE,
+      IDENTITY_MARKDOWN,
     );
-    expect(data.monthSections).toEqual([]);
-    expect(data.meetings).toHaveLength(1);
-    expect(data.meetings[0].title).toBe('June Meeting');
+    expect(card.dateLabel).toBe('Saturday, May 23');
   });
 
-  it('groups a real month into its own section and orders sections chronologically', async () => {
+  it('formats a range within one month without repeating the month name', async () => {
+    const card = await toEventCard(
+      row({ start_date: '2026-09-05', end_date: '2026-09-07' }),
+      TODAY,
+      NO_IMAGE,
+      IDENTITY_MARKDOWN,
+    );
+    expect(card.dateLabel).toBe('September 5–7');
+  });
+
+  it('formats a range crossing months with both months spelled out', async () => {
+    const card = await toEventCard(
+      row({ start_date: '2026-09-28', end_date: '2026-10-02' }),
+      TODAY,
+      NO_IMAGE,
+      IDENTITY_MARKDOWN,
+    );
+    expect(card.dateLabel).toBe('September 28 – October 2');
+  });
+
+  it('reads "Date to be announced" for a genuinely undated row', async () => {
+    const card = await toEventCard(row({}), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(card.dateLabel).toBe('Date to be announced');
+  });
+});
+
+describe('toEventCard: isPast', () => {
+  it('is true once the end date falls before today', async () => {
+    const card = await toEventCard(
+      row({ start_date: '2026-06-01', end_date: '2026-06-10' }),
+      TODAY,
+      NO_IMAGE,
+      IDENTITY_MARKDOWN,
+    );
+    expect(card.isPast).toBe(true);
+  });
+
+  it('is false while the end date is still today or later', async () => {
+    const card = await toEventCard(
+      row({ start_date: '2026-06-10', end_date: '2026-06-20' }),
+      TODAY,
+      NO_IMAGE,
+      IDENTITY_MARKDOWN,
+    );
+    expect(card.isPast).toBe(false);
+  });
+
+  it('falls back to start_date when there is no end_date', async () => {
+    const past = await toEventCard(row({ start_date: '2026-06-01' }), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(past.isPast).toBe(true);
+
+    const upcoming = await toEventCard(row({ start_date: '2026-06-20' }), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(upcoming.isPast).toBe(false);
+  });
+
+  it('is false for a genuinely undated row: no evidence it has already happened', async () => {
+    const card = await toEventCard(row({}), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(card.isPast).toBe(false);
+  });
+});
+
+describe('toEventCard: time', () => {
+  it('formats an afternoon hour with no minutes', async () => {
+    const card = await toEventCard(row({ start_time: '13:00' }), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(card.time).toBe('1 p.m.');
+  });
+
+  it('formats a morning time with minutes', async () => {
+    const card = await toEventCard(row({ start_time: '10:30' }), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(card.time).toBe('10:30 a.m.');
+  });
+
+  it('is undefined when the row has no start time', async () => {
+    const card = await toEventCard(row({}), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(card.time).toBeUndefined();
+  });
+});
+
+describe('toEventCard: class fields', () => {
+  it('carries fee, track, and dropIn true for a drop-in class', async () => {
+    const card = await toEventCard(
+      row({ event_type: 'class', fee: 100, track: 'youth', drop_in: 1 }),
+      TODAY,
+      NO_IMAGE,
+      IDENTITY_MARKDOWN,
+    );
+    expect(card.fee).toBe(100);
+    expect(card.track).toBe('youth');
+    expect(card.dropIn).toBe(true);
+  });
+
+  it('reads dropIn false for a scheduled (non-drop-in) class', async () => {
+    const card = await toEventCard(
+      row({ event_type: 'class', track: 'adult-teen', drop_in: 0 }),
+      TODAY,
+      NO_IMAGE,
+      IDENTITY_MARKDOWN,
+    );
+    expect(card.dropIn).toBe(false);
+  });
+
+  it('reads dropIn false and leaves fee/track undefined for a plain event', async () => {
+    const card = await toEventCard(row({ event_type: 'racing', fee: null }), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(card.dropIn).toBe(false);
+    expect(card.fee).toBeUndefined();
+    expect(card.track).toBeUndefined();
+  });
+
+  it('maps the registration_status SQL CASE to the season page\'s own vocabulary', async () => {
+    const open = await toEventCard(row({ event_type: 'class', registration_status: 'open' }), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(open.registrationState).toBe('open');
+
+    const full = await toEventCard(row({ event_type: 'class', registration_status: 'full' }), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(full.registrationState).toBe('waitlisted');
+
+    const closed = await toEventCard(row({ event_type: 'class', registration_status: 'closed' }), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(closed.registrationState).toBe('closed');
+
+    const plainEvent = await toEventCard(row({ event_type: 'racing' }), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(plainEvent.registrationState).toBeUndefined();
+  });
+});
+
+describe('toEventCard: longHtml, photo, and dotKind', () => {
+  it('renders long_description through the injected markdown renderer only when present', async () => {
+    const withBody = await toEventCard(row({ long_description: 'Bring gloves.' }), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(withBody.longHtml).toBe('<p>Bring gloves.</p>');
+
+    const withoutBody = await toEventCard(row({}), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(withoutBody.longHtml).toBeUndefined();
+  });
+
+  it('resolves a real photo when the resolver has one, and falls back to none when it does not', async () => {
+    const withPhoto = await toEventCard(
+      row({ hero_image: 'bnac.jpg', hero_image_alt: 'Racing' }),
+      TODAY,
+      () => '/media/bnac.29d75df78f196b2e.jpg',
+      IDENTITY_MARKDOWN,
+    );
+    expect(withPhoto.image).toEqual({ url: '/media/bnac.29d75df78f196b2e.jpg', alt: 'Racing' });
+
+    const withoutPhoto = await toEventCard(row({ hero_image: 'unmigrated.jpg' }), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(withoutPhoto.image).toBeUndefined();
+  });
+
+  it('leaves the alt empty, never the title, for a photo the editor has not described', async () => {
+    const card = await toEventCard(
+      row({ title: 'BNAC', hero_image: 'bnac.jpg' }),
+      TODAY,
+      () => '/media/bnac.29d75df78f196b2e.jpg',
+      IDENTITY_MARKDOWN,
+    );
+    expect(card.image?.alt).toBe('');
+  });
+
+  it("tags each card with the Season list's C7 dot kind, reused verbatim from season-data.ts", async () => {
+    const byType = async (event_type: string) => (await toEventCard(row({ event_type }), TODAY, NO_IMAGE, IDENTITY_MARKDOWN)).dotKind;
+    expect(await byType('racing')).toBe('racing');
+    expect(await byType('class')).toBe('class');
+    expect(await byType('social')).toBe('social');
+    expect(await byType('operations')).toBe('business');
+    expect(await byType('governance')).toBe('business');
+  });
+
+  it("routes a class on its own id, not its (season-scoped, non-unique) slug", async () => {
+    const eventCard = await toEventCard(row({ id: 'event-row-id', slug: 'bnac', event_type: 'racing' }), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(eventCard.routeId).toBe('bnac');
+
+    const classCard = await toEventCard(row({ id: 'class-row-id', slug: 'adult-intro', event_type: 'class' }), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(classCard.routeId).toBe('class-row-id');
+  });
+});
+
+describe('buildEventsPage', () => {
+  it('pulls a governance row out of the chronology entirely, regardless of date', async () => {
+    const data = await buildEventsPage(
+      [row({ title: 'June Meeting', slug: 'june-meeting', event_type: 'governance', start_date: '2026-06-10' })],
+      { today: TODAY, currentSeason: 2026, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+    );
+    expect(data.months).toEqual([]);
+    expect(data.governance).toHaveLength(1);
+    expect(data.governance[0].title).toBe('June Meeting');
+  });
+
+  it('groups rows by calendar month and orders the months chronologically', async () => {
     const data = await buildEventsPage(
       [
         row({ title: 'July event', slug: 'july-event', start_date: '2026-07-10' }),
         row({ title: 'May event', slug: 'may-event', start_date: '2026-05-10' }),
-      ],
-      { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
-    );
-    expect(data.monthSections.map((s) => s.label)).toEqual(['May', 'July']);
-  });
-
-  it('buckets an out-of-season row into Off-Season, sorted chronologically', async () => {
-    const data = await buildEventsPage(
-      [
         row({ title: 'BNAC', slug: 'bnac', start_date: '2026-10-09' }),
-        row({ title: 'End of Season', slug: 'eos', start_date: '2026-11-07' }),
       ],
-      { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+      { today: TODAY, currentSeason: 2026, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
     );
-    expect(data.offSeason.map((e) => e.title)).toEqual(['BNAC', 'End of Season']);
+    expect(data.months.map((m) => m.name)).toEqual(['May', 'July', 'October']);
+    expect(data.months.map((m) => m.id)).toEqual(['may', 'july', 'october']);
   });
 
-  it('only ever badges a registration status on a class row, never a plain event', async () => {
+  it('sorts a genuinely undated row into a trailing "Later" bucket', async () => {
     const data = await buildEventsPage(
       [
-        row({
-          title: 'Intro Class',
-          slug: 'intro-class',
-          event_type: 'class',
-          start_date: '2026-06-18',
-          registration_status: 'closed',
-        }),
-        row({
-          title: 'A Regatta With A Link',
-          slug: 'a-regatta',
-          event_type: 'racing',
-          start_date: '2026-06-19',
-          registration_url: 'https://example.com',
-        }),
+        row({ title: 'Dated', slug: 'dated', start_date: '2026-06-01' }),
+        row({ title: 'Undated', slug: 'undated' }),
       ],
-      { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+      { today: TODAY, currentSeason: 2026, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
     );
-    const [intro, regatta] = data.monthSections[0].events;
-    expect(intro.registrationStatusLabel).toBe('Closed (Waitlist Open)');
-    expect(intro.registrationStatusKind).toBe('error');
-    expect(regatta.registrationStatusLabel).toBeUndefined();
-    expect(regatta.registrationUrl).toBe('https://example.com');
+    expect(data.months.map((m) => m.name)).toEqual(['June', 'Later']);
+    expect(data.months.at(-1)?.events[0].title).toBe('Undated');
   });
 
-  it('carries a class row\'s registrationUrl straight through: the signup route is computed upstream by the CLUB_DB query, not this pure function', async () => {
+  it('sets nextUpcomingId to the first non-past, non-governance row', async () => {
     const data = await buildEventsPage(
       [
-        row({
-          title: 'Intro Class',
-          slug: 'intro-class',
-          event_type: 'class',
-          start_date: '2026-06-18',
-          registration_url: '/classes/abc123/signup',
-        }),
-      ],
-      { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
-    );
-    expect(data.monthSections[0].events[0].registrationUrl).toBe('/classes/abc123/signup');
-  });
-
-  it('only lists a TOC link for a section that actually has events, in order', async () => {
-    const data = await buildEventsPage(
-      [
-        row({ title: 'July event', slug: 'july-event', start_date: '2026-07-10' }),
-        row({ title: 'BNAC', slug: 'bnac', start_date: '2026-10-09' }),
-        row({ title: 'Meeting', slug: 'meeting', event_type: 'governance', start_date: '2026-11-14' }),
-      ],
-      { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
-    );
-    expect(data.tocLinks).toEqual([
-      { href: '#section-july', label: 'Jul' },
-      { href: '#section-off-season', label: 'Off-Season' },
-      { href: '#section-meetings', label: 'Meetings' },
-    ]);
-  });
-
-  it('resolves a real photo when the resolver has one, and falls back to none when it does not', async () => {
-    const withPhoto = await buildEventsPage(
-      [row({ title: 'BNAC', slug: 'bnac', start_date: '2026-10-09', hero_image: 'bnac.jpg', hero_image_alt: 'Racing' })],
-      {
-        currentYear: CURRENT_YEAR,
-        resolveMedia: () => '/media/bnac.29d75df78f196b2e.jpg',
-        renderMarkdown: IDENTITY_MARKDOWN,
-      },
-    );
-    expect(withPhoto.offSeason[0].image).toEqual({ url: '/media/bnac.29d75df78f196b2e.jpg', alt: 'Racing' });
-
-    const withoutPhoto = await buildEventsPage(
-      [row({ title: 'BNAC', slug: 'bnac', start_date: '2026-10-09', hero_image: 'unmigrated.jpg' })],
-      { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
-    );
-    expect(withoutPhoto.offSeason[0].image).toBeUndefined();
-  });
-
-  it('renders long_description through the injected markdown renderer only when present', async () => {
-    const data = await buildEventsPage(
-      [
-        row({ title: 'With', slug: 'with', start_date: '2026-06-01', long_description: 'Bring gloves.' }),
-        row({ title: 'Without', slug: 'without', start_date: '2026-06-02' }),
-      ],
-      { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
-    );
-    const [withCard, withoutCard] = data.monthSections[0].events;
-    expect(withCard.longDescriptionHtml).toBe('<p>Bring gloves.</p>');
-    expect(withoutCard.longDescriptionHtml).toBeUndefined();
-  });
-
-  it('flags isEmpty only when every bucket is empty', async () => {
-    const empty = await buildEventsPage([], {
-      currentYear: CURRENT_YEAR,
-      resolveMedia: NO_IMAGE,
-      renderMarkdown: IDENTITY_MARKDOWN,
-    });
-    expect(empty.isEmpty).toBe(true);
-    expect(empty.tocLinks).toEqual([]);
-
-    const notEmpty = await buildEventsPage([row({ title: 'X', slug: 'x', start_date: '2026-06-01' })], {
-      currentYear: CURRENT_YEAR,
-      resolveMedia: NO_IMAGE,
-      renderMarkdown: IDENTITY_MARKDOWN,
-    });
-    expect(notEmpty.isEmpty).toBe(false);
-  });
-
-  it("routes a class on its own id, not its (season-scoped, non-unique) slug", async () => {
-    const data = await buildEventsPage(
-      [
-        row({ title: 'Adult Intro', slug: 'adult-intro', id: 'class-row-id', event_type: 'class', start_date: '2026-06-01' }),
-        row({ title: 'BNAC', slug: 'bnac', id: 'event-row-id', event_type: 'racing', start_date: '2026-10-09' }),
-      ],
-      { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
-    );
-    expect(data.monthSections[0].events[0].routeId).toBe('class-row-id');
-    expect(data.offSeason[0].routeId).toBe('bnac');
-  });
-
-  it('formats start_time/end_time into a friendly 12-hour range, omitted when absent', async () => {
-    const withRange = await buildEventsPage(
-      [row({ title: 'A', slug: 'a', start_date: '2026-06-01', start_time: '09:00', end_time: '13:30' })],
-      { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
-    );
-    expect(withRange.monthSections[0].events[0].timeDisplay).toBe('9:00 AM–1:30 PM');
-
-    const noTime = await buildEventsPage([row({ title: 'B', slug: 'b', start_date: '2026-06-02' })], {
-      currentYear: CURRENT_YEAR,
-      resolveMedia: NO_IMAGE,
-      renderMarkdown: IDENTITY_MARKDOWN,
-    });
-    expect(noTime.monthSections[0].events[0].timeDisplay).toBeUndefined();
-  });
-
-  it("carries a class's fee, never a plain event's (which has no fee column)", async () => {
-    const data = await buildEventsPage(
-      [
-        row({ title: 'Class', slug: 'a-class', event_type: 'class', start_date: '2026-06-01', fee: 100 }),
-        row({ title: 'Regatta', slug: 'a-regatta', event_type: 'racing', start_date: '2026-06-02' }),
-      ],
-      { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
-    );
-    const [classCard, regattaCard] = data.monthSections[0].events;
-    expect(classCard.fee).toBe(100);
-    expect(regattaCard.fee).toBeUndefined();
-  });
-
-  it('summarizes short_description verbatim when it fits, and truncates at a word boundary otherwise', async () => {
-    const short = await buildEventsPage(
-      [row({ title: 'A', slug: 'a', start_date: '2026-06-01', short_description: 'Bring gloves.' })],
-      { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
-    );
-    expect(short.monthSections[0].events[0].summary).toBe('Bring gloves.');
-
-    const long = await buildEventsPage(
-      [
-        row({
-          title: 'B',
-          slug: 'b',
-          start_date: '2026-06-02',
-          short_description:
-            'This is a deliberately long lede sentence meant to exceed the ninety character truncation boundary by a fair margin.',
-        }),
-      ],
-      { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
-    );
-    const summary = long.monthSections[0].events[0].summary as string;
-    expect(summary.length).toBeLessThanOrEqual(91); // 90 chars plus the ellipsis
-    expect(summary.endsWith('…')).toBe(true);
-    expect(summary.endsWith(' …')).toBe(false); // no dangling space before the ellipsis
-  });
-
-  it("falls back to a stripped-markdown pass over long_description when there is no short_description (a class row)", async () => {
-    const data = await buildEventsPage(
-      [
-        row({
-          title: 'Intro Class',
-          slug: 'intro-class',
-          event_type: 'class',
-          start_date: '2026-06-01',
-          long_description: '## Bring your own **gear**\n\nSee [the list](https://example.com) for details.',
-        }),
-      ],
-      { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
-    );
-    expect(data.monthSections[0].events[0].summary).toBe('Bring your own gear See the list for details.');
-  });
-  it('tags each card with the Season list\'s C7 dot kind, reused verbatim from season-data.ts', async () => {
-    const data = await buildEventsPage(
-      [
-        row({ title: 'Regatta', slug: 'regatta', event_type: 'racing', start_date: '2026-06-01' }),
-        row({ title: 'Adult Intro', slug: 'adult-intro', event_type: 'class', start_date: '2026-06-02' }),
-        row({ title: 'Potluck', slug: 'potluck', event_type: 'social', start_date: '2026-06-03' }),
-        row({ title: 'Work Party', slug: 'work-party', event_type: 'operations', start_date: '2026-06-04' }),
+        row({ title: 'Past', slug: 'past', id: 'past-id', start_date: '2026-06-01' }),
         row({ title: 'Meeting', slug: 'meeting', event_type: 'governance', start_date: '2026-06-05' }),
+        row({ title: 'Upcoming', slug: 'upcoming', id: 'upcoming-id', start_date: '2026-06-20' }),
       ],
-      { currentYear: CURRENT_YEAR, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+      { today: TODAY, currentSeason: 2026, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
     );
-    const allEvents = [...data.monthSections[0].events, ...data.meetings];
-    const byTitle = Object.fromEntries(allEvents.map((e) => [e.title, e.dotKind]));
-    expect(byTitle['Regatta']).toBe('racing');
-    expect(byTitle['Adult Intro']).toBe('class');
-    expect(byTitle['Potluck']).toBe('social');
-    expect(byTitle['Work Party']).toBe('business');
-    expect(byTitle['Meeting']).toBe('business');
-  });
-});
-
-describe('truncateSummary', () => {
-  it('returns text unchanged when it already fits', () => {
-    expect(truncateSummary('Bring gloves.')).toBe('Bring gloves.');
+    expect(data.nextUpcomingId).toBe('upcoming');
   });
 
-  it('cuts at the last word boundary, never mid-word, and marks the cut with an ellipsis', () => {
-    const text =
-      'This is a deliberately long lede sentence meant to exceed the ninety character truncation boundary by a fair margin.';
-    const truncated = truncateSummary(text, 90);
-    expect(truncated.length).toBeLessThanOrEqual(91);
-    expect(truncated.endsWith('…')).toBe(true);
-    expect(truncated.endsWith(' …')).toBe(false);
-    // The character immediately before the cut must be a real word's own last letter, not a
-    // fragment: the source text has no word starting at any offset this truncation could stop
-    // mid-way through without landing on a space.
-    const withoutEllipsis = truncated.slice(0, -1);
-    expect(text.startsWith(withoutEllipsis)).toBe(true);
-    expect(text[withoutEllipsis.length]).toBe(' ');
-  });
-
-  it('prefers a real sentence boundary over an arbitrary word cut, dropping the ellipsis (basic-polish batch 1)', () => {
-    const text =
-      'Four-day on-site class for adults and teens 13+. Covers all the fundamentals of dinghy sailing, from basic boat handling to racing starts.';
-    expect(truncateSummary(text, 90)).toBe('Four-day on-site class for adults and teens 13+.');
-  });
-
-  it('falls back to a clause boundary (a comma) when no sentence end fits, keeping the ellipsis', () => {
-    const text =
-      'Covers all the fundamentals of dinghy sailing, from basic boat handling to racing starts and a sunset sail with instructors.';
-    expect(truncateSummary(text, 90)).toBe('Covers all the fundamentals of dinghy sailing…');
-  });
-});
-
-describe('toEventCard', () => {
-  it('is the same enrichment buildEventsPage runs per row, exported for a single-row read', async () => {
-    const card = await toEventCard(
-      row({ title: 'BNAC', slug: 'bnac', start_date: '2026-10-09' }),
-      CURRENT_YEAR,
-      NO_IMAGE,
-      IDENTITY_MARKDOWN,
+  it('leaves nextUpcomingId undefined when every row is past', async () => {
+    const data = await buildEventsPage(
+      [row({ title: 'Past', slug: 'past', start_date: '2026-05-01' })],
+      { today: TODAY, currentSeason: 2026, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
     );
-    expect(card.title).toBe('BNAC');
-    expect(card.routeId).toBe('bnac');
+    expect(data.nextUpcomingId).toBeUndefined();
+  });
+
+  it('never picks an undated row as nextUpcomingId, even with no dated row left to beat it', async () => {
+    const data = await buildEventsPage(
+      [
+        row({ title: 'Past', slug: 'past', start_date: '2026-05-01' }),
+        row({ title: 'Undated', slug: 'undated' }),
+      ],
+      { today: TODAY, currentSeason: 2026, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+    );
+    expect(data.nextUpcomingId).toBeUndefined();
+  });
+
+  it('reads seasonYear from settings.current_season when set', async () => {
+    const data = await buildEventsPage(
+      [row({ title: 'X', slug: 'x', start_date: '2019-06-01' })],
+      { today: TODAY, currentSeason: 2026, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+    );
+    expect(data.seasonYear).toBe(2026);
+  });
+
+  it('falls back to the year of the first dated row when currentSeason is unset', async () => {
+    const data = await buildEventsPage(
+      [
+        row({ title: 'Undated', slug: 'undated' }),
+        row({ title: 'X', slug: 'x', start_date: '2027-06-01' }),
+      ],
+      { today: TODAY, currentSeason: null, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+    );
+    expect(data.seasonYear).toBe(2027);
+  });
+
+  it('falls back to the CHRONOLOGICALLY earliest dated row, not the first in read order', async () => {
+    const data = await buildEventsPage(
+      [
+        row({ title: 'Later in read order, later in the season', slug: 'later', start_date: '2027-08-01' }),
+        row({ title: 'Earlier chronologically', slug: 'earlier', start_date: '2026-04-01' }),
+      ],
+      { today: TODAY, currentSeason: null, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+    );
+    expect(data.seasonYear).toBe(2026);
+  });
+
+  it('names the first open, non-drop-in class as the fireweed slot, even when it is not the next row', async () => {
+    const data = await buildEventsPage(
+      [
+        row({ title: 'Regatta', slug: 'regatta', id: 'regatta', start_date: '2026-06-20' }),
+        row({
+          title: 'Adult Intro',
+          slug: 'adult-intro',
+          id: 'class-open',
+          event_type: 'class',
+          start_date: '2026-07-04',
+          registration_status: 'open',
+        }),
+      ],
+      { today: TODAY, currentSeason: 2026, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+    );
+    expect(data.nextUpcomingId).toBe('regatta');
+    expect(data.primaryClassId).toBe('class-open');
+  });
+
+  it('leaves primaryClassId undefined when no class is open, past, drop-in, or waitlisted alike', async () => {
+    const data = await buildEventsPage(
+      [
+        row({ title: 'Full', slug: 'full', id: 'class-full', event_type: 'class', start_date: '2026-07-04', registration_status: 'full' }),
+        row({ title: 'Drop-in', slug: 'drop-in', id: 'class-dropin', event_type: 'class', start_date: '2026-07-05', registration_status: 'open', drop_in: 1 }),
+        row({ title: 'Done', slug: 'done', id: 'class-past', event_type: 'class', start_date: '2026-05-01', registration_status: 'open' }),
+      ],
+      { today: TODAY, currentSeason: 2026, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+    );
+    expect(data.primaryClassId).toBeUndefined();
+  });
+
+  it('drops a later row whose route id an earlier row already claimed, rather than 500ing the page', async () => {
+    // An `events` slug and a `classes` id are keyed in two independent tables, so nothing at the
+    // schema level stops them from colliding; on the keyed `{#each}` a duplicate is a crash.
+    const data = await buildEventsPage(
+      [
+        row({ title: 'The Event', slug: 'shared-id', id: 'event-uuid', start_date: '2026-06-20' }),
+        row({ title: 'The Class', slug: 'adult-intro', id: 'shared-id', event_type: 'class', start_date: '2026-06-21' }),
+      ],
+      { today: TODAY, currentSeason: 2026, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+    );
+    const titles = data.months.flatMap((m) => m.events.map((e) => e.title));
+    expect(titles).toEqual(['The Event']);
+  });
+
+  it('dedupes a governance row against a season row sharing its route id', async () => {
+    const data = await buildEventsPage(
+      [
+        row({ title: 'The Event', slug: 'shared-id', id: 'event-uuid', start_date: '2026-06-20' }),
+        row({ title: 'The Meeting', slug: 'shared-id', id: 'meeting-uuid', event_type: 'governance', start_date: '2026-06-21' }),
+      ],
+      { today: TODAY, currentSeason: 2026, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+    );
+    expect(data.governance).toEqual([]);
+    expect(data.months.flatMap((m) => m.events.map((e) => e.title))).toEqual(['The Event']);
+  });
+
+  it('judges "past" against the club\'s own calendar date, not the Worker\'s UTC clock', async () => {
+    // 05:00 UTC on June 16 is 9pm on June 15 in Anchorage: an event ending that day has not
+    // happened yet, and a UTC "today" would have quieted it nine hours early.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-16T05:00:00Z'));
+    try {
+      const data = await buildEventsPage(
+        [row({ title: 'Tonight', slug: 'tonight', start_date: '2026-06-15' })],
+        { currentSeason: 2026, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+      );
+      expect(data.months[0].events[0].isPast).toBe(false);
+      expect(data.nextUpcomingId).toBe('tonight');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('flags dropIn true and false across a mixed set of classes', async () => {
+    const data = await buildEventsPage(
+      [
+        // Distinct ids, not just distinct slugs: a class routes on its id, and two rows sharing
+        // one route id are deduped down to the first (`dedupeByRouteId`).
+        row({ id: 'clinic', title: 'Drop-in Clinic', slug: 'drop-in', event_type: 'class', start_date: '2026-06-01', drop_in: 1 }),
+        row({ id: 'scheduled', title: 'Scheduled Class', slug: 'scheduled', event_type: 'class', start_date: '2026-06-02', drop_in: 0 }),
+      ],
+      { today: TODAY, currentSeason: 2026, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+    );
+    const byTitle = Object.fromEntries(data.months[0].events.map((e) => [e.title, e.dropIn]));
+    expect(byTitle['Drop-in Clinic']).toBe(true);
+    expect(byTitle['Scheduled Class']).toBe(false);
   });
 });
 
@@ -344,7 +423,7 @@ describe('readEventRows', () => {
         'FROM classes WHERE': (args) => CLASS_ROWS_BY_SEASON[args[0] as number] ?? [],
       },
     });
-    const rows = await readEventRows(db);
+    const { rows } = await readEventRows(db);
     const adultIntro = rows.filter((r) => r.title === 'Adult Intro');
     expect(adultIntro).toHaveLength(1);
     expect(adultIntro[0].id).toBe('class-2026');
@@ -357,35 +436,122 @@ describe('readEventRows', () => {
         'FROM classes WHERE': (args) => CLASS_ROWS_BY_SEASON[args[0] as number] ?? [],
       },
     });
-    const rows = await readEventRows(db);
+    const { rows, season } = await readEventRows(db);
+    expect(season).toBeNull();
     expect(rows.some((r) => r.event_type === 'class')).toBe(false);
     expect(rows.some((r) => r.title === 'BNAC')).toBe(true);
   });
-});
 
-describe('buildEventOrder', () => {
-  it('orders every row chronologically by its own effective date', () => {
-    const order = buildEventOrder(
-      [
-        row({ title: 'July', slug: 'july', id: 'july-id', start_date: '2026-07-10' }),
-        row({ title: 'May', slug: 'may', id: 'may-id', start_date: '2026-05-10' }),
-        row({ title: 'June', slug: 'june', id: 'june-id', start_date: '2026-06-10' }),
-      ],
-      CURRENT_YEAR,
-    );
-    expect(order.map((o) => o.title)).toEqual(['May', 'June', 'July']);
-    expect(order[0].routeId).toBe('may');
+  it('returns the season it read alongside the rows, so the page needs no second settings read', async () => {
+    const { db } = fakeD1({
+      firstResults: { "FROM settings WHERE key = 'current_season'": { value: '2026' } },
+      allResults: {
+        'FROM events WHERE': EVENT_ROWS,
+        'FROM classes WHERE': (args) => CLASS_ROWS_BY_SEASON[args[0] as number] ?? [],
+      },
+    });
+    const { season } = await readEventRows(db);
+    expect(season).toBe(2026);
   });
 
-  it('routes a class entry on its id and sorts a genuinely undated row last', () => {
-    const order = buildEventOrder(
-      [
-        row({ title: 'TBD', slug: 'tbd', id: 'tbd-id', event_type: 'class' }),
-        row({ title: 'Dated Class', slug: 'dated-class', id: 'dated-class-id', event_type: 'class', start_date: '2026-06-01' }),
-      ],
-      CURRENT_YEAR,
-    );
-    expect(order.map((o) => o.title)).toEqual(['Dated Class', 'TBD']);
-    expect(order[0].routeId).toBe('dated-class-id');
+  it('binds the season, as text, to the events query so an out-of-season dated row never reads', async () => {
+    // The `events` table carries no season column: the filter tests `substr(start_date, 1, 4)`,
+    // which yields text, so an integer bind would silently match nothing. This responder stands
+    // in for that SQL, filtering the fixture rows by whatever the caller actually bound.
+    const DATED_EVENTS = [
+      row({ id: 'this-season', title: 'This Season', slug: 'this-season', start_date: '2026-05-24' }),
+      row({ id: 'next-season', title: 'Next Season', slug: 'next-season', start_date: '2027-05-24' }),
+      row({ id: 'undated', title: 'Undated', slug: 'undated' }),
+    ];
+    const { db, calls } = fakeD1({
+      firstResults: { "FROM settings WHERE key = 'current_season'": { value: '2026' } },
+      allResults: {
+        'FROM events WHERE': (args) =>
+          DATED_EVENTS.filter((r) => r.start_date === null || r.start_date.slice(0, 4) === args[0]),
+        'FROM classes WHERE': [],
+      },
+    });
+    const { rows } = await readEventRows(db);
+    expect(rows.map((r) => r.title)).toEqual(['This Season', 'Undated']);
+
+    const eventsCall = calls.find((call) => call.sql.includes('FROM events WHERE'));
+    expect(eventsCall?.sql).toContain('substr(start_date, 1, 4) = ?1');
+    expect(eventsCall?.args).toEqual(['2026']);
+  });
+
+  it('quiets the events season filter, rather than emptying the page, when current_season is unset', async () => {
+    const { db, calls } = fakeD1({
+      allResults: { 'FROM events WHERE': EVENT_ROWS, 'FROM classes WHERE': [] },
+    });
+    const { rows } = await readEventRows(db);
+    expect(rows.map((r) => r.title)).toEqual(['BNAC']);
+    expect(calls.find((call) => call.sql.includes('FROM events WHERE'))?.args).toEqual([null]);
+  });
+
+  it('degrades to no rows and no season when the read itself throws', async () => {
+    const db = {
+      prepare: () => ({
+        bind: () => ({ first: async () => { throw new Error('D1 is down'); } }),
+        first: async () => { throw new Error('D1 is down'); },
+      }),
+    } as unknown as D1Database;
+    expect(await readEventRows(db)).toEqual({ rows: [], season: null });
+  });
+});
+
+describe('readEventRow', () => {
+  const EVENT_ROW = row({ id: 'bnac-uuid', title: 'BNAC', slug: 'bnac', start_date: '2026-05-24' });
+  const CLASS_ROW = row({
+    id: 'class-2026',
+    title: 'Adult Intro',
+    slug: 'adult-intro',
+    event_type: 'class',
+    start_date: '2026-06-12',
+  });
+
+  /** Keyed on the two single-row statements, which `db.batch` answers from the same
+   *  `allResults` table `.all()` reads. The `id = ?1` key is listed first so it never loses a
+   *  substring match to a broader `FROM classes WHERE` key. */
+  function dbWith(eventRows: unknown[], classRows: unknown[] = []) {
+    return fakeD1({
+      firstResults: { "FROM settings WHERE key = 'current_season'": { value: '2026' } },
+      allResults: {
+        'FROM events WHERE slug = ?1': eventRows,
+        'FROM classes WHERE id = ?1': classRows,
+      },
+    });
+  }
+
+  it('finds an event by its slug through one batched round trip', async () => {
+    const { db, calls } = dbWith([EVENT_ROW]);
+    const read = await readEventRow(db, 'bnac');
+    expect(read).toEqual({ status: 'found', row: EVENT_ROW });
+    // The two targeted statements, not a full read of either table.
+    expect(calls.map((call) => call.args)).toContainEqual(['bnac']);
+    expect(calls.map((call) => call.args)).toContainEqual(['bnac', 2026]);
+  });
+
+  it('finds a class by its id', async () => {
+    const { db } = dbWith([], [CLASS_ROW]);
+    expect(await readEventRow(db, 'class-2026')).toEqual({ status: 'found', row: CLASS_ROW });
+  });
+
+  it('reports an id matching nothing as absent, never as a failure', async () => {
+    const { db } = dbWith([], []);
+    expect(await readEventRow(db, 'no-such-event')).toEqual({ status: 'absent' });
+  });
+
+  it('skips the class statement entirely when current_season is unset', async () => {
+    const { db, calls } = fakeD1({ allResults: { 'FROM events WHERE slug = ?1': [EVENT_ROW] } });
+    expect(await readEventRow(db, 'bnac')).toEqual({ status: 'found', row: EVENT_ROW });
+    expect(calls.some((call) => call.sql.includes('FROM classes'))).toBe(false);
+  });
+
+  it('reports a thrown read as a failure, which the routes turn into a 503 rather than a 404', async () => {
+    const db = {
+      prepare: () => ({ bind: () => ({ first: async () => { throw new Error('D1 is down'); } }) }),
+      batch: async () => { throw new Error('D1 is down'); },
+    } as unknown as D1Database;
+    expect(await readEventRow(db, 'bnac')).toEqual({ status: 'failed' });
   });
 });

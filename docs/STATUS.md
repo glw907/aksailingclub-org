@@ -7,17 +7,15 @@
 > moving to one of those, never deleting.
 
 **Current state (2026-08-22).** The site runs cairn `^0.96.0` (the floors release: Node 24,
-Kit 2.70, Svelte 5.56.10) on branch `cairn-0.96-adoption`, awaiting its PR onto `main`;
-`main` itself carries 0.95, deployed to dev.aksailingclub.org by `deploy.yml`. No initiative is
-in flight. The apex cutover remains its own deliberate DNS change, never bundled with a push.
+Kit 2.70, Svelte 5.56.10) on `main`, merged through PR #5 and deployed to dev.aksailingclub.org
+by `deploy.yml`. In flight: the `events-redesign` build pass on branch `events-redesign-build`,
+executing `docs/plans/2026-08-22-events-redesign.md` through the pass-execute workflow. The
+apex cutover remains its own deliberate DNS change, never bundled with a push.
 
-**Immediate next action (Geoff's).** Two before/afters on dev from the 0.95 pass, both
-rendering changes under the one-check rule: the smartypants typography on any prose page
-(curly quotes, real dashes; compare `/governance` against production), and the theme-flip
-cross-fade plus the smaller DaisyUI sheet (toggle the theme on `/` and on a 404). Then a minted
-preview link from any entry's editor ("Share preview"), opened in a private window; once the
-0.96 branch deploys, the banner's expiry reads in Alaska time. Also one Tidy run after that
-deploy, since its default model moved to `claude-sonnet-5`.
+**Immediate next action (Geoff's).** The events before/after (below). Also from 0.95/0.96,
+on dev: smartypants typography on a prose page (compare `/governance` against production),
+the theme-flip cross-fade on `/` and a 404, a minted "Share preview" link in a private window
+(the banner's expiry now reads in Alaska time), and one Tidy run (`claude-sonnet-5` default).
 
 **Open decisions.**
 - `wrangler.toml` `compatibility_date` is `2026-07-06`; bumping it is a deliberate runtime
@@ -31,16 +29,27 @@ deploy, since its default model moved to `claude-sonnet-5`.
 is gone. Riders still open from 0.94: announce-list recency via `publishedAt`; baseline
 coverage for the stacked field register; the `asset_requests` uniqueness race (needs a unique index, so a migration).
 
-**events-redesign (in flight, 2026-08-22).** Contract ratified and committed:
-`docs/2026-08-22-events-redesign-design.md` (one long anchorable season page, alternating photo
-bands, quieted past events, governance coda, four-entry subscribe bar, thin link-preview detail
-route; events stay D1 and the no-events-concept ruling stays closed). Probe arc settled on
-probe 3 (title "The 2026 Season"); arc log `docs/design-benchmark/events-redesign-round-1-arc.md`,
-probe files machine-local at `~/.local/asc-data/probes/events-redesign/`. Build plan:
-`docs/plans/2026-08-22-events-redesign.md` (five tasks, ceiling 1.5M, branch
-`events-redesign-build`), awaiting Geoff's plan approval, the pass's one human gate. Open data
-question for Geoff: `classes.fleet_tuneup` says `drop_in = 0` while its copy says no
-registration is required.
+**events-redesign (built, awaiting Geoff; 2026-08-22).** PR #6 (`events-redesign-build`)
+carries the whole pass: contract `docs/2026-08-22-events-redesign-design.md`, plan
+`docs/plans/2026-08-22-events-redesign.md`, ledger entry in `docs/HISTORY.md`. Gates green
+(check 0/0, 2105 tests, build); the four domain reviews' findings are fixed. Geoff's steps:
+(1) the before/after on dev once `deploy.yml` runs after merge, or on the PR's preview of the
+branch: `/events` at 1440 and 390, the June-clock states are gone from the live page so judge
+Register on a real open class when one exists; (2) the fresh-context coherence read is owed
+(session closed at its ceiling); (3) the `fleet_tuneup` data call (drop-in or registration);
+(4) merge. Harvest to cairn: `docs/2026-08-22-events-redesign-harvest-findings.md` (eight
+findings, incl. site-wide smooth scroll as an engine default and the dead-body content entry).
+
+**Next pass (prep, 2026-08-22; Geoff's pick 2026-08-22: the admin series gates the cutover).**
+`admin-screen-passes`, Events admin: the public page now exercises every field that screen
+edits (descriptions, times, location, photos, the governance category, `drop_in`), so the
+functional brainstorm has fresh evidence. Same shape as this pass: functional brainstorm first
+(superpowers:brainstorming), probe from the real admin shell with live rows, toolkit harvest to
+cairn at close. Inputs: `docs/2026-07-20-admin-toolkit-catalog.md`, the Members and Classes
+pass entries in `docs/HISTORY.md`/`status-archive.md`, `docs/2026-08-22-events-redesign-design.md`
+(what the public page needs authored). Resume prompt: "Start the Events admin pass: read
+ROADMAP.md's admin-screen-passes entry and docs/STATUS.md, then open the functional brainstorm
+with Geoff before any visual work." Launch a fresh session from this repo.
 
 **Geoff's review queue (full entries in docs/status-archive.md).** Before/afters on dev: the
 rebuilt Assets screens (gates the apex), Classes, the pass-B sidebar walkthrough per role, the

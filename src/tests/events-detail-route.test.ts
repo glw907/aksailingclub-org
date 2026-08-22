@@ -1,16 +1,21 @@
-// The events-redesign pass: /events/[id]'s own `load`. Mirrors class-signup-route.test.ts's
-// fakeD1 pattern (both routes read CLUB_DB directly), keyed on the two SQL substrings
-// `readEventRows` issues (`$theme/events-data.ts`'s EVENTS_QUERY/CLASSES_QUERY).
-import { describe, expect, it } from 'vitest';
+// The events-redesign pass: /events/[id]'s own thin link-preview `load`. Mirrors
+// class-signup-route.test.ts's fakeD1 pattern (both routes read CLUB_DB directly), keyed on the
+// two SQL substrings `readEventRow` issues (`$theme/events-data.ts`'s EVENT_BY_SLUG_QUERY/
+// CLASS_BY_ID_QUERY, batched).
+import { describe, expect, it, vi } from 'vitest';
 import { isHttpError } from '@sveltejs/kit';
+import { render } from 'svelte/server';
+import { SITE_DESCRIPTION } from '$chassis/content';
 import { load } from '../routes/(site)/events/[id]/+page.server';
+import Page from '../routes/(site)/events/[id]/+page.svelte';
+import type { PageData } from '../routes/(site)/events/[id]/$types';
 import { fakeD1 } from './_fake-d1';
 
 type LoadEvent = Parameters<typeof load>[0];
 type LoadResult = Exclude<Awaited<ReturnType<typeof load>>, void>;
 
 function eventFor(id: string, db: unknown): LoadEvent {
-  return { params: { id }, platform: { env: { CLUB_DB: db } } } as unknown as LoadEvent;
+  return { params: { id }, platform: { env: { CLUB_DB: db } }, setHeaders: () => {} } as unknown as LoadEvent;
 }
 
 async function runLoad(id: string, db: unknown): Promise<LoadResult> {
@@ -35,19 +40,28 @@ const EVENT_ROW = {
   registration_url: null,
   registration_status: null,
   fee: null,
+  track: null,
+  drop_in: null,
 };
 
 const HIDDEN_EVENT_ROW = { ...EVENT_ROW, id: 'hidden-uuid', slug: 'hidden-event', title: 'Hidden Event' };
 
+/** Keyed on the two targeted single-row statements `readEventRow` batches. */
 function dbWith(eventRows: unknown[], classRows: unknown[] = []) {
   return fakeD1({
     firstResults: { "FROM settings WHERE key = 'current_season'": { value: '2026' } },
     allResults: {
-      'FROM events WHERE visible': eventRows,
-      'FROM classes WHERE visible': classRows,
+      'FROM events WHERE slug = ?1': eventRows,
+      'FROM classes WHERE id = ?1': classRows,
     },
   }).db;
 }
+
+/** A database whose every read throws, standing in for D1 being down mid-request. */
+const FAILING_DB = {
+  prepare: () => ({ bind: () => ({ first: async () => { throw new Error('D1 is down'); } }) }),
+  batch: async () => { throw new Error('D1 is down'); },
+} as unknown as D1Database;
 
 describe('/events/[id] load', () => {
   it('503s when CLUB_DB is not bound', async () => {
@@ -57,28 +71,42 @@ describe('/events/[id] load', () => {
   });
 
   it('404s an id matching no visible row', async () => {
-    const db = dbWith([EVENT_ROW]);
+    // Both targeted statements answer empty, which is exactly what the real `WHERE slug = ?1` /
+    // `WHERE id = ?1` reads return for an id nothing matches.
+    const db = dbWith([], []);
     await expect(load(eventFor('no-such-event', db))).rejects.toSatisfy(
       (err: unknown) => isHttpError(err) && err.status === 404,
     );
   });
 
-  it('404s an invisible row: readEventRows\' own "visible = 1" filter excludes it before this route ever sees it', async () => {
-    // fakeD1 stands in for the real query's own WHERE clause: an invisible row's id simply never
-    // appears in the rows a real read would return, so this exercises the same 404 path.
-    const db = dbWith([EVENT_ROW]); // HIDDEN_EVENT_ROW deliberately absent, standing in for visible = 0
+  it('503s a failed read rather than 404ing it, and asks the caller back in a minute', async () => {
+    const setHeaders = vi.fn();
+    const event = { params: { id: 'bnac' }, platform: { env: { CLUB_DB: FAILING_DB } }, setHeaders } as unknown as LoadEvent;
+    await expect(load(event)).rejects.toSatisfy((err: unknown) => isHttpError(err) && err.status === 503);
+    expect(setHeaders).toHaveBeenCalledWith({ 'retry-after': '60' });
+  });
+
+  it('caches the stub for an hour', async () => {
+    const setHeaders = vi.fn();
+    const event = { params: { id: 'bnac' }, platform: { env: { CLUB_DB: dbWith([EVENT_ROW]) } }, setHeaders } as unknown as LoadEvent;
+    await load(event);
+    expect(setHeaders).toHaveBeenCalledWith({ 'cache-control': 'public, max-age=3600' });
+  });
+
+  it('404s an invisible row: readEventRow\'s own "visible = 1" filter excludes it before this route ever sees it', async () => {
+    // fakeD1 stands in for the real query's own WHERE clause: an invisible row simply never comes
+    // back from a real read, so this exercises the same 404 path.
+    const db = dbWith([], []); // HIDDEN_EVENT_ROW deliberately absent, standing in for visible = 0
     await expect(load(eventFor(HIDDEN_EVENT_ROW.slug, db))).rejects.toSatisfy(
       (err: unknown) => isHttpError(err) && err.status === 404,
     );
   });
 
-  it('returns the enriched card for a matching event row, keyed by slug', async () => {
+  it('returns the title and the /events#id scroll target for a matching event row, keyed by slug', async () => {
     const db = dbWith([EVENT_ROW]);
     const result = await runLoad('bnac', db);
-    expect(result.event.title).toBe('BNAC');
-    expect(result.event.routeId).toBe('bnac');
-    expect(result.event.location).toBe('Big Lake');
-    expect(result.seo.links.find((link: { rel: string }) => link.rel === 'canonical')?.href).toContain('/events/bnac');
+    expect(result.title).toBe('BNAC');
+    expect(result.target).toBe('/events#bnac');
   });
 
   it('routes a class row on its id, not its slug', async () => {
@@ -92,29 +120,85 @@ describe('/events/[id] load', () => {
       registration_url: '/classes/class-row-id/signup',
       registration_status: 'open',
     };
-    const db = dbWith([EVENT_ROW], [classRow]);
+    // The events statement answers empty: no event carries this id as its slug, which is the
+    // whole reason a class routes on its own id.
+    const db = dbWith([], [classRow]);
     const result = await runLoad('class-row-id', db);
-    expect(result.event.title).toBe('Adult Intro Class');
-    expect(result.event.fee).toBe(100);
-    expect(result.event.registrationStatusLabel).toBe('Open');
+    expect(result.title).toBe('Adult Intro Class');
+    expect(result.target).toBe('/events#class-row-id');
   });
 
-  it('computes prev/next along the season, undefined at either boundary', async () => {
-    // BNAC (EVENT_ROW) is October; May and July sort ahead of it.
-    const may = { ...EVENT_ROW, id: 'may-id', slug: 'may-event', title: 'May Event', start_date: '2026-05-10', end_date: null };
-    const july = { ...EVENT_ROW, id: 'july-id', slug: 'july-event', title: 'July Event', start_date: '2026-07-10', end_date: null };
-    const db = dbWith([may, EVENT_ROW, july]);
+  it('builds a noindex seo whose canonical points at /events with no fragment', async () => {
+    const db = dbWith([EVENT_ROW]);
+    const result = await runLoad('bnac', db);
+    expect(result.seo.meta).toContainEqual({ name: 'robots', content: 'noindex' });
+    expect(result.seo.links.find((link: { rel: string }) => link.rel === 'canonical')?.href).toBe(
+      'https://dev.aksailingclub.org/events',
+    );
+  });
 
-    const first = await runLoad('may-event', db);
-    expect(first.prev).toBeUndefined();
-    expect(first.next?.routeId).toBe('july-event');
+  it("unfurls with the row's own short_description as og:description", async () => {
+    const db = dbWith([EVENT_ROW]);
+    const result = await runLoad('bnac', db);
+    expect(result.seo.meta).toContainEqual({ property: 'og:description', content: 'The season closer.' });
+  });
 
-    const middle = await runLoad('july-event', db);
-    expect(middle.prev?.routeId).toBe('may-event');
-    expect(middle.next?.routeId).toBe('bnac');
+  it('falls back to an excerpt of long_description when short_description is absent', async () => {
+    const longRow = {
+      ...EVENT_ROW,
+      short_description: null,
+      long_description:
+        'A very long account of the season closer, with more detail than any one-line summary could hold, running well past a hundred and sixty characters so the excerpt actually has to cut it.',
+    };
+    const db = dbWith([longRow]);
+    const result = await runLoad('bnac', db);
+    const description = result.seo.meta.find(
+      (m: { property?: string }) => m.property === 'og:description',
+    )?.content as string;
+    expect(description.length).toBeLessThanOrEqual(161); // maxChars 160 plus the ellipsis
+    expect(description.startsWith('A very long account')).toBe(true);
+  });
 
-    const last = await runLoad('bnac', db);
-    expect(last.prev?.routeId).toBe('july-event');
-    expect(last.next).toBeUndefined();
+  it('falls back to the site description when the row carries no description at all', async () => {
+    const bareRow = { ...EVENT_ROW, short_description: null, long_description: null };
+    const db = dbWith([bareRow]);
+    const result = await runLoad('bnac', db);
+    expect(result.seo.meta).toContainEqual({
+      property: 'og:description',
+      content: SITE_DESCRIPTION,
+    });
+  });
+
+  it('unfurls with the resolved hero photo as an absolute og:image', async () => {
+    const withPhoto = { ...EVENT_ROW, hero_image: 'bnac.jpg', hero_image_alt: 'Boats racing' };
+    const db = dbWith([withPhoto]);
+    const result = await runLoad('bnac', db);
+    expect(result.seo.meta).toContainEqual({
+      property: 'og:image',
+      content: 'https://dev.aksailingclub.org/media/bnac.29d75df78f196b2e.jpg',
+    });
+    expect(result.seo.meta).toContainEqual({ name: 'twitter:image:alt', content: 'Boats racing' });
+  });
+
+  it('omits og:image for a row with no hero photo', async () => {
+    const db = dbWith([EVENT_ROW]);
+    const result = await runLoad('bnac', db);
+    expect(result.seo.meta.find((m: { property?: string }) => m.property === 'og:image')).toBeUndefined();
+  });
+});
+
+describe('/events/[id] page', () => {
+  it('renders the zero-delay meta refresh to the scroll target', async () => {
+    const db = dbWith([EVENT_ROW]);
+    const data = await runLoad('bnac', db);
+    const { head } = render(Page, { props: { data: data as unknown as PageData } });
+    expect(head).toContain('<meta http-equiv="refresh" content="0; url=/events#bnac"/>');
+  });
+
+  it('renders a one-line body: the title linking to the scroll target', async () => {
+    const db = dbWith([EVENT_ROW]);
+    const data = await runLoad('bnac', db);
+    const { body } = render(Page, { props: { data: data as unknown as PageData } });
+    expect(body).toContain('<a href="/events#bnac">BNAC</a>');
   });
 });

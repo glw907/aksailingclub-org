@@ -22,7 +22,14 @@ export default defineConfig({
     // Port 4179, not the family-conventional 4173: a squatting `vite preview --port 4173` from an
     // unrelated concurrent session has silently served this suite the WRONG SITE before
     // (reuseExistingServer masks the mismatch). A dedicated port removes that collision.
-    command: 'node e2e/fixtures/bootstrap-club-db.mjs && npm run build && npx wrangler dev --port 4179 --local',
+    // `--var ASC_FIXED_TODAY:2026-08-22` is the suite's fixed clock, a Worker binding rather than a
+    // request header or query parameter (src/app.d.ts declares it; only /events reads it). Without
+    // it, every past/upcoming judgment on the season page moves with the real calendar and the
+    // events baselines rot the day after they are minted. It is set here, not in wrangler.toml, so
+    // no deployed environment can ever inherit it. The fixture dates it pairs with live in
+    // e2e/fixtures/events-seed.sql's own header.
+    command:
+      'node e2e/fixtures/bootstrap-club-db.mjs && npm run build && npx wrangler dev --port 4179 --local --var ASC_FIXED_TODAY:2026-08-22',
     port: 4179,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
