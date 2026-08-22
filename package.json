@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "type": "module",
   "scripts": {
@@ -28,23 +28,23 @@
     "@fontsource-variable/source-sans-3": "^5.2.5",
     "@playwright/test": "^1.61.1",
     "@sveltejs/adapter-cloudflare": "^7.2.8",
-    "@sveltejs/kit": "^2.12",
+    "@sveltejs/kit": "^2.70",
     "@sveltejs/vite-plugin-svelte": "^7",
     "@tailwindcss/vite": "^4",
     "@types/node": "^24.13.0",
     "daisyui": "^5",
     "pagefind": "^1.5.2",
-    "svelte": "^5.56.3",
+    "svelte": "^5.56.10",
     "svelte-check": "^4",
     "tailwindcss": "^4",
     "typescript": "^6.0.3",
     "vite": "^8",
     "vitest": "^4.1.7",
-    "wrangler": "^4.93.1"
+    "wrangler": "^4.125.0"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",
-    "@glw907/cairn-cms": "^0.95.0",
+    "@glw907/cairn-cms": "^0.96.0",
     "remark-smartypants": "^3.0.2",
     "valibot": "^1.4.2"
   }

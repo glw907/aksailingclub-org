@@ -626,7 +626,7 @@ function buildTable(ctx: ComponentContext): Element {
   if (caption.length) {
     const captionId = `asc-table-caption-${slugifyForId(textContent(caption))}`;
     kids.push(h('figcaption', { id: captionId }, caption));
-    for (const t of tables) t.properties.ariaLabelledBy = captionId;
+    for (const t of tables) t.properties.ariaLabelledBy = [captionId];
   } else {
     // A heading directly above the table can already name it (racing's "What to Bring" h3, basic-
     // polish round 3, 2026-07-16), making a `:::caption` slot a redundant echo; `ariaLabel` gives
@@ -638,7 +638,7 @@ function buildTable(ctx: ComponentContext): Element {
   if (legend.length) {
     const legendId = `asc-table-legend-${slugifyForId(textContent(legend))}`;
     kids.push(h('div', { className: ['asc-table-legend'], id: legendId }, legend));
-    for (const t of tables) t.properties.ariaDescribedBy = legendId;
+    for (const t of tables) t.properties.ariaDescribedBy = [legendId];
   }
   return h('figure', { className: ['asc-table', `asc-table-${variant}`] }, kids);
 }
