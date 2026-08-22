@@ -1,16 +1,16 @@
 <!-- @component
-The events deep-look pass: the "events" content entry's own editorial intro (ordinary cairn
-markdown, rendered through the same plumbing (site)/[...path] uses), a calendar-subscribe bar
-(the real iCal/Apple and Google Calendar links, both reading the live `/events/calendar.ics`
-feed), then the full club calendar (`$theme/events-data.ts`, `EventsListing.svelte`) against
-docs/events-manifest.md's re-enumeration of the live page: month sections, Off-Season, and
-Meetings & Governance, each event or class carrying its type and registration-status badges,
-description, and register link. -->
+The events-redesign pass (docs/2026-08-22-events-redesign-design.md): the "events" content
+entry's own editorial intro (ordinary cairn markdown, rendered through the same plumbing
+(site)/[...path] uses) and a calendar-subscribe bar (the real iCal/Apple and Google Calendar
+links, both reading the live `/events/calendar.ics` feed). The season page's own long,
+anchorable listing (`EventsSubscribeBar`, `EventsIndex`, `EventBand`, `EventsGovernance`) is
+Task 2's own build; until it lands this route renders the editorial intro and subscribe bar
+only, so `$theme/events-data.ts`'s widened data layer (Task 1) keeps the project building and
+testing green in between. -->
 <script lang="ts">
   import type { PageData } from './$types';
   import { CairnHead } from '@glw907/cairn-cms/delivery/head';
   import { siteConfig } from '$theme/cairn.config';
-  import EventsListing from '$theme/components/EventsListing.svelte';
 
   let { data }: { data: PageData } = $props();
 
@@ -63,10 +63,6 @@ description, and register link. -->
     </a>
   </div>
 </div>
-
-<section class="events-season">
-  <EventsListing events={data.events} />
-</section>
 
 <style>
   /* The light promise hero's pair of type roles, matched declaration-for-declaration to the
@@ -137,9 +133,5 @@ description, and register link. -->
   }
   .calendar-subscribe-link:hover svg {
     opacity: 1;
-  }
-
-  .events-season {
-    margin-top: var(--spacing-l);
   }
 </style>

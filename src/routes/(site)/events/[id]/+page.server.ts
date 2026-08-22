@@ -1,14 +1,15 @@
-// The events-redesign pass: one event or class's own page. Shadows the (site)/[...path] catch-all
-// the same way (site)/events/+page.server.ts already does (a literal `events` segment always wins
-// over the catch-all's rest parameter), reading CLUB_DB at request time since the calendar is live
-// data, never prerendered. `params.id` is `routeIdOf`'s own route segment: an event's slug (global-
-// ly unique) or a class's id (its slug is only unique within its season, see `$theme/season-data.ts`).
+// The events-redesign pass (docs/2026-08-22-events-redesign-design.md): `/events/[id]` is no
+// longer a page in its own right, since annual recurrence means the real event lives on one long
+// season page. This route survives only as a thin link-preview carrier, because a URL fragment
+// never reaches the server and a shared `/events#slug` would otherwise unfurl as the generic
+// `/events` page. It 404s on an unknown id, builds a noindex `seo` whose canonical points at
+// `/events` (a canonical cannot carry a fragment), and hands the page its scroll target.
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { buildSeoMeta } from '@glw907/cairn-cms/delivery';
 import { ORIGIN, SITE_DESCRIPTION } from '$chassis/content';
-import { publicMediaResolver, renderMarkdown, siteConfig } from '$theme/cairn.config';
-import { buildEventOrder, readEventRows, toEventCard } from '$theme/events-data';
+import { siteConfig } from '$theme/cairn.config';
+import { readEventRows } from '$theme/events-data';
 import { routeIdOf } from '$theme/season-data';
 
 export const prerender = false;
@@ -21,25 +22,16 @@ export const load: PageServerLoad = async ({ params, platform }) => {
   const row = rows.find((candidate) => routeIdOf(candidate) === params.id);
   if (!row) error(404, 'No such event.');
 
-  const currentYear = new Date().getFullYear();
-  const event = await toEventCard(row, currentYear, publicMediaResolver, renderMarkdown);
-
-  const order = buildEventOrder(rows, currentYear);
-  const index = order.findIndex((link) => link.routeId === params.id);
-  const prev = index > 0 ? order[index - 1] : undefined;
-  const next = index >= 0 && index < order.length - 1 ? order[index + 1] : undefined;
-
+  const target = `/events#${params.id}`;
   return {
-    event,
-    prev,
-    next,
+    title: row.title,
+    target,
     seo: buildSeoMeta({
-      title: event.title,
-      description: event.summary ?? SITE_DESCRIPTION,
-      canonicalUrl: `${ORIGIN}/events/${params.id}`,
+      title: row.title,
+      description: SITE_DESCRIPTION,
+      canonicalUrl: `${ORIGIN}/events`,
       siteName: siteConfig.siteName,
-      image: event.image ? ORIGIN + event.image.url : undefined,
-      imageAlt: event.image?.alt,
+      robots: 'noindex',
     }),
   };
 };

@@ -1,32 +1,19 @@
-// The events deep-look pass: the full `/events` listing (docs/events-manifest.md is the mini-spec
-// this module originally built against, written against the ops-sourced schema; pass 2.1's Task 9
-// repoints the read to asc-club, whose column names differ, noted inline below). Reads the same
-// club-owned D1 tables `$theme/season-data.ts` already verified (`events` and `classes`, unioned,
-// `classes` tagged with the synthesized `'class'` category), but pulls every display field the
-// detailed page needs, not just the compact Season teaser's date/name/taxonomy triple. Shares the
-// low-level date helpers with season-data.ts (`getOrderingDate`, `monthAndDay`, `formatDateRange`,
-// `categorize`, `SEASON_MONTHS`, `DATE_TBD`) rather than a second copy of that logic; this module
-// owns everything specific to the full detail view: the richer row shape, the type/registration-
-// status label maps, hero-image resolution, and the month/off-season/meetings grouping (a
-// governance row is pulled out of the month and off-season buckets entirely, by type, regardless
-// of its date, mirroring the legacy main-site Worker's own `buildEventsPage`).
+// The events-redesign pass (docs/2026-08-22-events-redesign-design.md): the `/events` season
+// page's own data shape. Reads the same club-owned D1 tables `$theme/season-data.ts` already
+// verified (`events` and `classes`, unioned, `classes` tagged with the synthesized `'class'`
+// category), but pulls every display field the season page's photo bands and governance coda
+// need. Shares the low-level date helpers with season-data.ts (`monthAndDay`, `readCurrentSeason`,
+// `routeIdOf`, `seasonDotKind`) rather than a second copy of that logic; this module owns
+// everything specific to the full season page: the richer row shape, the date/time label
+// formatting, and the month/governance grouping (a governance row leaves the chronology
+// entirely, by category, regardless of its date).
 import type { MediaResolve } from '@glw907/cairn-cms/media';
-import {
-  categorize,
-  DATE_TBD,
-  formatDateRange,
-  monthAndDay,
-  readCurrentSeason,
-  routeIdOf,
-  seasonDotKind,
-  SEASON_MONTHS,
-  type SeasonDotKind,
-} from './season-data';
+import { monthAndDay, readCurrentSeason, routeIdOf, seasonDotKind, type SeasonDotKind } from './season-data';
 import { resolveEventImageUrl } from './event-images';
 
-/** A raw event or class row from D1, the full column set the detailed listing (and the per-event
- *  page) reads (a superset of season-data.ts's own `EventRow`, structurally compatible with its
- *  exported date helpers and `routeIdOf`). */
+/** A raw event or class row from D1, the full column set the season page reads (a superset of
+ *  season-data.ts's own `EventRow`, structurally compatible with its exported date helpers and
+ *  `routeIdOf`). */
 export interface EventDetailRow {
   id: string;
   title: string;
@@ -48,16 +35,24 @@ export interface EventDetailRow {
   /** A class's whole-dollar fee (`classes.fee`); a real `events` row selects a literal `NULL`,
    *  since events carry no fee column. */
   fee: number | null;
+  /** A class's age gate (`classes.track`, `'adult-teen' | 'youth'`); a real `events` row selects
+   *  a literal `NULL`, since events carry no track column. */
+  track: string | null;
+  /** A class's drop-in flag (`classes.drop_in`); a real `events` row selects a literal `NULL`,
+   *  since events carry no drop_in column. Confirmed present on the live `asc-club` database via
+   *  `PRAGMA table_info(classes)` against `--remote`. */
+  drop_in: number | null;
 }
 
 /** The events table's full-detail SELECT. asc-club's `events` (`migrations/asc-club/
- *  0001_substrate/`) carries no `registration_url` or `date_history` column (both ops-only, per
- *  `scripts/import/ops-events.README.md`'s field mapping), so both select as a literal `NULL`,
+ *  0001_substrate/`) carries no `registration_url` column (ops-only, per
+ *  `scripts/import/ops-events.README.md`'s field mapping), so it selects as a literal `NULL`,
  *  keeping `EventDetailRow`'s shape unchanged for `buildEventsPage`'s date helpers. */
 const EVENTS_QUERY = `SELECT id, title, slug, category AS event_type, start_date, start_time,
                               end_date, end_time, NULL AS date_history, location,
                               short_description, long_description, hero_image, hero_image_alt,
-                              NULL AS registration_url, NULL AS registration_status, NULL AS fee
+                              NULL AS registration_url, NULL AS registration_status, NULL AS fee,
+                              NULL AS track, NULL AS drop_in
                        FROM events WHERE visible = 1`;
 /** The classes table's full-detail SELECT, tagged with the synthesized `'class'` category. Two
  *  differences from the events query above, both forced by the ratified `classes` schema
@@ -67,23 +62,18 @@ const EVENTS_QUERY = `SELECT id, title, slug, category AS event_type, start_date
  *  `long_description` into it at import time), so the whole thing selects as `long_description`
  *  (markdown-rendered) and `short_description` is a literal `NULL`; (2) neither `registration_url`
  *  nor `registration_status` is a stored column (registration is now the internal
- *  enrollment/waitlist machine): the signup link is computed directly from the class's own `id`
- *  (collapsing the slug-join Task 8 did against a separate CLUB_DB read, now redundant since this
- *  query already reads CLUB_DB), and the status derives from the freed-spot rule
- *  (`$admin-club/lib/classes-store.ts`'s `isPubliclyOpen`, expressed here as one SQL `CASE` rather
- *  than a second round trip): `full` when enrollment has reached capacity, `closed` (reusing the
- *  existing "Closed (Waitlist Open)" label below, originally meant for events) when there is free
- *  capacity but anyone is still queued — a nonempty waitlist or a live, unresolved offer — and
- *  `open` only when none of that holds. A freed spot with anyone still queued never reopens to the
- *  public; only a drop that empties the queue does. `hero_image`/`hero_image_alt` select as real
- *  columns (migration
- *  `0003_class_images`, a rider closing the regression this pass first shipped with a literal
- *  `NULL` here): the five imported classes' own photography, already in the media library via
- *  `$theme/event-images.ts`'s `EVENT_IMAGE_TOKENS`, renders again. `classes` carries no
- *  `start_time`/`end_time` column of its own, so both select as a literal `NULL`. `season = ?1` is
- *  the fix for a real display bug: the MembershipWorks import mints a `classes` row per season, so
- *  an unfiltered read leaked 2024/2025 instances of the same class into the listing as duplicate,
- *  wrong-dated entries; `events` carries no `season` column and needs no such filter. */
+ *  enrollment/waitlist machine): the signup link is computed directly from the class's own `id`,
+ *  and the status derives from the freed-spot rule (`$admin-club/lib/classes-store.ts`'s
+ *  `isPubliclyOpen`, expressed here as one SQL `CASE` rather than a second round trip): `full`
+ *  when enrollment has reached capacity, `closed` (a live offer or a nonempty waitlist) when there
+ *  is free capacity but anyone is still queued, and `open` only when none of that holds. A freed
+ *  spot with anyone still queued never reopens to the public; only a drop that empties the queue
+ *  does. `hero_image`/`hero_image_alt` select as real columns (migration `0003_class_images`).
+ *  `classes` carries no `start_time`/`end_time` column of its own, so both select as a literal
+ *  `NULL`. `season = ?1` is the fix for a real display bug: the MembershipWorks import mints a
+ *  `classes` row per season, so an unfiltered read leaked prior-season instances of the same class
+ *  into the listing as duplicate, wrong-dated entries; `events` carries no `season` column and
+ *  needs no such filter. */
 const CLASSES_QUERY = `SELECT id, name AS title, slug, 'class' AS event_type, start_date,
                                NULL AS start_time, end_date, NULL AS end_time,
                                NULL AS date_history, location, NULL AS short_description,
@@ -101,7 +91,7 @@ const CLASSES_QUERY = `SELECT id, name AS title, slug, 'class' AS event_type, st
                                    THEN 'closed'
                                  ELSE 'open'
                                END AS registration_status,
-                               fee
+                               fee, track, drop_in
                         FROM classes WHERE visible = 1 AND season = ?1`;
 
 /** Read every visible event and class row, full detail. Degrades to an empty list on any D1
@@ -124,90 +114,63 @@ export async function readEventRows(db: D1Database): Promise<EventDetailRow[]> {
   }
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  racing: 'Racing',
-  class: 'Class',
-  operations: 'Operations',
-  social: 'Social Event',
-  governance: 'Governance',
-};
-
-/** The type-colored placeholder's glyph, one per type, all already in `$theme/markdown/icons.ts`'s
- *  `ICON_PATHS` (Phosphor paths ported verbatim from the pre-rebuild Hugo site's own vendored
- *  icons, which happen to be the exact same shapes the legacy events page's own fallback SVGs
- *  used: `wrench` for operations, `handshake` for a social event, `scales` for governance). */
-const TYPE_ICONS: Record<string, string> = {
-  racing: 'sailboat',
-  class: 'graduation-cap',
-  operations: 'wrench',
-  social: 'handshake',
-  governance: 'scales',
-};
-
-/** The registration-status label map, the events-page's own extended form (`closed` reads longer
- *  here than the ops dashboard's plain "Closed", since a member reading the public page needs the
- *  waitlist pointer the ops-side pill doesn't). */
-const REG_STATUS_LABELS: Record<string, string> = {
-  not_scheduled: 'Not Scheduled',
-  upcoming: 'Coming Soon',
-  open: 'Open',
-  full: 'Full',
-  closed: 'Closed (Waitlist Open)',
-};
-
-/** The badge's color role, one of the reserved semantic tokens (never the club-grounds palette;
- *  see theme.css's own header comment on why info/success/warning/error stay separate). */
+/** The registration-status badge's color role, one of the reserved semantic tokens (never the
+ *  club-grounds palette; see theme.css's own header comment on why info/success/warning/error
+ *  stay separate). Shared with the education page's live class schedule
+ *  (`class-schedule-data.ts`), which derives its own richer, year-round lifecycle independently. */
 export type RegStatusKind = 'success' | 'info' | 'warning' | 'error' | 'muted';
 
-const REG_STATUS_KIND: Record<string, RegStatusKind> = {
-  not_scheduled: 'muted',
-  upcoming: 'info',
-  open: 'success',
-  full: 'warning',
-  closed: 'error',
+/** A class's age gate, the ratified DDL's own CHECK constraint values
+ *  (`migrations/asc-club/0001_substrate/`). */
+export type ClassTrack = 'adult-teen' | 'youth';
+
+/** The `registration_status` SQL CASE's raw values, mapped to the season page's own three-way
+ *  vocabulary: `full` (enrolled at capacity, the waitlist still takes names) reads as
+ *  `waitlisted` here, since "Full" alone reads like a dead end rather than an invitation to
+ *  queue. */
+const REGISTRATION_STATE: Record<string, 'open' | 'waitlisted' | 'closed'> = {
+  open: 'open',
+  full: 'waitlisted',
+  closed: 'closed',
 };
 
-/** One event or class, display-ready: every field the season spine's compact row or the per-event
- *  detail page needs. */
+/** One event or class, display-ready for the season page's photo bands: every field a band or
+ *  the governance coda needs, and nothing the old spine listing needed instead. */
 export interface EventCard {
   /** The `/events/[id]` route segment (`routeIdOf`): an event's `slug`, or a class's own `id`
-   *  (whose `slug` is only unique within its season). The spine row's stable anchor id too. */
+   *  (whose `slug` is only unique within its season). Also the band's own anchor id. */
   routeId: string;
   slug: string;
   title: string;
-  typeLabel: string;
-  /** The placeholder glyph's name (a key into `ICON_PATHS`), shown only when the row has no
-   *  `hero_image` (or the type is `governance`, which never shows an image slot at all). */
-  typeIcon: string;
-  /** The C7 taxonomy, reused verbatim from `season-data.ts`'s `categorize()`: `dot` for a class or
-   *  clinic (the gold accent), `muted` for a routine non-racing entry, plain ink for a racing
-   *  event. */
-  dot?: boolean;
-  muted?: boolean;
   /** The home Season list's own four-way taxonomy (`season-data.ts`'s `seasonDotKind`, reused
-   *  verbatim, never a second mapping), so the category chip's dot color and the class/clinic
-   *  star glyph match the home band exactly. Undefined only for a category outside the ratified
+   *  verbatim, never a second mapping): `'class'` marks the gold star preceding a class or
+   *  clinic's title (the C7 taxonomy). Undefined only for a category outside the ratified
    *  taxonomy, the same defensive fallback `seasonDotKind` itself documents. */
   dotKind?: SeasonDotKind;
-  dateDisplay: string;
-  isTbd: boolean;
-  /** A friendly 12-hour rendering of `start_time`/`end_time` (events only; `classes` carries no
-   *  time column), shown only when the row has a start time. */
-  timeDisplay?: string;
+  /** `"Saturday, May 23"` for one day, `"September 5–7"` for a range in one month,
+   *  `"September 28 – October 2"` across months, `"Date to be announced"` when undated. */
+  dateLabel: string;
+  /** A friendly 12-hour rendering of `start_time` (events only; `classes` carries no time
+   *  column), e.g. `"1 p.m."` or `"10:30 a.m."`; undefined when the row has no start time. */
+  time?: string;
   location?: string;
   /** A class's whole-dollar fee; never set on a plain event (which has no fee column). */
   fee?: number;
-  shortDescription?: string;
-  /** A plain-text teaser (~90 characters), truncated at a sentence or clause boundary rather
-   *  than mid-clause, for the spine row's one-line description: `short_description` when
-   *  present, else a stripped-markdown pass over `long_description` (a class's only description
-   *  field). */
-  summary?: string;
-  /** Pre-rendered markdown (the async render step runs once, in the page's own server load). */
-  longDescriptionHtml?: string;
+  /** A class's age gate; never set on a plain event. */
+  track?: ClassTrack;
+  /** A class's drop-in flag; always `false` on a plain event (which has no drop_in column). */
+  dropIn: boolean;
+  /** True when the row's end date, or its start date when it has no end date, falls before the
+   *  `today` `buildEventsPage`/`toEventCard` was given; false for a genuinely undated row (there
+   *  is no evidence it has already happened). */
+  isPast: boolean;
+  /** Pre-rendered markdown (the async render step runs once, in the page's own server load):
+   *  the event's `long_description`, or a class's merged `description` column. */
+  longHtml?: string;
   registrationUrl?: string;
-  registrationStatusLabel?: string;
-  registrationStatusKind?: RegStatusKind;
+  /** A class's registration lifecycle, the `registration_status` SQL CASE mapped to the season
+   *  page's own vocabulary; never set on a plain event. */
+  registrationState?: 'open' | 'waitlisted' | 'closed';
   image?: { url: string; alt: string };
 }
 
@@ -217,164 +180,117 @@ export interface EventNavLink {
   title: string;
 }
 
-/** One month's (or Off-Season's) section, in the full listing's own shape (distinct from
- *  season-data.ts's `SeasonMonth`: this carries the section's anchor id alongside its events). */
-export interface EventSection {
+/** One month's group of season bands, in the page's own display order. */
+export interface MonthGroup {
+  name: string;
   id: string;
-  label: string;
   events: EventCard[];
 }
 
-/** One TOC jump link: only ever built for a section that actually has events. */
-export interface TocLink {
-  href: string;
-  label: string;
-}
-
-/** The full `/events` page's data: the TOC, the populated month sections, Off-Season, and
- *  Meetings & Governance, plus whether the whole calendar came back empty. */
+/** The full `/events` page's data: the season year for the hero title, the route id of the next
+ *  upcoming band (for the page's scroll-on-load and its one fireweed Register button), every
+ *  month that has at least one non-governance row, and the governance coda. */
 export interface EventsPageData {
-  tocLinks: TocLink[];
-  monthSections: EventSection[];
-  offSeason: EventCard[];
-  meetings: EventCard[];
-  isEmpty: boolean;
+  seasonYear: number;
+  /** The route id of the first non-governance row that has not already happened; undefined when
+   *  every row is past. */
+  nextUpcomingId?: string;
+  months: MonthGroup[];
+  governance: EventCard[];
 }
 
-const MONTH_TOC_LABELS: Record<number, string> = { 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug', 9: 'Sep' };
-const MONTH_IDS: Record<number, string> = {
-  5: 'may',
-  6: 'june',
-  7: 'july',
-  8: 'august',
-  9: 'september',
-};
-/** The Off-Season and Meetings & Governance section anchor ids, exported so the page component
- *  can set the matching `id="section-<id>"` the TOC links jump to. */
-export const OFF_SEASON_ID = 'off-season';
-export const MEETINGS_ID = 'meetings';
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+/** The trailing bucket for a row with no resolvable date at all (`monthAndDay`'s own `{99, 99}`
+ *  fallback): sorts after every named month, so a genuinely undated row is never dropped from the
+ *  page. */
+const UNDATED_MONTH: Pick<MonthGroup, 'name' | 'id'> = { name: 'Later', id: 'later' };
 
-/** Format a 24-hour `"HH:MM"` time value (the admin form's own `type="time"` input) as a friendly
- *  12-hour string, e.g. `"10:00"` -> `"10:00 AM"`. Returns undefined for a malformed value, so a
+const WEEKDAY_MONTH_DAY = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+const MONTH_DAY = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric' });
+const MONTH_ONLY = new Intl.DateTimeFormat('en-US', { month: 'long' });
+
+/** The season page's own date-label vocabulary (docs/2026-08-22-events-redesign-design.md's
+ *  probe): a single day carries its weekday, a range within one calendar month collapses to one
+ *  month name, and a range crossing months spells both out in full, en-dash joined. */
+function formatDateLabel(startIso: string | null, endIso: string | null): string {
+  if (!startIso) return 'Date to be announced';
+  const start = new Date(`${startIso}T00:00:00`);
+  if (!endIso || endIso === startIso) return WEEKDAY_MONTH_DAY.format(start);
+  const end = new Date(`${endIso}T00:00:00`);
+  if (start.getMonth() === end.getMonth()) {
+    return `${MONTH_ONLY.format(start)} ${start.getDate()}–${end.getDate()}`;
+  }
+  return `${MONTH_DAY.format(start)} – ${MONTH_DAY.format(end)}`;
+}
+
+/** Format a 24-hour `"HH:MM"` start time (the admin form's own `type="time"` input) as a
+ *  friendly, lowercase 12-hour string, e.g. `"13:00"` -> `"1 p.m."`, `"10:30"` -> `"10:30 a.m."`;
+ *  the minute is dropped entirely on the hour. Returns undefined for a malformed value, so a
  *  caller degrades to omitting the time line entirely rather than showing a broken string. */
-function formatTime(time: string): string | undefined {
+function formatTimeLabel(time: string): string | undefined {
   const match = /^(\d{2}):(\d{2})$/.exec(time);
   if (!match) return undefined;
   const hour24 = Number(match[1]);
+  const minute = Number(match[2]);
   const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
-  return `${hour12}:${match[2]} ${hour24 < 12 ? 'AM' : 'PM'}`;
+  const suffix = hour24 < 12 ? 'a.m.' : 'p.m.';
+  return minute === 0 ? `${hour12} ${suffix}` : `${hour12}:${match[2]} ${suffix}`;
 }
 
-/** A single time, or a start-end range when both are present and valid. */
-function formatTimeRange(startTime: string, endTime: string | null): string | undefined {
-  const start = formatTime(startTime);
-  if (!start) return undefined;
-  const end = endTime ? formatTime(endTime) : undefined;
-  return end ? `${start}–${end}` : start;
+/** True when `dateStr` (a row's end date, or its start date when it has none) falls strictly
+ *  before `today`'s own calendar date; false for a row with no date at all. Compares local
+ *  midnight to local midnight, the same date-only parsing every other helper in this module
+ *  uses, so a stray timezone offset can never shift a "today" event into yesterday. */
+function isRowPast(dateStr: string | null, today: Date): boolean {
+  if (!dateStr) return false;
+  const rowDate = new Date(`${dateStr}T00:00:00`);
+  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return rowDate.getTime() < todayDate.getTime();
 }
 
-/** A rough markdown-to-plain-text pass for the spine row's one-line teaser: strips the handful of
- *  syntax markers this content actually uses (headings, emphasis, links) without pulling in a full
- *  markdown parser just to shorten one sentence. */
-function stripMarkdown(md: string): string {
-  return md
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/[*_`]+/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-/** The index just past the last occurrence of a `punctuation`-matching character in `cut` that
- *  reads as a real boundary (followed by a space, or sitting at the very end of `cut`), no
- *  earlier than a third of the way in (guards a stray early match, an abbreviation's period,
- *  from producing a near-empty teaser). `null` when no such boundary exists. */
-function lastBoundary(cut: string, punctuation: RegExp): number | null {
-  const minIndex = Math.floor(cut.length / 3);
-  for (let i = cut.length - 1; i >= minIndex; i--) {
-    if (punctuation.test(cut[i]) && (i + 1 === cut.length || cut[i + 1] === ' ')) return i + 1;
-  }
-  return null;
-}
-
-/** Truncate `text` at the best available boundary within `maxLen` characters: a real sentence
- *  end (a period, question mark, or exclamation point) reads as a complete thought and needs no
- *  ellipsis; failing that, a clause end (a comma, semicolon, or colon) still needs the ellipsis,
- *  since it signals the sentence keeps going; failing that, the plain last word boundary, so the
- *  teaser never cuts a word or a clause in half (a mid-clause cut like "…relaxed and fun, no
- *  prior" read as an amputated fragment). Exported so this is
- *  directly unit-testable rather than only through `buildEventsPage`'s own summary field. */
-export function truncateSummary(text: string, maxLen = 90): string {
-  if (text.length <= maxLen) return text;
-  const cut = text.slice(0, maxLen);
-
-  const sentenceEnd = lastBoundary(cut, /[.!?]/);
-  if (sentenceEnd !== null) return cut.slice(0, sentenceEnd).trimEnd();
-
-  const clauseEnd = lastBoundary(cut, /[,;:]/);
-  if (clauseEnd !== null) return `${cut.slice(0, clauseEnd - 1).trimEnd()}…`;
-
-  const lastSpace = cut.lastIndexOf(' ');
-  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
-}
-
-/** Render a row's markdown fields and resolve its photo, the two async steps a bare D1 row needs
- *  before it is display-ready. Exported for the per-event page's own single-row load, which needs
- *  the same enrichment `buildEventsPage` runs per row, just for one row rather than the whole
- *  calendar. */
+/** Render a row's markdown field and resolve its photo, the two async steps a bare D1 row needs
+ *  before it is display-ready. Exported for the link-preview stub's own single-row read, which
+ *  needs the same enrichment `buildEventsPage` runs per row, just for one row. */
 export async function toEventCard(
   row: EventDetailRow,
-  currentYear: number,
+  today: Date,
   resolveMedia: MediaResolve,
   renderMarkdown: (md: string) => Promise<string>,
 ): Promise<EventCard> {
-  const isTbd =
-    !row.start_date || new Date(`${row.start_date}T00:00:00`).getFullYear() !== currentYear;
-  const dateDisplay = isTbd ? DATE_TBD : formatDateRange(row.start_date as string, row.end_date);
-
   const imageUrl = resolveEventImageUrl(row.hero_image, resolveMedia);
-  const descriptionSource = row.short_description ?? row.long_description ?? undefined;
+  const longSource = row.long_description ?? undefined;
+  const track = row.track === 'adult-teen' || row.track === 'youth' ? row.track : undefined;
+
   const card: EventCard = {
     routeId: routeIdOf(row),
     slug: row.slug,
     title: row.title,
-    typeLabel: TYPE_LABELS[row.event_type] ?? row.event_type,
-    typeIcon: TYPE_ICONS[row.event_type] ?? 'sailboat',
-    ...categorize(row.event_type),
     dotKind: seasonDotKind(row.event_type),
-    dateDisplay,
-    isTbd,
-    timeDisplay: row.start_time ? formatTimeRange(row.start_time, row.end_time) : undefined,
+    dateLabel: formatDateLabel(row.start_date, row.end_date),
+    time: row.start_time ? formatTimeLabel(row.start_time) : undefined,
     location: row.location ?? undefined,
     fee: row.event_type === 'class' && row.fee !== null ? row.fee : undefined,
-    shortDescription: row.short_description ?? undefined,
-    summary: descriptionSource ? truncateSummary(stripMarkdown(descriptionSource)) : undefined,
-    // A class row's registration_url is computed straight off asc-club by the query above (its own
-    // `id`, this database's internal signup route); a plain events row selects a literal `NULL`.
+    track,
+    dropIn: Boolean(row.drop_in),
+    isPast: isRowPast(row.end_date ?? row.start_date, today),
     registrationUrl: row.registration_url ?? undefined,
+    registrationState: row.registration_status ? REGISTRATION_STATE[row.registration_status] : undefined,
     image: imageUrl && row.hero_image ? { url: imageUrl, alt: row.hero_image_alt ?? row.title } : undefined,
   };
-  if (row.long_description) {
-    card.longDescriptionHtml = await renderMarkdown(row.long_description);
-  }
-  // A registration-status badge only ever marks a class or clinic, never a plain events row (see
-  // docs/events-manifest.md's #3: this is independent of whether the row itself has a
-  // registration_url, matching the legacy events page exactly).
-  if (row.event_type === 'class' && row.registration_status) {
-    card.registrationStatusLabel = REG_STATUS_LABELS[row.registration_status] ?? row.registration_status;
-    card.registrationStatusKind = REG_STATUS_KIND[row.registration_status] ?? 'muted';
-  }
+  if (longSource) card.longHtml = await renderMarkdown(longSource);
   return card;
 }
 
 const byMonthThenDay = (a: { month: number; sortDay: number }, b: { month: number; sortDay: number }) =>
   a.month !== b.month ? a.month - b.month : a.sortDay - b.sortDay;
 
-/** The season's full chronological order, every visible row (governance included, same as
- *  everywhere else in this module): just enough for a per-event page's quiet prev/next links, so
- *  it skips the async card enrichment `buildEventsPage` needs for a full render. A genuinely
- *  undated row sorts last (`monthAndDay`'s own `{99, 99}` fallback), same as every other ordering
- *  this module does. */
+/** The season's full chronological order, every visible row (governance included): just enough
+ *  for a quiet prev/next link, so it skips the async card enrichment `buildEventsPage` needs for
+ *  a full render. A genuinely undated row sorts last (`monthAndDay`'s own `{99, 99}` fallback),
+ *  same as every other ordering this module does. */
 export function buildEventOrder(rows: EventDetailRow[], currentYear = new Date().getFullYear()): EventNavLink[] {
   return rows
     .map((row) => ({ row, ...monthAndDay(row, currentYear) }))
@@ -382,64 +298,70 @@ export function buildEventOrder(rows: EventDetailRow[], currentYear = new Date()
     .map(({ row }) => ({ routeId: routeIdOf(row), title: row.title }));
 }
 
-/** Build the full `/events` page's data from every visible row: the enriched cards, grouped into
- *  month sections, Off-Season, and Meetings & Governance, plus the TOC that only lists a populated
- *  section. */
+/** The year of the first row (in read order) that carries a `start_date`; undefined when no row
+ *  is dated at all. */
+function firstDatedYear(rows: EventDetailRow[]): number | undefined {
+  const dated = rows.find((row) => row.start_date);
+  return dated ? new Date(`${dated.start_date}T00:00:00`).getFullYear() : undefined;
+}
+
+/** Build the full `/events` page's data from every visible row: the enriched cards, grouped by
+ *  calendar month (a governance row pulled out of the chronology entirely, by category,
+ *  regardless of its date), the season year for the hero title, and the route id of the next
+ *  upcoming band. */
 export async function buildEventsPage(
   rows: EventDetailRow[],
   opts: {
-    currentYear?: number;
+    /** The "now" every past/upcoming judgment is made against; defaults to the real clock so a
+     *  caller need not pass it, but every test does, for a deterministic result. */
+    today?: Date;
+    /** `settings.current_season`, already read by the caller (`readCurrentSeason`); `null` when
+     *  unset, in which case the season year falls back to the first dated row's own year. */
+    currentSeason: number | null;
     resolveMedia: MediaResolve;
     renderMarkdown: (md: string) => Promise<string>;
   },
 ): Promise<EventsPageData> {
-  const currentYear = opts.currentYear ?? new Date().getFullYear();
+  const today = opts.today ?? new Date();
+  const currentYear = today.getFullYear();
 
   const enriched = await Promise.all(
     rows.map(async (row) => ({
       row,
       ...monthAndDay(row, currentYear),
-      card: await toEventCard(row, currentYear, opts.resolveMedia, opts.renderMarkdown),
+      card: await toEventCard(row, today, opts.resolveMedia, opts.renderMarkdown),
     })),
   );
 
-  const monthBuckets = new Map<number, typeof enriched>();
-  const offSeasonRows: typeof enriched = [];
-  const meetingRows: typeof enriched = [];
+  const governanceRows = enriched.filter((item) => item.row.event_type === 'governance');
+  const seasonRows = enriched.filter((item) => item.row.event_type !== 'governance');
+  seasonRows.sort(byMonthThenDay);
+  governanceRows.sort(byMonthThenDay);
 
-  for (const item of enriched) {
-    if (item.row.event_type === 'governance') {
-      meetingRows.push(item);
-    } else if (item.month >= 5 && item.month <= 9) {
-      const bucket = monthBuckets.get(item.month) ?? [];
-      bucket.push(item);
-      monthBuckets.set(item.month, bucket);
-    } else {
-      offSeasonRows.push(item);
-    }
+  const monthBuckets = new Map<number, typeof seasonRows>();
+  for (const item of seasonRows) {
+    const bucket = monthBuckets.get(item.month) ?? [];
+    bucket.push(item);
+    monthBuckets.set(item.month, bucket);
   }
 
-  const monthSections: EventSection[] = [];
-  const tocLinks: TocLink[] = [];
-  for (const { month, label } of SEASON_MONTHS) {
+  const months: MonthGroup[] = [];
+  for (let month = 1; month <= 12; month++) {
     const bucket = monthBuckets.get(month);
     if (!bucket || bucket.length === 0) continue;
-    bucket.sort(byMonthThenDay);
-    monthSections.push({ id: MONTH_IDS[month], label, events: bucket.map((b) => b.card) });
-    tocLinks.push({ href: `#section-${MONTH_IDS[month]}`, label: MONTH_TOC_LABELS[month] });
+    months.push({ name: MONTH_NAMES[month - 1], id: MONTH_NAMES[month - 1].toLowerCase(), events: bucket.map((b) => b.card) });
+  }
+  const undatedBucket = monthBuckets.get(99);
+  if (undatedBucket && undatedBucket.length > 0) {
+    months.push({ ...UNDATED_MONTH, events: undatedBucket.map((b) => b.card) });
   }
 
-  offSeasonRows.sort(byMonthThenDay);
-  if (offSeasonRows.length > 0) tocLinks.push({ href: `#section-${OFF_SEASON_ID}`, label: 'Off-Season' });
-
-  meetingRows.sort(byMonthThenDay);
-  if (meetingRows.length > 0) tocLinks.push({ href: `#section-${MEETINGS_ID}`, label: 'Meetings' });
+  const nextUpcoming = seasonRows.find((item) => !item.card.isPast);
 
   return {
-    tocLinks,
-    monthSections,
-    offSeason: offSeasonRows.map((r) => r.card),
-    meetings: meetingRows.map((r) => r.card),
-    isEmpty: monthSections.length === 0 && offSeasonRows.length === 0 && meetingRows.length === 0,
+    seasonYear: opts.currentSeason ?? firstDatedYear(rows) ?? currentYear,
+    nextUpcomingId: nextUpcoming?.card.routeId,
+    months,
+    governance: governanceRows.map((r) => r.card),
   };
 }

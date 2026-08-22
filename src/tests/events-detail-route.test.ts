@@ -1,6 +1,7 @@
-// The events-redesign pass: /events/[id]'s own `load`. Mirrors class-signup-route.test.ts's
-// fakeD1 pattern (both routes read CLUB_DB directly), keyed on the two SQL substrings
-// `readEventRows` issues (`$theme/events-data.ts`'s EVENTS_QUERY/CLASSES_QUERY).
+// The events-redesign pass: /events/[id]'s own thin link-preview `load`. Mirrors
+// class-signup-route.test.ts's fakeD1 pattern (both routes read CLUB_DB directly), keyed on the
+// two SQL substrings `readEventRows` issues (`$theme/events-data.ts`'s EVENTS_QUERY/
+// CLASSES_QUERY).
 import { describe, expect, it } from 'vitest';
 import { isHttpError } from '@sveltejs/kit';
 import { load } from '../routes/(site)/events/[id]/+page.server';
@@ -35,6 +36,8 @@ const EVENT_ROW = {
   registration_url: null,
   registration_status: null,
   fee: null,
+  track: null,
+  drop_in: null,
 };
 
 const HIDDEN_EVENT_ROW = { ...EVENT_ROW, id: 'hidden-uuid', slug: 'hidden-event', title: 'Hidden Event' };
@@ -72,13 +75,11 @@ describe('/events/[id] load', () => {
     );
   });
 
-  it('returns the enriched card for a matching event row, keyed by slug', async () => {
+  it('returns the title and the /events#id scroll target for a matching event row, keyed by slug', async () => {
     const db = dbWith([EVENT_ROW]);
     const result = await runLoad('bnac', db);
-    expect(result.event.title).toBe('BNAC');
-    expect(result.event.routeId).toBe('bnac');
-    expect(result.event.location).toBe('Big Lake');
-    expect(result.seo.links.find((link: { rel: string }) => link.rel === 'canonical')?.href).toContain('/events/bnac');
+    expect(result.title).toBe('BNAC');
+    expect(result.target).toBe('/events#bnac');
   });
 
   it('routes a class row on its id, not its slug', async () => {
@@ -94,27 +95,16 @@ describe('/events/[id] load', () => {
     };
     const db = dbWith([EVENT_ROW], [classRow]);
     const result = await runLoad('class-row-id', db);
-    expect(result.event.title).toBe('Adult Intro Class');
-    expect(result.event.fee).toBe(100);
-    expect(result.event.registrationStatusLabel).toBe('Open');
+    expect(result.title).toBe('Adult Intro Class');
+    expect(result.target).toBe('/events#class-row-id');
   });
 
-  it('computes prev/next along the season, undefined at either boundary', async () => {
-    // BNAC (EVENT_ROW) is October; May and July sort ahead of it.
-    const may = { ...EVENT_ROW, id: 'may-id', slug: 'may-event', title: 'May Event', start_date: '2026-05-10', end_date: null };
-    const july = { ...EVENT_ROW, id: 'july-id', slug: 'july-event', title: 'July Event', start_date: '2026-07-10', end_date: null };
-    const db = dbWith([may, EVENT_ROW, july]);
-
-    const first = await runLoad('may-event', db);
-    expect(first.prev).toBeUndefined();
-    expect(first.next?.routeId).toBe('july-event');
-
-    const middle = await runLoad('july-event', db);
-    expect(middle.prev?.routeId).toBe('may-event');
-    expect(middle.next?.routeId).toBe('bnac');
-
-    const last = await runLoad('bnac', db);
-    expect(last.prev?.routeId).toBe('july-event');
-    expect(last.next).toBeUndefined();
+  it('builds a noindex seo whose canonical points at /events with no fragment', async () => {
+    const db = dbWith([EVENT_ROW]);
+    const result = await runLoad('bnac', db);
+    expect(result.seo.meta).toContainEqual({ name: 'robots', content: 'noindex' });
+    expect(result.seo.links.find((link: { rel: string }) => link.rel === 'canonical')?.href).toBe(
+      'https://dev.aksailingclub.org/events',
+    );
   });
 });

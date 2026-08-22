@@ -21,6 +21,8 @@ function row(overrides: Partial<EventDetailRow>): EventDetailRow {
     registration_url: null,
     registration_status: null,
     fee: null,
+    track: null,
+    drop_in: null,
     ...overrides,
   };
 }
