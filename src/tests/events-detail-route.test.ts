@@ -4,7 +4,11 @@
 // CLASSES_QUERY).
 import { describe, expect, it } from 'vitest';
 import { isHttpError } from '@sveltejs/kit';
+import { render } from 'svelte/server';
+import { buildSeoMeta } from '@glw907/cairn-cms/delivery';
 import { load } from '../routes/(site)/events/[id]/+page.server';
+import Page from '../routes/(site)/events/[id]/+page.svelte';
+import type { PageData } from '../routes/(site)/events/[id]/$types';
 import { fakeD1 } from './_fake-d1';
 
 type LoadEvent = Parameters<typeof load>[0];
@@ -106,5 +110,31 @@ describe('/events/[id] load', () => {
     expect(result.seo.links.find((link: { rel: string }) => link.rel === 'canonical')?.href).toBe(
       'https://dev.aksailingclub.org/events',
     );
+  });
+});
+
+describe('/events/[id] page', () => {
+  function fixtureData(): PageData {
+    return {
+      title: 'BNAC',
+      target: '/events#bnac',
+      seo: buildSeoMeta({
+        title: 'BNAC',
+        description: 'The season closer.',
+        canonicalUrl: 'https://dev.aksailingclub.org/events',
+        siteName: 'Alaska Sailing Club',
+        robots: 'noindex',
+      }),
+    } as unknown as PageData;
+  }
+
+  it('renders the zero-delay meta refresh to the scroll target', () => {
+    const { head } = render(Page, { props: { data: fixtureData() } });
+    expect(head).toContain('<meta http-equiv="refresh" content="0; url=/events#bnac"/>');
+  });
+
+  it('renders a one-line body: the title linking to the scroll target', () => {
+    const { body } = render(Page, { props: { data: fixtureData() } });
+    expect(body).toContain('<a href="/events#bnac">BNAC</a>');
   });
 });
