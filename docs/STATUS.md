@@ -39,12 +39,14 @@ route; events stay D1 and the no-events-concept ruling stays closed). Probe arc 
 probe 3 (title "The 2026 Season"); arc log `docs/design-benchmark/events-redesign-round-1-arc.md`,
 probe files machine-local at `~/.local/asc-data/probes/events-redesign/`. Build plan:
 `docs/plans/2026-08-22-events-redesign.md` (five tasks, ceiling 1.5M, branch
-`events-redesign-build`), approved by Geoff 2026-08-22. Checkpoint: tasks 1 through 4 are
-committed (`bf1097b`..`ed477c5`, workflow `wf_ae294cae-ef0`, 1.11M tokens spent); one
-consolidated fix round is in flight (the link-preview stub must unfurl the event's own
-photo and description, plus the reviewers' non-blocking findings). Next: task 5, the close
-(push, PR, CI baseline regeneration, reviewer fan-out, coherence read, docs). Spend is near
-the ceiling; the close may need a raise. Open data
+`events-redesign-build`), approved by Geoff 2026-08-22. Tasks 1 through 4 plus one
+consolidated fix round are committed and pushed (`bf1097b`..`2712339`; workflow
+`wf_ae294cae-ef0`; about 1.3M of the 1.5M ceiling spent). PR #6 is open and the
+`update_snapshots` CI dispatch is regenerating the baselines on the branch. Remaining for
+task 5, paused at the 80% line for Geoff's ceiling call: the fix round's `diff-reviewer`
+read, the reviewer fan-out (svelte, a11y, workers), the fresh-context coherence read at 390
+and 1440, the close docs (HISTORY, decisions.md, ledger, ROADMAP, harvest findings), then
+Geoff's before/after on dev and his merge. Open data
 question for Geoff: `classes.fleet_tuneup` says `drop_in = 0` while its copy says no
 registration is required.
 
