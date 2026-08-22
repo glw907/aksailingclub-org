@@ -15,17 +15,13 @@
 // with `$theme/events-data.ts`'s own row shape, even though the source column is `category`.
 //
 // Taxonomy mapping (the C7-gold recipe): `class` (the synthesized tag above) gets the gold dot,
-// since the club's own mission-first emphasis is education. `categorize()` below keeps its own,
-// separate two-way split (dot/muted booleans), still read by the full `/events` listing's own
-// badge (`events-data.ts`), where racing stays plain ink; that boolean shape is untouched by the
-// home band's own richer taxonomy below.
+// since the club's own mission-first emphasis is education.
 //
 // The home Season band's calendar rebuild (round-3 design review, 2026-07-07) replaces its own
 // font-weight "muted ink" category coding with a richer per-category DOT, since a font-treatment
 // split reads as an unintentionally weaker row rather than a deliberate marker (Geoff's live
-// finding). `seasonDotKind()` below is a second, home-band-only mapping over the same real D1
-// `category` values, kept separate from `categorize()` so the full listing's own boolean taxonomy
-// is untouched: every real category value in the ratified DDL's CHECK constraint gets its own dot
+// finding). `seasonDotKind()` below is the home-band-only mapping over the real D1 `category`
+// values: every real category value in the ratified DDL's CHECK constraint gets its own dot
 // now (round-5 addendum, 2026-07-07, Geoff's own "just to make things consistent" finding: racing
 // used to be the one category with no dot at all). `social` gets a green dot, `operations`/
 // `governance` (the club's administrative categories) share a neutral gray dot, and `racing` gets
@@ -178,16 +174,6 @@ export function formatDateRange(startIso: string, endIso: string | null): string
   return startMonth === endMonth
     ? `${startMonth} ${start.getDate()}–${end.getDate()}`
     : `${startMonth} ${start.getDate()}–${endMonth} ${end.getDate()}`;
-}
-
-/** The full `/events` listing's own two-way emphasis: `dot` for a class or clinic, `muted` for
- *  everything routine and non-racing, plain ink for a racing event. Kept as its own boolean shape
- *  (not `SeasonEvent`'s richer `SeasonDotKind`) since `events-data.ts`'s badge reads exactly this
- *  pair; see the header comment for why the home Season band now reads a separate mapping. */
-export function categorize(eventType: string): { dot?: boolean; muted?: boolean } {
-  if (eventType === 'class') return { dot: true };
-  if (eventType === 'racing') return {};
-  return { muted: true };
 }
 
 /** The home Season band's per-category dot (see the header comment): `class` keeps the sanctioned

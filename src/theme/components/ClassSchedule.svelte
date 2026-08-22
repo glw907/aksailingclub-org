@@ -9,7 +9,7 @@ rows in the final geometry, so the mount never shifts the page. An empty or fail
 the same events-page pointer the fallback carries, permanently.
 
 The status chip (2026-07-15 shared-components pass) is the same `.asc-availability-chip` class
-`SpineRow.svelte`'s registration-status chip uses (asc-components.css): a quiet outline, no
+the class signup page's own Availability fact uses (asc-components.css): a quiet outline, no
 semantic-palette color, since Open/Full/Completed and every other lifecycle label now read the
 same neutral chip rather than a color-per-status vocabulary. -->
 <script lang="ts">

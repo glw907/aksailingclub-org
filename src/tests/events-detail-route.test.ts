@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { isHttpError } from '@sveltejs/kit';
 import { render } from 'svelte/server';
-import { buildSeoMeta } from '@glw907/cairn-cms/delivery';
+import { SITE_DESCRIPTION } from '$chassis/content';
 import { load } from '../routes/(site)/events/[id]/+page.server';
 import Page from '../routes/(site)/events/[id]/+page.svelte';
 import type { PageData } from '../routes/(site)/events/[id]/$types';
@@ -111,30 +111,69 @@ describe('/events/[id] load', () => {
       'https://dev.aksailingclub.org/events',
     );
   });
+
+  it("unfurls with the row's own short_description as og:description", async () => {
+    const db = dbWith([EVENT_ROW]);
+    const result = await runLoad('bnac', db);
+    expect(result.seo.meta).toContainEqual({ property: 'og:description', content: 'The season closer.' });
+  });
+
+  it('falls back to an excerpt of long_description when short_description is absent', async () => {
+    const longRow = {
+      ...EVENT_ROW,
+      short_description: null,
+      long_description:
+        'A very long account of the season closer, with more detail than any one-line summary could hold, running well past a hundred and sixty characters so the excerpt actually has to cut it.',
+    };
+    const db = dbWith([longRow]);
+    const result = await runLoad('bnac', db);
+    const description = result.seo.meta.find(
+      (m: { property?: string }) => m.property === 'og:description',
+    )?.content as string;
+    expect(description.length).toBeLessThanOrEqual(161); // maxChars 160 plus the ellipsis
+    expect(description.startsWith('A very long account')).toBe(true);
+  });
+
+  it('falls back to the site description when the row carries no description at all', async () => {
+    const bareRow = { ...EVENT_ROW, short_description: null, long_description: null };
+    const db = dbWith([bareRow]);
+    const result = await runLoad('bnac', db);
+    expect(result.seo.meta).toContainEqual({
+      property: 'og:description',
+      content: SITE_DESCRIPTION,
+    });
+  });
+
+  it('unfurls with the resolved hero photo as an absolute og:image', async () => {
+    const withPhoto = { ...EVENT_ROW, hero_image: 'bnac.jpg', hero_image_alt: 'Boats racing' };
+    const db = dbWith([withPhoto]);
+    const result = await runLoad('bnac', db);
+    expect(result.seo.meta).toContainEqual({
+      property: 'og:image',
+      content: 'https://dev.aksailingclub.org/media/bnac.29d75df78f196b2e.jpg',
+    });
+    expect(result.seo.meta).toContainEqual({ name: 'twitter:image:alt', content: 'Boats racing' });
+  });
+
+  it('omits og:image for a row with no hero photo', async () => {
+    const db = dbWith([EVENT_ROW]);
+    const result = await runLoad('bnac', db);
+    expect(result.seo.meta.find((m: { property?: string }) => m.property === 'og:image')).toBeUndefined();
+  });
 });
 
 describe('/events/[id] page', () => {
-  function fixtureData(): PageData {
-    return {
-      title: 'BNAC',
-      target: '/events#bnac',
-      seo: buildSeoMeta({
-        title: 'BNAC',
-        description: 'The season closer.',
-        canonicalUrl: 'https://dev.aksailingclub.org/events',
-        siteName: 'Alaska Sailing Club',
-        robots: 'noindex',
-      }),
-    } as unknown as PageData;
-  }
-
-  it('renders the zero-delay meta refresh to the scroll target', () => {
-    const { head } = render(Page, { props: { data: fixtureData() } });
+  it('renders the zero-delay meta refresh to the scroll target', async () => {
+    const db = dbWith([EVENT_ROW]);
+    const data = await runLoad('bnac', db);
+    const { head } = render(Page, { props: { data: data as unknown as PageData } });
     expect(head).toContain('<meta http-equiv="refresh" content="0; url=/events#bnac"/>');
   });
 
-  it('renders a one-line body: the title linking to the scroll target', () => {
-    const { body } = render(Page, { props: { data: fixtureData() } });
+  it('renders a one-line body: the title linking to the scroll target', async () => {
+    const db = dbWith([EVENT_ROW]);
+    const data = await runLoad('bnac', db);
+    const { body } = render(Page, { props: { data: data as unknown as PageData } });
     expect(body).toContain('<a href="/events#bnac">BNAC</a>');
   });
 });

@@ -61,6 +61,7 @@ const GOVERNANCE_ROW = card({
   title: 'Annual Meeting',
   dateLabel: 'Saturday, October 3',
   location: 'Clubhouse',
+  note: 'Election of club officers and financial report.',
 });
 
 const EVENTS: EventsPageData = {
@@ -130,6 +131,12 @@ describe('/events season page', () => {
     const codaSection = body.slice(body.indexOf('id="meetings"'));
     expect(codaSection).toContain('Annual Meeting');
     expect(codaSection).toMatch(/id="annual-meeting"/);
+  });
+
+  it("renders a governance row's own note under the meeting name", () => {
+    const { body } = render(Page, { props: { data: fixtureData(EVENTS) } });
+    expect(body).toContain('<span class="ev-gov-note');
+    expect(body).toContain('Election of club officers and financial report.');
   });
 
   it('renders all four subscribe entries with the exact Google and Outlook hrefs for the fixture feed URL', () => {

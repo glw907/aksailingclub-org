@@ -154,6 +154,11 @@ export interface EventCard {
    *  column), e.g. `"1 p.m."` or `"10:30 a.m."`; undefined when the row has no start time. */
   time?: string;
   location?: string;
+  /** The row's `short_description`, undefined when absent. Only ever rendered by the governance
+   *  coda (`EventsGovernance.svelte`), which is a plain reference table with no room for the
+   *  full `longHtml` body a season band shows instead; a plain event or class row carries this
+   *  through unused. */
+  note?: string;
   /** A class's whole-dollar fee; never set on a plain event (which has no fee column). */
   fee?: number;
   /** A class's age gate; never set on a plain event. */
@@ -174,12 +179,6 @@ export interface EventCard {
   image?: { url: string; alt: string };
 }
 
-/** One entry in the season's chronological order: the per-event page's quiet prev/next links. */
-export interface EventNavLink {
-  routeId: string;
-  title: string;
-}
-
 /** One month's group of season bands, in the page's own display order. */
 export interface MonthGroup {
   name: string;
@@ -192,8 +191,9 @@ export interface MonthGroup {
  *  month that has at least one non-governance row, and the governance coda. */
 export interface EventsPageData {
   seasonYear: number;
-  /** The route id of the first non-governance row that has not already happened; undefined when
-   *  every row is past. */
+  /** The route id of the first dated, non-governance row that has not already happened;
+   *  undefined when every dated row is past. An undated row never wins this slot: it is never
+   *  provably past, but it is also never a real scroll target. */
   nextUpcomingId?: string;
   months: MonthGroup[];
   governance: EventCard[];
@@ -252,8 +252,8 @@ function isRowPast(dateStr: string | null, today: Date): boolean {
 }
 
 /** Render a row's markdown field and resolve its photo, the two async steps a bare D1 row needs
- *  before it is display-ready. Exported for the link-preview stub's own single-row read, which
- *  needs the same enrichment `buildEventsPage` runs per row, just for one row. */
+ *  before it is display-ready; `buildEventsPage`'s own per-row enrichment step. Exported for
+ *  direct unit testing, since it is the one place all of a card's field mappings live. */
 export async function toEventCard(
   row: EventDetailRow,
   today: Date,
@@ -272,6 +272,7 @@ export async function toEventCard(
     dateLabel: formatDateLabel(row.start_date, row.end_date),
     time: row.start_time ? formatTimeLabel(row.start_time) : undefined,
     location: row.location ?? undefined,
+    note: row.short_description ?? undefined,
     fee: row.event_type === 'class' && row.fee !== null ? row.fee : undefined,
     track,
     dropIn: Boolean(row.drop_in),
@@ -287,22 +288,14 @@ export async function toEventCard(
 const byMonthThenDay = (a: { month: number; sortDay: number }, b: { month: number; sortDay: number }) =>
   a.month !== b.month ? a.month - b.month : a.sortDay - b.sortDay;
 
-/** The season's full chronological order, every visible row (governance included): just enough
- *  for a quiet prev/next link, so it skips the async card enrichment `buildEventsPage` needs for
- *  a full render. A genuinely undated row sorts last (`monthAndDay`'s own `{99, 99}` fallback),
- *  same as every other ordering this module does. */
-export function buildEventOrder(rows: EventDetailRow[], currentYear = new Date().getFullYear()): EventNavLink[] {
-  return rows
-    .map((row) => ({ row, ...monthAndDay(row, currentYear) }))
-    .sort(byMonthThenDay)
-    .map(({ row }) => ({ routeId: routeIdOf(row), title: row.title }));
-}
-
-/** The year of the first row (in read order) that carries a `start_date`; undefined when no row
- *  is dated at all. */
+/** The year of the chronologically earliest `start_date` among every row; undefined when no row
+ *  is dated at all. Every stored date is `YYYY-MM-DD`, so a plain string minimum sorts the same as
+ *  a chronological one; read order plays no part, unlike a plain `.find()`. */
 function firstDatedYear(rows: EventDetailRow[]): number | undefined {
-  const dated = rows.find((row) => row.start_date);
-  return dated ? new Date(`${dated.start_date}T00:00:00`).getFullYear() : undefined;
+  const dates = rows.map((row) => row.start_date).filter((date): date is string => date !== null);
+  if (dates.length === 0) return undefined;
+  const earliest = dates.reduce((min, date) => (date < min ? date : min));
+  return new Date(`${earliest}T00:00:00`).getFullYear();
 }
 
 /** Build the full `/events` page's data from every visible row: the enriched cards, grouped by
@@ -356,7 +349,10 @@ export async function buildEventsPage(
     months.push({ ...UNDATED_MONTH, events: undatedBucket.map((b) => b.card) });
   }
 
-  const nextUpcoming = seasonRows.find((item) => !item.card.isPast);
+  // An undated row is never the scroll target: `isRowPast` always reads it as not-past (there is
+  // no evidence it already happened), so without the `start_date` guard a genuinely TBD row would
+  // win this search whenever every dated row has already passed.
+  const nextUpcoming = seasonRows.find((item) => item.row.start_date && !item.card.isPast);
 
   return {
     seasonYear: opts.currentSeason ?? firstDatedYear(rows) ?? currentYear,

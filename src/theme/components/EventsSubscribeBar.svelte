@@ -24,16 +24,22 @@ constraint. -->
 
   let { webcalUrl, googleCalendarUrl, outlookCalendarUrl, icsUrl }: Props = $props();
 
-  /** Whether the copy button's label currently reads "Copied" (a `$state` flag, no clipboard
-   *  library); reset after two seconds so a second copy re-announces the confirmation. */
-  let copied = $state(false);
+  /** The copy button's label state: `'idle'` by default, `'copied'` after a successful write, or
+   *  `'failed'` when the clipboard call itself rejects (an insecure context, a denied permission).
+   *  Either outcome resets to idle after two seconds, so a second attempt re-announces its own
+   *  result. */
+  let copyState = $state<'idle' | 'copied' | 'failed'>('idle');
   let copyTimeout: ReturnType<typeof setTimeout> | undefined;
 
   async function copyFeedAddress() {
-    await navigator.clipboard.writeText(icsUrl);
-    copied = true;
+    try {
+      await navigator.clipboard.writeText(icsUrl);
+      copyState = 'copied';
+    } catch {
+      copyState = 'failed';
+    }
     clearTimeout(copyTimeout);
-    copyTimeout = setTimeout(() => (copied = false), 2000);
+    copyTimeout = setTimeout(() => (copyState = 'idle'), 2000);
   }
 </script>
 
@@ -54,7 +60,7 @@ constraint. -->
     </a>
     <button class="ev-subscribe-link" type="button" onclick={copyFeedAddress}>
       <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d={ICON_PATHS.copy} /></svg>
-      {copied ? 'Copied' : 'Copy feed address'}
+      {copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy failed' : 'Copy feed address'}
     </button>
   </div>
 </div>

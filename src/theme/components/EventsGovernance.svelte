@@ -4,7 +4,9 @@ coda"): every `category = 'governance'` row (the Annual Meeting, board and commi
 in a plain three-column hairline table, the same quiet register the member portal's own
 committees section already uses. No photos, no bands: this is a reference list, not a season
 event. Every row with `category = 'governance'` lands here regardless of its date, so it leaves
-the chronology entirely (unlike a past event, which stays in place, quieted). -->
+the chronology entirely (unlike a past event, which stays in place, quieted). A row's own `note`
+(its `short_description`) prints under the meeting name in a muted, smaller line, when the row
+carries one. -->
 <script lang="ts">
   import type { EventCard } from '$theme/events-data';
 
@@ -26,7 +28,10 @@ the chronology entirely (unlike a past event, which stays in place, quieted). --
         {#each rows as row (row.routeId)}
           <tr id={row.routeId}>
             <td>{row.dateLabel}</td>
-            <td><a href="#{row.routeId}">{row.title}</a></td>
+            <td>
+              <a href="#{row.routeId}">{row.title}</a>
+              {#if row.note}<span class="ev-gov-note">{row.note}</span>{/if}
+            </td>
             <td>{row.location ?? ''}</td>
           </tr>
         {/each}
@@ -92,6 +97,12 @@ the chronology entirely (unlike a past event, which stays in place, quieted). --
   .ev-gov-table td a:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
+  }
+  .ev-gov-note {
+    display: block;
+    font-size: var(--text-step--1);
+    color: var(--color-muted);
+    margin-top: 0.15em;
   }
   @media (max-width: 48rem) {
     .ev-gov-table th:last-child,

@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  buildEventOrder,
-  buildEventsPage,
-  readEventRows,
-  toEventCard,
-  type EventDetailRow,
-} from '$theme/events-data';
+import { buildEventsPage, readEventRows, toEventCard, type EventDetailRow } from '$theme/events-data';
 import type { MediaRef } from '@glw907/cairn-cms/media';
 import { fakeD1 } from './_fake-d1';
 
@@ -269,6 +263,17 @@ describe('buildEventsPage', () => {
     expect(data.nextUpcomingId).toBeUndefined();
   });
 
+  it('never picks an undated row as nextUpcomingId, even with no dated row left to beat it', async () => {
+    const data = await buildEventsPage(
+      [
+        row({ title: 'Past', slug: 'past', start_date: '2026-05-01' }),
+        row({ title: 'Undated', slug: 'undated' }),
+      ],
+      { today: TODAY, currentSeason: 2026, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+    );
+    expect(data.nextUpcomingId).toBeUndefined();
+  });
+
   it('reads seasonYear from settings.current_season when set', async () => {
     const data = await buildEventsPage(
       [row({ title: 'X', slug: 'x', start_date: '2019-06-01' })],
@@ -286,6 +291,17 @@ describe('buildEventsPage', () => {
       { today: TODAY, currentSeason: null, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
     );
     expect(data.seasonYear).toBe(2027);
+  });
+
+  it('falls back to the CHRONOLOGICALLY earliest dated row, not the first in read order', async () => {
+    const data = await buildEventsPage(
+      [
+        row({ title: 'Later in read order, later in the season', slug: 'later', start_date: '2027-08-01' }),
+        row({ title: 'Earlier chronologically', slug: 'earlier', start_date: '2026-04-01' }),
+      ],
+      { today: TODAY, currentSeason: null, resolveMedia: NO_IMAGE, renderMarkdown: IDENTITY_MARKDOWN },
+    );
+    expect(data.seasonYear).toBe(2026);
   });
 
   it('flags dropIn true and false across a mixed set of classes', async () => {
@@ -337,32 +353,5 @@ describe('readEventRows', () => {
     const rows = await readEventRows(db);
     expect(rows.some((r) => r.event_type === 'class')).toBe(false);
     expect(rows.some((r) => r.title === 'BNAC')).toBe(true);
-  });
-});
-
-describe('buildEventOrder', () => {
-  it('orders every row chronologically by its own effective date', () => {
-    const order = buildEventOrder(
-      [
-        row({ title: 'July', slug: 'july', id: 'july-id', start_date: '2026-07-10' }),
-        row({ title: 'May', slug: 'may', id: 'may-id', start_date: '2026-05-10' }),
-        row({ title: 'June', slug: 'june', id: 'june-id', start_date: '2026-06-10' }),
-      ],
-      2026,
-    );
-    expect(order.map((o) => o.title)).toEqual(['May', 'June', 'July']);
-    expect(order[0].routeId).toBe('may');
-  });
-
-  it('routes a class entry on its id and sorts a genuinely undated row last', () => {
-    const order = buildEventOrder(
-      [
-        row({ title: 'TBD', slug: 'tbd', id: 'tbd-id', event_type: 'class' }),
-        row({ title: 'Dated Class', slug: 'dated-class', id: 'dated-class-id', event_type: 'class', start_date: '2026-06-01' }),
-      ],
-      2026,
-    );
-    expect(order.map((o) => o.title)).toEqual(['Dated Class', 'TBD']);
-    expect(order[0].routeId).toBe('dated-class-id');
   });
 });

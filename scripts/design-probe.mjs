@@ -224,12 +224,25 @@ async function checkBandAlternation(page, path, warnings) {
 
 // ─── The events-redesign pass's own checks (i-l below), against /events specifically ────────
 
+/** Every check below only means something against a page that actually rendered season bands: an
+ *  empty `.ev-band` query (a seed gap, a broken CLUB_DB read, a route regression) would otherwise
+ *  let each check pass on zero elements to examine, silently certifying nothing at all. Each of
+ *  the four checks below calls this first and fails loudly instead. */
+async function requireEventBands(page, path, offenders) {
+  const bandCount = await page.evaluate(() => document.querySelectorAll('.ev-band').length);
+  if (bandCount === 0) {
+    offenders.push(`${path}: no bands rendered (0 .ev-band sections; cannot verify the events checks)`);
+  }
+  return bandCount > 0;
+}
+
 /** Check (i): every `.ev-photo img` on /events renders at exactly a 3:2 ratio, within 1px (the
  *  design contract's uncropped-photo rule). This reads the rendered box, not the natural image
  *  size: `aspect-ratio` is a layout property of the `<img>` element itself, so the box holds this
  *  ratio even against the CI runner's photo-less local R2 replica (this file's own header note),
  *  unlike the natural-size comparison `checkImageRatios` above needs a loaded image for. */
 async function checkEventPhotoRatio(page, path, offenders) {
+  if (!(await requireEventBands(page, path, offenders))) return;
   const boxes = await page.evaluate(() =>
     Array.from(document.querySelectorAll('.ev-photo img')).map((img) => {
       const r = img.getBoundingClientRect();
@@ -254,6 +267,7 @@ async function checkEventPhotoRatio(page, path, offenders) {
  *  `oklch()` custom property, so the comparison matches whatever `rgb()`/`oklch()` form the
  *  browser actually resolves computed backgrounds to. */
 async function checkFireweedSingleton(page, path, offenders) {
+  if (!(await requireEventBands(page, path, offenders))) return;
   const matches = await page.evaluate(() => {
     const probe = document.createElement('div');
     probe.style.backgroundColor = 'var(--color-fireweed)';
@@ -277,6 +291,7 @@ async function checkFireweedSingleton(page, path, offenders) {
  *  governance coda) carries both an `id` (the anchor `EventsIndex` and the calendar links target)
  *  and an `h2` (the season page's own outline). */
 async function checkSeasonSections(page, path, offenders) {
+  if (!(await requireEventBands(page, path, offenders))) return;
   const issues = await page.evaluate(() => {
     const found = [];
     for (const section of document.querySelectorAll('.events-shell section')) {
@@ -292,6 +307,7 @@ async function checkSeasonSections(page, path, offenders) {
 /** Check (l): every month-index link (`EventsIndex`) resolves to a real element id somewhere on
  *  the page, so a jump link is never dead. */
 async function checkMonthIndexLinks(page, path, offenders) {
+  if (!(await requireEventBands(page, path, offenders))) return;
   const issues = await page.evaluate(() => {
     const found = [];
     for (const a of document.querySelectorAll('.ev-index a')) {
