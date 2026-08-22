@@ -39,7 +39,12 @@ route; events stay D1 and the no-events-concept ruling stays closed). Probe arc 
 probe 3 (title "The 2026 Season"); arc log `docs/design-benchmark/events-redesign-round-1-arc.md`,
 probe files machine-local at `~/.local/asc-data/probes/events-redesign/`. Build plan:
 `docs/plans/2026-08-22-events-redesign.md` (five tasks, ceiling 1.5M, branch
-`events-redesign-build`), approved by Geoff 2026-08-22 and executing. Open data
+`events-redesign-build`), approved by Geoff 2026-08-22. Checkpoint: tasks 1 through 4 are
+committed (`bf1097b`..`ed477c5`, workflow `wf_ae294cae-ef0`, 1.11M tokens spent); one
+consolidated fix round is in flight (the link-preview stub must unfurl the event's own
+photo and description, plus the reviewers' non-blocking findings). Next: task 5, the close
+(push, PR, CI baseline regeneration, reviewer fan-out, coherence read, docs). Spend is near
+the ceiling; the close may need a raise. Open data
 question for Geoff: `classes.fleet_tuneup` says `drop_in = 0` while its copy says no
 registration is required.
 
