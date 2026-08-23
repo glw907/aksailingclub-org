@@ -356,7 +356,17 @@ describe('delete action', () => {
   });
 
   it('refuses a published event server-side, auditing the rejection', async () => {
-    const { db } = fakeD1({ firstResults: { 'FROM events WHERE id': EXISTING_EVENT } });
+    // Two distinct reads now touch `events` for one id: `getEvent`'s own full-row select (the
+    // 404 check) and `deleteEvent`'s own guarded eligibility select. They need distinguishable
+    // fixture keys -- a shared broad key would let the eligibility read answer with the full
+    // (published, dated) row and wrongly read as eligible, since fakeD1 matches by SQL substring
+    // and never evaluates a real WHERE clause.
+    const { db } = fakeD1({
+      firstResults: {
+        'SELECT id, series_id, season, title': EXISTING_EVENT,
+        'SELECT series_id FROM events WHERE id = ?1 AND visible = 0': null,
+      },
+    });
     const sink = vi.fn();
     const result = await actions.delete(postEvent(admin, { id: 'board-meeting-2026' }, { db, auditSink: sink }));
     expect(isActionFailure(result)).toBe(true);
@@ -370,16 +380,19 @@ describe('delete action', () => {
   it('deletes an undated, never-visible event, deletes its now-orphaned series, and audits the id', async () => {
     const { db, calls } = fakeD1({
       firstResults: {
-        'FROM events WHERE id': UNDATED_INVISIBLE_EVENT,
-        'FROM events WHERE series_id = ?1 AND id != ?2': { n: 0 },
+        'SELECT id, series_id, season, title': UNDATED_INVISIBLE_EVENT,
+        'SELECT series_id FROM events WHERE id = ?1 AND visible = 0': { series_id: UNDATED_INVISIBLE_EVENT.series_id },
       },
+      runResults: { 'DELETE FROM event_series': { changes: 1 } },
     });
     const sink = vi.fn();
     const caught = await catchThrown(actions.delete(postEvent(admin, { id: 'regatta-2026' }, { db, auditSink: sink })));
     expect(isRedirect(caught)).toBe(true);
     expect((caught as Redirect).location).toBe('?season=2026');
-    expect(calls.some((c) => c.sql === 'DELETE FROM events WHERE id = ?1')).toBe(true);
-    expect(calls.some((c) => c.sql === 'DELETE FROM event_series WHERE id = ?1')).toBe(true);
+    expect(calls.some((c) => c.sql === 'DELETE FROM events WHERE id = ?1 AND visible = 0 AND start_date IS NULL')).toBe(true);
+    expect(
+      calls.some((c) => c.sql === 'DELETE FROM event_series WHERE id = ?1 AND NOT EXISTS (SELECT 1 FROM events WHERE series_id = ?1)'),
+    ).toBe(true);
     expect(sink).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'delete', entity: 'event', entityId: 'regatta-2026', actor: admin.email }),
     );

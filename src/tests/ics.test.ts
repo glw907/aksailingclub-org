@@ -73,6 +73,30 @@ describe('buildIcs', () => {
     const withoutDesc = buildIcs([row({ title: 'B', slug: 'b', start_date: '2026-06-02' })], BASE_URL);
     expect(withoutDesc).not.toContain('DESCRIPTION:');
   });
+
+  it('escapes a reserved character in the UID (slug-derived, never assumed pre-safe)', () => {
+    const ics = buildIcs(
+      [row({ title: 'A', slug: 'a;b,c', start_date: '2026-06-01' })],
+      BASE_URL,
+    );
+    expect(ics).toContain('UID:a\\;b\\,c@aksailingclub.org');
+  });
+
+  it('folds a lone \\r or a \\r\\n pair in the description into the same \\n escape as a bare \\n', () => {
+    const lonCr = buildIcs(
+      [row({ title: 'A', slug: 'a', start_date: '2026-06-01', short_description: 'Line one\rLine two' })],
+      BASE_URL,
+    );
+    expect(lonCr).toContain('DESCRIPTION:Line one\\nLine two');
+
+    const crlf = buildIcs(
+      [row({ title: 'B', slug: 'b', start_date: '2026-06-02', short_description: 'Line one\r\nLine two' })],
+      BASE_URL,
+    );
+    expect(crlf).toContain('DESCRIPTION:Line one\\nLine two');
+    // A \r\n pair collapses to ONE escaped break, not two.
+    expect(crlf).not.toContain('\\n\\n');
+  });
 });
 
 describe('buildSingleEventIcs', () => {

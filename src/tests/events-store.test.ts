@@ -250,17 +250,21 @@ describe('linkEventToSeries', () => {
   const movingEvent = { ...RAW_ROW, id: 'regatta-2027', series_id: 'series-old', season: 2027 };
 
   it('moves the event onto the target series when the old series keeps other rows', async () => {
+    // The move's own conflict guard is folded into the UPDATE's WHERE clause now (item 7), so a
+    // successful move is driven by runResults: changes 1 means the guard did not fire.
     const { db, calls } = fakeD1({
       firstResults: {
         'FROM events WHERE id = ?1': movingEvent,
         'FROM event_series WHERE id = ?1': { id: 'series-new' },
-        'FROM events WHERE series_id = ?1 AND season = ?2': null,
-        'FROM events WHERE series_id = ?1 AND id != ?2': { n: 1 },
+      },
+      runResults: {
+        'UPDATE events SET series_id': { changes: 1 },
+        'DELETE FROM event_series': { changes: 0 }, // the old series still holds other rows
       },
     });
     await expect(linkEventToSeries(db, 'regatta-2027', 'series-new')).resolves.toEqual({ removedSeriesId: null });
     expect(calls.some((c) => c.sql.startsWith('UPDATE events SET series_id'))).toBe(true);
-    expect(calls.some((c) => c.sql.startsWith('DELETE FROM event_series'))).toBe(false);
+    expect(calls.some((c) => c.sql.startsWith('DELETE FROM event_series'))).toBe(true); // it runs; its own guard just no-ops
   });
 
   it('deletes the now-orphaned former series and reports its id', async () => {
@@ -268,12 +272,16 @@ describe('linkEventToSeries', () => {
       firstResults: {
         'FROM events WHERE id = ?1': movingEvent,
         'FROM event_series WHERE id = ?1': { id: 'series-new' },
-        'FROM events WHERE series_id = ?1 AND season = ?2': null,
-        'FROM events WHERE series_id = ?1 AND id != ?2': { n: 0 },
+      },
+      runResults: {
+        'UPDATE events SET series_id': { changes: 1 },
+        'DELETE FROM event_series': { changes: 1 },
       },
     });
     await expect(linkEventToSeries(db, 'regatta-2027', 'series-new')).resolves.toEqual({ removedSeriesId: 'series-old' });
-    expect(calls.some((c) => c.sql === 'DELETE FROM event_series WHERE id = ?1')).toBe(true);
+    expect(calls.some((c) => c.sql === 'DELETE FROM event_series WHERE id = ?1 AND NOT EXISTS (SELECT 1 FROM events WHERE series_id = ?1)')).toBe(
+      true,
+    );
   });
 
   it('refuses when the target series does not exist', async () => {
@@ -283,12 +291,17 @@ describe('linkEventToSeries', () => {
     await expect(linkEventToSeries(db, 'regatta-2027', 'no-such-series')).resolves.toEqual({ error: 'No such series.' });
   });
 
-  it('refuses when the target series already has a row in the moving event\'s season', async () => {
+  it("refuses when the target series already has a row in the moving event's season", async () => {
+    // The conflict guard folded into the UPDATE's own WHERE NOT EXISTS means it matches zero
+    // rows when the target already holds a row for this season; changes: 0 is what tells the two
+    // refusal branches apart, since "no such series" already short-circuited before the batch.
     const { db } = fakeD1({
       firstResults: {
         'FROM events WHERE id = ?1': movingEvent,
         'FROM event_series WHERE id = ?1': { id: 'series-new' },
-        'FROM events WHERE series_id = ?1 AND season = ?2': { id: 'already-there-2027' },
+      },
+      runResults: {
+        'UPDATE events SET series_id': { changes: 0 },
       },
     });
     await expect(linkEventToSeries(db, 'regatta-2027', 'series-new')).resolves.toEqual({
@@ -338,9 +351,33 @@ describe('canDeleteEvent', () => {
 });
 
 describe('deleteEvent', () => {
-  it('deletes by id only', async () => {
-    const { db, calls } = fakeD1();
-    await deleteEvent(db, 'board-meeting-2026-08');
-    expect(calls).toEqual([{ sql: 'DELETE FROM events WHERE id = ?1', args: ['board-meeting-2026-08'] }]);
+  it('reads back deleted: false with no writes when the eligibility read finds nothing (unknown id or ineligible row)', async () => {
+    const { db, calls } = fakeD1({ firstResults: { 'SELECT series_id FROM events WHERE id = ?1 AND visible = 0': null } });
+    await expect(deleteEvent(db, 'board-meeting-2026-08')).resolves.toEqual({ deleted: false, removedSeriesId: null });
+    expect(calls.some((c) => c.sql.startsWith('DELETE'))).toBe(false);
+  });
+
+  it('deletes an eligible row and reports no orphaned series when siblings remain', async () => {
+    const { db, calls } = fakeD1({
+      firstResults: { 'SELECT series_id FROM events WHERE id = ?1 AND visible = 0': { series_id: 'series-board' } },
+      runResults: { 'DELETE FROM event_series': { changes: 0 } },
+    });
+    await expect(deleteEvent(db, 'board-meeting-2026-08')).resolves.toEqual({ deleted: true, removedSeriesId: null });
+    expect(calls).toContainEqual({
+      sql: 'DELETE FROM events WHERE id = ?1 AND visible = 0 AND start_date IS NULL',
+      args: ['board-meeting-2026-08'],
+    });
+    expect(calls).toContainEqual({
+      sql: 'DELETE FROM event_series WHERE id = ?1 AND NOT EXISTS (SELECT 1 FROM events WHERE series_id = ?1)',
+      args: ['series-board'],
+    });
+  });
+
+  it('deletes an eligible row and reports the now-orphaned series', async () => {
+    const { db } = fakeD1({
+      firstResults: { 'SELECT series_id FROM events WHERE id = ?1 AND visible = 0': { series_id: 'series-board' } },
+      runResults: { 'DELETE FROM event_series': { changes: 1 } },
+    });
+    await expect(deleteEvent(db, 'board-meeting-2026-08')).resolves.toEqual({ deleted: true, removedSeriesId: 'series-board' });
   });
 });

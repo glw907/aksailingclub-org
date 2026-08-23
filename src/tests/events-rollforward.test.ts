@@ -8,16 +8,19 @@ import { fakeD1 } from './_fake-d1';
 import { listLedger, previewRollForward, rollForwardSeason } from '$admin-club/lib/events-store';
 
 describe('previewRollForward', () => {
-  it('sorts into create/skipped with the retired -> once -> already-rolled precedence, both lists title-sorted', async () => {
+  it('sorts into create/skipped with the retired -> once -> already-rolled -> slug-taken precedence, both lists title-sorted', async () => {
     const { db, calls } = fakeD1({
       allResults: {
         'FROM event_series es': [
-          { series_id: 'series-a', title: 'A Annual New', recurrence: 'annual', retired_at: null, has_to_season: 0 },
-          { series_id: 'series-b', title: 'B Retired', recurrence: 'annual', retired_at: '2026-01-01 00:00:00', has_to_season: 0 },
-          { series_id: 'series-c', title: 'C Once', recurrence: 'once', retired_at: null, has_to_season: 0 },
-          { series_id: 'series-d', title: 'D Already Rolled', recurrence: 'annual', retired_at: null, has_to_season: 1 },
+          { series_id: 'series-a', title: 'A Annual New', recurrence: 'annual', retired_at: null, has_to_season: 0, slug_taken: 0 },
+          { series_id: 'series-b', title: 'B Retired', recurrence: 'annual', retired_at: '2026-01-01 00:00:00', has_to_season: 0, slug_taken: 0 },
+          { series_id: 'series-c', title: 'C Once', recurrence: 'once', retired_at: null, has_to_season: 0, slug_taken: 0 },
+          { series_id: 'series-d', title: 'D Already Rolled', recurrence: 'annual', retired_at: null, has_to_season: 1, slug_taken: 0 },
           // Both retired AND once-off: retired wins (the stated precedence).
-          { series_id: 'series-e', title: 'E Retired And Once', recurrence: 'once', retired_at: '2026-01-01 00:00:00', has_to_season: 0 },
+          { series_id: 'series-e', title: 'E Retired And Once', recurrence: 'once', retired_at: '2026-01-01 00:00:00', has_to_season: 0, slug_taken: 0 },
+          // A different series already holds this series' slug in toSeason: skipped, never a
+          // silent no-op the officer discovers only after the roll-forward.
+          { series_id: 'series-f', title: 'F Slug Taken', recurrence: 'annual', retired_at: null, has_to_season: 0, slug_taken: 1 },
         ],
       },
     });
@@ -33,6 +36,7 @@ describe('previewRollForward', () => {
         { seriesId: 'series-c', title: 'C Once', reason: 'once' },
         { seriesId: 'series-d', title: 'D Already Rolled', reason: 'already-rolled' },
         { seriesId: 'series-e', title: 'E Retired And Once', reason: 'retired' },
+        { seriesId: 'series-f', title: 'F Slug Taken', reason: 'slug-taken' },
       ],
     });
     expect(calls[0].args).toEqual([2026, 2027]);
@@ -40,26 +44,13 @@ describe('previewRollForward', () => {
 });
 
 describe('rollForwardSeason', () => {
-  const sourceRow = {
-    title: 'Regatta',
-    slug: 'regatta',
-    category: 'racing',
-    short_description: 'desc',
-    long_description: 'long desc',
-    location: 'Outer buoys',
-    hero_image: 'media:regatta.abcdef0123456789',
-    hero_image_alt: 'Boats racing.',
-    thumbnail_image: 'media:regatta-thumb.abcdef0123456789',
-  };
-
-  it('inserts one row per create entry, copying everything but the dates/times, undated and hidden', async () => {
+  it('inserts one row per create entry as a single INSERT ... SELECT (no per-row JS read of the source), copying everything but the dates/times, undated and hidden', async () => {
     const { db, calls } = fakeD1({
       allResults: {
         'FROM event_series es': [
-          { series_id: 'series-a', title: 'Regatta', recurrence: 'annual', retired_at: null, has_to_season: 0 },
+          { series_id: 'series-a', title: 'Regatta', recurrence: 'annual', retired_at: null, has_to_season: 0, slug_taken: 0 },
         ],
       },
-      firstResults: { 'SELECT title, slug, category': sourceRow },
     });
 
     const result = await rollForwardSeason(db, { fromSeason: 2026, toSeason: 2027 });
@@ -67,41 +58,28 @@ describe('rollForwardSeason', () => {
 
     const insertCall = calls.find((c) => c.sql.startsWith('INSERT INTO events'));
     expect(insertCall).toBeDefined();
+    expect(insertCall!.sql).toContain('FROM events src');
+    expect(insertCall!.sql).toContain("src.slug || '-' || ?2");
     expect(insertCall!.sql).toContain('NULL, NULL, NULL, NULL');
-    expect(insertCall!.sql).toContain('NOT EXISTS');
-    expect(insertCall!.args).toEqual([
-      'regatta-2027',
-      'series-a',
-      2027,
-      'Regatta',
-      'regatta',
-      'racing',
-      'desc',
-      'long desc',
-      'Outer buoys',
-      'media:regatta.abcdef0123456789',
-      'Boats racing.',
-      'media:regatta-thumb.abcdef0123456789',
-    ]);
+    expect(insertCall!.sql).toContain('NOT EXISTS (SELECT 1 FROM events WHERE series_id = ?1 AND season = ?2)');
+    expect(insertCall!.sql).toContain('NOT EXISTS (SELECT 1 FROM events WHERE slug = src.slug AND season = ?2)');
+    expect(insertCall!.sql).toContain("NOT EXISTS (SELECT 1 FROM events WHERE id = src.slug || '-' || ?2)");
+    expect(insertCall!.args).toEqual(['series-a', 2027, 2026]);
   });
 
-  it('counts each statement\'s own meta.changes, not the number of statements queued: a guard that skips a row does not inflate the count', async () => {
+  it("counts each statement's own meta.changes, not the number of statements queued: a guard that skips a row does not inflate the count", async () => {
     const { db } = fakeD1({
       allResults: {
         'FROM event_series es': [
-          { series_id: 'series-a', title: 'Regatta', recurrence: 'annual', retired_at: null, has_to_season: 0 },
-          { series_id: 'series-b', title: 'Clinic', recurrence: 'annual', retired_at: null, has_to_season: 0 },
+          { series_id: 'series-a', title: 'Regatta', recurrence: 'annual', retired_at: null, has_to_season: 0, slug_taken: 0 },
+          { series_id: 'series-b', title: 'Clinic', recurrence: 'annual', retired_at: null, has_to_season: 0, slug_taken: 0 },
         ],
-      },
-      firstResults: {
-        'SELECT title, slug, category': (args: unknown[]) =>
-          args[0] === 'series-a' ? sourceRow : { ...sourceRow, title: 'Clinic', slug: 'clinic' },
       },
       // series-b's own INSERT loses the race against its own NOT EXISTS guard (a row landed
       // between previewRollForward's read and this batch), so it reports zero changes even
       // though the statement itself ran and succeeded.
       runResults: {
-        'INSERT INTO events': (args: unknown[]) => (args[0] === 'regatta-2027' ? { changes: 1 } : { changes: 0 }),
+        'INSERT INTO events': (args: unknown[]) => (args[0] === 'series-a' ? { changes: 1 } : { changes: 0 }),
       },
     });
 
@@ -124,11 +102,11 @@ describe('rollForwardSeason', () => {
               // The first read shows the series not yet rolled; the second read (simulating the
               // row the first call just inserted) shows it already in toSeason.
               has_to_season: reads > 1 ? 1 : 0,
+              slug_taken: 0,
             },
           ];
         },
       },
-      firstResults: { 'SELECT title, slug, category': sourceRow },
     });
 
     const first = await rollForwardSeason(db, { fromSeason: 2026, toSeason: 2027 });
@@ -144,7 +122,14 @@ describe('rollForwardSeason', () => {
     const { db, calls } = fakeD1({
       allResults: {
         'FROM event_series es': [
-          { series_id: 'series-b', title: 'Retired Regatta', recurrence: 'annual', retired_at: '2026-01-01 00:00:00', has_to_season: 0 },
+          {
+            series_id: 'series-b',
+            title: 'Retired Regatta',
+            recurrence: 'annual',
+            retired_at: '2026-01-01 00:00:00',
+            has_to_season: 0,
+            slug_taken: 0,
+          },
         ],
       },
     });

@@ -16,6 +16,13 @@
 // plan's own "Task 4 depends on 2, Task 5 depends on 4" sequencing runs both through this
 // module in the interim). It reads every event across every season, unscoped -- the ledger's own
 // `listLedger` is the real, season-scoped replacement and is what Task 4 wires in.
+//
+// Every read here that follows a write in the same request (a write's own audit emit reading
+// the row back, a route re-reading after a redirect) assumes `asc-club` has no read replication:
+// a read issued right after a write sees that write's own effect. If `asc-club` ever grows a
+// read replica, every "guard folded into a statement, read back with a fresh SELECT" shape below
+// (`deleteEvent`'s eligibility read, `linkEventToSeries`'s target check) needs re-auditing for
+// replica lag, not just the obviously-sequential ones.
 import type { StatusChipTone } from '@glw907/cairn-cms/admin-toolkit';
 
 /** The `events.category` CHECK constraint's exact vocabulary (forward.sql). Every consumer (the
@@ -178,7 +185,7 @@ export async function listEvents(db: D1Database): Promise<EventRow[]> {
 
 /** One event by id, or `null` if no such row (a stale link or a bad id, never thrown). */
 export async function getEvent(db: D1Database, id: string): Promise<EventRow | null> {
-  const row = await db.prepare(`SELECT ${EVENT_SELECT_COLUMNS} FROM events WHERE id = ?1`).bind(id).first<EventRawRow>();
+  const row = await db.prepare(`SELECT ${EVENT_SELECT_COLUMNS} FROM events WHERE id = ?1 LIMIT 1`).bind(id).first<EventRawRow>();
   return row ? toEventRow(row) : null;
 }
 
@@ -187,7 +194,7 @@ export async function getEvent(db: D1Database, id: string): Promise<EventRow | n
  */
 export async function findEventBySeasonSlug(db: D1Database, season: number, slug: string): Promise<EventRow | null> {
   const row = await db
-    .prepare(`SELECT ${EVENT_SELECT_COLUMNS} FROM events WHERE season = ?1 AND slug = ?2`)
+    .prepare(`SELECT ${EVENT_SELECT_COLUMNS} FROM events WHERE season = ?1 AND slug = ?2 LIMIT 1`)
     .bind(season, slug)
     .first<EventRawRow>();
   return row ? toEventRow(row) : null;
@@ -211,28 +218,32 @@ export async function listEventSeasons(db: D1Database): Promise<number[]> {
   return results.map((row) => row.season);
 }
 
-/** Insert a new `event_series` row. `id` is the caller's chosen stable identifier (the create
- *  action's own `series-${slug}-${season}` convention, Task 5). */
-export async function createSeries(
+/** The unrun `INSERT INTO event_series` statement, shared by `createSeries` (its own single-write
+ *  call) and `createSeriesWithEvent` (which batches it alongside the event insert below). */
+function createSeriesStatement(
   db: D1Database,
   args: { id: string; title: string; recurrence: EventRecurrence },
-): Promise<void> {
-  await db
-    .prepare('INSERT INTO event_series (id, title, recurrence) VALUES (?1, ?2, ?3)')
-    .bind(args.id, args.title, args.recurrence)
-    .run();
+): D1PreparedStatement {
+  return db.prepare('INSERT INTO event_series (id, title, recurrence) VALUES (?1, ?2, ?3)').bind(args.id, args.title, args.recurrence);
 }
 
-/** Insert a new `events` row onto an existing series. `visible` is never taken from the caller:
- *  it is 1 when `write.startDate` is already set (a dated event, published from the moment it
- *  exists) and 0 otherwise (an undated event, exactly like a roll-forward copy) -- the same
- *  "a date publishes" rule `updateEvent`/`setEventDates` enforce for an edit. */
-export async function createEvent(
+/** Insert a new `event_series` row. `id` is the caller's chosen stable identifier (the create
+ *  action's own `series-${slug}-${season}` convention, Task 5). */
+export async function createSeries(db: D1Database, args: { id: string; title: string; recurrence: EventRecurrence }): Promise<void> {
+  await createSeriesStatement(db, args).run();
+}
+
+/** The unrun `INSERT INTO events` statement, shared by `createEvent` and `createSeriesWithEvent`.
+ *  `visible` is never taken from the caller: it is 1 when `write.startDate` is already set (a
+ *  dated event, published from the moment it exists) and 0 otherwise (an undated event, exactly
+ *  like a roll-forward copy) -- the same "a date publishes" rule `updateEvent`/`setEventDates`
+ *  enforce for an edit. */
+function createEventStatement(
   db: D1Database,
   args: { id: string; season: number; seriesId: string; write: EventWrite },
-): Promise<void> {
+): D1PreparedStatement {
   const { id, season, seriesId, write } = args;
-  await db
+  return db
     .prepare(
       `INSERT INTO events (id, series_id, season, title, slug, category, short_description,
         long_description, start_date, start_time, end_date, end_time, location, hero_image,
@@ -256,12 +267,31 @@ export async function createEvent(
       write.heroImage,
       write.heroImageAlt,
       write.startDate !== null ? 1 : 0,
-    )
-    .run();
+    );
 }
 
-/** Update an existing event's editable columns; `id`, `series_id`, and `season` never change here
- *  (a series move is `linkEventToSeries`' own job).
+/** Insert a new `events` row onto an existing series. */
+export async function createEvent(db: D1Database, args: { id: string; season: number; seriesId: string; write: EventWrite }): Promise<void> {
+  await createEventStatement(db, args).run();
+}
+
+/** Insert a fresh series and its first event in one `db.batch`, atomically: the "New event"
+ *  action's own write, so a request that fails partway (a dropped connection between the two
+ *  inserts the old two-call sequence risked) never leaves a series with no event or an event
+ *  pointing at a series that never landed. */
+export async function createSeriesWithEvent(
+  db: D1Database,
+  args: { seriesId: string; title: string; recurrence: EventRecurrence; id: string; season: number; write: EventWrite },
+): Promise<void> {
+  const { seriesId, title, recurrence, id, season, write } = args;
+  await db.batch([
+    createSeriesStatement(db, { id: seriesId, title, recurrence }),
+    createEventStatement(db, { id, season, seriesId, write }),
+  ]);
+}
+
+/** The unrun `UPDATE events` statement, shared by `updateEvent` and `saveEventAndSeries`; `id`,
+ *  `series_id`, and `season` never change here (a series move is `linkEventToSeries`' own job).
  *
  *  The dated-publishes rule lives in this one statement, not in a caller: `visible` becomes 1
  *  when the new `start_date` is non-null AND the row's own current `start_date` (read before this
@@ -270,8 +300,8 @@ export async function createEvent(
  *  had one (hidden or not) leaves `visible` exactly as it was: re-dating an already-published row
  *  does not touch it, and re-dating an already-hidden, already-dated row does not silently
  *  re-publish it. Nothing else in this module writes `visible` except `setEventVisibility`. */
-export async function updateEvent(db: D1Database, id: string, write: EventWrite): Promise<void> {
-  await db
+function updateEventStatement(db: D1Database, id: string, write: EventWrite): D1PreparedStatement {
+  return db
     .prepare(
       `UPDATE events SET title = ?1, slug = ?2, category = ?3, short_description = ?4,
         long_description = ?5, start_date = ?6, start_time = ?7, end_date = ?8, end_time = ?9,
@@ -294,8 +324,13 @@ export async function updateEvent(db: D1Database, id: string, write: EventWrite)
       write.heroImage,
       write.heroImageAlt,
       id,
-    )
-    .run();
+    );
+}
+
+/** Update an existing event's editable columns. See `updateEventStatement`'s own doc for the
+ *  publish-on-date rule this carries. */
+export async function updateEvent(db: D1Database, id: string, write: EventWrite): Promise<void> {
+  await updateEventStatement(db, id, write).run();
 }
 
 /** The ledger's own inline date-cell save: writes only the two date columns, with the identical
@@ -326,6 +361,18 @@ export async function setEventVisibility(db: D1Database, id: string, visible: bo
     .run();
 }
 
+/** The unrun `UPDATE event_series` statement, shared by `setSeriesTitleAndRecurrence` and
+ *  `saveEventAndSeries`. */
+function setSeriesTitleAndRecurrenceStatement(
+  db: D1Database,
+  seriesId: string,
+  args: { title: string; recurrence: EventRecurrence },
+): D1PreparedStatement {
+  return db
+    .prepare(`UPDATE event_series SET title = ?1, recurrence = ?2, updated_at = datetime('now') WHERE id = ?3`)
+    .bind(args.title, args.recurrence, seriesId);
+}
+
 /** Write the series' own title and recurrence. The row form's single Title field writes both this
  *  and `updateEvent`'s own `events.title` for one submitted value (plan decision, `events-admin`
  *  design doc): `events.title` keeps each year's own wording in history, `event_series.title` is
@@ -335,10 +382,21 @@ export async function setSeriesTitleAndRecurrence(
   seriesId: string,
   args: { title: string; recurrence: EventRecurrence },
 ): Promise<void> {
-  await db
-    .prepare(`UPDATE event_series SET title = ?1, recurrence = ?2, updated_at = datetime('now') WHERE id = ?3`)
-    .bind(args.title, args.recurrence, seriesId)
-    .run();
+  await setSeriesTitleAndRecurrenceStatement(db, seriesId, args).run();
+}
+
+/** Save an existing row's own fields and its series' title/recurrence in one `db.batch`, the
+ *  row form's single Save button (`updateEvent` plus `setSeriesTitleAndRecurrence`, atomically):
+ *  the two writes either both land or neither does, rather than the prior two-call sequence's
+ *  window where a dropped connection between them could leave the event's own fields saved but
+ *  the series label stale, or vice versa. */
+export async function saveEventAndSeries(
+  db: D1Database,
+  id: string,
+  write: EventWrite,
+  series: { seriesId: string; title: string; recurrence: EventRecurrence },
+): Promise<void> {
+  await db.batch([updateEventStatement(db, id, write), setSeriesTitleAndRecurrenceStatement(db, series.seriesId, series)]);
 }
 
 /** Retire (`retired_at` set) or unretire (`retired_at` cleared) a series -- reversible, per the
@@ -354,16 +412,28 @@ export async function retireSeries(db: D1Database, seriesId: string, retired: bo
     .run();
 }
 
+/** The orphan-series cleanup statement shared by `linkEventToSeries` and `deleteEvent`: deletes
+ *  `seriesId` only when no `events` row still references it. Folded into a `db.batch` alongside
+ *  the write that might have just orphaned it (a move, or a delete), so its own `NOT EXISTS`
+ *  always evaluates against that write's post-write state, never a stale pre-write read. */
+function deleteOrphanedSeriesStatement(db: D1Database, seriesId: string): D1PreparedStatement {
+  return db.prepare('DELETE FROM event_series WHERE id = ?1 AND NOT EXISTS (SELECT 1 FROM events WHERE series_id = ?1)').bind(seriesId);
+}
+
 /**
  * Move one event onto a different series ("this is the {season} instance of an existing series",
  * Task 5's row form): refuses with `{ error: 'No such series.' }` when `targetSeriesId` names no
- * `event_series` row, and with `{ error: 'That series already has an event in this season.' }`
- * when the target already holds a row for the moving event's own season -- the table-level
- * `UNIQUE (season, slug)` says nothing about a season already having a member of that series, so
- * this check is this function's own job, before the move ever reaches SQL.
+ * `event_series` row. The "does the target already hold a row for this season" guard is folded
+ * into the `UPDATE`'s own `WHERE NOT EXISTS` (rather than a separate conflict `SELECT` run
+ * first) -- the table-level `UNIQUE (season, slug)` says nothing about a season already having a
+ * member of that series, so the guard still has to exist, it just lives in the statement that
+ * would violate it rather than a read taken before it. `updateResult.meta.changes === 0` after
+ * that guard already ruled out "no such series" is what tells the two refusal cases apart.
  *
  * When the move leaves the event's former series holding no rows at all, that now-orphaned series
- * is deleted in the same `db.batch` as the move and its id is reported as `removedSeriesId`, so
+ * is deleted (`deleteOrphanedSeriesStatement`) in the same `db.batch` as the move -- its `NOT
+ * EXISTS` runs after the `UPDATE` has already moved the row, so it sees the post-move state
+ * whether or not the move actually happened -- and its id is reported as `removedSeriesId`, so
  * the ledger never accumulates a phantom empty series a link created and abandoned. A missing
  * `eventId` is treated as a no-op (`{ removedSeriesId: null }`): the caller (Task 5's `save`
  * action) already 404s an unknown event before this is ever reached.
@@ -376,30 +446,24 @@ export async function linkEventToSeries(
   const event = await getEvent(db, eventId);
   if (!event) return { removedSeriesId: null };
 
-  const target = await db.prepare('SELECT id FROM event_series WHERE id = ?1').bind(targetSeriesId).first<{ id: string }>();
+  const target = await db.prepare('SELECT id FROM event_series WHERE id = ?1 LIMIT 1').bind(targetSeriesId).first<{ id: string }>();
   if (!target) return { error: 'No such series.' };
 
-  const conflict = await db
-    .prepare('SELECT id FROM events WHERE series_id = ?1 AND season = ?2')
-    .bind(targetSeriesId, event.season)
-    .first<{ id: string }>();
-  if (conflict) return { error: 'That series already has an event in this season.' };
-
   const formerSeriesId = event.seriesId;
-  const siblingsRemaining = await db
-    .prepare('SELECT COUNT(*) AS n FROM events WHERE series_id = ?1 AND id != ?2')
-    .bind(formerSeriesId, eventId)
-    .first<{ n: number }>();
-  const orphaned = (siblingsRemaining?.n ?? 0) === 0;
+  const [updateResult, deleteResult] = await db.batch([
+    db
+      .prepare(
+        `UPDATE events SET series_id = ?1, updated_at = datetime('now')
+         WHERE id = ?2 AND NOT EXISTS (SELECT 1 FROM events WHERE series_id = ?1 AND season = ?3)`,
+      )
+      .bind(targetSeriesId, eventId, event.season),
+    deleteOrphanedSeriesStatement(db, formerSeriesId),
+  ]);
 
-  const statements: D1PreparedStatement[] = [
-    db.prepare(`UPDATE events SET series_id = ?1, updated_at = datetime('now') WHERE id = ?2`).bind(targetSeriesId, eventId),
-  ];
-  if (orphaned) {
-    statements.push(db.prepare('DELETE FROM event_series WHERE id = ?1').bind(formerSeriesId));
+  if ((updateResult.meta.changes ?? 0) === 0) {
+    return { error: 'That series already has an event in this season.' };
   }
-  await db.batch(statements);
-
+  const orphaned = (deleteResult.meta.changes ?? 0) > 0;
   return { removedSeriesId: orphaned ? formerSeriesId : null };
 }
 
@@ -407,15 +471,37 @@ export async function linkEventToSeries(
  *  exactly a row that was never published, since the only path to `visible = 1` is a saved date
  *  and Hide never clears one (plan decision, `events-admin` design doc's "never been visible"). A
  *  pure function so the route's own server-side re-check and the panel's own visibility share one
- *  rule. */
+ *  rule; `deleteEvent` below folds the identical rule into its own `WHERE` clause rather than
+ *  calling this on an already-fetched row, so the two stay independently expressed on purpose --
+ *  this one gates what the client shows, that one gates what the database actually does. */
 export function canDeleteEvent(row: EventRow): boolean {
   return row.visible === false && row.startDate === null;
 }
 
-/** Delete an event by id. The route gates this behind `canDeleteEvent`, re-checked server-side,
- *  and the row form's own confirm. */
-export async function deleteEvent(db: D1Database, id: string): Promise<void> {
-  await db.prepare('DELETE FROM events WHERE id = ?1').bind(id).run();
+/**
+ * Delete an event: a single guarded read (`visible = 0 AND start_date IS NULL`, `canDeleteEvent`'s
+ * own rule folded into a `WHERE` clause rather than a JS predicate on an already-fetched row)
+ * finds the row's `seriesId` and, in the same motion, confirms it is eligible; a missing or
+ * ineligible row both read back nothing here; the caller (the route's `delete` action) tells
+ * those two cases apart with its own `getEvent` re-read on the `deleted: false` branch, since this
+ * function has no reason to spend a second read distinguishing them on the common, successful
+ * path. When eligible, the delete itself and the orphan-series cleanup
+ * (`deleteOrphanedSeriesStatement`, the same statement `linkEventToSeries` shares) run in one
+ * `db.batch`, so the orphan check always sees the post-delete state.
+ */
+export async function deleteEvent(db: D1Database, id: string): Promise<{ deleted: boolean; removedSeriesId: string | null }> {
+  const eligible = await db
+    .prepare('SELECT series_id FROM events WHERE id = ?1 AND visible = 0 AND start_date IS NULL LIMIT 1')
+    .bind(id)
+    .first<{ series_id: string }>();
+  if (!eligible) return { deleted: false, removedSeriesId: null };
+
+  const [, deleteResult] = await db.batch([
+    db.prepare('DELETE FROM events WHERE id = ?1 AND visible = 0 AND start_date IS NULL').bind(id),
+    deleteOrphanedSeriesStatement(db, eligible.series_id),
+  ]);
+  const orphaned = (deleteResult.meta.changes ?? 0) > 0;
+  return { deleted: true, removedSeriesId: orphaned ? eligible.series_id : null };
 }
 
 /** One season's worth of an event or class row, as the ledger cell needs it: enough to render a
@@ -505,7 +591,7 @@ function compareTitles(a: string, b: string): number {
 export async function listLedger(db: D1Database, season: number): Promise<LedgerRow[]> {
   const seasons: [number, number, number] = [season, season - 1, season - 2];
 
-  const [eventsResult, classesResult] = await Promise.all([
+  const [eventsResult, classesResult, yearCountsResult] = await Promise.all([
     db
       .prepare(
         `SELECT e.id AS id, e.series_id AS series_id, e.season AS season, e.title AS title,
@@ -528,18 +614,22 @@ export async function listLedger(db: D1Database, season: number): Promise<Ledger
       )
       .bind(...seasons)
       .all<LedgerClassRawRow>(),
+    // Bound with the same three-season window as the events read, not the events read's own
+    // result: a constant three-placeholder IN clause instead of a dynamic placeholder list built
+    // from `seriesIds`, so this can run alongside the other two reads in the same Promise.all
+    // rather than waiting on the first one's rows before it knows what to bind.
+    db
+      .prepare(
+        `SELECT series_id, COUNT(DISTINCT season) AS n FROM events
+         WHERE series_id IN (SELECT series_id FROM events WHERE season IN (?1, ?2, ?3))
+         GROUP BY series_id`,
+      )
+      .bind(...seasons)
+      .all<{ series_id: string; n: number }>(),
   ]);
 
-  const seriesIds = [...new Set(eventsResult.results.map((row) => row.series_id))];
   const yearCounts = new Map<string, number>();
-  if (seriesIds.length > 0) {
-    const placeholders = seriesIds.map((_, index) => `?${index + 1}`).join(', ');
-    const { results } = await db
-      .prepare(`SELECT series_id, COUNT(DISTINCT season) AS n FROM events WHERE series_id IN (${placeholders}) GROUP BY series_id`)
-      .bind(...seriesIds)
-      .all<{ series_id: string; n: number }>();
-    for (const row of results) yearCounts.set(row.series_id, row.n);
-  }
+  for (const row of yearCountsResult.results) yearCounts.set(row.series_id, row.n);
 
   const bySeries = new Map<string, LedgerEventRawRow[]>();
   for (const row of eventsResult.results) {
@@ -616,27 +706,43 @@ export interface RollForwardPlan {
   fromSeason: number;
   toSeason: number;
   create: { seriesId: string; title: string }[];
-  skipped: { seriesId: string; title: string; reason: 'once' | 'retired' | 'already-rolled' }[];
+  skipped: { seriesId: string; title: string; reason: 'once' | 'retired' | 'already-rolled' | 'slug-taken' }[];
 }
 
 /**
  * Which series a roll-forward would create a `toSeason` copy for, and which it would skip and
  * why. A series lands in `create` when it is annual, not retired, holds at least one row in
- * `fromSeason`, and holds none in `toSeason`; every other series with a `fromSeason` row lands in
- * `skipped` with exactly one reason, in this precedence: `retired` -> `once` -> `already-rolled`.
- * Both lists are title-sorted.
+ * `fromSeason`, holds none in `toSeason`, and its slug is not already held by a DIFFERENT series
+ * in `toSeason`; every other series with a `fromSeason` row lands in `skipped` with exactly one
+ * reason, in this precedence: `retired` -> `once` -> `already-rolled` -> `slug-taken`. Both lists
+ * are title-sorted.
+ *
+ * `slug-taken` surfaces a collision the insert's own `UNIQUE (season, slug)` would otherwise
+ * reject silently (a `NOT EXISTS` guard, like `rollForwardSeason`'s own, just skips the row) --
+ * naming it here lets the officer see the skip on the confirmation panel before committing,
+ * rather than discovering afterward that a series they expected to roll forward silently did not.
  */
 export async function previewRollForward(db: D1Database, args: { fromSeason: number; toSeason: number }): Promise<RollForwardPlan> {
   const { results } = await db
     .prepare(
       `SELECT es.id AS series_id, es.title AS title, es.recurrence AS recurrence,
          es.retired_at AS retired_at,
-         EXISTS (SELECT 1 FROM events e2 WHERE e2.series_id = es.id AND e2.season = ?2) AS has_to_season
+         EXISTS (SELECT 1 FROM events e2 WHERE e2.series_id = es.id AND e2.season = ?2) AS has_to_season,
+         EXISTS (
+           SELECT 1 FROM events e3 WHERE e3.season = ?2 AND e3.slug = e1.slug AND e3.series_id != es.id
+         ) AS slug_taken
        FROM event_series es
-       WHERE EXISTS (SELECT 1 FROM events e1 WHERE e1.series_id = es.id AND e1.season = ?1)`,
+       JOIN events e1 ON e1.series_id = es.id AND e1.season = ?1`,
     )
     .bind(args.fromSeason, args.toSeason)
-    .all<{ series_id: string; title: string; recurrence: string; retired_at: string | null; has_to_season: 0 | 1 }>();
+    .all<{
+      series_id: string;
+      title: string;
+      recurrence: string;
+      retired_at: string | null;
+      has_to_season: 0 | 1;
+      slug_taken: 0 | 1;
+    }>();
 
   const create: RollForwardPlan['create'] = [];
   const skipped: RollForwardPlan['skipped'] = [];
@@ -647,6 +753,8 @@ export async function previewRollForward(db: D1Database, args: { fromSeason: num
       skipped.push({ seriesId: row.series_id, title: row.title, reason: 'once' });
     } else if (row.has_to_season === 1) {
       skipped.push({ seriesId: row.series_id, title: row.title, reason: 'already-rolled' });
+    } else if (row.slug_taken === 1) {
+      skipped.push({ seriesId: row.series_id, title: row.title, reason: 'slug-taken' });
     } else {
       create.push({ seriesId: row.series_id, title: row.title });
     }
@@ -656,43 +764,26 @@ export async function previewRollForward(db: D1Database, args: { fromSeason: num
   return { fromSeason: args.fromSeason, toSeason: args.toSeason, create, skipped };
 }
 
-/** One series' `fromSeason` row, the fields a roll-forward copies. */
-async function getSeriesSeasonSource(db: D1Database, seriesId: string, season: number) {
-  return db
-    .prepare(
-      `SELECT title, slug, category, short_description, long_description, location, hero_image,
-         hero_image_alt, thumbnail_image
-       FROM events WHERE series_id = ?1 AND season = ?2`,
-    )
-    .bind(seriesId, season)
-    .first<{
-      title: string;
-      slug: string;
-      category: string;
-      short_description: string | null;
-      long_description: string | null;
-      location: string | null;
-      hero_image: string | null;
-      hero_image_alt: string | null;
-      thumbnail_image: string | null;
-    }>();
-}
-
 /**
- * Run `previewRollForward`'s plan: one `db.batch` inserting one row per `create` entry, copying
- * everything from the series' `fromSeason` row except the dates and times (`start_date`,
- * `start_time`, `end_date`, `end_time` all null, `visible` 0 -- undated and hidden until an
- * officer saves a date, same as any other newly created row). The new row's id is
- * `` `${slug}-${toSeason}` ``.
+ * Run `previewRollForward`'s plan: one `db.batch`, one `INSERT ... SELECT` per `create` entry,
+ * each copying its series' `fromSeason` row entirely in SQL -- no per-row JS read of the source
+ * first, unlike the prior two-step (read the source row, then insert its fields back as bound
+ * parameters). Every column copies except the dates and times (`start_date`, `start_time`,
+ * `end_date`, `end_time` all null, `visible` 0 -- undated and hidden until an officer saves a
+ * date, same as any other newly created row). The new row's id is `` `${slug}-${toSeason}` ``,
+ * computed in SQL (`src.slug || '-' || ?2`).
  *
- * Idempotent: each insert's own `SELECT ... WHERE NOT EXISTS (... series_id AND toSeason ...)`
- * guards it at the SQL layer, on top of `previewRollForward`'s own already-rolled filtering, so a
+ * Idempotent, and guarded against every constraint the insert can hit, not just the one
+ * `previewRollForward` already filters on: each insert's own `WHERE` carries three `NOT EXISTS`
+ * guards -- `(series_id, toSeason)` (already-rolled), `(toSeason, slug)` (a different series
+ * holding the same slug this season), and `id` (the exact row this insert would mint) -- so a
  * second run against an unchanged plan inserts nothing even if a row landed between the preview
- * and this call. When the plan already has nothing to create (the ordinary repeat-run case, once
- * the preview itself sees the rolled rows), no statement is issued at all and `created` is `0`.
- * `created` counts each batched statement's own `meta.changes`, not `statements.length`: a
- * statement whose `NOT EXISTS` guard skips its row still runs and still returns success, so
- * counting statements queued would over-report by one for every guard that fires.
+ * and this call, and a same-second race against a `slug-taken` collision the preview missed still
+ * cannot violate the new `UNIQUE (season, slug)`. When the plan already has nothing to create (the
+ * ordinary repeat-run case, once the preview itself sees the rolled rows), no statement is issued
+ * at all and `created` is `0`. `created` counts each batched statement's own `meta.changes`, not
+ * `statements.length`: a statement whose guard skips its row still runs and still returns success,
+ * so counting statements queued would over-report by one for every guard that fires.
  */
 export async function rollForwardSeason(
   db: D1Database,
@@ -703,40 +794,24 @@ export async function rollForwardSeason(
     return { created: 0, skipped: plan.skipped.length };
   }
 
-  const statements: D1PreparedStatement[] = [];
-  for (const entry of plan.create) {
-    const source = await getSeriesSeasonSource(db, entry.seriesId, args.fromSeason);
-    if (!source) continue;
-    const id = `${source.slug}-${args.toSeason}`;
-    statements.push(
-      db
-        .prepare(
-          `INSERT INTO events (id, series_id, season, title, slug, category, short_description,
-            long_description, start_date, start_time, end_date, end_time, location, hero_image,
-            hero_image_alt, thumbnail_image, visible)
-           SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, NULL, NULL, NULL, ?9, ?10, ?11, ?12, 0
-           WHERE NOT EXISTS (SELECT 1 FROM events WHERE series_id = ?2 AND season = ?3)`,
-        )
-        .bind(
-          id,
-          entry.seriesId,
-          args.toSeason,
-          source.title,
-          source.slug,
-          source.category,
-          source.short_description,
-          source.long_description,
-          source.location,
-          source.hero_image,
-          source.hero_image_alt,
-          source.thumbnail_image,
-        ),
-    );
-  }
-  let created = 0;
-  if (statements.length > 0) {
-    const results = await db.batch(statements);
-    created = results.reduce((sum, result) => sum + (result.meta.changes ?? 0), 0);
-  }
+  const statements: D1PreparedStatement[] = plan.create.map((entry) =>
+    db
+      .prepare(
+        `INSERT INTO events (id, series_id, season, title, slug, category, short_description,
+          long_description, start_date, start_time, end_date, end_time, location, hero_image,
+          hero_image_alt, thumbnail_image, visible)
+         SELECT src.slug || '-' || ?2, src.series_id, ?2, src.title, src.slug, src.category,
+           src.short_description, src.long_description, NULL, NULL, NULL, NULL, src.location,
+           src.hero_image, src.hero_image_alt, src.thumbnail_image, 0
+         FROM events src
+         WHERE src.series_id = ?1 AND src.season = ?3
+           AND NOT EXISTS (SELECT 1 FROM events WHERE series_id = ?1 AND season = ?2)
+           AND NOT EXISTS (SELECT 1 FROM events WHERE slug = src.slug AND season = ?2)
+           AND NOT EXISTS (SELECT 1 FROM events WHERE id = src.slug || '-' || ?2)`,
+      )
+      .bind(entry.seriesId, args.toSeason, args.fromSeason),
+  );
+  const results = await db.batch(statements);
+  const created = results.reduce((sum, result) => sum + (result.meta.changes ?? 0), 0);
   return { created, skipped: plan.skipped.length };
 }

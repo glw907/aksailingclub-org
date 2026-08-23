@@ -229,6 +229,12 @@ so a consumer doesn't have to re-derive the `stopPropagation` pair by hand.
                   <CsrfField />
                   <input type="hidden" name="fromSeason" value={data.season} />
                   <input type="hidden" name="toSeason" value={data.season + 1} />
+                  <!-- The exact plan the officer is looking at, so the server can refuse (409) when
+                       it no longer matches a freshly recomputed plan at submit time -- the events-
+                       store's own `rollForward` action doc explains why. -->
+                  {#each plan.create as entry (entry.seriesId)}
+                    <input type="hidden" name="seriesIds" value={entry.seriesId} />
+                  {/each}
                   <button type="submit" class="btn btn-primary btn-sm">Start the next season</button>
                   <button type="button" class="btn btn-sm" onclick={() => (rollPanelOpen = false)}>Cancel</button>
                 </form>

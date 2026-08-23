@@ -69,6 +69,24 @@ describe('toEventCard: dateLabel', () => {
     const card = await toEventCard(row({}), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
     expect(card.dateLabel).toBe('Date to be announced');
   });
+
+  it('falls back to "Date to be announced" rather than throwing on an unparseable start_date', async () => {
+    // The database column carries no date-shape CHECK (0036_event_indexes's own "enforced in
+    // code, not SQL" decision); this proves a malformed value degrades instead of crashing the
+    // whole season page render.
+    const card = await toEventCard(row({ start_date: 'not-a-date' }), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(card.dateLabel).toBe('Date to be announced');
+  });
+
+  it('falls back to the start date alone when only end_date is unparseable', async () => {
+    const card = await toEventCard(
+      row({ start_date: '2026-05-23', end_date: 'not-a-date' }),
+      TODAY,
+      NO_IMAGE,
+      IDENTITY_MARKDOWN,
+    );
+    expect(card.dateLabel).toBe('Saturday, May 23');
+  });
 });
 
 describe('toEventCard: isPast', () => {

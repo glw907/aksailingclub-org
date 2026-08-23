@@ -279,14 +279,28 @@ const WEEKDAY_MONTH_DAY = new Intl.DateTimeFormat('en-US', { weekday: 'long', mo
 const MONTH_DAY = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric' });
 const MONTH_ONLY = new Intl.DateTimeFormat('en-US', { month: 'long' });
 
+/** `Invalid Date` for a string `Date` cannot parse; `Intl.DateTimeFormat.format` throws a
+ *  `RangeError` on one rather than returning a placeholder, so every caller here checks this
+ *  first rather than letting a malformed `start_date`/`end_date` crash the whole render. */
+function isValidDate(date: Date): boolean {
+  return !Number.isNaN(date.getTime());
+}
+
 /** The season page's own date-label vocabulary (docs/2026-08-22-events-redesign-design.md's
  *  probe): a single day carries its weekday, a range within one calendar month collapses to one
- *  month name, and a range crossing months spells both out in full, en-dash joined. */
+ *  month name, and a range crossing months spells both out in full, en-dash joined. Falls back
+ *  to the TBD label on an unparseable `startIso` -- the database column is a plain `TEXT` with no
+ *  date-shape CHECK (`0036_event_indexes`'s own "enforced in code, not SQL" decision), so a
+ *  malformed value degrades to "date to be announced" rather than throwing and breaking the whole
+ *  season page. An unparseable `endIso` degrades one step further, to the start date alone, since
+ *  a genuinely bad end date is not a reason to hide a start date that did parse. */
 function formatDateLabel(startIso: string | null, endIso: string | null): string {
   if (!startIso) return 'Date to be announced';
   const start = new Date(`${startIso}T00:00:00`);
+  if (!isValidDate(start)) return 'Date to be announced';
   if (!endIso || endIso === startIso) return WEEKDAY_MONTH_DAY.format(start);
   const end = new Date(`${endIso}T00:00:00`);
+  if (!isValidDate(end)) return WEEKDAY_MONTH_DAY.format(start);
   if (start.getMonth() === end.getMonth()) {
     return `${MONTH_ONLY.format(start)} ${start.getDate()}–${end.getDate()}`;
   }

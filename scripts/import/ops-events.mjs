@@ -96,12 +96,25 @@ function execStatements(dbName, sql) {
   return JSON.parse(stdout);
 }
 
-/** A SQL literal for a value already known to be a string, number, or null; never used on
- *  raw user input, only on values already read back from D1 itself. */
+/** A SQL literal for a value already known to be a string, number, or null. Every value spliced
+ *  through this function is ops-authored text read back from `asc-ops` (an internal, trusted
+ *  source this script only ever reads) -- never a request path or any value a site visitor could
+ *  influence -- but it is still escaped (doubling every `'`) and checked for a NUL or other
+ *  control character before being spliced into the batch SQL text, since this script emits raw
+ *  SQL statements rather than binding parameters through `wrangler d1 execute --command`'s own
+ *  parameter support. A NUL or control character (tab, newline, and carriage return excepted --
+ *  ordinary whitespace a description field can legitimately carry) throws rather than silently
+ *  stripping it, so a malformed source row fails the import loudly instead of writing a quietly
+ *  truncated value. */
 function sqlLiteral(value) {
   if (value === null || value === undefined) return 'NULL';
   if (typeof value === 'number') return String(value);
-  return `'${String(value).replace(/'/g, "''")}'`;
+  const text = String(value);
+  // eslint-disable-next-line no-control-regex -- deliberately matching control characters
+  if (/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text)) {
+    throw new Error(`ops-events: value contains a NUL or control character: ${JSON.stringify(text)}`);
+  }
+  return `'${text.replace(/'/g, "''")}'`;
 }
 
 /** `start_date`'s year, or `fallbackSeason` for an undated row -- the same fallback
@@ -179,8 +192,12 @@ function main() {
     const diff = changedColumns(existing, row);
 
     if (!existing) {
+      // OR IGNORE: two different asc-ops event ids could in principle slugify to the same
+      // series_id (`series-${slug}`), which would otherwise abort the whole batch on
+      // event_series's own PRIMARY KEY; ignoring a duplicate insert here matches this script's
+      // own idempotent-target contract (this module's own header) rather than failing the run.
       statements.push(
-        `INSERT INTO event_series (id, title, recurrence) VALUES ` +
+        `INSERT OR IGNORE INTO event_series (id, title, recurrence) VALUES ` +
           `(${sqlLiteral(row.series_id)}, ${sqlLiteral(row.title)}, 'annual');`,
       );
       const cols = [...COLUMNS, 'series_id', 'season', 'created_at', 'updated_at'];

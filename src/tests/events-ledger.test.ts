@@ -375,26 +375,17 @@ describe('rollForward action', () => {
     const { db, calls } = fakeD1({
       allResults: {
         'FROM event_series es': [
-          { series_id: 'series-board', title: 'Board Meeting', recurrence: 'annual', retired_at: null, has_to_season: 0 },
+          { series_id: 'series-board', title: 'Board Meeting', recurrence: 'annual', retired_at: null, has_to_season: 0, slug_taken: 0 },
         ],
-      },
-      firstResults: {
-        'FROM events WHERE series_id': {
-          title: 'Board Meeting',
-          slug: 'board-meeting',
-          category: 'governance',
-          short_description: null,
-          long_description: null,
-          location: null,
-          hero_image: null,
-          hero_image_alt: null,
-          thumbnail_image: null,
-        },
       },
     });
     const sink = vi.fn();
+    // `seriesIds` mirrors the recomputed plan's own create set (`+page.svelte`'s own hidden-input
+    // render): the handler recomputes the plan fresh and refuses with 409 when the two disagree.
     const caught = await catchThrown(
-      actions.rollForward(postEvent(admin, { fromSeason: '2026', toSeason: '2027' }, { db, auditSink: sink })),
+      actions.rollForward(
+        postEvent(admin, { fromSeason: '2026', toSeason: '2027', seriesIds: 'series-board' }, { db, auditSink: sink }),
+      ),
     );
     expect(isRedirect(caught)).toBe(true);
     expect((caught as Redirect).location).toBe('?season=2027');
@@ -407,5 +398,23 @@ describe('rollForward action', () => {
         detail: '1 created, 0 skipped',
       }),
     );
+  });
+
+  it('refuses with 409 when the recomputed plan no longer matches the posted seriesIds', async () => {
+    const { db } = fakeD1({
+      allResults: {
+        'FROM event_series es': [
+          { series_id: 'series-board', title: 'Board Meeting', recurrence: 'annual', retired_at: null, has_to_season: 0, slug_taken: 0 },
+        ],
+      },
+    });
+    const sink = vi.fn();
+    const result = await actions.rollForward(
+      postEvent(admin, { fromSeason: '2026', toSeason: '2027', seriesIds: 'series-stale' }, { db, auditSink: sink }),
+    );
+    expect(isActionFailure(result)).toBe(true);
+    expect((result as { status: number }).status).toBe(409);
+    expect((result as { data: { error: string } }).data.error).toBe('The season changed since you opened this. Review it again.');
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ detail: 'rejected: plan changed since preview' }));
   });
 });
