@@ -432,6 +432,20 @@ Dates are 2026-07-07/08 (the home convergence arc) unless noted.
   on-load jump stays instant, since only reader-initiated motion should be seen. Events stay D1
   records; cairn's no-events-concept ruling was considered and left closed on purpose.
 
+- **Events page header block and month headings (Geoff, 2026-08-22, the post-merge probe
+  round, probes 4 through 8)**: the top of the page "felt like a jumble" with the month bar
+  "too small" and the rhythm off. Ruled: the HEADER BLOCK is three elements (title block, ONE
+  quiet subscribe line with no caps label, no icons, no hairline, and the feed URL shown only
+  after a failed copy; the month TABS). The tabs are attached to the season: body size in the
+  display face, the current month on the star-gold underline sitting on the hairline that is
+  the first band's top edge (probe 6's cue; "better in terms of making the sections feel
+  related"). A sage ground under the bar was tried and rejected ("That definitely doesn't
+  work"). Cutting the header to three elements was the fix for busyness ("That does the
+  trick"). MONTH HEADINGS are chapter headings: h2 at step 3 in ink with a short gold rule
+  (the spine's waypoint reborn), events drop to h3 at step 1, because on a chronological page
+  the month is the chapter and the running-head treatment was "easy to miss" when scrolling.
+  Smooth scrolling is site-wide per the earlier ruling.
+
 ## Benchmark provenance
 
 Pinned by the owner 2026-07-08 ("that's our new design benchmark"): the home page at commit
