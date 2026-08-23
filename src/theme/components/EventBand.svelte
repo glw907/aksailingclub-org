@@ -99,15 +99,15 @@ was sent to rather than from the top of the document. -->
       </div>
     {/if}
     <div class="ev-text">
-      {#if showMonth}<p class="ev-month">{showMonth.name}</p>{/if}
-      <h2 class="ev-title">
+      {#if showMonth}<h2 class="ev-month">{showMonth.name}</h2>{/if}
+      <h3 class="ev-title">
         {#if card.dotKind === 'class'}
           <svg class="ev-star" viewBox="0 0 24 24" aria-hidden="true">
             <path fill="currentColor" d="M12 2.5l2.9 6.2 6.8.8-5 4.7 1.3 6.8L12 17.6 5.9 21l1.3-6.8-5-4.7 6.8-.8z" />
           </svg>
           <span class="sr-only">Class or clinic: </span>
         {/if}{card.title}
-      </h2>
+      </h3>
       <p class="ev-facts">{factsLine}{#if card.isPast}{' · '}<span class="sr-only">Status: </span>Past{/if}</p>
       {#if card.longHtml}<div class="ev-body">{@html card.longHtml}</div>{/if}
       {#if action === 'register'}
@@ -171,20 +171,32 @@ was sent to rather than from the top of the document. -->
   .ev-text {
     min-width: 0;
   }
+  /* Probe 8: the month running head is the chapter heading for its stretch of bands, not a small
+     eyebrow label above the first one; the gold rule underneath is the same waypoint mark
+     star-gold carries elsewhere on the site. */
   .ev-month {
-    margin: 0 0 var(--spacing-2xs);
+    margin: 0 0 var(--spacing-s);
     font-family: var(--font-display);
-    font-weight: 600;
-    font-size: var(--text-step--1);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-eyebrow);
-    color: var(--color-muted);
+    font-weight: 650;
+    font-size: var(--text-step-3);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    color: var(--color-base-content);
+  }
+  .ev-month::after {
+    content: '';
+    display: block;
+    width: 2.5rem;
+    height: 3px;
+    margin-top: var(--spacing-2xs);
+    background: var(--color-star-gold);
+    border-radius: 2px;
   }
   .ev-title {
     margin: 0;
     font-family: var(--font-display);
     font-weight: 650;
-    font-size: var(--text-step-2);
+    font-size: var(--text-step-1);
     line-height: var(--leading-tight);
     letter-spacing: var(--tracking-tight);
     color: var(--color-base-content);

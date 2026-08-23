@@ -32,6 +32,14 @@ composition, not decoration wrapped around prose. -->
 
   const hasSeason = $derived(bands.length > 0 || data.events.governance.length > 0);
 
+  /** The month that holds the next-upcoming band, so the month index can mark it current (the
+   *  gold underline, `aria-current="true"`), the same waypoint role star-gold carries elsewhere
+   *  on the site. Undefined when every dated row is past, in which case no tab reads as current. */
+  const currentMonthId = $derived(
+    data.events.months.find((month) => month.events.some((card) => card.routeId === data.events.nextUpcomingId))
+      ?.id,
+  );
+
   // On arrival, when the URL carries no fragment of its own, land the reader on the next upcoming
   // band instead of the page's top (the design contract's own "opens at the next upcoming
   // event"). This runs after hydration, so it is a jump the reader sees, not the first paint;
@@ -70,7 +78,11 @@ composition, not decoration wrapped around prose. -->
     />
 
     {#if hasSeason}
-      <EventsIndex months={data.events.months} hasGovernance={data.events.governance.length > 0} />
+      <EventsIndex
+        months={data.events.months}
+        hasGovernance={data.events.governance.length > 0}
+        {currentMonthId}
+      />
     {/if}
   </div>
 
@@ -109,8 +121,12 @@ composition, not decoration wrapped around prose. -->
     color: var(--color-base-content);
     text-wrap: balance;
   }
+  /* Probe 8's header rhythm: the hero, the subscribe line, and the month index each step down
+     by one size (spacing-s, spacing-s, spacing-m), with no hairline of its own between the hero
+     and the subscribe line (EventsSubscribeBar carries none; the month index's own bottom border
+     is the header block's only hairline, so it reads as one closing bar rather than two). */
   .events-hero {
-    margin-bottom: var(--spacing-m);
+    margin-bottom: var(--spacing-s);
   }
 
   .ev-measure {
@@ -119,8 +135,10 @@ composition, not decoration wrapped around prose. -->
     padding: var(--spacing-l) var(--spacing-m) 0;
   }
 
+  /* No top margin: the month index's own border-bottom is the hairline the first band's top
+     edge sits against. */
   .ev-season {
-    margin-top: var(--spacing-l);
+    margin-top: 0;
   }
   /* The band alternation and the hairline between bands: declared here, not inside EventBand
      itself, since `:nth-child` and an adjacent-sibling combinator across many sibling instances

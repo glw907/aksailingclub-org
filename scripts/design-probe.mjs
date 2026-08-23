@@ -303,8 +303,11 @@ async function checkFireweedSingleton(page, path, offenders, expectOpenClass) {
 }
 
 /** Check (k): every `<section>` in the events page's own composition (each event/class band, the
- *  governance coda) carries both an `id` (the anchor `EventsIndex` and the calendar links target)
- *  and an `h2` (the season page's own outline). */
+ *  governance coda) carries an `id` (the anchor `EventsIndex` and the calendar links target), and
+ *  the season page's own outline is intact: a band section carries an `h3` (its event or class
+ *  title), the governance coda carries an `h2` (its own standalone chapter), and the first band
+ *  of every month carries the month's own `h2.ev-month` chapter heading (the header-round pass,
+ *  probe 8: the running head is the month's chapter, not a small label on the first row alone). */
 async function checkSeasonSections(page, path, offenders) {
   if (!(await requireEventBands(page, path, offenders))) return;
   const issues = await page.evaluate(() => {
@@ -312,7 +315,18 @@ async function checkSeasonSections(page, path, offenders) {
     for (const section of document.querySelectorAll('.events-shell section')) {
       const label = section.id ? `#${section.id}` : '(no id)';
       if (!section.id) found.push(`section ${label} has no id`);
-      if (!section.querySelector('h2')) found.push(`section ${label} has no h2`);
+      if (section.classList.contains('ev-band')) {
+        if (!section.querySelector('h3')) found.push(`band ${label} has no h3`);
+      } else if (!section.querySelector('h2')) {
+        found.push(`section ${label} has no h2`);
+      }
+    }
+    for (const anchor of document.querySelectorAll('.ev-month-anchor')) {
+      const band = anchor.closest('.ev-band');
+      const label = band?.id ? `#${band.id}` : '(unknown band)';
+      if (!band?.querySelector('h2.ev-month')) {
+        found.push(`band ${label} is a month's first band but has no h2.ev-month`);
+      }
     }
     return found;
   });

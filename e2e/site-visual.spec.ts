@@ -115,8 +115,9 @@ test('events — light', async ({ page }) => {
   await expect(page.locator('.events-hero-eyebrow', { hasText: 'Events' })).toBeVisible();
   // A season band, proving the full read/group/render pipeline, not just the shell.
   await expect(page.locator('.ev-band').first()).toBeVisible();
-  // A band title is plain text inside its h2, not a self-link (the close-out review round).
-  await expect(page.getByRole('heading', { level: 2, name: 'Test Regatta' })).toBeVisible();
+  // A band title is plain text inside its h3, not a self-link (the header-round pass moved the
+  // month running head to the h2 step as the season's chapter heading, close-out review round).
+  await expect(page.getByRole('heading', { level: 3, name: 'Test Regatta' })).toBeVisible();
   // The governance coda, still reachable off the month index's own "Meetings" link.
   await expect(page.locator('#meetings')).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Meetings and governance' })).toBeVisible();
