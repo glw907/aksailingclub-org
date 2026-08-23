@@ -42,3 +42,6 @@ scripts/_*-tmp.mjs
 # MW export plaintext must never land in git; only the .age copies are committed
 data/membershipworks/*.csv
 .claude/agent-memory/
+
+# superpowers brainstorm companion sessions
+.superpowers/

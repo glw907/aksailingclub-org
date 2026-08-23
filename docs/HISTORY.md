@@ -6,6 +6,53 @@
 > than the ones here live in `docs/status-archive.md` (the pre-2026-08-21 rolling status,
 > moved whole).
 
+## 2026-08-22/23: events-admin, the series ledger
+
+Contract: `docs/2026-08-22-events-admin-design.md`. Plan: `docs/plans/2026-08-22-events-admin.md`.
+Branch `events-admin`, PR #8. Harvest: `docs/2026-08-22-events-admin-harvest-findings.md` (nine
+findings). Ceiling 2M; spend about 3.5M in agent tokens. Human interaction points: the
+brainstorm's eight questions plus one mid-turn note, one companion-mockup pick, the design
+approval, the spec approval with the workflow opt-in, and the ceiling call. Tokens ran far over
+because the build was right on its contract and wrong on its mechanics: five reviewers and two
+cold reads found what the plan's text-asserting tests could not (below).
+
+**What landed.** `/admin/club/events` is a series ledger: one row per `event_series`, the two
+prior seasons' dates read-only beside an inline-editable current-season date, dating publishes,
+annual/once recurrence, "Start the next season" rolling annual series forward as undated
+invisible copies with a counted confirmation, class rows read-only with a link to Classes, the
+full form in place under the row (hero photo through a site-local picker over the committed
+manifest), Hide/Show, Retire, and a confirm-gated Delete only for a never-published row. The
+`[id]` route redirects; `new/` is gone. `asc-club` gained `event_series`, `events.series_id`
+and `events.season` with `UNIQUE (season, slug)` (`0035`, a table recreate), then the
+`(series_id, season)` unique index and a slug index (`0036`); both are live. The public queries
+filter on `season`; `/events` renders unchanged; the ICS feed escapes its date and UID lines.
+
+**What the gates caught.** The chain's diff-reviews accepted all five tasks, then the fan-out
+found: the series and event created in two statements (an orphan poisoned the title for the
+season); the roll-forward guard missing two of the three constraints the insert can hit; an
+unbounded bind list in the ledger's year count (D1's 100-parameter cap); `save`/`create` dates
+unvalidated and reaching the public page and the ICS feed; `update()` without `reset: false`
+blanking the row form's CSRF field after every save; `?open=` seeded once so `create` landed
+with the row closed; a 308 redirect to a DB-derived target; `--color-warning` used as ink at
+1.6:1; the hero listbox dropping out of the tab order when the selection filtered out. The
+first cold read failed on ten tells (a flexed name cell out of the row box, undated rows at
+twice the height, a 640px row in a 356px wrapper at 390, UA bullets, Delete undemoted); the
+second failed on eleven more, most bought by the 390 fit (an 84px date input under 82px of
+text). Three fix rounds; the third read is in the ledger.
+
+**What a later pass would be wrong to rediscover.** SQLite cannot drop a column-level UNIQUE or
+add a NOT NULL FK to a populated table: both force the create-copy-drop-rename recreate, and
+`0035`'s rollback expired the moment the first roll-forward created a second season's copy.
+Slugs repeat across seasons now, so any slug lookup orders by `season DESC`. `fakeD1` asserts
+SQL text and can never see a constraint or a batch's atomicity; every guard must live in the
+statement (`NOT EXISTS`, `meta.changes`), never in a preceding SELECT. A bare `use:enhance` on
+a form carrying `CsrfField` is a latent 403 (the email compose screen already said so). The
+`*-narrow-hide` recipe drops columns but does not size a cell's own controls; the acceptance
+is `scrollWidth === clientWidth` measured at 390 with a row expanded, and a native date input
+needs about 112px at 12px or its value renders under the picker glyph. `ListToolbar`'s count
+and trailing slots are sealed into three bands; a screen that wants count and action on one
+line renders its own row. The media picker is not reachable through cairn's exports.
+
 ## 2026-08-22: events-redesign, the season page
 
 Contract: `docs/2026-08-22-events-redesign-design.md`. Plan:

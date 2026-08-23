@@ -13,6 +13,14 @@
  * table `0001_substrate` always creates), then reseeds the suite's own fixture rows fresh every
  * run, so both a cold CI checkout and a warm workstation replica end up in the identical state.
  *
+ * A second, narrower probe covers the gap between those two states: a warm workstation replica
+ * that already has `settings` (so the first probe short-circuits `applyMigrations()` for it) can
+ * still predate a migration added after that replica was last bootstrapped. Rather than re-run
+ * every migration for it (0001_substrate's own `CREATE TABLE` statements fail outright against an
+ * already-populated replica), the script checks for `event_series` (`0035_event_series`) and
+ * applies just that one migration's `forward.sql` when it is missing -- the same narrow-probe
+ * shape a later migration should extend rather than replace.
+ *
  * `wrangler d1 execute --local` never touches the real asc-club data the admin screens and the
  * import scripts own; it only ever writes the gitignored local replica.
  */
@@ -31,7 +39,7 @@ function d1File(relativeSqlPath) {
   });
 }
 
-function schemaAlreadyMigrated() {
+function tableExists(name) {
   const out = execFileSync(
     'npx',
     [
@@ -42,7 +50,7 @@ function schemaAlreadyMigrated() {
       '--local',
       '--json',
       '--command',
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='settings'",
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='${name}'`,
     ],
     { cwd: repoRoot },
   ).toString();
@@ -60,8 +68,15 @@ function applyMigrations() {
   }
 }
 
-if (!schemaAlreadyMigrated()) {
+if (!tableExists('settings')) {
   applyMigrations();
+} else if (!tableExists('event_series')) {
+  // A warm workstation replica that already carries 0001-0034 (the `settings` probe above short-
+  // circuits `applyMigrations()` for it) still needs 0035_event_series applied on its own: a
+  // blanket re-run of every migration is not the fix, since re-running 0001_substrate's own
+  // `CREATE TABLE` statements against an already-populated replica fails outright. This narrow,
+  // additive probe is how a new migration reaches an existing local replica without one.
+  d1File(path.join(migrationsDir, '0035_event_series', 'forward.sql'));
 }
 
 d1File(path.join(repoRoot, 'e2e/fixtures/events-seed.sql'));

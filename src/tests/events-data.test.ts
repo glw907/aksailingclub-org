@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { buildEventsPage, readEventRow, readEventRows, toEventCard, type EventDetailRow } from '$theme/events-data';
+import { resolveEventImageUrl } from '$theme/event-images';
 import type { MediaRef } from '@glw907/cairn-cms/media';
 import { fakeD1 } from './_fake-d1';
 
@@ -67,6 +68,24 @@ describe('toEventCard: dateLabel', () => {
   it('reads "Date to be announced" for a genuinely undated row', async () => {
     const card = await toEventCard(row({}), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
     expect(card.dateLabel).toBe('Date to be announced');
+  });
+
+  it('falls back to "Date to be announced" rather than throwing on an unparseable start_date', async () => {
+    // The database column carries no date-shape CHECK (0036_event_indexes's own "enforced in
+    // code, not SQL" decision); this proves a malformed value degrades instead of crashing the
+    // whole season page render.
+    const card = await toEventCard(row({ start_date: 'not-a-date' }), TODAY, NO_IMAGE, IDENTITY_MARKDOWN);
+    expect(card.dateLabel).toBe('Date to be announced');
+  });
+
+  it('falls back to the start date alone when only end_date is unparseable', async () => {
+    const card = await toEventCard(
+      row({ start_date: '2026-05-23', end_date: 'not-a-date' }),
+      TODAY,
+      NO_IMAGE,
+      IDENTITY_MARKDOWN,
+    );
+    expect(card.dateLabel).toBe('Saturday, May 23');
   });
 });
 
@@ -454,20 +473,22 @@ describe('readEventRows', () => {
     expect(season).toBe(2026);
   });
 
-  it('binds the season, as text, to the events query so an out-of-season dated row never reads', async () => {
-    // The `events` table carries no season column: the filter tests `substr(start_date, 1, 4)`,
-    // which yields text, so an integer bind would silently match nothing. This responder stands
-    // in for that SQL, filtering the fixture rows by whatever the caller actually bound.
-    const DATED_EVENTS = [
-      row({ id: 'this-season', title: 'This Season', slug: 'this-season', start_date: '2026-05-24' }),
-      row({ id: 'next-season', title: 'Next Season', slug: 'next-season', start_date: '2027-05-24' }),
-      row({ id: 'undated', title: 'Undated', slug: 'undated' }),
-    ];
+  it('binds the season, as a number, to the events query, scoped by the real season column', async () => {
+    // `events` now carries a real `season` column (migration 0035_event_series). This responder
+    // stands in for that filter, keyed by whatever season the caller actually bound; a stray
+    // undated row in the fixture would have leaked in under the old substr(start_date) derivation
+    // but only reads here because its own `season` value is set to the bound season.
+    const EVENTS_BY_SEASON: Record<number, EventDetailRow[]> = {
+      2026: [
+        row({ id: 'this-season', title: 'This Season', slug: 'this-season', start_date: '2026-05-24' }),
+        row({ id: 'undated', title: 'Undated', slug: 'undated' }),
+      ],
+      2027: [row({ id: 'next-season', title: 'Next Season', slug: 'next-season', start_date: '2027-05-24' })],
+    };
     const { db, calls } = fakeD1({
       firstResults: { "FROM settings WHERE key = 'current_season'": { value: '2026' } },
       allResults: {
-        'FROM events WHERE': (args) =>
-          DATED_EVENTS.filter((r) => r.start_date === null || r.start_date.slice(0, 4) === args[0]),
+        'FROM events WHERE': (args) => EVENTS_BY_SEASON[args[0] as number] ?? [],
         'FROM classes WHERE': [],
       },
     });
@@ -475,8 +496,10 @@ describe('readEventRows', () => {
     expect(rows.map((r) => r.title)).toEqual(['This Season', 'Undated']);
 
     const eventsCall = calls.find((call) => call.sql.includes('FROM events WHERE'));
-    expect(eventsCall?.sql).toContain('substr(start_date, 1, 4) = ?1');
-    expect(eventsCall?.args).toEqual(['2026']);
+    expect(eventsCall?.sql).toContain('season = ?1');
+    expect(eventsCall?.sql).not.toContain('substr');
+    expect(eventsCall?.args).toEqual([2026]);
+    expect(typeof eventsCall?.args[0]).toBe('number');
   });
 
   it('quiets the events season filter, rather than emptying the page, when current_season is unset', async () => {
@@ -553,5 +576,25 @@ describe('readEventRow', () => {
       batch: async () => { throw new Error('D1 is down'); },
     } as unknown as D1Database;
     expect(await readEventRow(db, 'bnac')).toEqual({ status: 'failed' });
+  });
+});
+
+describe('resolveEventImageUrl', () => {
+  it('resolves a stored media: token directly, the admin hero picker\'s own write shape', () => {
+    const url = resolveEventImageUrl('media:regatta-day.a1b2c3d4e5f60718', (ref) => `/media/${ref.slug}.${ref.hash}.jpg`);
+    expect(url).toBe('/media/regatta-day.a1b2c3d4e5f60718.jpg');
+  });
+
+  it('falls back to the legacy filename map for a pre-admin value', () => {
+    const url = resolveEventImageUrl('bnac.jpg', (ref) => `/media/${ref.slug}.${ref.hash}.jpg`);
+    expect(url).toBe('/media/bnac.29d75df78f196b2e.jpg');
+  });
+
+  it('is undefined for a filename in neither form', () => {
+    expect(resolveEventImageUrl('unmigrated.jpg', () => '/media/whatever.jpg')).toBeUndefined();
+  });
+
+  it('is undefined for a null hero_image', () => {
+    expect(resolveEventImageUrl(null, () => '/media/whatever.jpg')).toBeUndefined();
   });
 });

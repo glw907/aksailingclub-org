@@ -18,6 +18,15 @@
  * part of the admin data model; the asc-site cutover, plan Task 9, decides how month
  * bucketing works without it).
  *
+ * `series_id` and `season` are both NOT NULL as of migration 0035_event_series and this
+ * script mirrors that migration's own derivation for every newly inserted row: a fresh
+ * `event_series` row (`id = 'series-' || events.id`, `title = events.title`,
+ * `recurrence = 'annual'`) is inserted alongside the event, and `season` is the year of
+ * `start_date` when there is one, else `settings.current_season` (read once per run, the
+ * same fallback the migration's own INSERT uses). Neither column is ever part of the
+ * update path: an already-migrated row already carries both, and a source-side title
+ * edit updates `events.title` alone, exactly as an officer's own row-form save does.
+ *
  * Usage: node scripts/import/ops-events.mjs [--dry-run]
  */
 import { execFileSync } from 'node:child_process';
@@ -87,21 +96,42 @@ function execStatements(dbName, sql) {
   return JSON.parse(stdout);
 }
 
-/** A SQL literal for a value already known to be a string, number, or null; never used on
- *  raw user input, only on values already read back from D1 itself. */
+/** A SQL literal for a value already known to be a string, number, or null. Every value spliced
+ *  through this function is ops-authored text read back from `asc-ops` (an internal, trusted
+ *  source this script only ever reads) -- never a request path or any value a site visitor could
+ *  influence -- but it is still escaped (doubling every `'`) and checked for a NUL or other
+ *  control character before being spliced into the batch SQL text, since this script emits raw
+ *  SQL statements rather than binding parameters through `wrangler d1 execute --command`'s own
+ *  parameter support. A NUL or control character (tab, newline, and carriage return excepted --
+ *  ordinary whitespace a description field can legitimately carry) throws rather than silently
+ *  stripping it, so a malformed source row fails the import loudly instead of writing a quietly
+ *  truncated value. */
 function sqlLiteral(value) {
   if (value === null || value === undefined) return 'NULL';
   if (typeof value === 'number') return String(value);
-  return `'${String(value).replace(/'/g, "''")}'`;
+  const text = String(value);
+  // eslint-disable-next-line no-control-regex -- deliberately matching control characters
+  if (/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text)) {
+    throw new Error(`ops-events: value contains a NUL or control character: ${JSON.stringify(text)}`);
+  }
+  return `'${text.replace(/'/g, "''")}'`;
 }
 
-function toEventRow(src) {
+/** `start_date`'s year, or `fallbackSeason` for an undated row -- the same fallback
+ *  `forward.sql`'s own `season` `COALESCE` uses. */
+function seasonFor(startDate, fallbackSeason) {
+  return startDate ? Number(String(startDate).slice(0, 4)) : fallbackSeason;
+}
+
+function toEventRow(src, fallbackSeason) {
   const category = CATEGORY_BY_EVENT_TYPE[src.event_type];
   if (!category) {
     throw new Error(`ops-events: unmapped event_type "${src.event_type}" on slug ${src.slug}`);
   }
   return {
     id: src.slug,
+    series_id: `series-${src.slug}`,
+    season: seasonFor(src.start_date, fallbackSeason),
     title: src.title,
     slug: src.slug,
     category,
@@ -145,6 +175,11 @@ function main() {
   const [clubResult] = execStatements(clubDb.name, `SELECT * FROM events`);
   const existingById = new Map(clubResult.results.map((row) => [row.id, row]));
 
+  const [settingsResult] = execStatements(clubDb.name, `SELECT value FROM settings WHERE key = 'current_season'`);
+  const currentSeasonRow = settingsResult.results[0];
+  if (!currentSeasonRow) throw new Error('ops-events: could not read settings.current_season from asc-club');
+  const fallbackSeason = Number(currentSeasonRow.value);
+
   const batchId = `ops-events-${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`;
   const statements = [];
   let inserted = 0;
@@ -152,12 +187,20 @@ function main() {
   let unchanged = 0;
 
   for (const src of sourceRows) {
-    const row = toEventRow(src);
+    const row = toEventRow(src, fallbackSeason);
     const existing = existingById.get(row.id);
     const diff = changedColumns(existing, row);
 
     if (!existing) {
-      const cols = [...COLUMNS, 'created_at', 'updated_at'];
+      // OR IGNORE: two different asc-ops event ids could in principle slugify to the same
+      // series_id (`series-${slug}`), which would otherwise abort the whole batch on
+      // event_series's own PRIMARY KEY; ignoring a duplicate insert here matches this script's
+      // own idempotent-target contract (this module's own header) rather than failing the run.
+      statements.push(
+        `INSERT OR IGNORE INTO event_series (id, title, recurrence) VALUES ` +
+          `(${sqlLiteral(row.series_id)}, ${sqlLiteral(row.title)}, 'annual');`,
+      );
+      const cols = [...COLUMNS, 'series_id', 'season', 'created_at', 'updated_at'];
       const vals = cols.map((c) => sqlLiteral(row[c]));
       statements.push(`INSERT INTO events (${cols.join(', ')}) VALUES (${vals.join(', ')});`);
       statements.push(

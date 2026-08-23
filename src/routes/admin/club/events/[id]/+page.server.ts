@@ -1,67 +1,25 @@
-// The Events edit screen (Task 5): the detail form's load, plus the update and delete actions,
-// migrated onto `clubAdminAction` in Task 6's rider 1. A miss on `id` is not thrown as a
-// SvelteKit `error(404)` (that would bubble past `/admin`'s own layout to the root
-// `+error.svelte`, which rebuilds the PUBLIC site chrome, not the admin shell, the same
-// reasoning the Member detail's own load already documents); it returns an honest `event: null`
-// instead, and the page renders a themed not-found state in the admin chrome.
-import { fail, redirect } from '@sveltejs/kit';
-import type { Actions, PageServerLoad } from './$types';
-import { requireSession } from '@glw907/cairn-cms/sveltekit';
+// The retired Events detail route (events-admin pass, Task 5, `docs/plans/
+// 2026-08-22-events-admin.md`; hardened in the reviewer fan-out fix round). This route has no
+// `+page.svelte` of its own -- the full edit now happens in place on the ledger
+// (`/admin/club/events`, `EventRowForm.svelte`) -- so `load` must always end in a `redirect`;
+// there is no fallback page to fall through to if it does not. `requireAccess`, not
+// `requireSession`: this route sits under the same `/admin/club` access-map prefix every other
+// Club screen checks (`/admin/club/+layout.server.ts`'s own call, mirrored here), so a signed-in
+// editor the map does not admit for Club still gets refused here rather than being allowed only
+// because this particular route happened to check session alone. `302` (Found), not `308`
+// (Permanent Redirect): the target is DB-derived (the row's own current season), not a fixed
+// rename, so a client or intermediary must not cache this redirect as permanent.
+import { redirect } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
+import { requireAccess } from '@glw907/cairn-cms/sveltekit';
 import { resolveClubDb } from '$admin-club/lib/club-db';
-import { clubAdminAction } from '$admin-club/lib/club-action';
-import { deleteEvent, getEvent, updateEvent, type EventRow } from '$admin-club/lib/events-store';
-import { parseEventForm } from '../event-form-input';
-
-/** `CairnEvent`'s own type is narrowed to what `adminAction` itself needs (cookies, locals,
- *  platform), the same way `CairnEnv` narrows `platform.env` elsewhere in this site (see
- *  club-db.ts's `resolveClubDb` comment for the identical reasoning). The real underlying
- *  SvelteKit `RequestEvent` this dynamic route dispatches always carries `params.id`, so this is
- *  a narrow, explained cast, not a widening of the engine's own public event type. */
-function routeId(event: unknown): string {
-  return (event as { params: { id: string } }).params.id;
-}
+import { getEvent } from '$admin-club/lib/events-store';
 
 export const load: PageServerLoad = async (event) => {
-  requireSession(event);
+  requireAccess(event);
   const db = resolveClubDb(event.platform?.env);
-  if (!db) return { event: null as EventRow | null, error: 'CLUB_DB is not bound.' };
+  if (!db) redirect(302, '/admin/club/events');
   const row = await getEvent(db, event.params.id);
-  return { event: row, error: null as string | null };
-};
-
-const DENIED_MESSAGE = 'A club role is required to manage events.';
-
-export const actions: Actions = {
-  update: clubAdminAction(
-    async ({ event, form, ctx }) => {
-      const id = routeId(event);
-      if (!(await getEvent(ctx.db, id))) {
-        ctx.audit({ action: 'update', entity: 'event', entityId: id, detail: 'rejected: no such event' });
-        return fail(404, { error: 'No such event.' });
-      }
-      const parsed = parseEventForm(form);
-      if ('error' in parsed) {
-        ctx.audit({ action: 'update', entity: 'event', entityId: id, detail: `rejected: ${parsed.error}` });
-        return fail(400, { error: parsed.error });
-      }
-      await updateEvent(ctx.db, id, parsed.write);
-      ctx.audit({ action: 'update', entity: 'event', entityId: id });
-      return { ok: true };
-    },
-    { action: 'update', entity: 'event', deniedMessage: DENIED_MESSAGE },
-  ),
-
-  delete: clubAdminAction(
-    async ({ event, ctx }) => {
-      const id = routeId(event);
-      if (!(await getEvent(ctx.db, id))) {
-        ctx.audit({ action: 'delete', entity: 'event', entityId: id, detail: 'rejected: no such event' });
-        return fail(404, { error: 'No such event.' });
-      }
-      await deleteEvent(ctx.db, id);
-      ctx.audit({ action: 'delete', entity: 'event', entityId: id });
-      redirect(303, '/admin/club/events');
-    },
-    { action: 'delete', entity: 'event', deniedMessage: DENIED_MESSAGE },
-  ),
+  if (!row) redirect(302, '/admin/club/events');
+  redirect(302, `/admin/club/events?season=${row.season}&open=${encodeURIComponent(row.id)}`);
 };

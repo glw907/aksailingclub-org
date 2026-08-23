@@ -6,11 +6,16 @@
 > `ROADMAP.md`; pre-2026-08-21 status entries are `docs/status-archive.md`. Pruning means
 > moving to one of those, never deleting.
 
-**Current state (2026-08-22).** The site runs cairn `^0.96.0` (the floors release: Node 24,
-Kit 2.70, Svelte 5.56.10) on `main`, merged through PR #5 and deployed to dev.aksailingclub.org
-by `deploy.yml`. In flight: the `events-redesign` build pass on branch `events-redesign-build`,
-executing `docs/plans/2026-08-22-events-redesign.md` through the pass-execute workflow. The
-apex cutover remains its own deliberate DNS change, never bundled with a push.
+**Current state (2026-08-23).** The site runs cairn `^0.96.0`; the `events-admin` pass is
+complete on PR #8 (branch `events-admin`): the series ledger, roll-forward, in-place row form,
+and hero picker, with migrations `0035_event_series` and `0036_event_indexes` APPLIED LIVE
+(records in their READMEs; 0035's rollback is expired). Four domain reviews, three cold
+coherence reads, and four fix rounds are folded in; the third read passed 1440 at a glance and
+its five 390 defects are fixed and measured (`723eb56`). Held for a probe round with Geoff:
+the native date inputs beside typeset columns, the hero picker's shape, the racing dot's
+semantic blue, and the 390 view dropping the prior-season columns. Harvest:
+`docs/2026-08-22-events-admin-harvest-findings.md` (11 findings). The apex cutover remains its
+own deliberate DNS change, never bundled with a push.
 
 **Immediate next action (Geoff's).** The events before/after (below). Also from 0.95/0.96,
 on dev: smartypants typography on a prose page (compare `/governance` against production),

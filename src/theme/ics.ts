@@ -8,9 +8,19 @@
 // below rather than duplicating either.
 import type { EventDetailRow } from './events-data';
 
-/** Escape the handful of characters the iCalendar spec reserves in a text property value. */
+/** Escape the handful of characters the iCalendar spec reserves in a text property value.
+ *  Carriage returns fold into the same `\n` escape as a line feed (a lone `\r` or a `\r\n` pair
+ *  both read as one line break to a human, and RFC 5545 has no separate escape for `\r`), handled
+ *  before the plain `\n` replacement so a `\r\n` pair collapses to one escaped break rather than
+ *  two. */
 function icsEscape(text: string): string {
-  return text.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  return text
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r\n/g, '\\n')
+    .replace(/\r/g, '\\n')
+    .replace(/\n/g, '\\n');
 }
 
 const VCALENDAR_HEADER = [
@@ -38,9 +48,9 @@ function vEventLines(row: EventDetailRow, baseUrl: string): string[] | null {
 
   const lines = [
     'BEGIN:VEVENT',
-    `UID:${row.slug}@aksailingclub.org`,
-    `DTSTART;VALUE=DATE:${dtstart}`,
-    `DTEND;VALUE=DATE:${dtend}`,
+    `UID:${icsEscape(row.slug)}@aksailingclub.org`,
+    `DTSTART;VALUE=DATE:${icsEscape(dtstart)}`,
+    `DTEND;VALUE=DATE:${icsEscape(dtend)}`,
     `SUMMARY:${icsEscape(row.title)}`,
   ];
   if (row.short_description) lines.push(`DESCRIPTION:${icsEscape(row.short_description)}`);

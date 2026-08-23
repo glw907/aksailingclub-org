@@ -1,14 +1,13 @@
 <!--
 @component
 The Classes detail/edit fields (Task 6), shared between the create screen (`classes/new`) and
-the edit screen (`classes/[id]`), the same one-copy shape `events/EventForm.svelte` already
+the edit screen (`classes/[id]`), the same one-copy shape `events/EventRowForm.svelte` already
 established for this section. `capacity` and `fee` are plain numeric text inputs (whole
 numbers only, `class-form-input.ts` validates); `season` is not a field here (assigned once at
 creation from the current season, see `classes-store.ts`'s `createClass`, never edited
-afterward). `heroImage`/`heroImageAlt` render read-only, the same recipe `EventForm.svelte`
-already established: no media-library picker seam is wired for this custom `/admin/club`
-screen yet, so the field only ever displays whatever image reference migration 0003's backfill
-carried.
+afterward). `heroImage`/`heroImageAlt` render read-only here: no media-library picker seam is
+wired for this custom `/admin/club` screen yet, so the field only ever displays whatever image
+reference migration 0003's backfill carried.
 -->
 <script lang="ts">
   import { FieldLabel, SelectInput, TextInput } from '@glw907/cairn-cms/admin-toolkit';
@@ -106,7 +105,7 @@ carried.
   <!-- Read-only this pass: the media-library picker reuse seam (design suite Part B) is not
        wired for a custom /admin/club screen yet, so the hero image only displays what migration
        0003's backfill carried. Replacing or clearing it needs the picker seam, a later pass's
-       work (the same recipe EventForm.svelte's own comment documents). -->
+       work. -->
   <div class="flex flex-wrap items-center gap-2 border-t border-[var(--cairn-card-border)] p-6 type-body">
     <span class="font-medium text-muted">Hero image (read-only):</span>
     <span>{heroImage}</span>
