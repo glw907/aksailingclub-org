@@ -1,20 +1,19 @@
 <!--
 @component
-The Club section's Events ledger (events-admin pass, Task 4,
-docs/2026-08-22-events-admin-design.md): the flat chronological list plus separate `[id]` detail
-page retire in favor of one series ledger, built entirely on the graduated toolkit
-(`PageHeader`, `ListToolbar`, `AdminTable`/`ExpandableRow`, `StatusChip`, `EmptyState`), the same
-recipe `classes/+page.svelte` follows. One row per event series shows the last two seasons'
-dates read-only beside the current season's own inline-editable date, so an officer dating the
-season sees every collision at a glance. Class rows come from the `classes` table for the same
-three seasons, read-only, with a link out to the Classes screen -- registration, fee, and
-`drop_in` stay that screen's own job.
+The Club section's Events ledger (events-admin pass, docs/2026-08-22-events-admin-design.md): the
+flat chronological list plus separate `[id]` detail page retire in favor of one series ledger,
+built entirely on the graduated toolkit (`PageHeader`, `ListToolbar`, `AdminTable`/
+`ExpandableRow`, `StatusChip`, `EmptyState`), the same recipe `classes/+page.svelte` follows. One
+row per event series shows the last two seasons' dates read-only beside the current season's own
+inline-editable date, so an officer dating the season sees every collision at a glance. Class
+rows come from the `classes` table for the same three seasons, read-only, with a link out to the
+Classes screen -- registration, fee, and `drop_in` stay that screen's own job.
 
-An event row's expanded panel is a deliberately thin stopgap for this task: it links to the
-still-live `events/[id]` detail page for a full edit, rather than embedding the row form inline
-(Task 5's job, once `EventRowForm.svelte` exists). "New event" and the empty state's own action
-likewise still point at the still-live `events/new` route rather than opening a blank inline
-panel, for the same reason -- both routes retire only once Task 5 lands.
+An event row's expanded panel is `EventRowForm.svelte`, the full edit in place (Task 5):
+`events/[id]` and `events/new` are both retired, a bookmarked `[id]` link now redirects here with
+the row's own season and id, and "New event" opens a blank `EventRowForm` in its own `<tr>` above
+the first ledger row from client state alone -- no draft row is ever written to the database, so
+an abandoned new event leaves nothing behind.
 
 **The `ExpandableRow` conflict, handled explicitly.** That component's contract puts a row-level
 `onclick` on the whole summary `<tr>` and states summary cells should stay non-interactive; the
@@ -41,6 +40,7 @@ so a consumer doesn't have to re-derive the `stopPropagation` pair by hand.
   } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL, formatCivilDate } from '$admin-club/lib/ui';
   import { EVENT_CATEGORY_LABEL, EVENT_CATEGORY_TONE, type EventInstance, type LedgerRow, type RollForwardPlan } from '$admin-club/lib/events-store';
+  import EventRowForm from './EventRowForm.svelte';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -48,9 +48,11 @@ so a consumer doesn't have to re-derive the `stopPropagation` pair by hand.
   let datesFilter = $state('all');
   let rowsFilter = $state('all');
   let rollPanelOpen = $state(false);
-  // Seeded once from the load's own `?open=` (Task 5's redirect target lands here); not a live
-  // mirror of `data.openId`, the same `untrack` idiom `classes/+page.svelte`'s own `expandedId`
-  // seed uses, so a later action's own re-render never clobbers what the officer has toggled.
+  let newRowOpen = $state(false);
+  // Seeded once from the load's own `?open=` (the `[id]` redirect and the `create` action's own
+  // redirect both land here); not a live mirror of `data.openId`, the same `untrack` idiom
+  // `classes/+page.svelte`'s own `expandedId` seed uses, so a later action's own re-render never
+  // clobbers what the officer has toggled.
   let expandedId: string | null = $state(untrack(() => data.openId));
 
   function toggleExpanded(id: string) {
@@ -145,6 +147,24 @@ so a consumer doesn't have to re-derive the `stopPropagation` pair by hand.
   function stopRowToggle(event: Event) {
     event.stopPropagation();
   }
+
+  /** The series-link control's own option list for `row`: every OTHER event series the currently
+   *  loaded ledger already knows about (this season plus the two priors, `data.rows`'s own
+   *  window -- there is no store read for "every series ever", and the control only ever appears
+   *  for a single-year series linking onto an established one, which this window already
+   *  covers), annual first then title order. */
+  function otherSeriesFor(row: LedgerRow): { id: string; title: string }[] {
+    const seen = new Map<string, { id: string; title: string; annual: boolean }>();
+    for (const candidate of data.rows) {
+      if (candidate.kind !== 'event' || candidate.seriesId === null || candidate.seriesId === row.seriesId) continue;
+      if (!seen.has(candidate.seriesId)) {
+        seen.set(candidate.seriesId, { id: candidate.seriesId, title: candidate.title, annual: candidate.recurrence === 'annual' });
+      }
+    }
+    return [...seen.values()]
+      .sort((a, b) => (a.annual === b.annual ? a.title.localeCompare(b.title) : a.annual ? -1 : 1))
+      .map(({ id, title }) => ({ id, title }));
+  }
 </script>
 
 <span class="sr-only" role="status">{data.undatedCount} undated</span>
@@ -155,14 +175,14 @@ so a consumer doesn't have to re-derive the `stopPropagation` pair by hand.
 
 {#if data.error}
   <p class="px-6 py-10 text-center type-body text-error">{data.error}</p>
-{:else if data.rows.length === 0}
+{:else if data.rows.length === 0 && !newRowOpen}
   <div class="rounded-box border border-[var(--cairn-card-border)] bg-base-100 shadow-[var(--cairn-shadow)]">
     <EmptyState
       heading={`No events in season ${data.season} yet`}
       message="Events you add for this season show up here, with the last two seasons' dates beside them."
     >
       {#snippet action()}
-        <a class="btn btn-primary btn-sm" href="/admin/club/events/new">New event</a>
+        <button type="button" class="btn btn-primary btn-sm" onclick={() => (newRowOpen = true)}>New event</button>
       {/snippet}
     </EmptyState>
   </div>
@@ -179,7 +199,7 @@ so a consumer doesn't have to re-derive the `stopPropagation` pair by hand.
         onSearch={(value) => (searchQuery = value)}
         searchLabel="Search by event name"
         {filters}
-        primaryAction={{ label: 'New event', onClick: () => goto('/admin/club/events/new') }}
+        primaryAction={{ label: 'New event', onClick: () => (newRowOpen = true) }}
         count={data.undatedCount}
         itemLabel={{ one: 'undated', many: 'undated' }}
       >
@@ -219,7 +239,7 @@ so a consumer doesn't have to re-derive the `stopPropagation` pair by hand.
       </ListToolbar>
     </div>
 
-    <AdminTable density="sm" zebra rowCount={filteredRows.length} emptyColspan={5}>
+    <AdminTable density="sm" zebra rowCount={filteredRows.length + (newRowOpen ? 1 : 0)} emptyColspan={5}>
       {#snippet header()}
         <th class={HEADER_CELL}>Event</th>
         <th class="{HEADER_CELL} tabular-nums events-narrow-hide">{data.season - 2}</th>
@@ -230,6 +250,13 @@ so a consumer doesn't have to re-derive the `stopPropagation` pair by hand.
       {#snippet empty()}
         <p>No events match those filters.</p>
       {/snippet}
+      {#if newRowOpen}
+        <tr>
+          <td colspan="5" class="events-new-row-cell">
+            <EventRowForm season={data.season} heroLibrary={data.heroLibrary} onCancel={() => (newRowOpen = false)} />
+          </td>
+        </tr>
+      {/if}
       {#each filteredRows as row (row.id)}
         <ExpandableRow
           expanded={expandedId === row.id}
@@ -289,9 +316,16 @@ so a consumer doesn't have to re-derive the `stopPropagation` pair by hand.
               {#if datum.kind === 'class'}
                 <a class="btn btn-sm" href="/admin/club/classes">Open in Classes</a>
               {:else if datum.event}
-                {#if datum.event.shortDescription}<p class="type-body">{datum.event.shortDescription}</p>{/if}
-                {#if datum.event.location}<p class="type-body text-muted">{datum.event.location}</p>{/if}
-                <a class="btn btn-sm" href={`/admin/club/events/${datum.event.id}`}>Edit event</a>
+                <EventRowForm
+                  event={datum.event}
+                  recurrence={datum.recurrence ?? 'annual'}
+                  retiredAt={datum.retiredAt}
+                  seriesId={datum.seriesId}
+                  seriesYearCount={datum.seriesYearCount}
+                  season={data.season}
+                  heroLibrary={data.heroLibrary}
+                  otherSeries={otherSeriesFor(datum)}
+                />
               {:else}
                 <p class="type-body text-muted">No {data.season} instance yet.</p>
               {/if}
@@ -304,7 +338,7 @@ so a consumer doesn't have to re-derive the `stopPropagation` pair by hand.
 {/if}
 
 <style>
-  /* Layout only, per the toolkit README's own compiled-CSS constraint: `/admin/**` loads only
+  /* Layout only, per the toolkit README's own compiled-CSS constraint: /admin/** loads only
      cairn's precompiled CSS, so an arbitrary grid/truncation utility string would render nothing
      there. Values stay literal, matching every toolkit component's own scoped block. */
   .events-toolbar-band {
@@ -353,9 +387,9 @@ so a consumer doesn't have to re-derive the `stopPropagation` pair by hand.
   /* At a phone width the two read-only prior-season columns push the row (and the trigger cell
      `AdminTable`'s own horizontal-scroll fallback strands off-screen) wider than the viewport;
      they are the row's lower-priority data (both already resurface as prior-year text once the
-     row is expanded, `Task 5`'s own panel job), so dropping them from the *summary* is what lets
-     the whole row -- current-season date form and trigger included -- fit with nothing to scroll,
-     the same fix `classes/+page.svelte`'s own `classes-narrow-hide` applies for the same reason. */
+     row is expanded, the panel's own job), so dropping them from the *summary* is what lets the
+     whole row -- current-season date form and trigger included -- fit with nothing to scroll, the
+     same fix `classes/+page.svelte`'s own `classes-narrow-hide` applies for the same reason. */
   @media (max-width: 640px) {
     .events-narrow-hide {
       display: none;
@@ -367,6 +401,18 @@ so a consumer doesn't have to re-derive the `stopPropagation` pair by hand.
     flex-direction: column;
     gap: 0.5rem;
     align-items: flex-start;
+  }
+
+  /* `EventRowForm`'s own top-level element carries `width: 100%` (its own scoped block) so it
+     fills the panel even under this container's `align-items: flex-start` -- needed so the
+     class-row link above stays a compact button rather than stretching full width. */
+
+  /* The blank "New event" row's own cell: `white-space: normal` overrides `AdminTable`'s
+     `:global()` single-line-cell enforcement, since this cell holds a whole multi-row form, not
+     one line of scannable text. */
+  .events-new-row-cell {
+    white-space: normal;
+    padding: 1rem 1.5rem;
   }
 
   .events-rollforward {

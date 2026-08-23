@@ -1,11 +1,14 @@
-// The Events ledger route's markup (events-admin pass Task 4,
+// The Events ledger route's markup (events-admin pass Tasks 4-5,
 // docs/2026-08-22-events-admin-design.md): guarded at the render level since the admin surface
 // carries no Playwright e2e coverage (`e2e/admin-login.spec.ts`'s own header). Mirrors
 // `members-page-toolbar.test.ts`'s own `render` idiom -- a static SSR render is enough to check
 // markup shape, since none of these claims need hydration or interaction. The roll-forward
 // confirmation panel renders its full copy into the SSR markup whenever a plan exists, visibility
 // toggled only by the `hidden` attribute (bound to the page's own `$state` disclosure), which is
-// what lets a static render assert on its exact copy without simulating a click.
+// what lets a static render assert on its exact copy without simulating a click. Task 5's own
+// additions (below the Task 4 tests) expand an event row's panel via `openId` and assert on
+// `EventRowForm`'s rendered field set, since that component only renders while its row is
+// expanded.
 import { describe, expect, it } from 'vitest';
 import { render } from 'svelte/server';
 import Page from '../routes/admin/club/events/+page.svelte';
@@ -95,6 +98,7 @@ function baseData(overrides: Partial<PageData> = {}): PageData {
     undatedCount: 0,
     rollPlan: { fromSeason: 2026, toSeason: 2027, create: [], skipped: [] },
     openId: null,
+    heroLibrary: [],
     error: null,
     ...overrides,
   } as PageData;
@@ -191,5 +195,95 @@ describe('/admin/club/events ledger markup', () => {
   it("the empty state's heading names the selected season", () => {
     const { body } = render(Page, { props: { data: baseData({ rows: [], season: 2027 }), form: null } });
     expect(body).toContain('No events in season 2027 yet');
+  });
+});
+
+describe('EventRowForm panel (events-admin Task 5)', () => {
+  it("renders the panel's own field set for an expanded event row", () => {
+    const row = eventRow();
+    const { body } = render(Page, { props: { data: baseData({ rows: [row], openId: row.id }), form: null } });
+    expect(body).toContain('Title');
+    expect(body).toContain('Recurrence');
+    expect(body).toContain('Category');
+    expect(body).toContain('Start date');
+    expect(body).toContain('End date');
+    expect(body).toContain('Start time');
+    expect(body).toContain('End time');
+    expect(body).toContain('Location');
+    expect(body).toContain('Short description');
+    expect(body).toContain('Long description');
+    expect(body).toContain('Alt text');
+  });
+
+  it('renders no name="visible" anywhere: visibility is Hide/Show only, never a checkbox', () => {
+    const row = eventRow();
+    const { body } = render(Page, { props: { data: baseData({ rows: [row], openId: row.id }), form: null } });
+    expect(body).not.toContain('name="visible"');
+  });
+
+  it('renders no name="slug": the slug stays derived, never a field', () => {
+    const row = eventRow();
+    const { body } = render(Page, { props: { data: baseData({ rows: [row], openId: row.id }), form: null } });
+    expect(body).not.toContain('name="slug"');
+  });
+
+  it('"Hide this year" renders for a visible row', () => {
+    const row = eventRow({ current: instance({ id: 'board-meeting-2026', startDate: '2026-08-01', visible: true }) });
+    const { body } = render(Page, { props: { data: baseData({ rows: [row], openId: row.id }), form: null } });
+    expect(body).toContain('Hide this year');
+    expect(body).not.toContain('>Show<');
+  });
+
+  it('"Show" renders for a hidden row', () => {
+    const row = eventRow({ current: instance({ id: 'board-meeting-2026', startDate: '2026-08-01', visible: false }) });
+    const { body } = render(Page, { props: { data: baseData({ rows: [row], openId: row.id }), form: null } });
+    expect(body).toContain('>Show<');
+  });
+
+  it('"Retire series" renders for an unretired series', () => {
+    const row = eventRow({ retiredAt: null });
+    const { body } = render(Page, { props: { data: baseData({ rows: [row], openId: row.id }), form: null } });
+    expect(body).toContain('Retire series');
+  });
+
+  it('"Unretire series" renders for a retired series', () => {
+    const row = eventRow({ retiredAt: '2026-01-01 00:00:00' });
+    const { body } = render(Page, { props: { data: baseData({ rows: [row], openId: row.id }), form: null } });
+    expect(body).toContain('Unretire series');
+  });
+
+  it('Delete renders only for an undated, never-visible row', () => {
+    const undatedInvisible = eventRow({
+      current: instance({ id: 'regatta-2026', startDate: null, endDate: null, visible: false }),
+    });
+    const { body } = render(Page, { props: { data: baseData({ rows: [undatedInvisible], openId: undatedInvisible.id }), form: null } });
+    expect(body).toContain('>Delete<');
+  });
+
+  it('Delete is absent for a published row', () => {
+    const published = eventRow({
+      current: instance({ id: 'board-meeting-2026', startDate: '2026-08-01', endDate: null, visible: true }),
+    });
+    const { body } = render(Page, { props: { data: baseData({ rows: [published], openId: published.id }), form: null } });
+    expect(body).not.toContain('>Delete<');
+  });
+
+  it('the series link control renders with its exact label when seriesYearCount is 1', () => {
+    const row = eventRow({ seriesYearCount: 1 });
+    const { body } = render(Page, { props: { data: baseData({ rows: [row], openId: row.id, season: 2026 }), form: null } });
+    expect(body).toContain('This is the 2026 instance of an existing series');
+  });
+
+  it('the series link control is absent when seriesYearCount is 2', () => {
+    const row = eventRow({ seriesYearCount: 2 });
+    const { body } = render(Page, { props: { data: baseData({ rows: [row], openId: row.id }), form: null } });
+    expect(body).not.toContain('instance of an existing series');
+  });
+
+  it("the hero field emits heroImage and heroImageAlt inputs", () => {
+    const row = eventRow();
+    const { body } = render(Page, { props: { data: baseData({ rows: [row], openId: row.id }), form: null } });
+    expect(body).toContain('name="heroImage"');
+    expect(body).toContain('name="heroImageAlt"');
   });
 });
