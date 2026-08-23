@@ -29,8 +29,9 @@ the theme-flip cross-fade on `/` and a 404, a minted "Share preview" link in a p
 is gone. Riders still open from 0.94: announce-list recency via `publishedAt`; baseline
 coverage for the stacked field register; the `asset_requests` uniqueness race (needs a unique index, so a migration).
 
-**events-redesign (merged and deployed to dev, 2026-08-22).** PR #6 is merged (`dad4821`)
-and `deploy.yml` pushed it to dev.aksailingclub.org; the pass's record: contract `docs/2026-08-22-events-redesign-design.md`, plan
+**events-redesign (merged and deployed to dev, 2026-08-22).** PR #6 (`dad4821`) plus the
+post-merge header round PR #7 (`f527f53`: three-element header, attached month tabs, month
+chapter headings; decisions.md has the rulings) are on dev.aksailingclub.org; the record: contract `docs/2026-08-22-events-redesign-design.md`, plan
 `docs/plans/2026-08-22-events-redesign.md`, ledger entry in `docs/HISTORY.md`. Gates green
 (check 0/0, 2105 tests, build); the four domain reviews' findings are fixed. Geoff's steps:
 (1) the before/after on dev, `/events` at 1440 and 390 (Register shows only on a real open
