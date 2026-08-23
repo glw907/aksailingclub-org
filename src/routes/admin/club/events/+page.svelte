@@ -281,7 +281,7 @@ so a consumer doesn't have to re-derive the `stopPropagation` pair by hand.
             </td>
             <td class="events-date-cell tabular-nums type-body text-muted events-narrow-hide">{instanceText(row.prior[1])}</td>
             <td class="events-date-cell tabular-nums type-body text-muted events-narrow-hide">{instanceText(row.prior[0])}</td>
-            <td class="events-date-cell events-date-cell-current tabular-nums type-body">
+            <td class="events-date-cell tabular-nums type-body">
               {#if row.kind === 'event' && row.event}
                 <!-- svelte-ignore a11y_no_static_element_interactions -->
                 <div class="events-date-form-wrap" onclick={stopRowToggle} onkeydown={stopRowToggle}>
@@ -402,10 +402,6 @@ so a consumer doesn't have to re-derive the `stopPropagation` pair by hand.
     gap: 0.5rem;
     align-items: flex-start;
   }
-
-  /* `EventRowForm`'s own top-level element carries `width: 100%` (its own scoped block) so it
-     fills the panel even under this container's `align-items: flex-start` -- needed so the
-     class-row link above stays a compact button rather than stretching full width. */
 
   /* The blank "New event" row's own cell: `white-space: normal` overrides `AdminTable`'s
      `:global()` single-line-cell enforcement, since this cell holds a whole multi-row form, not

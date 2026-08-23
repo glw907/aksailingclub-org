@@ -39,7 +39,7 @@ finds only `0003_class_images` (which alters `classes`, not `events`) and `0017_
 (which only names `events` in a comment) -- so `events_new` below carries the table's original
 column list unchanged and in the same order, with `series_id` and `season` appended.
 
-## Live pre-migration state (confirmed 2026-08-23, `--remote` read-only)
+## Live pre-migration state (confirmed 2026-08-22, `--remote` read-only)
 
 ```
 events:            12 rows total, 12 dated, 0 undated
@@ -117,7 +117,7 @@ migration discipline.
    undated (`Governor's Cup`), and two sharing the title `Duplicate Title` with different slugs
    and dates -- so the "no guessing at links by title" claim is visible in the result: they must
    land as two separate series, never merged. Result: **the insert returned `"success": true`**.
-4. **Forward.** `forward.sql` applied. Result: **all 5 statement batches returned `"success":
+4. **Forward.** `forward.sql` applied. Result: **all 7 statement batches returned `"success":
    true`**.
 5. **Verify.** `verify.sql` run. Result:
    - Query 1: `events_count` 4, `series_count` 4 (equal, as expected).
@@ -142,7 +142,7 @@ migration discipline.
    since `verify.sql` is written for the post-`forward.sql` schema and `event_series` (along with
    `events.season`) genuinely no longer exists once `rollback.sql` has run. This failure is itself
    the proof that the rollback removed the schema it claims to, not merely reverted row values.
-8. **Forward again.** `forward.sql` re-applied. Result: **all 5 statement batches returned
+8. **Forward again.** `forward.sql` re-applied. Result: **all 7 statement batches returned
    `"success": true`**. `verify.sql` run a third time reproduced step 5's results exactly:
    `events_count`/`series_count` both 4, `orphan_series_id` 0, no duplicate `(season, slug)` rows,
    `bad_season` 0, the same schema text, `undated_count` 1.

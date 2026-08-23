@@ -13,6 +13,14 @@
  * table `0001_substrate` always creates), then reseeds the suite's own fixture rows fresh every
  * run, so both a cold CI checkout and a warm workstation replica end up in the identical state.
  *
+ * A second, narrower probe covers the gap between those two states: a warm workstation replica
+ * that already has `settings` (so the first probe short-circuits `applyMigrations()` for it) can
+ * still predate a migration added after that replica was last bootstrapped. Rather than re-run
+ * every migration for it (0001_substrate's own `CREATE TABLE` statements fail outright against an
+ * already-populated replica), the script checks for `event_series` (`0035_event_series`) and
+ * applies just that one migration's `forward.sql` when it is missing -- the same narrow-probe
+ * shape a later migration should extend rather than replace.
+ *
  * `wrangler d1 execute --local` never touches the real asc-club data the admin screens and the
  * import scripts own; it only ever writes the gitignored local replica.
  */

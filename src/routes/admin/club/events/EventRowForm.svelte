@@ -206,7 +206,6 @@ never deletes -- the same posture the retired `events/[id]` dialog held.
                 <input type="hidden" name="id" value={event.id} />
                 <button type="submit" class="btn btn-error btn-sm">Delete</button>
               </form>
-              <!-- svelte-ignore a11y_autofocus -->
               <button bind:this={cancelButton} type="button" class="btn btn-sm" onclick={() => (deleteConfirmOpen = false)}>
                 Cancel
               </button>
@@ -222,7 +221,10 @@ never deletes -- the same posture the retired `events/[id]` dialog held.
 
 <style>
   /* Layout only, per the toolkit README's own compiled-CSS constraint: literal values, no
-     arbitrary Tailwind utility string. */
+     arbitrary Tailwind utility string. `width: 100%` fills the ledger row's `.events-panel`
+     container (`+page.svelte`) even under that container's own `align-items: flex-start` --
+     needed so the class-row link above this form stays a compact button rather than stretching
+     full width. */
   .event-row-form {
     display: flex;
     width: 100%;

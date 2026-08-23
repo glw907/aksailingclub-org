@@ -125,10 +125,18 @@ describe('/admin/club/events ledger markup', () => {
   });
 
   it('an empty prior-season cell renders nothing, not a dash, for a season the series did not run', () => {
+    // The range separator `instanceText` uses for a dated instance is an en dash (`–`), not an
+    // em dash, so the real regression to guard against is any dash at all in an empty cell, not
+    // specifically the wrong dash character.
     const row = eventRow({ prior: [null, instance({ id: 'x', startDate: null, visible: false })] });
     const { body } = render(Page, { props: { data: baseData({ rows: [row] }), form: null } });
-    expect(body).not.toContain('—');
-    expect(body).not.toContain('&mdash;');
+    const emptyCellMatch = body.match(/<td class="events-date-cell[^"]*events-narrow-hide[^"]*">([\s\S]*?)<\/td>/);
+    expect(emptyCellMatch).not.toBeNull();
+    const emptyCellContent = emptyCellMatch![1].trim();
+    expect(emptyCellContent).toBe('');
+    expect(emptyCellContent).not.toContain('–');
+    expect(emptyCellContent).not.toContain('—');
+    expect(emptyCellContent).not.toContain('&mdash;');
   });
 
   it('the count line reads exactly "5 undated" for a five-undated fixture', () => {

@@ -272,6 +272,10 @@ export const actions: Actions = {
         return fail(400, { error: 'Invalid season.' });
       }
       const slug = slugify(parsed.write.title);
+      if (slug === '') {
+        ctx.audit({ action: 'create', entity: 'event', detail: 'rejected: title has no letters or numbers' });
+        return fail(400, { error: 'Enter a title with at least one letter or number.' });
+      }
       if (await findEventBySeasonSlug(ctx.db, season, slug)) {
         ctx.audit({ action: 'create', entity: 'event', detail: 'rejected: name already exists this season' });
         return fail(400, { error: 'An event with that name already exists this season.' });

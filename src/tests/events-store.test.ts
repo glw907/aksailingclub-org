@@ -127,6 +127,14 @@ describe('listEventSeasons', () => {
     await expect(listEventSeasons(db)).resolves.toEqual([2026, 2025]);
     expect(calls[0].sql).toContain('ORDER BY season DESC');
   });
+
+  it('unions with classes so a season holding only classes still appears in the filter', async () => {
+    const { db, calls } = fakeD1({ allResults: { 'SELECT DISTINCT season FROM events': [{ season: 2026 }, { season: 2024 }] } });
+    await listEventSeasons(db);
+    expect(calls[0].sql).toContain('SELECT DISTINCT season FROM events');
+    expect(calls[0].sql).toContain('UNION');
+    expect(calls[0].sql).toContain('SELECT DISTINCT season FROM classes');
+  });
 });
 
 describe('createSeries', () => {

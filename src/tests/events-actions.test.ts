@@ -202,6 +202,20 @@ describe('create action', () => {
     expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'create', entity: 'event' }));
   });
 
+  it('fails 400 on a title with no letters or numbers, auditing the rejected attempt before minting an id', async () => {
+    const { db, calls } = fakeD1();
+    const sink = vi.fn();
+    const result = await actions.create(
+      postEvent(admin, { ...VALID_FIELDS, title: '!!!', season: '2026' }, { db, auditSink: sink }),
+    );
+    expect(isActionFailure(result)).toBe(true);
+    expect((result as { status: number }).status).toBe(400);
+    expect((result as { data: { error: string } }).data.error).toBe('Enter a title with at least one letter or number.');
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({ action: 'create', entity: 'event' }));
+    expect(calls.some((c) => c.sql.startsWith('INSERT INTO event_series'))).toBe(false);
+    expect(calls.some((c) => c.sql.startsWith('INSERT INTO events'))).toBe(false);
+  });
+
   it('fails 400 when the name already exists this season, auditing the rejected attempt', async () => {
     const { db } = fakeD1({ firstResults: { 'FROM events WHERE season = ?1 AND slug = ?2': EXISTING_EVENT } });
     const sink = vi.fn();

@@ -18,6 +18,15 @@
  * part of the admin data model; the asc-site cutover, plan Task 9, decides how month
  * bucketing works without it).
  *
+ * `series_id` and `season` are both NOT NULL as of migration 0035_event_series and this
+ * script mirrors that migration's own derivation for every newly inserted row: a fresh
+ * `event_series` row (`id = 'series-' || events.id`, `title = events.title`,
+ * `recurrence = 'annual'`) is inserted alongside the event, and `season` is the year of
+ * `start_date` when there is one, else `settings.current_season` (read once per run, the
+ * same fallback the migration's own INSERT uses). Neither column is ever part of the
+ * update path: an already-migrated row already carries both, and a source-side title
+ * edit updates `events.title` alone, exactly as an officer's own row-form save does.
+ *
  * Usage: node scripts/import/ops-events.mjs [--dry-run]
  */
 import { execFileSync } from 'node:child_process';
@@ -95,13 +104,21 @@ function sqlLiteral(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 
-function toEventRow(src) {
+/** `start_date`'s year, or `fallbackSeason` for an undated row -- the same fallback
+ *  `forward.sql`'s own `season` `COALESCE` uses. */
+function seasonFor(startDate, fallbackSeason) {
+  return startDate ? Number(String(startDate).slice(0, 4)) : fallbackSeason;
+}
+
+function toEventRow(src, fallbackSeason) {
   const category = CATEGORY_BY_EVENT_TYPE[src.event_type];
   if (!category) {
     throw new Error(`ops-events: unmapped event_type "${src.event_type}" on slug ${src.slug}`);
   }
   return {
     id: src.slug,
+    series_id: `series-${src.slug}`,
+    season: seasonFor(src.start_date, fallbackSeason),
     title: src.title,
     slug: src.slug,
     category,
@@ -145,6 +162,11 @@ function main() {
   const [clubResult] = execStatements(clubDb.name, `SELECT * FROM events`);
   const existingById = new Map(clubResult.results.map((row) => [row.id, row]));
 
+  const [settingsResult] = execStatements(clubDb.name, `SELECT value FROM settings WHERE key = 'current_season'`);
+  const currentSeasonRow = settingsResult.results[0];
+  if (!currentSeasonRow) throw new Error('ops-events: could not read settings.current_season from asc-club');
+  const fallbackSeason = Number(currentSeasonRow.value);
+
   const batchId = `ops-events-${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`;
   const statements = [];
   let inserted = 0;
@@ -152,12 +174,16 @@ function main() {
   let unchanged = 0;
 
   for (const src of sourceRows) {
-    const row = toEventRow(src);
+    const row = toEventRow(src, fallbackSeason);
     const existing = existingById.get(row.id);
     const diff = changedColumns(existing, row);
 
     if (!existing) {
-      const cols = [...COLUMNS, 'created_at', 'updated_at'];
+      statements.push(
+        `INSERT INTO event_series (id, title, recurrence) VALUES ` +
+          `(${sqlLiteral(row.series_id)}, ${sqlLiteral(row.title)}, 'annual');`,
+      );
+      const cols = [...COLUMNS, 'series_id', 'season', 'created_at', 'updated_at'];
       const vals = cols.map((c) => sqlLiteral(row[c]));
       statements.push(`INSERT INTO events (${cols.join(', ')}) VALUES (${vals.join(', ')});`);
       statements.push(

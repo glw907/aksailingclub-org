@@ -85,6 +85,30 @@ describe('rollForwardSeason', () => {
     ]);
   });
 
+  it('counts each statement\'s own meta.changes, not the number of statements queued: a guard that skips a row does not inflate the count', async () => {
+    const { db } = fakeD1({
+      allResults: {
+        'FROM event_series es': [
+          { series_id: 'series-a', title: 'Regatta', recurrence: 'annual', retired_at: null, has_to_season: 0 },
+          { series_id: 'series-b', title: 'Clinic', recurrence: 'annual', retired_at: null, has_to_season: 0 },
+        ],
+      },
+      firstResults: {
+        'SELECT title, slug, category': (args: unknown[]) =>
+          args[0] === 'series-a' ? sourceRow : { ...sourceRow, title: 'Clinic', slug: 'clinic' },
+      },
+      // series-b's own INSERT loses the race against its own NOT EXISTS guard (a row landed
+      // between previewRollForward's read and this batch), so it reports zero changes even
+      // though the statement itself ran and succeeded.
+      runResults: {
+        'INSERT INTO events': (args: unknown[]) => (args[0] === 'regatta-2027' ? { changes: 1 } : { changes: 0 }),
+      },
+    });
+
+    const result = await rollForwardSeason(db, { fromSeason: 2026, toSeason: 2027 });
+    expect(result).toEqual({ created: 1, skipped: 0 });
+  });
+
   it('is idempotent: a second run against a fixture reporting the rolled row creates nothing', async () => {
     let reads = 0;
     const { db, calls } = fakeD1({
@@ -198,18 +222,22 @@ describe('listLedger', () => {
   ];
 
   const CLASS_ROWS = [
+    // Tied with Commodore's Cup on the same MM-DD (07-18), a lowercase-initial title against
+    // Commodore's Cup's uppercase-initial one: a raw, un-lowered string compare would sort
+    // "Commodore's Cup" first (`'C'` sorts below `'a'` in char-code order), the opposite of the
+    // alphabetical order this row must actually land in.
     {
-      id: 'learn-to-sail-2027',
+      id: 'arctic-swim-meet-2027',
       season: 2027,
-      name: 'Learn to Sail',
-      slug: 'learn-to-sail',
-      start_date: '2027-05-10',
+      name: 'arctic swim meet',
+      slug: 'arctic-swim-meet',
+      start_date: '2027-07-18',
       end_date: null,
       visible: 1 as const,
     },
   ];
 
-  it('issues at most three statements and orders rows by month-and-day, nulls last, ties broken by title', async () => {
+  it('issues at most three statements and orders rows by month-and-day, nulls last, ties broken by case-insensitive title', async () => {
     const { db, calls } = fakeD1({
       allResults: {
         'FROM events e JOIN event_series s': EVENT_ROWS,
@@ -219,8 +247,8 @@ describe('listLedger', () => {
 
     const rows = await listLedger(db, 2027);
 
-    expect(rows.map((row) => row.title)).toEqual(['Learn to Sail', "Governor's Cup", "Commodore's Cup", 'Winter Meeting']);
-    expect(rows.map((row) => row.kind)).toEqual(['class', 'event', 'event', 'event']);
+    expect(rows.map((row) => row.title)).toEqual(["Governor's Cup", 'arctic swim meet', "Commodore's Cup", 'Winter Meeting']);
+    expect(rows.map((row) => row.kind)).toEqual(['event', 'class', 'event', 'event']);
     expect(calls.length).toBeLessThanOrEqual(3);
   });
 

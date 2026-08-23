@@ -193,11 +193,21 @@ export async function findEventBySeasonSlug(db: D1Database, season: number, slug
   return row ? toEventRow(row) : null;
 }
 
-/** Every season at least one `events` row belongs to, most recent first: the ledger's own season
- *  filter vocabulary, the same shape `classes-store.ts`'s `listClassSeasons` already establishes.
- */
+/** Every season at least one `events` or `classes` row belongs to, most recent first: the
+ *  ledger's own season filter vocabulary. Unioned across both tables, not `events` alone --
+ *  `listLedger` shows a class-only season's rows too (`kind: 'class'`), so a season holding
+ *  nothing but classes must still appear in the filter, or that season's classes become
+ *  unreachable through it. The same shape `classes-store.ts`'s `listClassSeasons` already
+ *  establishes for the Classes screen's own filter. */
 export async function listEventSeasons(db: D1Database): Promise<number[]> {
-  const { results } = await db.prepare('SELECT DISTINCT season FROM events ORDER BY season DESC').all<{ season: number }>();
+  const { results } = await db
+    .prepare(
+      `SELECT DISTINCT season FROM events
+       UNION
+       SELECT DISTINCT season FROM classes
+       ORDER BY season DESC`,
+    )
+    .all<{ season: number }>();
   return results.map((row) => row.season);
 }
 
@@ -680,6 +690,9 @@ async function getSeriesSeasonSource(db: D1Database, seriesId: string, season: n
  * second run against an unchanged plan inserts nothing even if a row landed between the preview
  * and this call. When the plan already has nothing to create (the ordinary repeat-run case, once
  * the preview itself sees the rolled rows), no statement is issued at all and `created` is `0`.
+ * `created` counts each batched statement's own `meta.changes`, not `statements.length`: a
+ * statement whose `NOT EXISTS` guard skips its row still runs and still returns success, so
+ * counting statements queued would over-report by one for every guard that fires.
  */
 export async function rollForwardSeason(
   db: D1Database,
@@ -720,6 +733,10 @@ export async function rollForwardSeason(
         ),
     );
   }
-  if (statements.length > 0) await db.batch(statements);
-  return { created: statements.length, skipped: plan.skipped.length };
+  let created = 0;
+  if (statements.length > 0) {
+    const results = await db.batch(statements);
+    created = results.reduce((sum, result) => sum + (result.meta.changes ?? 0), 0);
+  }
+  return { created, skipped: plan.skipped.length };
 }

@@ -81,10 +81,14 @@ export function fakeD1(opts: FakeD1Options = {}) {
       // Each statement answers from the same `allResults` table `.all()` reads, so a module that
       // batches two SELECTs (events-data.ts's single-row read) is testable at all; a statement
       // with no matching key still answers the empty result every write-shaped batch expects.
+      // `meta` reuses the same `runResults` table `.run()` reads, defaulting to `{ changes: 1 }`
+      // per statement, so a module that sums a batch's `meta.changes` (a conditional `INSERT ...
+      // WHERE NOT EXISTS` that can match zero rows) is testable without every batch test needing
+      // its own fixture.
       return stmts.map((stmt) => ({
         results: matchingResult<unknown[]>(stmt.sql, opts.allResults, stmt.args, []),
         success: true,
-        meta: {},
+        meta: matchingResult<{ changes?: number }>(stmt.sql, opts.runResults, stmt.args, { changes: 1 }),
       }));
     },
   };
