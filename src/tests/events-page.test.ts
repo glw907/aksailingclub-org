@@ -208,4 +208,45 @@ describe('/events season page', () => {
     expect(body).not.toContain('ev-band');
     expect(body.toLowerCase()).toContain('season');
   });
+
+  // The header-round pass (probe 8): the month running head is the chapter heading, so it takes
+  // the h2 step; the event title steps down to h3.
+  it('renders each band title inside an h3, never an h2', () => {
+    const { body } = render(Page, { props: { data: fixtureData(EVENTS) } });
+    expect(body).toMatch(/<h3 class="ev-title[ "]/);
+    expect(body).not.toMatch(/<h2 class="ev-title[ "]/);
+  });
+
+  it('renders the month running head as an h2, only on the first band of its month', () => {
+    const { body } = render(Page, { props: { data: fixtureData(EVENTS) } });
+    expect(body).toMatch(/<h2 class="ev-month[ "][^>]*>May<\/h2>/);
+    expect(body).toMatch(/<h2 class="ev-month[ "][^>]*>June<\/h2>/);
+    // The second June band (class-2) follows the first and carries no running head of its own.
+    const class2Start = body.indexOf('id="class-2"');
+    const class2Section = body.slice(class2Start, body.indexOf('</section>', class2Start));
+    expect(class2Section).not.toContain('ev-month');
+  });
+
+  it('renders the subscribe line as one quiet line, four entries, no visible address fallback', () => {
+    const { body } = render(Page, { props: { data: fixtureData(EVENTS) } });
+    expect(body).toMatch(/<p class="ev-subscribe-line[ "][^>]*role="group"[^>]*>/);
+    expect(body).toContain('Add to your calendar:');
+    expect(body).toContain('Apple Calendar');
+    expect(body).toContain('Google Calendar');
+    expect(body).toContain('Outlook');
+    expect(body).toContain('Copy feed address');
+    expect(body.match(/class="ev-sep[ "]/g) ?? []).toHaveLength(3);
+    // The failed-copy fallback only ever mounts client-side, on a failed copy.
+    expect(body).not.toContain('ev-subscribe-address');
+  });
+
+  it("marks the month holding the next-upcoming band as the index's current tab", () => {
+    const { body } = render(Page, { props: { data: fixtureData(EVENTS) } });
+    const juneLink = body.slice(body.indexOf('href="#june"'), body.indexOf('>June<'));
+    expect(juneLink).toContain('is-current');
+    expect(juneLink).toContain('aria-current="true"');
+    const mayLink = body.slice(body.indexOf('href="#may"'), body.indexOf('>May<'));
+    expect(mayLink).not.toContain('is-current');
+    expect(mayLink).not.toContain('aria-current');
+  });
 });

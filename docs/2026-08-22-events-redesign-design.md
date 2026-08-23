@@ -41,10 +41,13 @@ The route is `/events`, server-rendered on each request (it reads `CLUB_DB`). To
    `season` column, else the year of the first dated event), so it updates itself each
    season and keeps naming last season through the winter until new rows land. The image
    standard assigns Events no hero photo; the season's own photographs follow immediately.
-2. The calendar-subscribe bar, widened from two links to four (see "Calendar subscription").
-3. The month index: one line of in-page links, one per month that has at least one event,
-   plus "Meetings". Rendered a step below body. Sticky at 1440 only if the probe round
-   shows it earns its place; never sticky below 48rem.
+2. The calendar-subscribe bar, one quiet line naming all four entries (see "Calendar
+   subscription"), following the hero at the same close spacing with no hairline of its own.
+3. The month index: one per month that has at least one event, plus "Meetings", ratified as
+   the header block's own closing tab row (probe 4/8): body size in the display face, navy,
+   attached to a hairline that is also the first season band's own top edge, the month holding
+   the next-upcoming band marked current on the gold active-nav underline. Sticky at 1440 only
+   if the probe round shows it earns its place; never sticky below 48rem.
 4. The season bands, one per event or class, in `start_date` order. Events with no date sort
    after the dated ones, within the month their `date_history` fallback names, as the
    current listing already does.
@@ -67,8 +70,10 @@ the `<img>`, this repo's own declared-crop convention), so a source that is not 
 center-cropped to it rather than letterboxed: the band's rhythm down the page depends on every
 photo holding the same shape. The text column carries, in order:
 
-- the month as a small running head at the band's top edge, only on the first band of a month;
-- the title at the h2 step, plain text rather than a link (the `<section id>` around it is the
+- the month as the chapter heading at the band's top edge, only on the first band of a month,
+  ratified at the h2 step with a short gold rule beneath it (probe 8: it is the season's own
+  outline, not a small label the first row alone carries);
+- the title at the h3 step, plain text rather than a link (the `<section id>` around it is the
   share anchor, and a heading that links to its own anchor is a dead end for anyone who follows
   it), preceded by the gold star when the row is a class or clinic (C7); races, work parties, and
   socials carry no mark;
@@ -102,8 +107,9 @@ place restacks as a second muted line there rather than dropping out with the co
 
 ## Calendar subscription
 
-The subscribe bar offers four entries, each with its calendar's icon from the theme's icon
-set, each a navy link in the bar's existing quiet register:
+The subscribe bar offers four entries, ratified (probe 7) as one quiet line: a muted "Add to
+your calendar:" lead phrase, then the four entries as plain navy inline links or a button, no
+icons, separated by a middot:
 
 | Entry | Link |
 |---|---|
@@ -114,8 +120,11 @@ set, each a navy link in the bar's existing quiet register:
 
 The Outlook link prompts Outlook.com and the Outlook desktop apps; a Microsoft 365 account
 takes the `outlook.office.com` form of the same path. The copy button covers Thunderbird,
-Fastmail, Proton, and the phone apps that ask for a feed address. The per-band "Add to
-calendar" link stays a one-event `.ics` download; a one-off event needs no subscription.
+Fastmail, Proton, and the phone apps that ask for a feed address; the plain URL itself only
+appears on the page when that copy fails (an insecure context, a denied permission), as the
+fallback a reader can still select by hand, rather than sitting visible on every load. The
+per-band "Add to calendar" link stays a one-event `.ics` download; a one-off event needs no
+subscription.
 
 ## The detail route
 
