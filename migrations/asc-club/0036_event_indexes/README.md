@@ -151,3 +151,10 @@ source ~/.local/secrets && npx wrangler d1 execute asc-club --remote --command "
 
 This repo applies `asc-club` migrations by `wrangler d1 execute --remote --file`; there is no
 `wrangler d1 migrations` usage anywhere in it and none is introduced here.
+
+## Live apply record (2026-08-22, conductor)
+
+Applied after the scratch proof and the read-only duplicate check above. `forward.sql` is now
+the record of what ran and must not be edited. Pre-apply: no duplicate `(series_id, season)`
+pair. Post-apply verify: both indexes present in `sqlite_master`; the 0035 checks unchanged
+(12 events, 12 series, 0 orphans, no duplicate `(season, slug)`, 0 bad seasons, 0 undated).
