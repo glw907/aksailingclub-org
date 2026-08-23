@@ -100,6 +100,14 @@ Any row returned means rollback will fail; do not run it. This is the same preco
 `0034_asset_type_ids/README.md`'s own rollback section uses for its own irreversible-past-a-point
 step.
 
+**This is an expiry, not merely a per-run condition.** Once the first `rollForwardSeason` call
+has actually run against live (creating a second season's copy of any series, so two `events` rows
+share a slug), this rollback is permanently unusable from that point forward -- a later season
+rolling back to zero rows sharing a slug can never happen on its own, since nothing in the
+application ever deletes a rolled-forward row's slug collision. Treat this rollback as expired the
+moment the first roll-forward lands, not as a check to re-run before every future rollback
+attempt.
+
 ## Scratch-proof procedure
 
 Run entirely against a local, disposable D1 replica (`--persist-to` distinct from the repo's own
