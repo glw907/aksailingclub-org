@@ -339,9 +339,21 @@ describe('EventRowForm panel (events-admin Task 5)', () => {
 });
 
 describe('reviewer fan-out fix round (Svelte half: items 21-33, 36-47)', () => {
-  it('the season filter reads "Season: <year>" once it differs from the current season (item 33)', () => {
-    const { body } = render(Page, { props: { data: baseData({ season: 2027, currentSeason: 2026 }), form: null } });
-    expect(body).toContain('Season: 2027');
+  it('the season filter reads "Season: <year>" on every view, not only once it differs from the current season (S11 of the second coherence read)', () => {
+    const differing = render(Page, { props: { data: baseData({ season: 2027, currentSeason: 2026 }), form: null } });
+    expect(differing.body).toContain('Season: 2027');
+    const atCurrent = render(Page, { props: { data: baseData({ season: 2026, currentSeason: 2026 }), form: null } });
+    expect(atCurrent.body).toContain('Season: 2026');
+    // A plain `<select>`, not the `'menu'` display's applied-filter treatment: no clear affordance
+    // suggesting a season is a removable filter rather than a required dimension.
+    expect(atCurrent.body).not.toContain('toolkit-toolbar-facet-clear');
+  });
+
+  it('the season filter still shows the selected season even when it is absent from `seasons` (a hand-edited `?season=`)', () => {
+    const { body } = render(Page, {
+      props: { data: baseData({ season: 2030, currentSeason: 2026, seasons: [2026, 2025] }), form: null },
+    });
+    expect(body).toContain('Season: 2030');
   });
 
   it('the roll-forward trigger carries aria-expanded and aria-controls naming its own panel', () => {
@@ -425,5 +437,114 @@ describe('reviewer fan-out fix round (Svelte half: items 21-33, 36-47)', () => {
     // uses, rather than SvelteKit's default full-form reset.
     expect(setVisibilityForm![0]).toMatch(/use:enhance=\{keepOnScreen\}/);
     expect(retireForm![0]).toMatch(/use:enhance=\{keepOnScreen\}/);
+  });
+});
+
+describe('second coherence read fix round (docs/plans/2026-08-22-events-admin.md follow-up, S1-S11)', () => {
+  const source = readFileSync(new URL('../routes/admin/club/events/+page.svelte', import.meta.url), 'utf-8');
+
+  it('S1: the narrow date input widens past its old 84px and hides the picker glyph', () => {
+    expect(source).not.toContain('width: 5.25rem');
+    expect(source).toMatch(/width:\s*7\.25rem/);
+    expect(source).toContain('min-width: 112px');
+    expect(source).toContain("::-webkit-calendar-picker-indicator");
+  });
+
+  it('S1: a class row\'s current-season text widens/wraps instead of ellipsizing at the narrow breakpoint', () => {
+    expect(source).not.toContain('max-width: 5.5rem');
+    expect(source).toMatch(/\.events-current-text\s*\{[^}]*white-space:\s*normal/);
+  });
+
+  it('S2: the unlabeled range dot is gone, replaced by an end-date note or a "+ end date" link', () => {
+    expect(source).not.toContain('events-range-dot');
+    const { body } = render(Page, {
+      props: {
+        data: baseData({
+          rows: [
+            eventRow({
+              id: 'ranged',
+              event: {
+                id: 'ranged',
+                seriesId: 'series-ranged',
+                season: 2026,
+                title: 'Ranged Event',
+                slug: 'ranged',
+                category: 'racing',
+                shortDescription: null,
+                longDescription: null,
+                startDate: '2026-06-01',
+                startTime: null,
+                endDate: '2026-06-03',
+                endTime: null,
+                location: null,
+                heroImage: null,
+                heroImageAlt: null,
+                thumbnailImage: null,
+                visible: true,
+                createdAt: '2026-01-01 00:00:00',
+                updatedAt: '2026-01-01 00:00:00',
+              },
+              current: instance({ id: 'ranged', startDate: '2026-06-01', endDate: '2026-06-03', visible: true }),
+            }),
+          ],
+        }),
+        form: null,
+      },
+    });
+    expect(body).toContain('events-end-date-note');
+    expect(body).toContain('to Jun 3');
+  });
+
+  it('S2/S3: an undated row renders the "+ end date" link instead of a raw empty end-date input', () => {
+    const undated = eventRow({ current: instance({ id: 'board-meeting-2026', startDate: null, endDate: null, visible: false }) });
+    const { body } = render(Page, { props: { data: baseData({ rows: [undated] }), form: null } });
+    expect(body).toContain('events-add-end-date-link');
+    expect(body).toContain('+ end date');
+    expect(body).toContain('events-end-date-input-hidden');
+  });
+
+  it('S4: the class category chip carries a neutral dot, never the reserved warning tone', () => {
+    const { body } = render(Page, { props: { data: baseData({ rows: [classRow()], openId: null }), form: null } });
+    expect(body).toContain('status-neutral');
+    expect(body).not.toContain('status-warning');
+  });
+
+  it('S5: the toolbar renders its own count-plus-roll-controls row and hides the toolkit\'s own count line', () => {
+    expect(source).toContain('events-toolbar-summary');
+    expect(source).toMatch(/:global\(\.toolkit-toolbar-count\)\s*\{[^}]*display:\s*none/);
+  });
+
+  it('S7: a class row\'s panel is a single quiet link, not the old full-width btn band', () => {
+    const row = classRow();
+    const { body } = render(Page, { props: { data: baseData({ rows: [row], openId: row.id }), form: null } });
+    expect(body).toContain('events-class-panel-link');
+    expect(body).toContain('href="/admin/club/classes"');
+    expect(body).not.toContain('class="btn btn-sm" href="/admin/club/classes"');
+  });
+
+  it('S8: the Details header cell is a real (non sr-only-on-the-th) column with its own border', () => {
+    const { body } = render(Page, { props: { data: baseData(), form: null } });
+    expect(body).not.toContain('<th class="sr-only"');
+    expect(body).toContain('events-details-header');
+    expect(body).toMatch(/<th class="[^"]*events-details-header[^"]*"[^>]*><span class="sr-only">Details<\/span><\/th>/);
+  });
+
+  it('S9: a per-row "Saved" status region is present at load, empty until a save fills it', () => {
+    const row = eventRow();
+    const { body } = render(Page, { props: { data: baseData({ rows: [row] }), form: null } });
+    const match = body.match(/<span class="events-row-saved[^"]*"[^>]*role="status"[^>]*>([\s\S]*?)<\/span>/);
+    expect(match).not.toBeNull();
+    expect(match![1].trim()).toBe('');
+  });
+
+  it('S10: the date-cell and row-form inputs override the focus ring to match the button ring', () => {
+    expect(source).toMatch(/input\[type='date'\]:focus[\s\S]*?outline: 2px solid var\(--color-primary\) !important/);
+    const formSource = readFileSync(new URL('../routes/admin/club/events/EventRowForm.svelte', import.meta.url), 'utf-8');
+    expect(formSource).toMatch(/:global\(\.input:focus\)[\s\S]*?outline: 2px solid var\(--color-primary\) !important/);
+  });
+
+  it('item 11: the status line collapses (no reserved bottom margin) when empty', () => {
+    const { body } = render(Page, { props: { data: baseData(), form: null } });
+    expect(body).toContain('events-status-line-empty');
   });
 });

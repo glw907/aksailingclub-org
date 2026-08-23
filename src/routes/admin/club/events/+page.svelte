@@ -36,6 +36,20 @@ single page-level `role="status"` region, always present, carries every error no
 plus a "Saved." announcement after an inline date save, Hide/Show, or Retire/Unretire -- a row-
 scoped error (one whose `fail()` payload names that row's own id) renders inside the row's own
 panel instead, via `EventRowForm`'s new `error` prop.
+
+**Second coherence read fix round (docs/plans/2026-08-22-events-admin.md's follow-up brief,
+items S1-S11 plus the cosmetic list).** The 390 date cell widens to fill its own cell and hides
+Chromium's own calendar-picker glyph (S1); the unlabeled range dot is gone, replaced by an
+"to <date>"/"+ end date" affordance beside the start input, narrow-only where the default-width
+cell already shows the real second input (S2/S3); the Class category chip's dot reads `neutral`,
+not the reserved `warning` tone (S4); the toolbar's own count line hides in favor of one this file
+renders itself, on the same row as the roll-forward controls (S5); a class row's panel is a single
+40px quiet link, not `ExpandableRow`'s own full-width padded band (S7); the `sr-only` Details
+header cell is a real (if minimal) column so the header rule reaches the row edge (S8); a per-row
+"Saved" confirmation renders beside the date that just changed (S9); the date/row-form inputs'
+focus ring matches the button ring instead of a darker one `.input:focus` supplies (S10); and the
+Season facet reads "Season: <year>" on every view, not only once it differs from the current
+season (S11).
 -->
 <script lang="ts">
   import { untrack } from 'svelte';
@@ -51,6 +65,8 @@ panel instead, via `EventRowForm`'s new `error` prop.
     ListToolbar,
     PageHeader,
     StatusChip,
+    computeAppliedFilters,
+    computeCountLine,
     type ListToolbarFilter,
   } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL, formatCivilDate } from '$admin-club/lib/ui';
@@ -97,6 +113,36 @@ panel instead, via `EventRowForm`'s new `error` prop.
     expandedId = expandedId === id ? null : id;
   }
 
+  /** The date cell's own "+ end date" quiet link (S2 of the second coherence read's fix brief):
+   *  opens the row's panel and asks `EventRowForm` to focus and scroll to its End date field once
+   *  it mounts. Keyed by event id, not toggled -- opening a row that is already open (from a
+   *  second click somewhere else) still re-requests the focus. */
+  let endDateFocusRequest: string | null = $state(null);
+
+  function openEndDateField(row: LedgerRow) {
+    expandedId = row.id;
+    endDateFocusRequest = row.id;
+  }
+
+  /** The inline date save's own row-scoped confirmation (S9 of the second coherence read's fix
+   *  brief): the page-level status line already announces "Saved." for AT, but that line sits
+   *  above the toolbar, well off-screen from a row an officer is dating deep in a long ledger.
+   *  This mirrors the confirmation back beside the very input that changed. One shared `$state`
+   *  pair (not a per-row map) is enough: only one row is ever mid-save at a time in practice, and
+   *  a second save while the first's clear timer is still pending simply re-points both at the
+   *  newer row, which is the correct behavior anyway (whichever save just happened is the one
+   *  worth confirming). */
+  let savedRowId: string | null = $state(null);
+  let savedClearTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function showSaved(rowId: string) {
+    savedRowId = rowId;
+    clearTimeout(savedClearTimer);
+    savedClearTimer = setTimeout(() => {
+      savedRowId = null;
+    }, 2000);
+  }
+
   /** Pushes a new `?season=`, the Classes screen's own `pushSeason` idiom: a season change is a
    *  real server reload, since each season carries its own eagerly-loaded ledger read. */
   function pushSeason(value: string) {
@@ -119,13 +165,30 @@ panel instead, via `EventRowForm`'s new `error` prop.
   );
 
   const filters: ListToolbarFilter[] = $derived([
+    // `display: 'select'`, not `'menu'` (S11 of the second coherence read's fix brief): the
+    // `'menu'` display only shows a value once it differs from `defaultValue` (`computeFacetLabel`,
+    // `list-toolbar.ts`), so viewing the CURRENT season -- the common case -- read as a bare
+    // "Season" with no year at all. A season is never optional (every row belongs to one), so the
+    // `'menu'` display's applied-filter treatment (a primary-tinted border and a `x` clear
+    // affordance that resets to the default) was also the wrong grammar here: clearing back to
+    // "no season" is not a real state, only "a different season" is. A plain `<select>` has
+    // neither problem -- it always shows its own selected option's text, with no separate applied
+    // state -- so each option's own label carries the "Season: " prefix directly, the only way a
+    // native control's visible text (not just its `aria-label`) can read "Season: 2027" while
+    // still choosing among bare year values underneath.
     {
       id: 'season',
       label: 'Season',
-      display: 'menu',
+      display: 'select',
       value: String(data.season),
-      defaultValue: String(data.currentSeason),
-      options: data.seasons.map((season) => ({ value: String(season), label: String(season) })),
+      // A native `<select>` can only ever show a value that has a matching `<option>`; the load's
+      // own `seasons` union guarantees the CURRENT season is always an option (`+page.server.ts`'s
+      // own comment), but not necessarily whichever season a hand-edited `?season=` query param
+      // names. The same union here, keyed off the SELECTED season instead, keeps that edge case
+      // from silently mis-selecting some other year with no visible trace of the one requested.
+      options: (data.seasons.includes(data.season) ? data.seasons : [data.season, ...data.seasons].sort((a, b) => b - a)).map(
+        (season) => ({ value: String(season), label: `Season: ${season}` }),
+      ),
       onChange: pushSeason,
     },
     {
@@ -199,12 +262,19 @@ panel instead, via `EventRowForm`'s new `error` prop.
   }
 
   /** Every `setDate` form's own `use:enhance`: keeps the burst of a dozen date saves off a full
-   *  page reload each, matching four other `/admin/club/**` screens' idiom. */
-  const keepDateOnScreen: SubmitFunction = () => {
-    return async ({ update }) => {
-      await update({ reset: false });
+   *  page reload each, matching four other `/admin/club/**` screens' idiom, and shows this row's
+   *  own "Saved" confirmation (S9 of the second coherence read's fix brief) on a successful write
+   *  -- the page-level status line still announces "Saved." for AT, but it sits above the toolbar,
+   *  off-screen from a row an officer is dating deep in a long ledger. Factory, not a single
+   *  shared handler: this form's own `rowId` needs to reach `showSaved` above. */
+  function keepDateOnScreen(rowId: string): SubmitFunction {
+    return () => {
+      return async ({ update, result }) => {
+        await update({ reset: false });
+        if (result.type === 'success') showSaved(rowId);
+      };
     };
-  };
+  }
 
   function stopRowToggle(event: Event) {
     event.stopPropagation();
@@ -309,6 +379,7 @@ panel instead, via `EventRowForm`'s new `error` prop.
      panel instead (`rowError`, above). -->
 <p
   class="events-status-line {pageStatusInfo.isError ? 'text-error' : 'text-muted'}"
+  class:events-status-line-empty={!pageStatusInfo.text}
   role="status"
   aria-live="polite"
   aria-atomic="true"
@@ -319,6 +390,15 @@ panel instead, via `EventRowForm`'s new `error` prop.
 {:else}
   <div class="rounded-box border border-[var(--cairn-card-border)] bg-base-100 overflow-x-auto shadow-[var(--cairn-shadow)]">
     <div class="events-toolbar-band border-b border-[var(--cairn-card-border)] p-6">
+      <!-- `count`/`itemLabel` stay real (`ListToolbar`'s own props are type-required, not
+           optional -- passing them out is a type error, not a layout choice), but the toolkit's
+           own count `<p>` renders hidden below (`.toolkit-toolbar-count`'s own override in this
+           file's `<style>`): `ListToolbar`'s count line and its `trailing` snippet are two fixed
+           siblings in that component's own `flex-direction: column` band, with no seam to put
+           them on one row together (S5 of the second coherence read's fix brief). This route
+           builds its own combined count-plus-roll-controls row instead, immediately below,
+           reusing `computeCountLine`/`computeAppliedFilters` so its text matches exactly what the
+           hidden line would have read. -->
       <ListToolbar
         search={searchQuery}
         onSearch={(value) => (searchQuery = value)}
@@ -327,66 +407,68 @@ panel instead, via `EventRowForm`'s new `error` prop.
         primaryAction={{ label: 'New event', onClick: () => (newRowOpen = true) }}
         count={filteredRows.length}
         itemLabel={{ one: 'row', many: 'rows' }}
-      >
-        {#snippet trailing()}
-          <div class="events-rollforward" bind:this={rollContainerEl} onfocusout={onRollFocusOut}>
-            {#if data.undatedCount > 0}
-              <StatusChip tone="neutral" label={`${data.undatedCount} undated`} size="xs" register="quiet" />
-            {/if}
-            <button
-              type="button"
-              class="btn btn-outline btn-sm"
-              bind:this={rollTriggerEl}
-              aria-expanded={rollPanelOpen}
-              aria-controls={rollPanelId}
-              onclick={toggleRollPanel}
-            >
-              Start the next season
-            </button>
-            {#if data.rollPlan}
-              {@const plan = data.rollPlan}
-              {@const skip = skipLine(plan)}
-              <!-- `hidden`, not an `{#if rollPanelOpen}` gate, keeps this panel's full copy in the
-                   rendered markup at all times (a static SSR render can assert on it directly, the
-                   design's own render-test shape); `rollPanelOpen`'s `$state` is still the real
-                   disclosure the officer drives. -->
-              <div id={rollPanelId} class="events-rollforward-panel" hidden={!rollPanelOpen}>
-                <h2 id={rollHeadingId} class="type-heading font-bold" tabindex="-1" bind:this={rollHeadingEl}>
-                  Start the {data.season + 1} season
-                </h2>
-                {#if plan.create.length === 0}
-                  <p class="mt-1 type-body text-muted">Nothing left to roll into {data.season + 1}.</p>
-                {:else}
-                  <p class="mt-1 type-body">
-                    Creates {plan.create.length} events in {data.season + 1}, undated and hidden until you save a date.
-                  </p>
-                {/if}
-                {#if skip}
-                  <p class="mt-1 type-body text-muted">{skip}</p>
-                {/if}
-                <ul class="events-rollforward-list">
-                  {#each plan.create as entry (entry.seriesId)}<li>{entry.title}</li>{/each}
-                </ul>
-                <form method="post" action="?/rollForward" class="events-rollforward-actions" use:enhance>
-                  <CsrfField />
-                  <input type="hidden" name="fromSeason" value={data.season} />
-                  <input type="hidden" name="toSeason" value={data.season + 1} />
-                  <!-- The exact plan the officer is looking at, so the server can refuse (409) when
-                       it no longer matches a freshly recomputed plan at submit time -- the events-
-                       store's own `rollForward` action doc explains why. -->
-                  {#each plan.create as entry (entry.seriesId)}
-                    <input type="hidden" name="seriesIds" value={entry.seriesId} />
-                  {/each}
-                  <button type="submit" class="btn btn-primary btn-sm" disabled={plan.create.length === 0}>
-                    Start the next season
-                  </button>
-                  <button type="button" class="btn btn-sm" onclick={() => closeRollPanel(true)}>Cancel</button>
-                </form>
-              </div>
-            {/if}
-          </div>
-        {/snippet}
-      </ListToolbar>
+      />
+      <div class="events-toolbar-summary">
+        <p class="events-toolbar-count-line" role="status" aria-live="polite" aria-atomic="true">
+          {computeCountLine(filteredRows.length, { one: 'row', many: 'rows' }, computeAppliedFilters(filters).map((pill) => pill.label))}
+        </p>
+        <div class="events-rollforward" bind:this={rollContainerEl} onfocusout={onRollFocusOut}>
+          {#if data.undatedCount > 0}
+            <StatusChip tone="neutral" label={`${data.undatedCount} undated`} size="xs" register="quiet" />
+          {/if}
+          <button
+            type="button"
+            class="btn btn-outline btn-sm"
+            bind:this={rollTriggerEl}
+            aria-expanded={rollPanelOpen}
+            aria-controls={rollPanelId}
+            onclick={toggleRollPanel}
+          >
+            Start the next season
+          </button>
+          {#if data.rollPlan}
+            {@const plan = data.rollPlan}
+            {@const skip = skipLine(plan)}
+            <!-- `hidden`, not an `{#if rollPanelOpen}` gate, keeps this panel's full copy in the
+                 rendered markup at all times (a static SSR render can assert on it directly, the
+                 design's own render-test shape); `rollPanelOpen`'s `$state` is still the real
+                 disclosure the officer drives. -->
+            <div id={rollPanelId} class="events-rollforward-panel" hidden={!rollPanelOpen}>
+              <h2 id={rollHeadingId} class="type-heading font-bold" tabindex="-1" bind:this={rollHeadingEl}>
+                Start the {data.season + 1} season
+              </h2>
+              {#if plan.create.length === 0}
+                <p class="mt-1 type-body text-muted">Nothing left to roll into {data.season + 1}.</p>
+              {:else}
+                <p class="mt-1 type-body">
+                  Creates {plan.create.length} events in {data.season + 1}, undated and hidden until you save a date.
+                </p>
+              {/if}
+              {#if skip}
+                <p class="mt-1 type-body text-muted">{skip}</p>
+              {/if}
+              <ul class="events-rollforward-list">
+                {#each plan.create as entry (entry.seriesId)}<li>{entry.title}</li>{/each}
+              </ul>
+              <form method="post" action="?/rollForward" class="events-rollforward-actions" use:enhance>
+                <CsrfField />
+                <input type="hidden" name="fromSeason" value={data.season} />
+                <input type="hidden" name="toSeason" value={data.season + 1} />
+                <!-- The exact plan the officer is looking at, so the server can refuse (409) when
+                     it no longer matches a freshly recomputed plan at submit time -- the events-
+                     store's own `rollForward` action doc explains why. -->
+                {#each plan.create as entry (entry.seriesId)}
+                  <input type="hidden" name="seriesIds" value={entry.seriesId} />
+                {/each}
+                <button type="submit" class="btn btn-primary btn-sm" disabled={plan.create.length === 0}>
+                  Start the next season
+                </button>
+                <button type="button" class="btn btn-sm" onclick={() => closeRollPanel(true)}>Cancel</button>
+              </form>
+            </div>
+          {/if}
+        </div>
+      </div>
     </div>
 
     {#if data.rows.length === 0 && !newRowOpen}
@@ -405,7 +487,19 @@ panel instead, via `EventRowForm`'s new `error` prop.
           <th class="{HEADER_CELL} tabular-nums events-narrow-hide" scope="col">{data.season - 2}</th>
           <th class="{HEADER_CELL} tabular-nums events-narrow-hide" scope="col">{data.season - 1}</th>
           <th class="{HEADER_CELL} tabular-nums" scope="col">{data.season}</th>
-          <th class="sr-only" scope="col">Details</th>
+          <!-- A REAL (though visually blank) narrow cell, not a `sr-only`-on-the-`<th>` one (S8
+               of the second coherence read's fix brief): Tailwind's `sr-only` utility is
+               `position: absolute`, which per the table layout spec computes an absolutely
+               positioned table-cell to `display: block`, removing it from the header row's own
+               column grid entirely. `AdminTable`'s per-`th`/`td` border-bottom rule
+               (`cairn-admin.css`'s `.table :where(thead tr :is(td, th), ...)`) then has no 5th
+               header cell to draw under, so the rule stops one column short of the trigger
+               column's own real width -- the header's dividing line visibly fell short of the row
+               edge. `events-details-header`'s own `width: 1px` (`ExpandableRow`'s own trigger-cell
+               sizing trick) keeps this column's real footprint minimal while it stays a genuine
+               table-cell; the sr-only text moves to an inner span instead, which CAN be
+               absolutely positioned with no layout consequence of its own. -->
+          <th class="{HEADER_CELL} events-details-header" scope="col"><span class="sr-only">Details</span></th>
         {/snippet}
         {#snippet empty()}
           <p>No events match those filters.</p>
@@ -436,11 +530,19 @@ panel instead, via `EventRowForm`'s new `error` prop.
                 </span>
                 <span class="events-name-chips">
                   <StatusChip tone={EVENT_CATEGORY_TONE[row.category]} label={EVENT_CATEGORY_LABEL[row.category]} size="xs" register="quiet" />
-                  {#if row.kind === 'event' && row.current && !row.current.visible}
-                    <StatusChip tone="neutral" label="Hidden" size="xs" register="quiet" />
+                  <!-- `events-state-chip`, not `StatusChip` (cosmetic item, second coherence
+                       read): a category chip's colored dot marks WHAT a row is, so a state marker
+                       (Hidden/Retired) carrying the same dot read as a sixth category rather than
+                       a status. No dot, and an sr-only "State: " prefix names the distinction for
+                       assistive tech too, not only sighted readers. Hidden is omitted while the
+                       "Undated only" filter is active: every row in that view is hidden by the
+                       publish-on-date rule, so the marker would repeat on every single row rather
+                       than adding information. -->
+                  {#if row.kind === 'event' && row.current && !row.current.visible && datesFilter !== 'undated'}
+                    <span class="events-state-chip"><span class="sr-only">State: </span>Hidden</span>
                   {/if}
                   {#if row.kind === 'event' && row.retiredAt}
-                    <StatusChip tone="neutral" label="Retired" size="xs" register="quiet" />
+                    <span class="events-state-chip"><span class="sr-only">State: </span>Retired</span>
                   {/if}
                 </span>
               </td>
@@ -453,12 +555,12 @@ panel instead, via `EventRowForm`'s new `error` prop.
                        explains the wider contract. -->
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <div class="events-date-form-wrap" onclick={stopRowToggle} onkeydown={stopRowToggle}>
-                    <form method="post" action="?/setDate" use:enhance={keepDateOnScreen}>
+                    <form method="post" action="?/setDate" use:enhance={keepDateOnScreen(row.event.id)}>
                       <CsrfField />
                       <input type="hidden" name="id" value={row.event.id} />
                       <span class="events-start-date-wrap">
                         <input
-                          class="input input-sm"
+                          class="input input-sm events-date-input"
                           type="date"
                           name="startDate"
                           value={row.current?.startDate ?? ''}
@@ -466,64 +568,110 @@ panel instead, via `EventRowForm`'s new `error` prop.
                           onchange={(event) => event.currentTarget.form?.requestSubmit()}
                         />
                         {#if row.current?.endDate}
-                          <!-- A phone-width-only cue (item 37, item 38): a real end date exists
-                               but its own input is hidden at this width (see below), so the
-                               officer still sees the row carries a range at a glance, with the
-                               exact date read by the row's own expanded panel or, for a screen
-                               reader, this dot's own text. -->
-                          <span class="events-range-dot" aria-hidden="true"></span>
-                          <span class="sr-only">Also ends {formatCivilDate(row.current.endDate)}.</span>
+                          <!-- Narrow width only (S2 of the second coherence read's fix brief): the
+                               end-date input itself is CSS-hidden below, so this reads the range's
+                               own end date as quiet text where the unlabeled 6px dot used to sit
+                               -- readable on its own, not just a decorative cue a screen reader had
+                               to be told about separately. At the default width the real,
+                               pre-filled end-date input already shows this, so the text stays
+                               narrow-only. -->
+                          <span class="events-end-date-note events-narrow-only type-meta text-muted">
+                            to {monthDayFmt.format(parseCivil(row.current.endDate))}
+                          </span>
+                        {:else}
+                          <!-- The "+ end date" quiet link (S2 and S3): narrow-only when the row
+                               already carries a start date (the real end-date input handles that
+                               case at the default width instead, below); visible at every width
+                               for a fully undated row, since S3's own fix is exactly "don't show
+                               an empty end-date input beside an empty start-date input" -- there is
+                               nothing for it to pair with yet at ANY width until a start date
+                               exists. -->
+                          <button
+                            type="button"
+                            class="events-add-end-date-link"
+                            class:events-narrow-only={row.current?.startDate != null}
+                            onclick={() => openEndDateField(row)}
+                          >
+                            + end date
+                          </button>
                         {/if}
                       </span>
                       <!-- Always in the DOM, so its own value posts even while CSS-hidden at a
-                           phone width (item 37): `display: none` never drops a field from its
-                           form's own submission, only a genuinely absent or `disabled` one does,
-                           so an officer who edits only the start date at that width still
-                           round-trips whatever end date this row already carries, unchanged;
-                           editing the end date itself at that width happens in the row's own
-                           expanded panel (item 39's own Start date/End date pair) instead. -->
+                           phone width or an undated row: `display: none` never drops a field from
+                           its form's own submission, only a genuinely absent or `disabled` one
+                           does, so an officer who edits only the start date still round-trips
+                           whatever end date this row already carries, unchanged; editing the end
+                           date itself then happens in the row's own expanded panel (Start date/End
+                           date pair) or through the "+ end date" link above, which opens exactly
+                           that panel. `events-end-date-input-hidden` (S3): don't render the empty
+                           end-date input at all until a start date exists -- two empty
+                           `mm/dd/yyyy` boxes side by side read as "half a form", not a date. -->
                       <input
-                        class="input input-sm events-end-date-input"
+                        class="input input-sm events-date-input events-end-date-input"
+                        class:events-end-date-input-hidden={row.current?.startDate == null}
                         type="date"
                         name="endDate"
                         value={row.current?.endDate ?? ''}
                         aria-label={`${row.title} end date, ${data.season}`}
                         onchange={(event) => event.currentTarget.form?.requestSubmit()}
                       />
+                      <!-- S9: the "Saved" confirmation renders beside the very input that changed,
+                           `role="status"` present at load (this element, always rendered, empty
+                           until `showSaved` fills it) rather than only the page-level line above
+                           the toolbar, which sits well off-screen from a row an officer is dating
+                           deep in a long ledger. -->
+                      <span
+                        class="events-row-saved type-meta text-muted"
+                        class:events-row-saved-empty={savedRowId !== row.event.id}
+                        role="status"
+                        aria-live="polite"
+                        aria-atomic="true"
+                      >{savedRowId === row.event.id ? 'Saved' : ''}</span>
                     </form>
                   </div>
                 {:else}
                   <!-- A class row's own current-season text (never a form -- Task 5's own
-                       header comment): capped at the narrow breakpoint (below) so a real
-                       multi-day range's full, unwrapped text (`nowrap` is a table-wide
-                       enforcement, `AdminTable`'s own contract) never sets the WHOLE column's
-                       width off this one row's text, which was silently overriding every width
-                       the date-form's own inputs on other rows were given (measured: this text
-                       alone was the actual 390px overflow's own cause, not the input width). -->
+                       header comment): allowed to wrap onto a second line at the narrow
+                       breakpoint (below) rather than ellipsizing, so a range's own year never
+                       silently drops (the second coherence read's own S1 finding). -->
                   <span class="events-current-text">{instanceText(row.current)}</span>
                 {/if}
               </td>
             {/snippet}
             {#snippet panel(datum: LedgerRow)}
-              <div class="events-panel">
-                {#if datum.kind === 'class'}
-                  <a class="btn btn-sm" href="/admin/club/classes">Open in Classes</a>
-                {:else if datum.event}
-                  <EventRowForm
-                    event={datum.event}
-                    recurrence={datum.recurrence ?? 'annual'}
-                    retiredAt={datum.retiredAt}
-                    seriesId={datum.seriesId}
-                    seriesYearCount={datum.seriesYearCount}
-                    season={data.season}
-                    heroLibrary={data.heroLibrary}
-                    otherSeries={otherSeriesFor(datum)}
-                    error={rowError(datum.id)}
-                  />
-                {:else}
-                  <p class="type-body text-muted">No {data.season} instance yet.</p>
-                {/if}
-              </div>
+              {#if datum.kind === 'class'}
+                <!-- `ExpandableRow` always forces a full-width, padded `<td>` for a panel (this
+                     file's own header comment on that component's contract); a class row has
+                     nothing to edit here, so the second coherence read's own fix (item S7) is a
+                     single-line quiet link rather than the wide empty band the default panel
+                     styling gave it. `events-class-panel` overrides that outer `<td>`'s own
+                     padding/background below, `!important` because it must win regardless of
+                     which of the two same-specificity compiled rules loads last (`ExpandableRow`'s
+                     own scoped `.toolkit-expandable-row-panel td` rule and this one). -->
+                <div class="events-class-panel">
+                  <a class="events-class-panel-link" href="/admin/club/classes">Open in Classes</a>
+                </div>
+              {:else}
+                <div class="events-panel">
+                  {#if datum.event}
+                    <EventRowForm
+                      event={datum.event}
+                      recurrence={datum.recurrence ?? 'annual'}
+                      retiredAt={datum.retiredAt}
+                      seriesId={datum.seriesId}
+                      seriesYearCount={datum.seriesYearCount}
+                      season={data.season}
+                      heroLibrary={data.heroLibrary}
+                      otherSeries={otherSeriesFor(datum)}
+                      error={rowError(datum.id)}
+                      focusField={endDateFocusRequest === datum.id ? 'endDate' : null}
+                      onFocusHandled={() => (endDateFocusRequest = null)}
+                    />
+                  {:else}
+                    <p class="type-body text-muted">No {data.season} instance yet.</p>
+                  {/if}
+                </div>
+              {/if}
             {/snippet}
           </ExpandableRow>
         {/each}
@@ -539,6 +687,30 @@ panel instead, via `EventRowForm`'s new `error` prop.
   .events-toolbar-band {
     display: flex;
     flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  /* `ListToolbar`'s own count line is real (`count`/`itemLabel` stay honest, type-required
+     props), just not shown: this route renders an equivalent one itself, in
+     `.events-toolbar-summary` below, on the same row as the roll-forward controls (S5's own
+     two-band fix, this file's header comment on the toolbar markup explains why). */
+  .events-toolbar-band :global(.toolkit-toolbar-count) {
+    display: none;
+  }
+
+  .events-toolbar-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .events-toolbar-count-line {
+    margin: 0;
+    font-size: var(--cairn-type-meta, 0.8125rem);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-muted);
   }
 
   /* Mirrors `classes/+page.svelte`'s own `PageHeader` margin fix (Members-refinement-round-1's
@@ -555,14 +727,18 @@ panel instead, via `EventRowForm`'s new `error` prop.
   }
 
   /* The page-level status line (item 24): always in the DOM (a stable `role="status"` target),
-     collapsing to nothing when it carries no text so an empty announcement never reserves
-     visible height. */
+     collapsing to nothing when it carries no text so an empty announcement never reserves visible
+     height. A `class:` toggle, not `:empty` (the cosmetic item, second coherence read): Svelte's
+     own text interpolation leaves an empty (zero-length) Text node in the DOM rather than removing
+     the node outright, and `:empty` requires literally no child nodes at all, so the selector
+     never matched and this line's own bottom margin rendered on every load regardless of whether
+     it carried text. */
   .events-status-line {
     margin: 0 0 0.75rem;
     font-size: var(--cairn-type-meta, 0.8125rem);
     font-weight: 500;
   }
-  .events-status-line:empty {
+  .events-status-line-empty {
     display: none;
   }
 
@@ -602,6 +778,12 @@ panel instead, via `EventRowForm`'s new `error` prop.
     background-color: var(--color-base-100);
   }
 
+  /* S8: a real (minimal-width) column, not a `position: absolute` one -- see the header snippet's
+     own comment for why that kept the border-bottom rule from reaching this column at all. */
+  .events-details-header {
+    width: 1px;
+  }
+
   .events-name-text {
     display: flex;
     align-items: center;
@@ -614,6 +796,21 @@ panel instead, via `EventRowForm`'s new `error` prop.
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  /* The state-marker chip (cosmetic item, second coherence read): no colored dot -- see the
+     summary snippet's own comment for why a category chip's dot and a state marker's dot would
+     otherwise read as the same vocabulary. Literal values, matching `StatusChip`'s own quiet
+     register (`color-mix(in oklab, var(--color-base-content) 14%, var(--color-base-300))`), since
+     that component's own scoped classes are not a reachable selector from here. */
+  .events-state-chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    padding: 0.0625rem 0.5rem;
+    font-size: var(--cairn-type-chip, 0.625rem);
+    font-weight: 600;
+    background-color: color-mix(in oklab, var(--color-base-content) 14%, var(--color-base-300));
   }
 
   .events-name-chips {
@@ -655,17 +852,73 @@ panel instead, via `EventRowForm`'s new `error` prop.
   .events-date-form-wrap :global(input[type='date']) {
     width: 8rem;
     min-width: 0;
+    font-variant-numeric: tabular-nums;
   }
 
+  /* Matches the button ring (S10 of the second coherence read's fix brief); `EventRowForm.svelte`
+     carries the identical override with the identical reasoning in its own comment. */
+  .events-date-form-wrap :global(input[type='date']:focus),
+  .events-date-form-wrap :global(input[type='date']:focus-within) {
+    outline: 2px solid var(--color-primary) !important;
+    outline-offset: 2px !important;
+    box-shadow: 0 1px var(--color-primary) !important;
+  }
+
+  /* Flex-row by default (desktop: the end-date note/link sits beside the start input, roughly
+     where the real end-date input would); flips to a column at the narrow breakpoint below, so
+     the same markup renders "under the start input" there (S2). */
   .events-start-date-wrap {
     position: relative;
     display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
   }
 
-  /* The range cue (item 37/38): purely decorative and zero-width (`position: absolute`), so a
-     row with a real end date still reads as a range at a glance without the layout cost of a
-     second live input -- see the breakpoint below for why that cost does not fit at all. */
-  .events-range-dot {
+  /* The end-date note/link default state: visible (desktop), no special treatment needed --
+     `events-narrow-only` (below) is what hides one of the two at the default width when the real
+     end-date input already covers that case. */
+  .events-end-date-note,
+  .events-add-end-date-link {
+    white-space: nowrap;
+  }
+
+  /* A quiet text-button, not a `.btn` (S2/S3): reads as an affordance beside the date, never a
+     bordered control competing with the row's own trigger button. Literal values, per the toolkit
+     README's own compiled-CSS constraint. */
+  .events-add-end-date-link {
+    border: none;
+    background: none;
+    padding: 0;
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklab, var(--color-primary) 45%, transparent);
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--cairn-type-meta, 0.8125rem);
+  }
+
+  .events-add-end-date-link:hover {
+    text-decoration-color: var(--color-primary);
+  }
+
+  /* S9: present at load (this file's header comment on the summary snippet explains why), empty
+     until `showSaved` fills it. A `class:` toggle, not a `:empty` selector: Svelte's own text
+     interpolation leaves an empty (zero-length) Text node in the DOM rather than removing the node
+     outright, and `:empty` requires literally no child nodes at all, so it never matches here --
+     the same defect this file's page-level status line patches the same way, below. */
+  .events-row-saved-empty {
+    display: none;
+  }
+
+  /* S3: don't render the empty end-date input at all until a start date exists (the desktop half
+     of the same rule the narrow breakpoint below already enforces unconditionally). */
+  .events-end-date-input-hidden {
+    display: none;
+  }
+
+  /* Hidden by default (S3): shown only at the narrow breakpoint below, where the real end-date
+     input is always hidden and the note/link stand in for it instead. */
+  .events-narrow-only {
     display: none;
   }
 
@@ -673,42 +926,72 @@ panel instead, via `EventRowForm`'s new `error` prop.
      (item 31) already consume all but ~124px of a 356px row for the name and trigger columns
      together, leaving no room for a second live date input beside them (`AdminTable`'s own
      horizontal-scroll fallback would strand the trigger off-screen otherwise) -- measured
-     directly: even a single legible native date input plus that fixed overhead is close to this
-     viewport's own budget, and two together never fit regardless of how far either narrows. Two
-     fixes close the gap: dropping the prior-season columns from the summary (their data already
-     resurfaces as prior-year text in the panel), and showing only the start-date input here, with
-     the end date (when this row carries one) reduced to the small dot cue above rather than a
-     second input -- editing it at this width happens in the row's own expanded panel (item 39's
-     own Start date/End date pair), which has the full page width to work with. */
+     directly. So this breakpoint still shows only the start-date input; what changed (the second
+     coherence read's own S1/S2 fixes) is how much room that ONE input gets and what replaces the
+     dot cue that used to mark a range: the cell measured 116.5px available once the two
+     narrow-hidden columns clear, comfortably past the 112px floor a legible `mm/dd/yyyy` value
+     plus Chromium's own picker glyph needs (the glyph itself is hidden below, since at 84px it
+     overlapped the value's own trailing digits). */
   @media (max-width: 640px) {
     .events-name-text {
       max-width: 10rem;
     }
 
+    /* S1: wraps to a second line instead of ellipsizing a long title (the cosmetic item, second
+       coherence read). `-webkit-line-clamp` is Chromium/WebKit-only, matching this admin surface's
+       own Chromium-only browser target; a third line still ellipsizes rather than growing the row
+       without bound. */
+    .events-name-title {
+      overflow: visible;
+      white-space: normal;
+      text-overflow: clip;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
     .events-date-form-wrap :global(input[type='date']) {
-      width: 5.25rem;
+      width: 7.25rem;
+      min-width: 112px;
+    }
+
+    /* S1: Chromium's own calendar-picker glyph rendered inside the input's own box at this width,
+       overlapping the value's trailing digits (`20‌27` clipped under the icon). Hiding it keeps
+       keyboard entry (typing into the mm/dd/yyyy segments) fully intact; only the glyph's own
+       click-to-open affordance goes away, and only at this width, where there was no room for it
+       beside a legible value in the first place. */
+    .events-date-form-wrap :global(input[type='date']::-webkit-calendar-picker-indicator) {
+      display: none;
+    }
+
+    .events-start-date-wrap {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.125rem;
     }
 
     .events-end-date-input {
       display: none;
     }
 
-    .events-current-text {
-      display: inline-block;
-      max-width: 5.5rem;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .events-row-saved {
+      display: none;
     }
 
-    .events-range-dot {
-      display: block;
-      position: absolute;
-      top: -1px;
-      right: -1px;
-      width: 0.375rem;
-      height: 0.375rem;
-      border-radius: 50%;
-      background: var(--color-primary);
+    /* S1: widened (not ellipsized) so a class row's own current-season range keeps its year
+       (`Jun 12–13, 2027`) -- `white-space: normal` overrides the inherited `nowrap` this element
+       would otherwise take from `AdminTable`'s own per-cell enforcement (a direct declaration on
+       this element always wins over an inherited one, regardless of either rule's specificity),
+       letting a range that still doesn't fit wrap onto a second line rather than truncate. */
+    .events-current-text {
+      display: inline-block;
+      max-width: 7.25rem;
+      white-space: normal;
+    }
+
+    .events-narrow-only {
+      display: inline;
     }
 
     .events-narrow-hide {
@@ -721,6 +1004,44 @@ panel instead, via `EventRowForm`'s new `error` prop.
     flex-direction: column;
     gap: 0.5rem;
     align-items: flex-start;
+  }
+
+  /* S7: a class row has nothing to edit, so its own panel overrides `ExpandableRow`'s own
+     `.toolkit-expandable-row-panel td` rule (padding, `base-300` background, the inset-shadow
+     depth cue -- all sized for a real multi-field form) down to a single 40px-tall strip, rather
+     than the wide, mostly-empty band that rule gave a one-link panel. `:has()` reaches the `<td>`
+     ExpandableRow itself renders (opaque to this component's own scoped selectors, the same
+     reason `AdminTable`'s `td`/`th` enforcement needs `:global()`) via the one thing this file DOES
+     control, the panel's own content; `!important` because it must win regardless of which of the
+     two same-specificity compiled rules loads last, matching the reasoning `ListToolbar`'s own
+     compiled-CSS override already carries for the identical problem. */
+  :global(tr.toolkit-expandable-row-panel:has(.events-class-panel) td) {
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .events-class-panel {
+    display: flex;
+    min-height: 40px;
+    align-items: center;
+    padding: 0 1.5rem;
+  }
+
+  .events-class-panel-link {
+    border: none;
+    background: none;
+    padding: 0;
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklab, var(--color-primary) 45%, transparent);
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--cairn-type-meta, 0.8125rem);
+  }
+
+  .events-class-panel-link:hover {
+    text-decoration-color: var(--color-primary);
   }
 
   /* The blank "New event" row's own cell: `white-space: normal` overrides `AdminTable`'s
@@ -778,11 +1099,4 @@ panel instead, via `EventRowForm`'s new `error` prop.
     padding-top: 0.5rem;
   }
 
-  /* Right-aligns the toolbar's own view-specific slot (item 44: "the toolbar's trailing edge"),
-     the closest this screen can get to that placement inside `ListToolbar`'s sealed column
-     layout -- `trailing` always renders as its own line below the count line, by that
-     component's own contract, so this is a horizontal alignment fix, not a line-count one. */
-  .events-toolbar-band :global(.toolkit-toolbar-trailing) {
-    align-self: flex-end;
-  }
 </style>

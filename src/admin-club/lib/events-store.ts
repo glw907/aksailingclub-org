@@ -58,10 +58,17 @@ export const EVENT_RECURRENCE_LABEL: Record<EventRecurrence, string> = {
 
 /** The one place the category chip's dressing is decided (design doc's "one dressing" ruling,
  *  the catalog's "four different dressings" finding): every consumer reads this map rather than
- *  hand-rolling its own tone-to-category guess. */
+ *  hand-rolling its own tone-to-category guess.
+ *
+ *  `class` reads `neutral`, not `warning` (the second coherence read's own finding): `warning` is
+ *  part of the club-grounds palette's reserved alarm vocabulary (CLAUDE.md's "the semantic
+ *  palette stays a separate reserved vocabulary"), and a Class row's own gold star already marks
+ *  it -- the chip's dot needs only to read as a plain category, not another alarm color. `racing`
+ *  keeps `info`, which is not part of that reserved set, so the two categories still read as two
+ *  different dot colors at a glance. */
 export const EVENT_CATEGORY_TONE: Record<EventCategory, StatusChipTone> = {
   racing: 'info',
-  class: 'warning',
+  class: 'neutral',
   operations: 'neutral',
   social: 'neutral',
   governance: 'neutral',

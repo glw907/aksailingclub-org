@@ -63,6 +63,8 @@ the field it concerns rather than only at the top of the page.
     heroLibrary,
     otherSeries = [],
     error = null,
+    focusField = null,
+    onFocusHandled,
     onCancel,
   }: {
     /** `null` for the blank "New event" panel; the row's own current-season `EventRow` otherwise. */
@@ -82,6 +84,14 @@ the field it concerns rather than only at the top of the page.
      *  the top of the form. `null` when nothing was refused, or the refusal concerned a different
      *  row. */
     error?: string | null;
+    /** The ledger's own "+ end date" quiet link (`+page.svelte`'s `openEndDateField`): the field
+     *  name to focus and scroll into view once this panel mounts. `null` for a normal open (the
+     *  chevron, a redirect landing, or the blank "New event" panel, which has its own separate
+     *  Title autofocus below). */
+    focusField?: 'endDate' | null;
+    /** Fires once `focusField` has been focused, so the ledger can clear its own request state
+     *  and not re-fire it the next time this row happens to re-render. */
+    onFocusHandled?: () => void;
     /** The blank panel's own Cancel, closing it with nothing written. `undefined` for an existing
      *  row, which has no equivalent "abandon" gesture. */
     onCancel?: () => void;
@@ -125,6 +135,21 @@ the field it concerns rather than only at the top of the page.
     void (async () => {
       await tick();
       formEl?.querySelector<HTMLInputElement>('input[name="title"]')?.focus();
+    })();
+  });
+
+  // The ledger's own "+ end date" quiet link (item S2 of the second coherence read's fix brief):
+  // this panel mounts fresh every time `ExpandableRow`'s own `{#if expanded}` opens it, so a
+  // plain (non-`untrack`ed) effect keyed off `focusField` runs once per mount, the same shape the
+  // Title-autofocus effect above already carries.
+  $effect(() => {
+    if (!focusField) return;
+    void (async () => {
+      await tick();
+      const field = formEl?.querySelector<HTMLInputElement>(`input[name="${focusField}"]`);
+      field?.focus();
+      field?.scrollIntoView({ block: 'center' });
+      onFocusHandled?.();
     })();
   });
 
@@ -342,6 +367,34 @@ the field it concerns rather than only at the top of the page.
   .event-row-form-hero {
     border-top: 1px solid var(--cairn-card-border);
     padding-top: 1rem;
+  }
+
+  /* The Start/End date fields' own numeric alignment (S3 of the second coherence read's fix
+     brief): the `mm/dd/yyyy` segments line up down the column instead of drifting a pixel or two
+     per digit width. */
+  .event-row-form-grid :global(input[type='date']) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Matches the button ring (S10 of the second coherence read's fix brief): cairn-admin.css's own
+     `.input:focus`/`.select:focus`/`.textarea:focus` (and their `:focus-within` siblings) set
+     `--input-color: var(--color-base-content)`, which both darkens the underline `box-shadow` AND
+     recolors the `outline` off that same custom property -- a near-black ring, not the primary one
+     every `.btn` gets from the sheet's own unqualified `:focus-visible` rule. Overriding
+     `outline`/`box-shadow` directly (rather than only the custom property) is deliberate: it wins
+     regardless of which of the sheet's own same-specificity `.input:focus`/`.input:focus-within`
+     declarations happens to load last, the same reasoning `ListToolbar`'s own compiled-CSS
+     override carries its `!important` for. Likely a cairn-level mechanic, not a site choice --
+     filed as this pass's own harvest finding 6 (`docs/2026-08-22-events-admin-harvest-findings.md`). */
+  .event-row-form :global(.input:focus),
+  .event-row-form :global(.input:focus-within),
+  .event-row-form :global(.select:focus),
+  .event-row-form :global(.select:focus-within),
+  .event-row-form :global(.textarea:focus),
+  .event-row-form :global(.textarea:focus-within) {
+    outline: 2px solid var(--color-primary) !important;
+    outline-offset: 2px !important;
+    box-shadow: 0 1px var(--color-primary) !important;
   }
 
   /* item 41: Delete demoted to its own right-hand danger zone, rather than sitting in the same

@@ -60,9 +60,11 @@ const WRITE: EventWrite = {
 
 describe('static vocabularies', () => {
   it('EVENT_CATEGORY_TONE maps every category to its ratified tone', () => {
+    // `class` reads `neutral`, not `warning` (the second coherence read's own fix): `warning` is
+    // the reserved alarm vocabulary, and the gold star already marks a Class row.
     expect(EVENT_CATEGORY_TONE).toEqual({
       racing: 'info',
-      class: 'warning',
+      class: 'neutral',
       operations: 'neutral',
       social: 'neutral',
       governance: 'neutral',

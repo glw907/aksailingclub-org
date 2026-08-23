@@ -48,7 +48,13 @@
    for it as ink (the class-row star, a "Needs alt" cue) and measured 1.6:1 and 2.1:1. The
    admin theme already defines `--cairn-warning-ink` for exactly this; the token's name invites
    the mistake. A `cairn-audit` rule that flags `color: var(--color-{warning,success,error})`
-   on text in admin scope would catch it at build time.
+   on text in admin scope would catch it at build time. The second coherence read found a
+   sibling mismatch in the same admin theme: `.input:focus`/`.select:focus`/`.textarea:focus`
+   (and their `:focus-within` pairs) set `--input-color: var(--color-base-content)`, so a text
+   field's own outline and underline both read a near-black ring while every `.btn` gets the
+   sheet's unqualified `:focus-visible` rule's primary-toned one -- two different focus rings on
+   one screen with no site-level reason for the split. `EventRowForm.svelte` patches it locally
+   with an `!important` override; the admin theme wants one focus-ring token both paths read.
 
 7. **A disclosure panel in a toolbar is a toolkit primitive, not a per-screen build.**
    `ListToolbar`'s overflow menu already carries the right mechanics (`aria-expanded`,
