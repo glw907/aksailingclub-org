@@ -6,14 +6,15 @@
 > `ROADMAP.md`; pre-2026-08-21 status entries are `docs/status-archive.md`. Pruning means
 > moving to one of those, never deleting.
 
-**Current state (2026-08-22).** The site runs cairn `^0.96.0` on `main` (`92ed533`), with the
-events-redesign and its header round on dev.aksailingclub.org. In flight: the `events-admin`
-pass on branch `events-admin`, executing `docs/plans/2026-08-22-events-admin.md` (spec
-`docs/2026-08-22-events-admin-design.md`: the series ledger, annual/once recurrence, the
-season roll-forward, the hero picker, migration `0035_event_series`) through the
-pass-execute workflow, tasks 1 to 5 chained; task 6 (live migration, reviewers, coherence
-read, harvest, records) is the conductor's close. The apex cutover remains its own deliberate
-DNS change, never bundled with a push.
+**Current state (2026-08-23).** The site runs cairn `^0.96.0` on `main` (`92ed533`), with the
+events-redesign on dev. The `events-admin` pass is built on branch `events-admin`, PR #8 green
+on `ed78ae8`: migrations `0035_event_series` and `0036_event_indexes` are APPLIED LIVE (records
+in their READMEs; 0035's rollback is expired), the series ledger, roll-forward, row form, and
+hero picker are in, four domain reviews and a cleanup are folded in, the harvest doc is
+`docs/2026-08-22-events-admin-harvest-findings.md`. The cold coherence read still FAILS (11
+tells, `docs/design-benchmark/ledger.md`) and the pass sits past its 2M token ceiling, so the
+merge waits on Geoff's call: a third fix round before dev, or merge now and polish after. The
+apex cutover remains its own deliberate DNS change, never bundled with a push.
 
 **Immediate next action (Geoff's).** The events before/after (below). Also from 0.95/0.96,
 on dev: smartypants typography on a prose page (compare `/governance` against production),

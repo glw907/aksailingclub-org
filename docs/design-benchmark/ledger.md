@@ -258,3 +258,36 @@ the owner's queue.
 - **Class mark contrast** — APPLIED: `--color-star-gold-dot` (3.70:1) with an sr-only label.
 - **Subscribe targets** — APPLIED: padded to about 30px; `checkTouchTargets` now runs on
   `/events` at 390.
+## Events admin ledger, events-admin pass (2026-08-22/23, fresh-context coherence reads)
+
+Two cold reads (Opus `visual-verifier`), both grounded: the twelve live series seeded across
+2024-2027 in the local replica, the roll-forward run through the page's own action, rows dated
+through the inline cell, the 53 committed media objects loaded so the hero picker rendered
+photographs.
+
+**First read (2026-08-22): FAIL** (10 tells, three sharing one root cause). `.events-name-cell
+{ display: flex }` took the name cell out of the row box (37px in an 87px row: title 25px
+above its dates, an empty lower half, a white notch in every tinted row); the wrapping date
+form made undated rows twice the height of dated ones; the 390 summary row measured 640px in
+a 356px wrapper with the panel cut mid-word; the row form split start/end pairs diagonally;
+UA discs in the roll-forward list (the 2026-07-21 tell again); Delete undemoted; the new-event
+form on a different ground; the hero picker unlabeled with circular thumbs; the roll button
+orphaned; the empty state removing the season selector. All ten fixed in `ed78ae8`.
+
+**Second read (cold, 2026-08-23): FAIL** (11 tells). The ten fixes verified by measurement
+(name cell equals row height everywhere, 52px rows dated and undated alike, `scrollWidth ===
+clientWidth` at 390 in every state, list markers none, Delete 704px from its neighbors, no
+text under 4.5:1 in either theme, chips compiled). What fails is what the 390 fit was bought
+with: the surviving date input is 84px against 82px of text, so the typed value renders under
+the picker glyph and clips on every editable row; the end date has no 390 affordance beyond an
+unlabeled 6px dot; the class row's read-only date drops its year. Beside that: the editable
+column in US-numeric notation against two typeset columns, with an empty second box on every
+undated row; the Class chip's dot is the warning token the color story reserves away from
+education; the roll button still on its own toolbar line between two mismatched counts; the
+header rule 48px short of the row rules (the `sr-only` Details `th` carries no border); the
+hero picker's label after its search box, the selection named by slug in a circular crop; a
+class row's drawer holding one button; "Saved." firing a quarter-viewport above the fold
+during a scrolled burst; focus rings differing by control family; the season facet showing
+no value on the default view. Open at the pass's token ceiling; the fix round is Geoff's call
+(STATUS).
+
