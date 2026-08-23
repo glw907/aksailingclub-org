@@ -31,7 +31,7 @@ function d1File(relativeSqlPath) {
   });
 }
 
-function schemaAlreadyMigrated() {
+function tableExists(name) {
   const out = execFileSync(
     'npx',
     [
@@ -42,7 +42,7 @@ function schemaAlreadyMigrated() {
       '--local',
       '--json',
       '--command',
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='settings'",
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='${name}'`,
     ],
     { cwd: repoRoot },
   ).toString();
@@ -60,8 +60,15 @@ function applyMigrations() {
   }
 }
 
-if (!schemaAlreadyMigrated()) {
+if (!tableExists('settings')) {
   applyMigrations();
+} else if (!tableExists('event_series')) {
+  // A warm workstation replica that already carries 0001-0034 (the `settings` probe above short-
+  // circuits `applyMigrations()` for it) still needs 0035_event_series applied on its own: a
+  // blanket re-run of every migration is not the fix, since re-running 0001_substrate's own
+  // `CREATE TABLE` statements against an already-populated replica fails outright. This narrow,
+  // additive probe is how a new migration reaches an existing local replica without one.
+  d1File(path.join(migrationsDir, '0035_event_series', 'forward.sql'));
 }
 
 d1File(path.join(repoRoot, 'e2e/fixtures/events-seed.sql'));

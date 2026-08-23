@@ -100,14 +100,18 @@ const OFF_SEASON_LABEL = 'Off-season';
 /** The events table's own SELECT; `visible = 1` matches the legacy ops-sourced read's public
  *  filter. `date_history` has no asc-club equivalent (the ratified DDL carries no such column, see
  *  the header comment); selected as a literal `NULL` so the row shape below, and its shared date
- *  helpers, stay unchanged. */
+ *  helpers, stay unchanged. `AND (?1 IS NULL OR season = ?1)` (events-admin pass, migration
+ *  0035_event_series: `events` now carries a real `season` column) mirrors `CLASSES_QUERY`'s own
+ *  season scope below; `?1 IS NULL` is the unset-`current_season` arm, which reads every event
+ *  rather than none, matching that same posture. */
 const EVENTS_QUERY = `SELECT id, title, slug, category AS event_type, start_date, end_date, NULL AS date_history
-                       FROM events WHERE visible = 1`;
+                       FROM events WHERE visible = 1 AND (?1 IS NULL OR season = ?1)`;
 /** The classes table's SELECT, tagged with the synthesized `'class'` category (see the header
  *  comment on why `classes` carries no category column of its own). `season = ?1` is the fix for
  *  a real display bug: the MembershipWorks import mints a `classes` row per season, so an
  *  unfiltered read leaked 2024/2025 instances of the same class into the current calendar as
- *  duplicate, wrong-dated entries. `events` carries no `season` column and needs no such filter. */
+ *  duplicate, wrong-dated entries. `events` now carries its own `season` column too and scopes
+ *  the same way, above. */
 const CLASSES_QUERY = `SELECT id, name AS title, slug, 'class' AS event_type, start_date, end_date, NULL AS date_history
                         FROM classes WHERE visible = 1 AND season = ?1`;
 const CURRENT_SEASON_QUERY = `SELECT value FROM settings WHERE key = 'current_season' LIMIT 1`;
@@ -279,7 +283,7 @@ export async function loadSeasonMonths(db: D1Database, currentYear = new Date().
   try {
     const season = await readCurrentSeason(db);
     const [events, classes] = await Promise.all([
-      db.prepare(EVENTS_QUERY).all<EventRow>(),
+      db.prepare(EVENTS_QUERY).bind(season).all<EventRow>(),
       season === null ? Promise.resolve({ results: [] as EventRow[] }) : db.prepare(CLASSES_QUERY).bind(season).all<EventRow>(),
     ]);
     return buildSeasonMonths([...(events.results ?? []), ...(classes.results ?? [])], currentYear);
@@ -308,6 +312,11 @@ export async function loadSeasonMonths(db: D1Database, currentYear = new Date().
  * winter, the exact window the `off-season` "reassure-and-anticipate" state exists for. `null`
  * (the `current_season` setting unset) skips the bound entirely, matching `loadSeasonMonths`'s
  * own "no filter when unset" posture for the classes arm.
+ *
+ * `events` now carries a real `season` column of its own (migration 0035_event_series), and
+ * `EVENTS_QUERY` scopes on it directly; this JS-side bound stays as-is regardless, since it still
+ * guards the direct-array callers below (this function's own unit tests) that never go through
+ * that SQL at all.
  */
 export function seasonHasLiveEvents(rows: EventRow[], today: Date, currentSeason: number | null = null): boolean {
   const todayIso = today.toISOString().slice(0, 10);
@@ -327,7 +336,7 @@ export async function loadSeasonHasLiveEvents(db: D1Database, today = new Date()
   try {
     const season = await readCurrentSeason(db);
     const [events, classes] = await Promise.all([
-      db.prepare(EVENTS_QUERY).all<EventRow>(),
+      db.prepare(EVENTS_QUERY).bind(season).all<EventRow>(),
       season === null ? Promise.resolve({ results: [] as EventRow[] }) : db.prepare(CLASSES_QUERY).bind(season).all<EventRow>(),
     ]);
     return seasonHasLiveEvents([...(events.results ?? []), ...(classes.results ?? [])], today, season);

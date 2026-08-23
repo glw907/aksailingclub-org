@@ -54,19 +54,21 @@ const EVENTS_COLUMNS = `SELECT id, title, slug, category AS event_type, start_da
                                NULL AS registration_url, NULL AS registration_status, NULL AS fee,
                                NULL AS track, NULL AS drop_in
                         FROM events`;
-/** Every visible event of the current season. `events` carries no `season` column of its own
- *  (only `classes` does), so the season is read off the stored `start_date`'s own year, as text:
- *  `substr` yields a string, and SQLite never equates a string to an integer, so the caller binds
- *  the season as text too. An undated row has no year to test and always stays: a TBD event is
- *  the club announcing something for the season now under way, never a leftover from a past one.
- *  `?1 IS NULL` is the unset-`current_season` arm, which reads every event rather than none: an
- *  unconfigured setting should quiet the season filter, not empty the page. */
-const EVENTS_QUERY = `${EVENTS_COLUMNS} WHERE visible = 1
-                        AND (?1 IS NULL OR start_date IS NULL OR substr(start_date, 1, 4) = ?1)`;
+/** Every visible event of the current season. `events` now carries a real `season` column
+ *  (`migrations/asc-club/0035_event_series/`), so this filters on it directly rather than
+ *  deriving a year from `start_date`; an undated row's `season` is still set (the migration backs
+ *  it onto `settings.current_season` when there is no date to read one from), so an undated row
+ *  in the selected season still reads. `?1 IS NULL` is the unset-`current_season` arm, which
+ *  reads every event rather than none: an unconfigured setting should quiet the season filter,
+ *  not empty the page. */
+const EVENTS_QUERY = `${EVENTS_COLUMNS} WHERE visible = 1 AND (?1 IS NULL OR season = ?1)`;
 /** One event by its public route segment (its slug), for the per-event stub and its `.ics`
  *  sibling: a targeted read, never the whole table filtered in JavaScript. No season filter here,
- *  since a shared link to a past season's event should still unfurl rather than 404. */
-const EVENT_BY_SLUG_QUERY = `${EVENTS_COLUMNS} WHERE slug = ?1 AND visible = 1 LIMIT 1`;
+ *  since a shared link to a past season's event should still unfurl rather than 404. **Plan
+ *  decision:** slug is no longer globally unique (`UNIQUE (season, slug)`, migration 0035), so a
+ *  rolled-forward series can have one row per season sharing a slug; `ORDER BY season DESC`
+ *  resolves to the most recent instance rather than an arbitrary one. */
+const EVENT_BY_SLUG_QUERY = `${EVENTS_COLUMNS} WHERE slug = ?1 AND visible = 1 ORDER BY season DESC LIMIT 1`;
 /** The classes table's full-detail SELECT, tagged with the synthesized `'class'` category. Two
  *  differences from the events query above, both forced by the ratified `classes` schema
  *  (`migrations/asc-club/0001_substrate/`), which was never designed to carry the public listing's
@@ -85,8 +87,8 @@ const EVENT_BY_SLUG_QUERY = `${EVENTS_COLUMNS} WHERE slug = ?1 AND visible = 1 L
  *  `classes` carries no `start_time`/`end_time` column of its own, so both select as a literal
  *  `NULL`. `season = ?1` is the fix for a real display bug: the MembershipWorks import mints a
  *  `classes` row per season, so an unfiltered read leaked prior-season instances of the same class
- *  into the listing as duplicate, wrong-dated entries; `events` carries no `season` column and
- *  needs no such filter. */
+ *  into the listing as duplicate, wrong-dated entries; `events` now carries its own `season`
+ *  column too and scopes the same way (see `EVENTS_QUERY`, above). */
 const CLASSES_COLUMNS = `SELECT id, name AS title, slug, 'class' AS event_type, start_date,
                                NULL AS start_time, end_date, NULL AS end_time,
                                NULL AS date_history, location, NULL AS short_description,
@@ -131,9 +133,8 @@ export async function readEventRows(db: D1Database): Promise<EventRowsRead> {
   try {
     const season = await readCurrentSeason(db);
     const [events, classes] = await Promise.all([
-      // Bound as text, not as a number: the filter compares against `substr(start_date, 1, 4)`,
-      // and SQLite never equates a string to an integer.
-      db.prepare(EVENTS_QUERY).bind(season === null ? null : String(season)).all<EventDetailRow>(),
+      // Bound as a number: the filter now compares against the real `season INTEGER` column.
+      db.prepare(EVENTS_QUERY).bind(season).all<EventDetailRow>(),
       season === null
         ? Promise.resolve({ results: [] as EventDetailRow[] })
         : db.prepare(CLASSES_QUERY).bind(season).all<EventDetailRow>(),

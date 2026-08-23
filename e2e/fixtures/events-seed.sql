@@ -45,30 +45,44 @@ DELETE FROM credit_redemptions;
 DELETE FROM class_enrollments;
 DELETE FROM classes;
 DELETE FROM events;
+DELETE FROM event_series;
 
+-- One series per fixture event (migration 0035_event_series), the same 'series-' || events.id
+-- derivation the migration's own backfill uses, so a re-run stays reproducible. Every row is
+-- 'annual' here; nothing in this suite exercises the roll-forward or a 'once' series.
+INSERT INTO event_series (id, title, recurrence) VALUES
+  ('series-test-regatta', 'Test Regatta', 'annual'),
+  ('series-test-spring-work-party', 'Test Spring Work Party', 'annual'),
+  ('series-test-off-season-social', 'Test Off-Season Social', 'annual'),
+  ('series-test-annual-meeting', 'Test Annual Meeting', 'annual');
+
+-- `season` equals the `settings.current_season` value `0001_substrate` seeds ('2026'): the public
+-- season filter (`$theme/events-data.ts`'s `EVENTS_QUERY`, `$theme/season-data.ts`'s own copy)
+-- now scopes on this real column, so a fixture row seeded into any other season would silently
+-- vanish from every `/events` visual baseline.
 INSERT INTO events (
-  id, title, slug, category, start_date, start_time, end_date, end_time, location, short_description, long_description, visible
+  id, series_id, season, title, slug, category, start_date, start_time, end_date, end_time, location, short_description, long_description, visible
 ) VALUES
   (
-    'test-regatta', 'Test Regatta', 'test-regatta', 'racing', '2026-07-10', '10:00', '2026-07-11', NULL, 'Alaska Sailing Club',
+    'test-regatta', 'series-test-regatta', 2026, 'Test Regatta', 'test-regatta', 'racing', '2026-07-10', '10:00', '2026-07-11', NULL, 'Alaska Sailing Club',
     'A one-day fixture regatta for the visual suite.',
     'Racing starts at 10am both days, weather permitting.',
     1
   ),
   (
-    'test-spring-work-party', 'Test Spring Work Party', 'test-spring-work-party', 'operations', '2026-05-18', NULL, '2026-05-18', NULL, 'Alaska Sailing Club',
+    'test-spring-work-party', 'series-test-spring-work-party', 2026, 'Test Spring Work Party', 'test-spring-work-party', 'operations', '2026-05-18', NULL, '2026-05-18', NULL, 'Alaska Sailing Club',
     'Dock building and general grounds work.',
     NULL,
     1
   ),
   (
-    'test-off-season-social', 'Test Off-Season Social', 'test-off-season-social', 'social', '2026-11-05', NULL, '2026-11-05', NULL, 'Anchorage, AK',
+    'test-off-season-social', 'series-test-off-season-social', 2026, 'Test Off-Season Social', 'test-off-season-social', 'social', '2026-11-05', NULL, '2026-11-05', NULL, 'Anchorage, AK',
     'A fixture off-season gathering.',
     NULL,
     1
   ),
   (
-    'test-annual-meeting', 'Test Annual Meeting', 'test-annual-meeting', 'governance', '2026-11-14', NULL, NULL, NULL, 'Google Meet',
+    'test-annual-meeting', 'series-test-annual-meeting', 2026, 'Test Annual Meeting', 'test-annual-meeting', 'governance', '2026-11-14', NULL, NULL, NULL, 'Google Meet',
     'Election of officers, fixture data only.',
     NULL,
     1

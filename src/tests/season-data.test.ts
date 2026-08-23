@@ -263,6 +263,37 @@ describe('loadSeasonMonths', () => {
     expect(names).not.toContain('Adult Intro');
     expect(names).toContain('BNAC');
   });
+
+  it('binds the season, as a number, to the events query, scoped by the real season column', async () => {
+    const EVENTS_BY_SEASON: Record<number, typeof EVENT_ROWS> = {
+      2026: EVENT_ROWS,
+      2027: [{ id: 'next-season', title: 'Next Season', slug: 'next-season', event_type: 'racing', start_date: '2027-06-01', end_date: '2027-06-01', date_history: null }],
+    };
+    const { db, calls } = fakeD1({
+      firstResults: { "FROM settings WHERE key = 'current_season'": { value: '2026' } },
+      allResults: {
+        'FROM events WHERE': (args) => EVENTS_BY_SEASON[args[0] as number] ?? [],
+        'FROM classes WHERE': [],
+      },
+    });
+    const months = await loadSeasonMonths(db, 2026);
+    const names = months.flatMap((m) => m.events).map((e) => e.name);
+    expect(names).toEqual(['BNAC']);
+
+    const eventsCall = calls.find((call) => call.sql.includes('FROM events WHERE'));
+    expect(eventsCall?.sql).toContain('season = ?1');
+    expect(eventsCall?.args).toEqual([2026]);
+    expect(typeof eventsCall?.args[0]).toBe('number');
+  });
+
+  it('quiets the events season filter, rather than emptying the page, when current_season is unset', async () => {
+    const { db, calls } = fakeD1({
+      allResults: { 'FROM events WHERE': EVENT_ROWS, 'FROM classes WHERE': [] },
+    });
+    await loadSeasonMonths(db, 2026);
+    const eventsCall = calls.find((call) => call.sql.includes('FROM events WHERE'));
+    expect(eventsCall?.args).toEqual([null]);
+  });
 });
 
 describe('seasonHasLiveEvents', () => {

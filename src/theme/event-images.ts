@@ -1,13 +1,17 @@
 // The events deep-look pass: a fixed filename-to-media-token map for the club's D1-sourced event
-// and class photography. Each row's `hero_image` column names a legacy filename ("bnac.jpg"), not
-// a cairn `media:` reference, since the photo lives in the club's read-only ops D1
-// (`$theme/events-data.ts`), not this site's own content; there is no frontmatter field to hang a
-// `fields.image` on, the same reasoning `home-images.ts` documents for the home page's fixed
-// photography. The 14 source files (`~/Projects/aksailingclub-legacy/static/events/images/`) are
-// pulled into the media library once, content-hashed; one of them (`end-of-season-party.jpg`)
-// turned out to be the exact same bytes already uploaded as the home hero photo
-// (`sunset-sail-dock`), so it reuses that entry rather than duplicating it, the dedup working as
-// designed.
+// and class photography. `hero_image` used to only ever name a legacy filename ("bnac.jpg"), not
+// a cairn `media:` reference, since the photo lived in the club's read-only ops D1
+// (`$theme/events-data.ts`); there was no frontmatter field to hang a `fields.image` on, the same
+// reasoning `home-images.ts` documents for the home page's fixed photography. The 14 source files
+// (`~/Projects/aksailingclub-legacy/static/events/images/`) were pulled into the media library
+// once, content-hashed; one of them (`end-of-season-party.jpg`) turned out to be the exact same
+// bytes already uploaded as the home hero photo (`sunset-sail-dock`), so it reuses that entry
+// rather than duplicating it, the dedup working as designed.
+//
+// The events-admin pass (Task 5) gave `events` its own writable `hero_image` field through the
+// admin's hero picker, which stores a real `media:slug.hash` token straight into the column
+// rather than a legacy filename, so `resolveEventImageUrl` below now tries that form first and
+// only falls back to this fixed map when the stored value does not parse as a token.
 import { parseMediaToken, type MediaResolve } from '@glw907/cairn-cms/media';
 
 const EVENT_IMAGE_TOKENS: Record<string, string> = {
@@ -28,18 +32,24 @@ const EVENT_IMAGE_TOKENS: Record<string, string> = {
 };
 
 /**
- * Resolve a D1 row's `hero_image` filename to its delivery URL, or undefined when the row has no
- * image or the filename is not one of the 14 migrated assets (a future ops-side upload the
- * catalogue above does not yet know about). The caller supplies the row's own `hero_image_alt` for
- * display text; this only resolves which bytes to show, matching `resolveMedia`'s own contract
- * (undefined on any miss degrades to the type-colored placeholder, never a broken image).
+ * Resolve a D1 row's `hero_image` value to its delivery URL, or undefined when the row has no
+ * image or the value resolves to nothing. Accepts two forms: a stored `media:slug.hash` token
+ * (events-admin pass, Task 5 -- the ledger's own hero picker writes one of these directly, and
+ * without this arm a hero picked through the admin would silently drop on the public page), tried
+ * first via `parseMediaToken`; and, only when that fails to parse, one of the 14 legacy filenames
+ * this module's `EVENT_IMAGE_TOKENS` map still carries from the pre-admin ops-D1 migration. The
+ * caller supplies the row's own `hero_image_alt` for display text; this only resolves which bytes
+ * to show, matching `resolveMedia`'s own contract (undefined on any miss degrades to the
+ * type-colored placeholder, never a broken image).
  */
 export function resolveEventImageUrl(
-  filename: string | null,
+  value: string | null,
   resolveMedia: MediaResolve,
 ): string | undefined {
-  if (!filename) return undefined;
-  const token = EVENT_IMAGE_TOKENS[filename];
+  if (!value) return undefined;
+  const directRef = parseMediaToken(value);
+  if (directRef) return resolveMedia(directRef);
+  const token = EVENT_IMAGE_TOKENS[value];
   if (!token) return undefined;
   const ref = parseMediaToken(token);
   if (!ref) return undefined;
