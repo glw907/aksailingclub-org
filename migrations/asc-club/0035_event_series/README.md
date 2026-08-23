@@ -172,3 +172,23 @@ Both public queries this migration's `season` column feeds (`src/theme/events-da
 
 This repo applies `asc-club` migrations by `wrangler d1 execute --remote --file`; there is no
 `wrangler d1 migrations` usage anywhere in it and none is introduced here.
+
+## Live apply record (2026-08-22, conductor)
+
+Applied to the live `asc-club` database after the scratch proof above and the diff-reviewer's
+independent reproduction of it. `forward.sql` is now the record of what ran and must not be
+edited; a later change is a new migration.
+
+| Check | Before | After |
+| --- | --- | --- |
+| `events` rows | 12 | 12 |
+| `event_series` rows | (no table) | 12 |
+| Undated (`start_date IS NULL`) | 0 | 0 |
+| Orphan `series_id` | n/a | 0 |
+| Duplicate `(season, slug)` | n/a | none |
+| `season` outside 2000-2100 | n/a | 0 |
+| `settings.current_season` | 2026 | 2026 |
+
+Every row landed in season 2026 (all twelve carry a 2026 `start_date`). The public `/events`
+page on dev, still serving the pre-pass code at that moment, rendered the same sixteen titles
+and seven months before and after the apply.
