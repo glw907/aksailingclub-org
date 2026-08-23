@@ -35,7 +35,8 @@ export const actions: Actions = {
   update: clubAdminAction(
     async ({ event, form, ctx }) => {
       const id = routeId(event);
-      if (!(await getEvent(ctx.db, id))) {
+      const existing = await getEvent(ctx.db, id);
+      if (!existing) {
         ctx.audit({ action: 'update', entity: 'event', entityId: id, detail: 'rejected: no such event' });
         return fail(404, { error: 'No such event.' });
       }
@@ -44,7 +45,14 @@ export const actions: Actions = {
         ctx.audit({ action: 'update', entity: 'event', entityId: id, detail: `rejected: ${parsed.error}` });
         return fail(400, { error: parsed.error });
       }
-      await updateEvent(ctx.db, id, parsed.write);
+      // This screen has no hero-image UI yet (events-admin Task 5 adds it): carry the existing
+      // row's own hero fields through rather than letting an update wipe them (see
+      // event-form-input.ts's own header on this split).
+      await updateEvent(ctx.db, id, {
+        ...parsed.write,
+        heroImage: existing.heroImage,
+        heroImageAlt: existing.heroImageAlt,
+      });
       ctx.audit({ action: 'update', entity: 'event', entityId: id });
       return { ok: true };
     },

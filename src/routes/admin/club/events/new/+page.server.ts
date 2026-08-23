@@ -5,7 +5,8 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
 import { clubAdminAction } from '$admin-club/lib/club-action';
-import { createEvent, getEvent } from '$admin-club/lib/events-store';
+import { createEvent, createSeries, getEvent } from '$admin-club/lib/events-store';
+import { getCurrentSeason } from '$admin-club/lib/club-settings';
 import { parseEventForm } from '../event-form-input';
 
 export const load: PageServerLoad = (event) => {
@@ -26,7 +27,15 @@ export const actions: Actions = {
         ctx.audit({ action: 'create', entity: 'event', entityId: id, detail: 'rejected: slug already exists' });
         return fail(400, { error: 'An event with that slug already exists.' });
       }
-      await createEvent(ctx.db, id, parsed.write);
+      // This route is deleted outright once events-admin Task 5 lands (the ledger's own
+      // `?/create` blank-panel action replaces it, minting a real series id and offering the
+      // "instance of an existing series" link). Until then, every event created here gets a
+      // one-row series of its own, matching migration 0035's backfill convention (`'series-' ||
+      // id`) -- no hero picker either, since this screen never had one.
+      const season = await getCurrentSeason(ctx.db);
+      const seriesId = `series-${id}`;
+      await createSeries(ctx.db, { id: seriesId, title: parsed.write.title, recurrence: 'annual' });
+      await createEvent(ctx.db, { id, season, seriesId, write: { ...parsed.write, heroImage: null, heroImageAlt: null } });
       ctx.audit({ action: 'create', entity: 'event', entityId: id });
       redirect(303, `/admin/club/events/${id}`);
     },

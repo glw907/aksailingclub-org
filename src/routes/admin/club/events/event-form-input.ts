@@ -11,10 +11,13 @@ function emptyToNull(value: FormDataEntryValue | null): string | null {
   return trimmed === '' ? null : trimmed;
 }
 
-/** Parse and validate a posted event form into the store's write shape, or a single user-facing
- *  error string. A title, a slug (lowercase, hyphen-separated), and a valid category are
- *  required; every other field is optional and blank posts as `null`. */
-export function parseEventForm(form: FormData): { write: EventWrite } | { error: string } {
+/** Parse and validate a posted event form into the store's write shape minus the hero image
+ *  fields (`heroImage`/`heroImageAlt`): this screen has no UI to edit them yet (events-admin
+ *  Task 5 adds the hero picker), so the caller merges in the existing row's own hero fields on an
+ *  update, or `null` on a create, rather than this parser inventing a value a save would then
+ *  overwrite. A title, a slug (lowercase, hyphen-separated), and a valid category are required;
+ *  every other field is optional and blank posts as `null`. */
+export function parseEventForm(form: FormData): { write: Omit<EventWrite, 'heroImage' | 'heroImageAlt'> } | { error: string } {
   const title = form.get('title');
   if (typeof title !== 'string' || !title.trim()) {
     return { error: 'A title is required.' };
@@ -40,7 +43,6 @@ export function parseEventForm(form: FormData): { write: EventWrite } | { error:
       endDate: emptyToNull(form.get('endDate')),
       endTime: emptyToNull(form.get('endTime')),
       location: emptyToNull(form.get('location')),
-      visible: form.get('visible') === 'on',
     },
   };
 }
