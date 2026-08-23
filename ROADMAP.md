@@ -57,9 +57,9 @@ The ASC admin screens taken one by one, each as a full pass opening with its own
 functional brainstorm (purpose and common use cases documented first; UI/UX flows from
 that). Scope per Geoff 2026-07-21: the series runs across the ENTIRE admin surface
 until every screen is fully polished; ordering is not critical — whatever makes sense
-pass to pass. Shipped so far: Members (2026-07-20), Classes (2026-07-21). Remaining
-pre-toolkit screens: Assets + asset-requests (the `asset_types` id defect rides
-along), Events, Email + Announce (a natural single pass), Settings (rides the
+pass to pass. Shipped so far: Members (2026-07-20), Classes (2026-07-21), Events (2026-08-23, the
+series ledger). Remaining pre-toolkit screens: Assets + asset-requests (the `asset_types`
+id defect rides along), Email + Announce (a natural single pass), Settings (rides the
 `season-rollover` initiative), Committees (light retrofit candidate); Money
 deliberately later, once the table and form vocabulary exists. Toolkit
 components and written standards are harvested into cairn as each pass lands, so the

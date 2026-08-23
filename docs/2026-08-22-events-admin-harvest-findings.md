@@ -75,3 +75,14 @@
    list does not. SvelteKit's streamed promises fit, but the toolkit has no convention for
    "load this when the panel opens"; a documented pattern (a `+server.ts` sibling, or a
    streamed slot on `ExpandableRow`) would stop each screen choosing differently.
+
+10. **A contrast probe that parses only `rgba()` reports 21:1 for everything on a modern
+    sheet.** The third coherence read found the family's probe regex returns `null` for
+    `oklch()`/`oklab()` computed colors, falls back to black-on-white, and passes every pair.
+    Every measured number from earlier reads on oklch surfaces is suspect. The fix (render the
+    color to a 1x1 canvas and read the pixel, compositing alpha up the ancestor chain) belongs
+    in `cairn-audit`'s checker, not each site's probe script.
+
+11. **`ExpandableRow`'s trigger is a 24px target.** At 390 it is the only way to open a row and
+    it sits under the family's own ~30px floor (and the polish brief's 44px). The trigger's hit
+    area belongs to the component, not to each consuming screen's scoped styles.

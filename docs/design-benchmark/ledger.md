@@ -288,6 +288,22 @@ header rule 48px short of the row rules (the `sr-only` Details `th` carries no b
 hero picker's label after its search box, the selection named by slug in a circular crop; a
 class row's drawer holding one button; "Saved." firing a quarter-viewport above the fold
 during a scrolled burst; focus rings differing by control family; the season facet showing
-no value on the default view. Open at the pass's token ceiling; the fix round is Geoff's call
-(STATUS).
+no value on the default view. Open at the pass's token ceiling; the fix round was authorized (2026-08-23).
+
+**Third read (cold, 2026-08-23): 1440 PASS at a glance, 390 FAIL.** The second read's
+mechanical fixes verified by measurement (date values unclipped with 22-36px headroom, header
+and row rules sharing an edge, uniform 52px rows, "Season: 2027" always shown, no overflow in
+twenty states, no text under 4.5:1 but one 4.43 note, chips compiled). At 390 two functional
+defects disqualified: the roll-forward confirmation anchored `right:0` inside a wrapper 128px
+from the viewport edge rendered at x=-80 (the primary button read "ext season", clipped at 320
+too), and "+ end date" was a dead control on every undated row (the narrow media block hides
+the input the reveal targets). Also structural: the clamped title painting through the chips,
+the save confirmation switched off at 390, and the skip list missing from the confirmation
+against the contract. Engine-level rather than site tells, filed in the harvest doc: four
+focus-ring vocabularies (one invisible at 1.19:1), the 24px expander target, and the read's
+own discovery that the family contrast probe parses only rgba() and reports 21:1 for
+everything oklch. Held for the probe round with Geoff: the native date inputs beside typeset
+columns, the hero picker's shape, the racing dot's semantic blue, and the 390 view dropping
+the two prior-season columns with no substitute (a ratified-or-not trade the contract's
+premise turns on). Four of the five fixed in the round that followed (723eb56: the confirmation viewport-fixed at narrow widths, the end-date reveal wired on dated rows too, the clamp cropped, Saved shown at 390); the fifth was proven correct behavior (the once-off and retired series hold no 2027 row, so an empty skip list was the right plan; the skip sentence renders when skips exist and a test locks it). Verdict on the fixes is the implementer's measurement, not a fourth cold read (2026-08-23).
 
