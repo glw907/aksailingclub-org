@@ -22,9 +22,21 @@ floating red top-right control): Save; Hide this year/Show; Retire series/Unreti
 only when `canDeleteEvent` allows it, a quiet Delete gated behind an inline confirm. The confirm
 autofocuses its own Cancel button, never the destructive Delete submit, so an accidental Enter
 never deletes -- the same posture the retired `events/[id]` dialog held.
+
+**Reviewer fan-out fix round (docs/plans/2026-08-22-events-admin.md's fix brief, items 21, 24,
+29-30, 39, 41).** Every `use:enhance` in this component now runs the same keep-on-screen handler
+`+page.svelte`'s own `setDate` form already uses (`await update({ reset: false })`), so a Hide/
+Show or Retire/Unretire round trip never resets this panel out from under whatever the officer is
+mid-typing in the fields above it. The grid pairs Start date/End date on one line and Start
+time/End time on the next (rather than interleaving a date with a time), a blank "New event"
+panel autofocuses its own Title field once mounted, and Delete is a separate, right-aligned
+danger zone whose confirm replaces just that zone rather than inlining between Save/Hide/Retire.
+An `error` prop (the route's own `rowError(datum.id)`, `+page.svelte`) renders inline against
+this panel when a write concerning THIS row was refused, so the officer sees the refusal beside
+the field it concerns rather than only at the top of the page.
 -->
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { enhance } from '$app/forms';
   import type { SubmitFunction } from '@sveltejs/kit';
   import { FieldLabel, SelectInput, TextInput } from '@glw907/cairn-cms/admin-toolkit';
@@ -50,6 +62,7 @@ never deletes -- the same posture the retired `events/[id]` dialog held.
     season,
     heroLibrary,
     otherSeries = [],
+    error = null,
     onCancel,
   }: {
     /** `null` for the blank "New event" panel; the row's own current-season `EventRow` otherwise. */
@@ -65,6 +78,10 @@ never deletes -- the same posture the retired `events/[id]` dialog held.
     /** Every other series' `{ id, title }`, annual-first then title order (`+page.svelte`'s own
      *  sort): the series-link `SelectInput`'s option list. */
     otherSeries?: { id: string; title: string }[];
+    /** A refused write concerning this row (`+page.svelte`'s own `rowError`), rendered inline at
+     *  the top of the form. `null` when nothing was refused, or the refusal concerned a different
+     *  row. */
+    error?: string | null;
     /** The blank panel's own Cancel, closing it with nothing written. `undefined` for an existing
      *  row, which has no equivalent "abandon" gesture. */
     onCancel?: () => void;
@@ -93,10 +110,31 @@ never deletes -- the same posture the retired `events/[id]` dialog held.
 
   let deleteConfirmOpen = $state(false);
   let cancelButton: HTMLButtonElement | undefined = $state();
+  let deleteTriggerButton: HTMLButtonElement | undefined = $state();
+  let formEl: HTMLFormElement | undefined = $state();
+  const deleteQuestionId = `${uid}-delete-question`;
 
   $effect(() => {
     if (deleteConfirmOpen) cancelButton?.focus();
   });
+
+  // The blank "New event" panel's own Title field takes focus once it mounts: an officer who just
+  // clicked "New event" should be able to start typing immediately, with no extra click.
+  $effect(() => {
+    if (!isCreate) return;
+    void (async () => {
+      await tick();
+      formEl?.querySelector<HTMLInputElement>('input[name="title"]')?.focus();
+    })();
+  });
+
+  function closeDeleteConfirm() {
+    deleteConfirmOpen = false;
+    void (async () => {
+      await tick();
+      deleteTriggerButton?.focus();
+    })();
+  }
 
   const categoryOptions = EVENT_CATEGORIES.map((value) => ({ value, label: EVENT_CATEGORY_LABEL[value] }));
   const recurrenceOptions = EVENT_RECURRENCES.map((value) => ({ value, label: EVENT_RECURRENCE_LABEL[value] }));
@@ -110,17 +148,38 @@ never deletes -- the same posture the retired `events/[id]` dialog held.
    *  re-rendering this same component: without this, a client-side `use:enhance` navigation
    *  leaves `onCancel`'s panel-open state stranded `true` above whatever row the redirect opens.
    *  A `save` submit has no such state to clear (`onCancel` is `undefined` for an existing row),
-   *  so the guard is a no-op there. */
+   *  so the guard is a no-op there. `{ reset: false }` matches every other form in this component
+   *  (below): a round trip must never reset a field back to its own defaultValue out from under
+   *  whatever the officer is mid-typing. */
   const handleSubmit: SubmitFunction = () => {
     return async ({ result, update }) => {
       if (isCreate && result.type === 'redirect') onCancel?.();
-      await update();
+      await update({ reset: false });
+    };
+  };
+
+  /** The two small subsidiary forms' own `use:enhance` (Hide/Show, Retire/Unretire): the same
+   *  keep-on-screen handler `+page.svelte`'s own `setDate` form already uses, so a toggle round
+   *  trip never resets this panel's own fields, above, out from under the officer. */
+  const keepOnScreen: SubmitFunction = () => {
+    return async ({ update }) => {
+      await update({ reset: false });
     };
   };
 </script>
 
 <div class="event-row-form">
-  <form id={formId} method="post" action={isCreate ? '?/create' : '?/save'} use:enhance={handleSubmit}>
+  {#if error}
+    <p class="event-row-form-error type-body font-medium text-error" role="alert">{error}</p>
+  {/if}
+  <form
+    id={formId}
+    bind:this={formEl}
+    method="post"
+    action={isCreate ? '?/create' : '?/save'}
+    aria-label={event ? event.title : 'New event'}
+    use:enhance={handleSubmit}
+  >
     <CsrfField />
     {#if event}
       <input type="hidden" name="id" value={event.id} />
@@ -141,6 +200,7 @@ never deletes -- the same posture the retired `events/[id]` dialog held.
         </div>
       {/if}
       <SelectInput label="Category" name="category" bind:value={category} options={categoryOptions} />
+      <TextInput label="Location" name="location" bind:value={location} />
       <FieldLabel label="Start date">
         <input class="input input-sm" type="date" name="startDate" bind:value={startDate} />
       </FieldLabel>
@@ -153,7 +213,6 @@ never deletes -- the same posture the retired `events/[id]` dialog held.
       <FieldLabel label="End time">
         <input class="input input-sm" type="time" name="endTime" bind:value={endTime} />
       </FieldLabel>
-      <TextInput label="Location" name="location" bind:value={location} />
     </div>
 
     <div class="event-row-form-prose">
@@ -173,48 +232,63 @@ never deletes -- the same posture the retired `events/[id]` dialog held.
   </form>
 
   <div class="event-row-form-footer">
-    <button type="submit" form={formId} class="btn btn-primary btn-sm">Save</button>
-    {#if isCreate && onCancel}
-      <button type="button" class="btn btn-sm" onclick={onCancel}>Cancel</button>
-    {/if}
-    {#if event}
-      <form method="post" action="?/setVisibility" use:enhance>
-        <CsrfField />
-        <input type="hidden" name="id" value={event.id} />
-        <!-- Named `show`, not `visible`: the row's edit form must carry no `name="visible"`
-             field anywhere (the design's "no Visible checkbox" ruling extends to the whole
-             panel), and this hidden field is the toggle's own target value, not an editable
-             visibility control. -->
-        <input type="hidden" name="show" value={event.visible ? '0' : '1'} />
-        <button type="submit" class="btn btn-ghost btn-sm">{event.visible ? 'Hide this year' : 'Show'}</button>
-      </form>
-      {#if seriesId}
-        <form method="post" action="?/retire" use:enhance>
-          <CsrfField />
-          <input type="hidden" name="seriesId" value={seriesId} />
-          <input type="hidden" name="retired" value={retiredAt ? '0' : '1'} />
-          <button type="submit" class="btn btn-ghost btn-sm">{retiredAt ? 'Unretire series' : 'Retire series'}</button>
-        </form>
+    <div class="event-row-form-actions">
+      <button type="submit" form={formId} class="btn btn-primary btn-sm">Save</button>
+      {#if isCreate && onCancel}
+        <button type="button" class="btn btn-sm" onclick={onCancel}>Cancel</button>
       {/if}
-      {#if canDeleteEvent(event)}
+      {#if event}
+        <form method="post" action="?/setVisibility" use:enhance={keepOnScreen}>
+          <CsrfField />
+          <input type="hidden" name="id" value={event.id} />
+          <!-- Named `show`, not `visible`: the row's edit form must carry no `name="visible"`
+               field anywhere (the design's "no Visible checkbox" ruling extends to the whole
+               panel), and this hidden field is the toggle's own target value, not an editable
+               visibility control. -->
+          <input type="hidden" name="show" value={event.visible ? '0' : '1'} />
+          <button type="submit" class="btn btn-ghost btn-sm">{event.visible ? 'Hide this year' : 'Show'}</button>
+        </form>
+        {#if seriesId}
+          <form method="post" action="?/retire" use:enhance={keepOnScreen}>
+            <CsrfField />
+            <input type="hidden" name="seriesId" value={seriesId} />
+            <!-- The fix round's own retire-refusal fix: `retire` is a series-level action with no
+                 row id of its own, so it echoes this back on a `fail()` (`+page.server.ts`) to let
+                 `rowError` above still find the right row to show the refusal against. -->
+            <input type="hidden" name="eventId" value={event.id} />
+            <input type="hidden" name="retired" value={retiredAt ? '0' : '1'} />
+            <button type="submit" class="btn btn-ghost btn-sm">{retiredAt ? 'Unretire series' : 'Retire series'}</button>
+          </form>
+        {/if}
+      {/if}
+    </div>
+    {#if event && canDeleteEvent(event)}
+      <div class="event-row-form-danger">
         {#if deleteConfirmOpen}
-          <div class="event-row-form-delete-confirm">
-            <p class="type-body">Delete "{event.title}"? It has never been published, so nothing public changes.</p>
+          <div class="event-row-form-delete-confirm" role="group" aria-labelledby={deleteQuestionId}>
+            <p id={deleteQuestionId} class="type-body">
+              Delete “{event.title}”? It has never been published, so nothing public changes.
+            </p>
             <div class="event-row-form-delete-actions">
               <form method="post" action="?/delete" use:enhance>
                 <CsrfField />
                 <input type="hidden" name="id" value={event.id} />
                 <button type="submit" class="btn btn-error btn-sm">Delete</button>
               </form>
-              <button bind:this={cancelButton} type="button" class="btn btn-sm" onclick={() => (deleteConfirmOpen = false)}>
-                Cancel
-              </button>
+              <button bind:this={cancelButton} type="button" class="btn btn-sm" onclick={closeDeleteConfirm}>Cancel</button>
             </div>
           </div>
         {:else}
-          <button type="button" class="btn btn-ghost btn-sm" onclick={() => (deleteConfirmOpen = true)}>Delete</button>
+          <button
+            bind:this={deleteTriggerButton}
+            type="button"
+            class="btn btn-ghost btn-sm"
+            onclick={() => (deleteConfirmOpen = true)}
+          >
+            Delete
+          </button>
         {/if}
-      {/if}
+      </div>
     {/if}
   </div>
 </div>
@@ -230,6 +304,10 @@ never deletes -- the same posture the retired `events/[id]` dialog held.
     width: 100%;
     flex-direction: column;
     gap: 1rem;
+  }
+
+  .event-row-form-error {
+    margin: 0;
   }
 
   .event-row-form-grid {
@@ -266,6 +344,9 @@ never deletes -- the same posture the retired `events/[id]` dialog held.
     padding-top: 1rem;
   }
 
+  /* item 41: Delete demoted to its own right-hand danger zone, rather than sitting in the same
+     flex line as Save/Hide/Retire -- `margin-left: auto` on the zone below pushes it to the
+     opposite edge of this shared, wrapping footer row. */
   .event-row-form-footer {
     display: flex;
     flex-wrap: wrap;
@@ -273,6 +354,17 @@ never deletes -- the same posture the retired `events/[id]` dialog held.
     gap: 0.5rem;
     border-top: 1px solid var(--cairn-card-border);
     padding-top: 1rem;
+  }
+
+  .event-row-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .event-row-form-danger {
+    margin-left: auto;
   }
 
   .event-row-form-delete-confirm {

@@ -426,11 +426,16 @@ export const actions: Actions = {
 
   /** Retire/Unretire a series -- reversible, and refuses an unknown series id 404 rather than
    *  writing a no-op `UPDATE`. Its own `opts.action` (`'retire'`) for the same wrapper-refusal
-   *  reason `setVisibility` carries. */
+   *  reason `setVisibility` carries. `retire` is a series-level action with no row id of its
+   *  own, so every `fail()` here echoes back the posted `eventId` (`EventRowForm`'s own hidden
+   *  field, the fix round's own addition) as `id`, letting the panel's `rowError` still find the
+   *  right row to show the refusal against. */
   retire: clubAdminAction(
     async ({ form, ctx }) => {
       const seriesIdEntry = form.get('seriesId');
       const seriesId = typeof seriesIdEntry === 'string' ? seriesIdEntry : '';
+      const eventIdEntry = form.get('eventId');
+      const eventId = typeof eventIdEntry === 'string' ? eventIdEntry : undefined;
       const retired = form.get('retired') === '1';
       if (!seriesId || !(await seriesExists(ctx.db, seriesId))) {
         ctx.audit({
@@ -439,13 +444,13 @@ export const actions: Actions = {
           entityId: seriesId || undefined,
           detail: 'rejected: no such series',
         });
-        return fail(404, { error: 'No such series.' });
+        return fail(404, { error: 'No such series.', id: eventId });
       }
       try {
         await retireSeries(ctx.db, seriesId, retired);
       } catch (err) {
         ctx.audit({ action: retired ? 'retire' : 'unretire', entity: 'event_series', entityId: seriesId, detail: 'rejected: write failed' });
-        return fail(500, { error: WRITE_FAILED_MESSAGE });
+        return fail(500, { error: WRITE_FAILED_MESSAGE, id: eventId });
       }
       ctx.audit({ action: retired ? 'retire' : 'unretire', entity: 'event_series', entityId: seriesId });
       return { ok: true };

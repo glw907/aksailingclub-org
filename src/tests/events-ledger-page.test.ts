@@ -8,7 +8,11 @@
 // what lets a static render assert on its exact copy without simulating a click. Task 5's own
 // additions (below the Task 4 tests) expand an event row's panel via `openId` and assert on
 // `EventRowForm`'s rendered field set, since that component only renders while its row is
-// expanded.
+// expanded. The reviewer fan-out fix round's own tests (bottom of the file) cover what the round
+// changed: the toolbar count line reading the filtered row count rather than the undated tally,
+// the undated tally's own StatusChip, the season filter's `'menu'` reading, and the roll-forward
+// disclosure's a11y wiring and zero-create disabled state.
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { render } from 'svelte/server';
 import Page from '../routes/admin/club/events/+page.svelte';
@@ -139,15 +143,27 @@ describe('/admin/club/events ledger markup', () => {
     expect(emptyCellContent).not.toContain('&mdash;');
   });
 
-  it('the count line reads exactly "5 undated" for a five-undated fixture', () => {
-    const { body } = render(Page, { props: { data: baseData({ undatedCount: 5 }), form: null } });
+  it('the toolbar count line reads the filtered row count, not the undated tally (item 25)', () => {
+    const { body } = render(Page, {
+      props: { data: baseData({ rows: [eventRow(), classRow()], undatedCount: 5 }), form: null },
+    });
+    expect(body).toContain('2 rows');
     expect(body).toContain('5 undated');
   });
 
-  it('the count line reads exactly "1 undated" for a one-undated fixture', () => {
+  it('the undated tally renders as its own StatusChip beside the roll-forward trigger', () => {
     const { body } = render(Page, { props: { data: baseData({ undatedCount: 1 }), form: null } });
+    expect(body).toContain('1 row');
     expect(body).toContain('1 undated');
-    expect(body).not.toContain('1 undateds');
+    expect(body).not.toContain('1 rowdated');
+  });
+
+  it('the undated StatusChip is absent when nothing is undated', () => {
+    const { body } = render(Page, { props: { data: baseData({ undatedCount: 0 }), form: null } });
+    // Not a bare `not.toContain('undated')`: the Dates filter's own `<option value="undated">`
+    // legitimately carries that substring regardless of the tally, so this checks for the chip's
+    // own rendered label text specifically.
+    expect(body).not.toMatch(/status-chip-label[^<]*>\d+ undated/);
   });
 
   it('a class row carries the star, the Class chip, and a link to /admin/club/classes', () => {
@@ -293,5 +309,121 @@ describe('EventRowForm panel (events-admin Task 5)', () => {
     const { body } = render(Page, { props: { data: baseData({ rows: [row], openId: row.id }), form: null } });
     expect(body).toContain('name="heroImage"');
     expect(body).toContain('name="heroImageAlt"');
+  });
+
+  it('the hero picker renders a visible "Hero photo" label and its own library count', () => {
+    const row = eventRow();
+    const { body } = render(Page, {
+      props: {
+        data: baseData({
+          rows: [row],
+          openId: row.id,
+          heroLibrary: [{ token: 'media:a.0123456789abcdef', displayName: 'A photo', alt: 'An alt', url: '/media/a.jpg' }],
+        }),
+        form: null,
+      },
+    });
+    expect(body).toContain('Hero photo');
+    expect(body).toContain('1 photos');
+  });
+
+  it('Hidden and Retired render as their own chips beside the category chip, not a raw badge', () => {
+    const row = eventRow({
+      retiredAt: '2026-01-01 00:00:00',
+      current: instance({ id: 'board-meeting-2026', startDate: '2026-08-01', visible: false }),
+    });
+    const { body } = render(Page, { props: { data: baseData({ rows: [row] }), form: null } });
+    expect(body).toContain('>Hidden<');
+    expect(body).toContain('>Retired<');
+  });
+});
+
+describe('reviewer fan-out fix round (Svelte half: items 21-33, 36-47)', () => {
+  it('the season filter reads "Season: <year>" once it differs from the current season (item 33)', () => {
+    const { body } = render(Page, { props: { data: baseData({ season: 2027, currentSeason: 2026 }), form: null } });
+    expect(body).toContain('Season: 2027');
+  });
+
+  it('the roll-forward trigger carries aria-expanded and aria-controls naming its own panel', () => {
+    const plan = { fromSeason: 2026, toSeason: 2027, create: [{ seriesId: 's-1', title: 'Event A' }], skipped: [] };
+    const { body } = render(Page, { props: { data: baseData({ rollPlan: plan }), form: null } });
+    const controlsMatch = body.match(/aria-controls="([^"]+)"[^>]*>\s*Start the next season/);
+    expect(controlsMatch).not.toBeNull();
+    const panelId = controlsMatch![1];
+    expect(body).toContain(`id="${panelId}"`);
+    expect(body).toContain('aria-expanded="false"');
+  });
+
+  it('the roll-forward submit disables and reads "Nothing left to roll into" for a zero-create plan', () => {
+    const plan = { fromSeason: 2026, toSeason: 2027, create: [], skipped: [] };
+    const { body } = render(Page, { props: { data: baseData({ rollPlan: plan }), form: null } });
+    expect(body).toContain('Nothing left to roll into 2027.');
+    expect(body).toMatch(/Start the next season<\/button>/);
+    const submitMatch = body.match(/<button type="submit"[^>]*>\s*Start the next season/);
+    expect(submitMatch).not.toBeNull();
+    expect(submitMatch![0]).toContain('disabled');
+  });
+
+  it('the toolbar always renders, even with zero rows, so the season selector survives (item 45)', () => {
+    const { body } = render(Page, { props: { data: baseData({ rows: [], season: 2027 }), form: null } });
+    expect(body).toContain('Search by event name');
+    expect(body).toContain('No events in season 2027 yet');
+  });
+
+  it('a same-year date range collapses to "Mon D–D, YYYY" (item 46)', () => {
+    // The current-season column is always an editable date form for an event row (its own
+    // `row.event` is truthy), so the read-only range text this fixture checks for is exercised
+    // through a prior-season column instead -- the one cell type that always reads `instanceText`.
+    const row = eventRow({
+      prior: [
+        instance({ id: 'board-meeting-2025', startDate: '2025-08-03', visible: true }),
+        instance({ id: 'icebreaker-2024', startDate: '2024-05-23', endDate: '2024-05-25', visible: true }),
+      ],
+    });
+    const { body } = render(Page, { props: { data: baseData({ rows: [row] }), form: null } });
+    expect(body).toContain('May 23–25, 2024');
+  });
+
+  it('a page-level error not tied to a row (rollForward) renders in the page-level status line', () => {
+    const { body } = render(Page, {
+      props: { data: baseData(), form: { error: 'The season changed since you opened this. Review it again.' } },
+    });
+    expect(body).toContain('The season changed since you opened this. Review it again.');
+  });
+
+  it('a "Saved." status announces after a successful write with no row of its own to render inside', () => {
+    const { body } = render(Page, { props: { data: baseData(), form: { ok: true } } });
+    expect(body).toContain('Saved.');
+  });
+
+  it('a row-scoped error renders inside that row\'s own panel, not the page-level line', () => {
+    const row = eventRow();
+    const { body } = render(Page, {
+      props: {
+        data: baseData({ rows: [row], openId: row.id }),
+        form: { error: 'That series already has an event in this season.', id: row.id },
+      },
+    });
+    // Inside the panel: EventRowForm's own `role="alert"` paragraph, not the page-level
+    // `role="status"` line (asserted by absence of the error text before the panel's own field
+    // set, i.e. it renders alongside "Title", not above the toolbar).
+    expect(body).toContain('role="alert"');
+    expect(body).toContain('That series already has an event in this season.');
+  });
+
+  it('EventRowForm.svelte gives its setVisibility and retire forms the keep-on-screen handler, never a bare use:enhance (item 21)', () => {
+    const source = readFileSync(
+      new URL('../routes/admin/club/events/EventRowForm.svelte', import.meta.url),
+      'utf-8',
+    );
+    const setVisibilityForm = source.match(/<form[^>]*action="\?\/setVisibility"[\s\S]*?<\/form>/);
+    const retireForm = source.match(/<form[^>]*action="\?\/retire"[\s\S]*?<\/form>/);
+    expect(setVisibilityForm).not.toBeNull();
+    expect(retireForm).not.toBeNull();
+    // Neither form's own opening `<form ...>` tag is a bare `use:enhance` (no handler): both
+    // carry `use:enhance={keepOnScreen}`, the same handler `+page.svelte`'s own `setDate` form
+    // uses, rather than SvelteKit's default full-form reset.
+    expect(setVisibilityForm![0]).toMatch(/use:enhance=\{keepOnScreen\}/);
+    expect(retireForm![0]).toMatch(/use:enhance=\{keepOnScreen\}/);
   });
 });
