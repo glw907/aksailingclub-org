@@ -6,11 +6,14 @@
 > `ROADMAP.md`; pre-2026-08-21 status entries are `docs/status-archive.md`. Pruning means
 > moving to one of those, never deleting.
 
-**Current state (2026-08-22).** The site runs cairn `^0.96.0` (the floors release: Node 24,
-Kit 2.70, Svelte 5.56.10) on `main`, merged through PR #5 and deployed to dev.aksailingclub.org
-by `deploy.yml`. In flight: the `events-redesign` build pass on branch `events-redesign-build`,
-executing `docs/plans/2026-08-22-events-redesign.md` through the pass-execute workflow. The
-apex cutover remains its own deliberate DNS change, never bundled with a push.
+**Current state (2026-08-22).** The site runs cairn `^0.96.0` on `main` (`92ed533`), with the
+events-redesign and its header round on dev.aksailingclub.org. In flight: the `events-admin`
+pass on branch `events-admin`, executing `docs/plans/2026-08-22-events-admin.md` (spec
+`docs/2026-08-22-events-admin-design.md`: the series ledger, annual/once recurrence, the
+season roll-forward, the hero picker, migration `0035_event_series`) through the
+pass-execute workflow, tasks 1 to 5 chained; task 6 (live migration, reviewers, coherence
+read, harvest, records) is the conductor's close. The apex cutover remains its own deliberate
+DNS change, never bundled with a push.
 
 **Immediate next action (Geoff's).** The events before/after (below). Also from 0.95/0.96,
 on dev: smartypants typography on a prose page (compare `/governance` against production),
