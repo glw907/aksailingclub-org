@@ -574,10 +574,21 @@ season (S11).
                                -- readable on its own, not just a decorative cue a screen reader had
                                to be told about separately. At the default width the real,
                                pre-filled end-date input already shows this, so the text stays
-                               narrow-only. -->
-                          <span class="events-end-date-note events-narrow-only type-meta text-muted">
+                               narrow-only. Third coherence read (item 2): a real button, not inert
+                               text -- the narrow width has no visible end-date input to tap, so
+                               this note is the only way to reach that field there, and it opens the
+                               row's own panel focused on End date exactly like "+ end date" below.
+                               `events-saved-active` (this file's narrow media block) hides it while
+                               this row's own save confirmation is showing, the same swap the "+ end
+                               date" button gets. -->
+                          <button
+                            type="button"
+                            class="events-add-end-date-link events-end-date-note events-narrow-only"
+                            class:events-saved-active={savedRowId === row.event.id}
+                            onclick={() => openEndDateField(row)}
+                          >
                             to {monthDayFmt.format(parseCivil(row.current.endDate))}
-                          </span>
+                          </button>
                         {:else}
                           <!-- The "+ end date" quiet link (S2 and S3): narrow-only when the row
                                already carries a start date (the real end-date input handles that
@@ -585,11 +596,15 @@ season (S11).
                                for a fully undated row, since S3's own fix is exactly "don't show
                                an empty end-date input beside an empty start-date input" -- there is
                                nothing for it to pair with yet at ANY width until a start date
-                               exists. -->
+                               exists. `events-saved-active` (item 4): hidden at the narrow width
+                               while this row's own save confirmation is showing, so "Saved" has
+                               room to render in its place instead of forcing the nowrap date form
+                               past the cell's own measured width. -->
                           <button
                             type="button"
                             class="events-add-end-date-link"
                             class:events-narrow-only={row.current?.startDate != null}
+                            class:events-saved-active={savedRowId === row.event.id}
                             onclick={() => openEndDateField(row)}
                           >
                             + end date
@@ -940,9 +955,15 @@ season (S11).
     /* S1: wraps to a second line instead of ellipsizing a long title (the cosmetic item, second
        coherence read). `-webkit-line-clamp` is Chromium/WebKit-only, matching this admin surface's
        own Chromium-only browser target; a third line still ellipsizes rather than growing the row
-       without bound. */
+       without bound. Third coherence read (item 3): `overflow: hidden`, not `visible` -- a title
+       long enough to clamp at two lines still lays out its third line in the box's own flow (the
+       clamp only paints an ellipsis over the second line, it does not remove the overflowing
+       content), and `overflow: visible` let that third line paint straight through the chip row
+       below it (measured: `events-name-text` clientHeight 30 vs. scrollHeight 45). `hidden` crops
+       the box at the clamp's own two-line height, which is what makes the ellipsis read as the
+       end of the text rather than a cosmetic mark with more text bleeding past it. */
     .events-name-title {
-      overflow: visible;
+      overflow: hidden;
       white-space: normal;
       text-overflow: clip;
       display: -webkit-box;
@@ -975,7 +996,18 @@ season (S11).
       display: none;
     }
 
-    .events-row-saved {
+    /* Third coherence read (item 4): the narrow width is exactly where the save burst happens (an
+       officer dating a long, undated ledger works one row at a time on a phone), so suppressing
+       the confirmation there hid it at the one width it mattered most. `events-saved-active` (the
+       narrow-only swap below) makes room for it: while a row's own save confirmation is showing,
+       its end-date note/link hides so "Saved" replaces it in the same narrow column rather than
+       forcing the nowrap date form wider than the cell the header comment above measured.
+       `.events-add-end-date-link.events-saved-active`, not the bare class alone (measured): the
+       note/link this hides always carries `events-add-end-date-link` too, and a compound two-class
+       selector outranks `.events-narrow-only`'s own single-class `display: inline` below
+       regardless of which rule the compiler emits last -- a bare single-class rule here tied that
+       rule's specificity and lost on source order for the has-a-start-date-but-no-end-date case. */
+    .events-add-end-date-link.events-saved-active {
       display: none;
     }
 
@@ -996,6 +1028,35 @@ season (S11).
 
     .events-narrow-hide {
       display: none;
+    }
+
+    /* Third coherence read (item 1): the desktop panel anchors `right: 0` against its own
+       trigger's wrapper (`.events-rollforward`, `position: relative`), whose own right edge sits
+       wherever the toolbar's flex-wrap put it -- at a phone width that is well inside the
+       viewport, not at its right edge, so the panel's fixed 22rem width ran off the LEFT side of
+       the screen (measured: x=-80 at 390, clipped at 320 too) with its primary button unreachable.
+       `position: fixed`, centered on the viewport rather than anchored to the trigger, sidesteps
+       that dependency entirely: the panel becomes its own small modal, sized to the viewport minus
+       a consistent margin and capped so it always fits, with `overflow-y: auto` covering a plan
+       whose create/skip lists run long enough to exceed the remaining height (the create list
+       alone can run to a dozen titles). Scoped to this file's own narrow breakpoint, so the
+       desktop anchor-to-trigger placement (`.events-rollforward-panel`'s base rule, above) is
+       unchanged at 768/1440. `!important` throughout (matching `.events-class-panel`'s own
+       precedent below, same reasoning): the build's CSS optimizer does not preserve this file's
+       own source order between an `@media` block and a plain rule targeting the same selector
+       (measured -- the compiled stylesheet emits this `@media` rule BEFORE the base rule it is
+       meant to override), so without `!important` the base rule's `position: absolute; right: 0`
+       silently won at every width regardless of the media query matching. */
+    .events-rollforward-panel {
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      right: auto !important;
+      transform: translate(-50%, -50%) !important;
+      width: calc(100vw - 2rem) !important;
+      max-width: 22rem !important;
+      max-height: calc(100vh - 2rem) !important;
+      overflow-y: auto !important;
     }
   }
 

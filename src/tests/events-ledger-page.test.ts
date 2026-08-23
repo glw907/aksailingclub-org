@@ -216,6 +216,27 @@ describe('/admin/club/events ledger markup', () => {
     expect(body).not.toContain('Skips');
   });
 
+  // Third coherence read (item 5): a live round-2 render of this exact plan shape already showed
+  // the skip clause correctly ("Skips 2: 1 once-off, 1 retired."); the round-3 capture that
+  // reported it missing was a season where the once-off and retired series held no row in the
+  // FROM season at all (so `previewRollForward`'s own `JOIN` never surfaces them, and an empty
+  // `skipped` list is the correct plan for that season, not a bug). This fixture locks in the
+  // literal one-once-off/one-retired shape the coherence read named, guarding the render path
+  // independently of whichever season's data happens to populate `skipped`.
+  it('renders the skip sentence for a plan carrying exactly one once-off and one retired skip', () => {
+    const plan = {
+      fromSeason: 2027,
+      toSeason: 2028,
+      create: [{ seriesId: 's-1', title: 'Event A' }],
+      skipped: [
+        { seriesId: 's-once-1', title: 'Once A', reason: 'once' as const },
+        { seriesId: 's-retired-1', title: 'Retired A', reason: 'retired' as const },
+      ],
+    };
+    const { body } = render(Page, { props: { data: baseData({ rollPlan: plan }), form: null } });
+    expect(body).toContain('Skips 2: 1 once-off, 1 retired.');
+  });
+
   it("the empty state's heading names the selected season", () => {
     const { body } = render(Page, { props: { data: baseData({ rows: [], season: 2027 }), form: null } });
     expect(body).toContain('No events in season 2027 yet');
@@ -493,6 +514,9 @@ describe('second coherence read fix round (docs/plans/2026-08-22-events-admin.md
     });
     expect(body).toContain('events-end-date-note');
     expect(body).toContain('to Jun 3');
+    // Third coherence read (item 2): a real `<button>`, not inert text -- the narrow width has no
+    // visible end-date input to tap, so the note is the only reachable path to that field there.
+    expect(body).toMatch(/<button[^>]*class="[^"]*events-end-date-note[^"]*"[^>]*>\s*to Jun 3/);
   });
 
   it('S2/S3: an undated row renders the "+ end date" link instead of a raw empty end-date input', () => {
