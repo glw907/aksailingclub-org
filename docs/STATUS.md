@@ -40,8 +40,9 @@ chapter headings; decisions.md has the rulings) are on dev.aksailingclub.org; th
 `docs/plans/2026-08-22-events-redesign.md`, ledger entry in `docs/HISTORY.md`. Gates green
 (check 0/0, 2105 tests, build); the four domain reviews' findings are fixed. Geoff's steps:
 (1) the before/after on dev, `/events` at 1440 and 390 (Register shows only on a real open
-class); (2) the fresh-context coherence read is owed (session closed at its ceiling); (3) the
-`fleet_tuneup` data call (drop-in or registration). Harvest to cairn: `docs/2026-08-22-events-redesign-harvest-findings.md` (eight
+class); (2) the fresh-context coherence read is owed (session closed at its ceiling). The
+`fleet_tuneup` call is settled: the 2026-07-13 ruling stands (pre-registration, free,
+members-only; Geoff reconfirmed 2026-08-24). Harvest to cairn: `docs/2026-08-22-events-redesign-harvest-findings.md` (eight
 findings, incl. site-wide smooth scroll as an engine default and the dead-body content entry).
 
 **Next pass (prep, 2026-08-22; Geoff's pick 2026-08-22: the admin series gates the cutover).**
