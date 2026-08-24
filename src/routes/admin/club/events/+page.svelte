@@ -596,7 +596,20 @@ season (S11).
                   <span class="events-name-title">{row.title}</span>
                 </span>
                 <span class="events-name-chips">
-                  <StatusChip tone={EVENT_CATEGORY_TONE[row.category]} label={EVENT_CATEGORY_LABEL[row.category]} size="xs" register="quiet" />
+                  <!-- Category color moves off `StatusChip`'s own 6px dot onto the chip's own
+                       ground (probe verdict, 2026-08-24: "the dot is so small it's hard to tell
+                       what color it is"). `events-cat-chip` hides the dot for every category (the
+                       tinted three below and the two quiet-gray ones alike, so the vocabulary
+                       stays one dressing); `events-cat-{row.category}` tints only racing/class/
+                       social, since operations/governance keep `StatusChip`'s own quiet gray
+                       ground unmodified. This is a site-side carry of a toolkit-wide ruling (Geoff:
+                       "it would need to apply to everything") -- the tinted-ground grammar
+                       belongs to `StatusChip` itself, filed in the events-admin harvest; this
+                       component reaches into `StatusChip`'s scoped markup via `:global()` below
+                       until the engine ships it. -->
+                  <span class="events-cat-chip events-cat-{row.category}">
+                    <StatusChip tone={EVENT_CATEGORY_TONE[row.category]} label={EVENT_CATEGORY_LABEL[row.category]} size="xs" register="quiet" />
+                  </span>
                   <!-- `events-state-chip`, not `StatusChip` (cosmetic item, second coherence
                        read): a category chip's colored dot marks WHAT a row is, so a state marker
                        (Hidden/Retired) carrying the same dot read as a sixth category rather than
@@ -604,12 +617,16 @@ season (S11).
                        assistive tech too, not only sighted readers. Hidden is omitted while the
                        "Undated only" filter is active: every row in that view is hidden by the
                        publish-on-date rule, so the marker would repeat on every single row rather
-                       than adding information. -->
+                       than adding information. Hidden and Retired now split registers (probe
+                       verdict, 2026-08-24, "must not read identically"): Hidden is the quiet
+                       hairline-outline chip (a transient, reversible absence), Retired keeps the
+                       filled darker-gray ground (a settled state) -- both at the normalized 400
+                       weight the flagged 600 inconsistency dropped to. -->
                   {#if row.kind === 'event' && row.current && !row.current.visible && datesFilter !== 'undated'}
-                    <span class="events-state-chip"><span class="sr-only">State: </span>Hidden</span>
+                    <span class="events-state-chip events-state-chip-outline"><span class="sr-only">State: </span>Hidden</span>
                   {/if}
                   {#if row.kind === 'event' && row.retiredAt}
-                    <span class="events-state-chip"><span class="sr-only">State: </span>Retired</span>
+                    <span class="events-state-chip events-state-chip-filled"><span class="sr-only">State: </span>Retired</span>
                   {/if}
                 </span>
               </td>
@@ -927,19 +944,77 @@ season (S11).
     white-space: nowrap;
   }
 
+  /* Category color moves off `StatusChip`'s own 6px dot onto the chip's own ground (probe
+     verdict, 2026-08-24: "the dot is so small it's hard to tell what color it is"). `:global()`
+     reaches into `StatusChip`'s own scoped markup -- its `.status-chip` span carries the ground,
+     its `.status` span is the dot -- since this page has no other route to that component's
+     internals. This block carries no `@layer` wrapper (an unlayered rule always outranks a
+     layered one, the `layer-cascade-gotcha` finding), and wins on specificity besides: three
+     classes once Svelte's scope class lands (`.events-cat-racing.svelte-* .status-chip`) against
+     `StatusChip`'s own two. Values and percentages are the public Season list's own palette (racing
+     blue, class gold, social sage); operations/governance keep `StatusChip`'s quiet gray ground
+     unmodified. Every label's contrast against its tinted ground clears 4.5:1 by a wide margin in
+     both admin themes (light 11.8-12.2:1, dark 10.2-12.1:1 -- the pass's own report carries the
+     full numbers), so neither tint needs a dark-mode adjustment. */
+  /* `display: contents`: as a bare flex item this wrapper blockifies and its line box grows
+     past the chip inside it, floating the category chip 1.6px off the state chips' shared
+     center (measured at 1440). With `contents` the chip itself is the flex item again; the
+     descendant selectors below still match, since they key on DOM ancestry, not boxes. */
+  .events-cat-chip {
+    display: contents;
+  }
+
+  .events-cat-chip :global(.status) {
+    display: none;
+  }
+
+  .events-cat-racing :global(.status-chip) {
+    background-color: color-mix(in oklab, oklch(53% 0.15 245) 16%, var(--color-base-100));
+  }
+
+  .events-cat-class :global(.status-chip) {
+    background-color: color-mix(in oklab, oklch(62% 0.155 78.3) 22%, var(--color-base-100));
+  }
+
+  .events-cat-social :global(.status-chip) {
+    background-color: color-mix(in oklab, oklch(46% 0.14 155) 15%, var(--color-base-100));
+  }
+
   /* The state-marker chip (cosmetic item, second coherence read): no colored dot -- see the
      summary snippet's own comment for why a category chip's dot and a state marker's dot would
-     otherwise read as the same vocabulary. Literal values, matching `StatusChip`'s own quiet
-     register (`color-mix(in oklab, var(--color-base-content) 14%, var(--color-base-300))`), since
-     that component's own scoped classes are not a reachable selector from here. */
+     otherwise read as the same vocabulary. Weight normalizes to 400 here (the flagged 600
+     inconsistency the coherence read measured, invisible at 10px without zoom); Hidden and
+     Retired split into their own registers below, per the probe verdict's "must not read
+     identically". */
   .events-state-chip {
     display: inline-flex;
     align-items: center;
     border-radius: 9999px;
     padding: 0.0625rem 0.5rem;
     font-size: var(--cairn-type-chip, 0.625rem);
-    font-weight: 600;
-    background-color: color-mix(in oklab, var(--color-base-content) 14%, var(--color-base-300));
+    font-weight: 400;
+  }
+
+  /* HIDDEN (probe verdict, 2026-08-24): a transient, reversible absence, so it reads as the
+     quieter hairline-outline register rather than a filled chip. `--color-muted` clears 4.5:1
+     against both admin themes' page and zebra grounds (light 5.9-6.4:1, dark 6.6-7.9:1). The
+     border mixes on `--color-base-content`, not the muted ink, to clear the 3:1 non-text floor
+     `StatusChip`'s own bounded register holds itself to; `padding-block: 0` gives the border's
+     2px back so this pill and the filled one measure the same 16px height. */
+  .events-state-chip-outline {
+    background-color: transparent;
+    border: 1px solid color-mix(in oklab, var(--color-base-content) 55%, transparent);
+    padding-block: 0;
+    color: var(--color-muted);
+  }
+
+  /* RETIRED: a settled state, on a filled ground one step DARKER than `StatusChip`'s quiet
+     14% -- with the dot and the 600 weight both gone, the old shared value left Retired
+     identical to an untinted category chip (Operations/Governance), and the probe verdict's
+     wording is "the filled darker state gray". Ink is unset (inherits `--color-base-content`);
+     the step is measured, not guessed (see the settle report's contrast table). */
+  .events-state-chip-filled {
+    background-color: color-mix(in oklab, var(--color-base-content) 24%, var(--color-base-300));
   }
 
   .events-name-chips {

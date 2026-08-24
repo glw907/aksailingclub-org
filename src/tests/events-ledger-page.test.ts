@@ -387,6 +387,38 @@ describe('EventRowForm panel (events-admin Task 5)', () => {
     expect(body).toContain('>Hidden<');
     expect(body).toContain('>Retired<');
   });
+
+  it('the category chip carries a per-category wrapper class the page CSS tints (probe verdict, 2026-08-24)', () => {
+    // All five categories, not just the tinted three: operations/governance keep the quiet gray
+    // precisely BECAUSE their wrapper class has no tint rule, so the wrapper must still render.
+    for (const category of ['racing', 'class', 'operations', 'social', 'governance'] as const) {
+      const row = eventRow({ category });
+      const { body } = render(Page, { props: { data: baseData({ rows: [row] }), form: null } });
+      expect(body).toContain(`events-cat-chip events-cat-${category}`);
+    }
+    const source = readFileSync(new URL('../routes/admin/club/events/+page.svelte', import.meta.url), 'utf-8');
+    for (const tinted of ['racing', 'class', 'social']) {
+      expect(source).toMatch(new RegExp(`\\.events-cat-${tinted} :global\\(\\.status-chip\\)`));
+    }
+    expect(source).not.toMatch(/\.events-cat-operations /);
+    expect(source).not.toMatch(/\.events-cat-governance /);
+  });
+
+  it('Hidden reads as the outline register and Retired as the filled register, both at the normalized weight', () => {
+    const row = eventRow({
+      retiredAt: '2026-01-01 00:00:00',
+      current: instance({ id: 'board-meeting-2026', startDate: '2026-08-01', visible: false }),
+    });
+    const { body } = render(Page, { props: { data: baseData({ rows: [row] }), form: null } });
+    expect(body).toMatch(/class="events-state-chip events-state-chip-outline[^"]*"[^>]*>[\s\S]{0,80}Hidden</);
+    expect(body).toMatch(/class="events-state-chip events-state-chip-filled[^"]*"[^>]*>[\s\S]{0,80}Retired</);
+    // Both registers now share one weight -- the flagged 600-vs-400 inconsistency the coherence
+    // read measured is gone, so no state chip declares its own font-weight anymore.
+    const source = readFileSync(new URL('../routes/admin/club/events/+page.svelte', import.meta.url), 'utf-8');
+    expect(source).toMatch(/\.events-state-chip\s*\{[^}]*font-weight:\s*400/);
+    expect(source).not.toMatch(/\.events-state-chip-outline\s*\{[^}]*font-weight/);
+    expect(source).not.toMatch(/\.events-state-chip-filled\s*\{[^}]*font-weight/);
+  });
 });
 
 describe('reviewer fan-out fix round (Svelte half: items 21-33, 36-47)', () => {
