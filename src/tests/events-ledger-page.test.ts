@@ -153,6 +153,15 @@ describe('/admin/club/events ledger markup', () => {
     expect(formBlock).toContain('use:enhance={keepDateOnScreen(eventId)}');
   });
 
+  it('a same-day range collapses to the single date, never "Nov 5–5" (settle-round read, 2026-08-24)', () => {
+    const row = eventRow({
+      current: instance({ id: 'board-meeting-2026', startDate: '2026-11-05', endDate: '2026-11-05', visible: true }),
+    });
+    const { body } = render(Page, { props: { data: baseData({ rows: [row] }), form: null } });
+    expect(body).toContain(formatCivilDate('2026-11-05'));
+    expect(body).not.toContain('–5, 2026');
+  });
+
   it('an empty prior-season cell renders nothing, not a dash, for a season the series did not run', () => {
     // The range separator `instanceText` uses for a dated instance is an en dash (`–`), not an
     // em dash, so the real regression to guard against is any dash at all in an empty cell, not

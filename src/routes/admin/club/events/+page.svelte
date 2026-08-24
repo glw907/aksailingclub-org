@@ -277,7 +277,9 @@ season (S11).
    *  either year there would misstate the date. */
   function instanceText(instance: EventInstance | null): string {
     if (!instance || !instance.startDate) return '';
-    if (!instance.endDate) return formatCivilDate(instance.startDate);
+    // A same-day "range" collapses to the single date: the form can save endDate === startDate,
+    // and "Nov 5–5, 2026" is a tell (settle-round read, 2026-08-24).
+    if (!instance.endDate || instance.endDate === instance.startDate) return formatCivilDate(instance.startDate);
     const start = parseCivil(instance.startDate);
     const end = parseCivil(instance.endDate);
     if (start.getFullYear() === end.getFullYear()) {

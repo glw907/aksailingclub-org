@@ -242,16 +242,22 @@ a grid thumbnail.
   {:else}
     <FieldLabel label={`Hero photo · ${library.length} ${library.length === 1 ? 'photo' : 'photos'}`}>
       <div class="hero-image-open">
-        <input
-          class="input input-sm"
-          type="search"
-          bind:value={query}
-          placeholder="Search by name or alt text"
-          aria-label="Search photos"
-          aria-controls={listboxId}
-          onkeydown={onSearchKeydown}
-          use:focusOnOpen
-        />
+        <!-- Cancel beside the search: Escape already closes, but a mouse needs a visible way
+             back out that is not "choose something" (settle-round read, 2026-08-24). Same close
+             path as Escape, focus returned to the remounted trigger. -->
+        <div class="hero-image-search-row">
+          <input
+            class="input input-sm"
+            type="search"
+            bind:value={query}
+            placeholder="Search by name or alt text"
+            aria-label="Search photos"
+            aria-controls={listboxId}
+            onkeydown={onSearchKeydown}
+            use:focusOnOpen
+          />
+          <button type="button" class="btn btn-ghost btn-sm" onclick={closeLibrary}>Cancel</button>
+        </div>
         <ul id={listboxId} role="listbox" aria-label="Hero photo library" class="hero-image-grid">
           {#if filtered.length === 0}
             <li class="hero-image-empty type-body text-muted" role="presentation">
@@ -327,6 +333,17 @@ a grid thumbnail.
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+  }
+
+  .hero-image-search-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .hero-image-search-row input {
+    flex: 1;
+    min-width: 0;
   }
 
   .hero-image-grid {
