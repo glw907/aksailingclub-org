@@ -357,7 +357,7 @@ describe('EventRowForm panel (events-admin Task 5)', () => {
     expect(body).toContain('name="heroImageAlt"');
   });
 
-  it('the hero picker renders a visible "Hero photo" label and its own library count', () => {
+  it('the hero picker renders a visible "Hero photo" label, closed at rest with no library grid (probe verdict, 2026-08-24)', () => {
     const row = eventRow();
     const { body } = render(Page, {
       props: {
@@ -370,7 +370,12 @@ describe('EventRowForm panel (events-admin Task 5)', () => {
       },
     });
     expect(body).toContain('Hero photo');
-    expect(body).toContain('1 photos');
+    expect(body).toContain('Choose photo');
+    // The library count folds into the open-state caption, so it never renders at rest; the
+    // open/close/select transitions are pinned as plain functions by hero-image-picker.test.ts
+    // (no test in this repo mounts a component -- see that module's header).
+    expect(body).not.toContain('· 1 photo');
+    expect(body).not.toContain('role="listbox"');
   });
 
   it('Hidden and Retired render as their own chips beside the category chip, not a raw badge', () => {
