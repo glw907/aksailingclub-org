@@ -121,11 +121,36 @@ describe('/admin/club/events ledger markup', () => {
     expect(i2026).toBeGreaterThan(i2025);
   });
 
-  it('renders a prior-season cell as read-only text and the current-season cell as a date input', () => {
+  it('renders a prior-season cell as read-only text and the current-season cell as at-rest typeset text (probe verdict, 2026-08-24)', () => {
     const { body } = render(Page, { props: { data: baseData(), form: null } });
     expect(body).toContain(formatCivilDate('2025-08-03'));
-    expect(body).toContain('type="date"');
-    expect(body).toContain('value="2026-08-01"');
+    // The current-season cell reads as typeset text at rest, the same register as the prior
+    // columns -- the native `type="date"` form only mounts once the row enters edit mode, which an
+    // SSR-only render (this suite's own idiom, see this file's header comment) never reaches.
+    expect(body).toContain('events-date-rest-btn');
+    expect(body).toContain(formatCivilDate('2026-08-01'));
+    expect(body).not.toContain('type="date"');
+  });
+
+  it('the ?/setDate edit form still sits inside the editingDateId branch with its full field set (fix round finding 3)', () => {
+    // The rest/edit toggle means an SSR-only render never mounts the edit-mode `<form>` (this
+    // file's own header comment); this asserts against the source directly instead, the same
+    // idiom the "second coherence read" describe block below uses throughout.
+    const source = readFileSync(new URL('../routes/admin/club/events/+page.svelte', import.meta.url), 'utf-8');
+    const ifIdx = source.indexOf('{#if editingDateId === eventId}');
+    expect(ifIdx).toBeGreaterThan(-1);
+    const elseIdx = source.indexOf('{:else if row.current?.startDate}', ifIdx);
+    expect(elseIdx).toBeGreaterThan(ifIdx);
+    const formIdx = source.indexOf('<form method="post" action="?/setDate"', ifIdx);
+    expect(formIdx).toBeGreaterThan(ifIdx);
+    expect(formIdx).toBeLessThan(elseIdx);
+    const formEndIdx = source.indexOf('</form>', formIdx) + '</form>'.length;
+    const formBlock = source.slice(formIdx, formEndIdx);
+    expect(formBlock).toContain('<CsrfField />');
+    expect(formBlock).toMatch(/type="hidden"\s+name="id"/);
+    expect(formBlock).toContain('name="startDate"');
+    expect(formBlock).toContain('name="endDate"');
+    expect(formBlock).toContain('use:enhance={keepDateOnScreen(eventId)}');
   });
 
   it('an empty prior-season cell renders nothing, not a dash, for a season the series did not run', () => {
@@ -476,7 +501,7 @@ describe('second coherence read fix round (docs/plans/2026-08-22-events-admin.md
     expect(source).toMatch(/\.events-current-text\s*\{[^}]*white-space:\s*normal/);
   });
 
-  it('S2: the unlabeled range dot is gone, replaced by an end-date note or a "+ end date" link', () => {
+  it('S2: the unlabeled range dot is gone; a ranged event collapses to one typeset range at rest, and edit mode still carries the end-date note (probe verdict, 2026-08-24)', () => {
     expect(source).not.toContain('events-range-dot');
     const { body } = render(Page, {
       props: {
@@ -512,19 +537,35 @@ describe('second coherence read fix round (docs/plans/2026-08-22-events-admin.md
         form: null,
       },
     });
-    expect(body).toContain('events-end-date-note');
-    expect(body).toContain('to Jun 3');
+    // At rest, the whole range collapses into one typeset button -- the end-date note only exists
+    // once the row enters edit mode, which an SSR-only render never reaches (this file's header
+    // comment on the rest/edit toggle), so the note itself is checked against the source below.
+    expect(body).toContain('Jun 1–3, 2026');
+    expect(body).toContain('events-date-rest-btn');
+    expect(body).not.toContain('events-end-date-note');
     // Third coherence read (item 2): a real `<button>`, not inert text -- the narrow width has no
     // visible end-date input to tap, so the note is the only reachable path to that field there.
-    expect(body).toMatch(/<button[^>]*class="[^"]*events-end-date-note[^"]*"[^>]*>\s*to Jun 3/);
+    // Fix round finding 3 (tightened): scoped to the `{#if editingDateId === eventId}` branch
+    // specifically (not merely somewhere in the file), so a note that drifted out to the rest
+    // state would fail this rather than still matching a bare file-wide search.
+    const ifIdx = source.indexOf('{#if editingDateId === eventId}');
+    const elseIdx = source.indexOf('{:else if row.current?.startDate}', ifIdx);
+    expect(ifIdx).toBeGreaterThan(-1);
+    expect(elseIdx).toBeGreaterThan(ifIdx);
+    const editBranch = source.slice(ifIdx, elseIdx);
+    const noteButton = editBranch.match(/<button[\s\S]*?<\/button>/g)?.find((tag) => tag.includes('events-end-date-note'));
+    expect(noteButton).toContain('to {monthDayFmt.format(parseCivil(row.current.endDate))}');
   });
 
-  it('S2/S3: an undated row renders the "+ end date" link instead of a raw empty end-date input', () => {
+  it('S2/S3: an undated row renders a quiet "+ add date" link at rest, not a raw empty date input (probe verdict, 2026-08-24)', () => {
     const undated = eventRow({ current: instance({ id: 'board-meeting-2026', startDate: null, endDate: null, visible: false }) });
     const { body } = render(Page, { props: { data: baseData({ rows: [undated] }), form: null } });
     expect(body).toContain('events-add-end-date-link');
-    expect(body).toContain('+ end date');
-    expect(body).toContain('events-end-date-input-hidden');
+    expect(body).toContain('+ add date');
+    expect(body).not.toContain('type="date"');
+    // The form's own "+ end date"/`events-end-date-input-hidden` markup only mounts in edit mode;
+    // the source-level check confirms it is still there, gated behind `editingDateId`.
+    expect(source).toContain('events-end-date-input-hidden');
   });
 
   it('S4: the class category chip carries a neutral dot, never the reserved warning tone', () => {

@@ -105,6 +105,11 @@ season (S11).
     if (data.season !== lastSeason) {
       lastSeason = data.season;
       newRowOpen = false;
+      // A season change swaps every row's `editingDateId`-bearing form out for a fresh one keyed
+      // to the new season's own event ids (fix round finding 6): an edit mid-flight on the old
+      // season has nothing left to return to.
+      editingDateId = null;
+      returnFocusId = null;
     }
   });
 
@@ -141,6 +146,40 @@ season (S11).
     savedClearTimer = setTimeout(() => {
       savedRowId = null;
     }, 2000);
+  }
+
+  /** The current-season date cell's own rest/edit toggle (probe verdict, 2026-08-24): a row reads
+   *  as typeset text (`instanceText`, the same formatter the read-only prior columns use) or a
+   *  quiet "+ add date" link until an officer activates it, rather than always showing the boxed
+   *  native inputs. Keyed by `event.id` (matching `savedRowId`/`keepDateOnScreen` below), not
+   *  toggled by row id, since only one row is ever mid-edit at a time. */
+  let editingDateId: string | null = $state(null);
+
+  /** Focuses the start-date input the moment a row enters edit mode: the `{#if editingDateId ===
+   *  row.event.id}` block mounts a fresh `<input>` each time that condition turns true, so a plain
+   *  `use:` action is enough -- it runs once the node is already in the DOM, with no queued ref or
+   *  `tick()` needed (contrast `EventRowForm`'s own `focusField` effect, which tracks a ref across
+   *  an entire panel rather than one input). */
+  function focusDateInput(node: HTMLInputElement) {
+    node.focus();
+  }
+
+  /** The date cell's own return-focus idiom (fix round finding 2), mirroring the roll-forward
+   *  disclosure's `closeRollPanel`/`rollTriggerEl` pair above: set wherever `editingDateId`
+   *  clears (the Escape path in `onDateCellKeydown` and the successful-save path in
+   *  `keepDateOnScreen`, both below), so focus never drops to `<body>` when edit mode exits.
+   *  Consumed by `focusIfReturning`, the `use:` action on this row's own rest button. */
+  let returnFocusId: string | null = $state(null);
+
+  /** Focuses this row's own rest button (the typeset date or "+ add date" link) once edit mode
+   *  closes for it: the `{#if editingDateId === eventId} ... {:else if ...}` block mounts a fresh
+   *  rest button each time editing closes, so a plain `use:` action run once at mount is enough --
+   *  the same reasoning `focusDateInput` above gives for the edit-mode input. */
+  function focusIfReturning(node: HTMLButtonElement, id: string) {
+    if (returnFocusId === id) {
+      node.focus();
+      returnFocusId = null;
+    }
   }
 
   /** Pushes a new `?season=`, the Classes screen's own `pushSeason` idiom: a season change is a
@@ -203,6 +242,8 @@ season (S11).
       onChange: (value) => {
         datesFilter = value;
         newRowOpen = false;
+        editingDateId = null;
+        returnFocusId = null;
       },
     },
     {
@@ -217,6 +258,8 @@ season (S11).
       onChange: (value) => {
         rowsFilter = value;
         newRowOpen = false;
+        editingDateId = null;
+        returnFocusId = null;
       },
     },
   ]);
@@ -271,13 +314,37 @@ season (S11).
     return () => {
       return async ({ update, result }) => {
         await update({ reset: false });
-        if (result.type === 'success') showSaved(rowId);
+        if (result.type === 'success') {
+          showSaved(rowId);
+          // Returns the row to at-rest typeset on a successful save (the probe verdict's own
+          // wording); a failed save leaves the officer in edit mode with whatever they typed.
+          // `returnFocusId` (fix round finding 2) sends focus back to that row's own rest button
+          // rather than dropping it to `<body>`.
+          if (editingDateId === rowId) {
+            editingDateId = null;
+            returnFocusId = rowId;
+          }
+        }
       };
     };
   }
 
   function stopRowToggle(event: Event) {
     event.stopPropagation();
+  }
+
+  /** The date form wrap's own keydown handler while a row is mid-edit: still stops the
+   *  `ExpandableRow` row-toggle bubble (`stopRowToggle`'s own job), plus Escape exits edit mode
+   *  without saving. A no-op past the propagation stop at rest, where there is no edit to leave. */
+  function onDateCellKeydown(event: KeyboardEvent, eventId: string) {
+    event.stopPropagation();
+    if (event.key === 'Escape' && editingDateId === eventId) {
+      event.preventDefault();
+      editingDateId = null;
+      // Same return-focus idiom as the successful-save path in `keepDateOnScreen`: focus goes
+      // back to this row's own rest button rather than dropping to `<body>`.
+      returnFocusId = eventId;
+    }
   }
 
   /** The series-link control's own option list for `row`: every OTHER event series the currently
@@ -550,99 +617,146 @@ season (S11).
               <td class="events-date-cell tabular-nums type-body text-muted events-narrow-hide">{instanceText(row.prior[0])}</td>
               <td class="events-date-cell tabular-nums type-body">
                 {#if row.kind === 'event' && row.event}
-                  <!-- Stops the date form's own click/keydown from bubbling to `ExpandableRow`'s
+                  <!-- `eventId`, not `row.event.id` inline: TS control-flow narrowing on
+                       `row.event` (the outer `{#if}` above) does not survive into a closure body
+                       (`onclick`/`onkeydown` below all capture it), so a local const the narrowing
+                       DOES apply to (this is a direct property access, not a closure) is what the
+                       closures actually read. -->
+                  {@const eventId = row.event.id}
+                  <!-- Stops the date cell's own click/keydown from bubbling to `ExpandableRow`'s
                        row-toggle `onclick` on the summary `<tr>`; this file's header comment
-                       explains the wider contract. -->
+                       explains the wider contract. Wraps BOTH states below (rest and edit), not
+                       just the form, since the rest-state buttons need the same guard: clicking
+                       either one must open edit mode, never toggle the whole row. -->
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
-                  <div class="events-date-form-wrap" onclick={stopRowToggle} onkeydown={stopRowToggle}>
-                    <form method="post" action="?/setDate" use:enhance={keepDateOnScreen(row.event.id)}>
-                      <CsrfField />
-                      <input type="hidden" name="id" value={row.event.id} />
-                      <span class="events-start-date-wrap">
+                  <div
+                    class="events-date-form-wrap"
+                    onclick={stopRowToggle}
+                    onkeydown={(event) => onDateCellKeydown(event, eventId)}
+                  >
+                    {#if editingDateId === eventId}
+                      <form method="post" action="?/setDate" use:enhance={keepDateOnScreen(eventId)}>
+                        <CsrfField />
+                        <input type="hidden" name="id" value={eventId} />
+                        <span class="events-start-date-wrap">
+                          <input
+                            class="input input-sm events-date-input"
+                            type="date"
+                            name="startDate"
+                            value={row.current?.startDate ?? ''}
+                            aria-label={`${row.title} start date, ${data.season}`}
+                            use:focusDateInput
+                            onchange={(event) => event.currentTarget.form?.requestSubmit()}
+                          />
+                          {#if row.current?.endDate}
+                            <!-- Narrow width only (S2 of the second coherence read's fix brief): the
+                                 end-date input itself is CSS-hidden below, so this reads the range's
+                                 own end date as quiet text where the unlabeled 6px dot used to sit
+                                 -- readable on its own, not just a decorative cue a screen reader had
+                                 to be told about separately. At the default width the real,
+                                 pre-filled end-date input already shows this, so the text stays
+                                 narrow-only. Third coherence read (item 2): a real button, not inert
+                                 text -- the narrow width has no visible end-date input to tap, so
+                                 this note is the only way to reach that field there, and it opens the
+                                 row's own panel focused on End date exactly like "+ end date" below.
+                                 `events-saved-active` (this file's narrow media block) hides it while
+                                 this row's own save confirmation is showing, the same swap the "+ end
+                                 date" button gets. -->
+                            <button
+                              type="button"
+                              class="events-add-end-date-link events-end-date-note events-narrow-only"
+                              class:events-saved-active={savedRowId === eventId}
+                              onclick={() => openEndDateField(row)}
+                            >
+                              to {monthDayFmt.format(parseCivil(row.current.endDate))}
+                            </button>
+                          {:else}
+                            <!-- The "+ end date" quiet link (S2 and S3): narrow-only when the row
+                                 already carries a start date (the real end-date input handles that
+                                 case at the default width instead, below); visible at every width
+                                 for a fully undated row, since S3's own fix is exactly "don't show
+                                 an empty end-date input beside an empty start-date input" -- there is
+                                 nothing for it to pair with yet at ANY width until a start date
+                                 exists. `events-saved-active` (item 4): hidden at the narrow width
+                                 while this row's own save confirmation is showing, so "Saved" has
+                                 room to render in its place instead of forcing the nowrap date form
+                                 past the cell's own measured width. -->
+                            <button
+                              type="button"
+                              class="events-add-end-date-link"
+                              class:events-narrow-only={row.current?.startDate != null}
+                              class:events-saved-active={savedRowId === eventId}
+                              onclick={() => openEndDateField(row)}
+                            >
+                              + end date
+                            </button>
+                          {/if}
+                        </span>
+                        <!-- Always in the DOM, so its own value posts even while CSS-hidden at a
+                             phone width or an undated row: `display: none` never drops a field from
+                             its form's own submission, only a genuinely absent or `disabled` one
+                             does, so an officer who edits only the start date still round-trips
+                             whatever end date this row already carries, unchanged; editing the end
+                             date itself then happens in the row's own expanded panel (Start date/End
+                             date pair) or through the "+ end date" link above, which opens exactly
+                             that panel. `events-end-date-input-hidden` (S3): don't render the empty
+                             end-date input at all until a start date exists -- two empty
+                             `mm/dd/yyyy` boxes side by side read as "half a form", not a date. -->
                         <input
-                          class="input input-sm events-date-input"
+                          class="input input-sm events-date-input events-end-date-input"
+                          class:events-end-date-input-hidden={row.current?.startDate == null}
                           type="date"
-                          name="startDate"
-                          value={row.current?.startDate ?? ''}
-                          aria-label={`${row.title} start date, ${data.season}`}
+                          name="endDate"
+                          value={row.current?.endDate ?? ''}
+                          aria-label={`${row.title} end date, ${data.season}`}
                           onchange={(event) => event.currentTarget.form?.requestSubmit()}
                         />
-                        {#if row.current?.endDate}
-                          <!-- Narrow width only (S2 of the second coherence read's fix brief): the
-                               end-date input itself is CSS-hidden below, so this reads the range's
-                               own end date as quiet text where the unlabeled 6px dot used to sit
-                               -- readable on its own, not just a decorative cue a screen reader had
-                               to be told about separately. At the default width the real,
-                               pre-filled end-date input already shows this, so the text stays
-                               narrow-only. Third coherence read (item 2): a real button, not inert
-                               text -- the narrow width has no visible end-date input to tap, so
-                               this note is the only way to reach that field there, and it opens the
-                               row's own panel focused on End date exactly like "+ end date" below.
-                               `events-saved-active` (this file's narrow media block) hides it while
-                               this row's own save confirmation is showing, the same swap the "+ end
-                               date" button gets. -->
-                          <button
-                            type="button"
-                            class="events-add-end-date-link events-end-date-note events-narrow-only"
-                            class:events-saved-active={savedRowId === row.event.id}
-                            onclick={() => openEndDateField(row)}
-                          >
-                            to {monthDayFmt.format(parseCivil(row.current.endDate))}
-                          </button>
-                        {:else}
-                          <!-- The "+ end date" quiet link (S2 and S3): narrow-only when the row
-                               already carries a start date (the real end-date input handles that
-                               case at the default width instead, below); visible at every width
-                               for a fully undated row, since S3's own fix is exactly "don't show
-                               an empty end-date input beside an empty start-date input" -- there is
-                               nothing for it to pair with yet at ANY width until a start date
-                               exists. `events-saved-active` (item 4): hidden at the narrow width
-                               while this row's own save confirmation is showing, so "Saved" has
-                               room to render in its place instead of forcing the nowrap date form
-                               past the cell's own measured width. -->
-                          <button
-                            type="button"
-                            class="events-add-end-date-link"
-                            class:events-narrow-only={row.current?.startDate != null}
-                            class:events-saved-active={savedRowId === row.event.id}
-                            onclick={() => openEndDateField(row)}
-                          >
-                            + end date
-                          </button>
-                        {/if}
-                      </span>
-                      <!-- Always in the DOM, so its own value posts even while CSS-hidden at a
-                           phone width or an undated row: `display: none` never drops a field from
-                           its form's own submission, only a genuinely absent or `disabled` one
-                           does, so an officer who edits only the start date still round-trips
-                           whatever end date this row already carries, unchanged; editing the end
-                           date itself then happens in the row's own expanded panel (Start date/End
-                           date pair) or through the "+ end date" link above, which opens exactly
-                           that panel. `events-end-date-input-hidden` (S3): don't render the empty
-                           end-date input at all until a start date exists -- two empty
-                           `mm/dd/yyyy` boxes side by side read as "half a form", not a date. -->
-                      <input
-                        class="input input-sm events-date-input events-end-date-input"
-                        class:events-end-date-input-hidden={row.current?.startDate == null}
-                        type="date"
-                        name="endDate"
-                        value={row.current?.endDate ?? ''}
-                        aria-label={`${row.title} end date, ${data.season}`}
-                        onchange={(event) => event.currentTarget.form?.requestSubmit()}
-                      />
-                      <!-- S9: the "Saved" confirmation renders beside the very input that changed,
-                           `role="status"` present at load (this element, always rendered, empty
-                           until `showSaved` fills it) rather than only the page-level line above
-                           the toolbar, which sits well off-screen from a row an officer is dating
-                           deep in a long ledger. -->
-                      <span
-                        class="events-row-saved type-meta text-muted"
-                        class:events-row-saved-empty={savedRowId !== row.event.id}
-                        role="status"
-                        aria-live="polite"
-                        aria-atomic="true"
-                      >{savedRowId === row.event.id ? 'Saved' : ''}</span>
-                    </form>
+                      </form>
+                    {:else if row.current?.startDate}
+                      <!-- At-rest typeset text (probe verdict, 2026-08-24): the same register the
+                           read-only prior columns use (`tabular-nums type-body`, full ink, no
+                           `text-muted`), a real button rather than a styled span so the edit
+                           affordance is keyboard-reachable and announced. No box, no calendar
+                           glyph until activated -- just the dashed underline below. -->
+                      <button
+                        type="button"
+                        class="events-date-rest-btn"
+                        aria-label={`Edit ${row.title} dates, ${data.season}: ${instanceText(row.current)}`}
+                        use:focusIfReturning={eventId}
+                        onclick={() => (editingDateId = eventId)}
+                      >
+                        {instanceText(row.current)}
+                      </button>
+                    {:else}
+                      <!-- The undated case (probe verdict): a quiet "+ add date" link, styled
+                           identically to the form's own "+ end date" link below (same class,
+                           reused rather than duplicated) -- both read as the same kind of
+                           affordance, "there is a date missing here, click to add it". No
+                           `aria-label` (fix round finding 4, label-in-name): the sr-only suffix
+                           keeps "+ add date" itself as a literal prefix of the accessible name,
+                           rather than replacing it with text that omits the visible string. -->
+                      <button
+                        type="button"
+                        class="events-add-end-date-link"
+                        use:focusIfReturning={eventId}
+                        onclick={() => (editingDateId = eventId)}
+                      >
+                        + add date<span class="sr-only"> for {row.title}, {data.season}</span>
+                      </button>
+                    {/if}
+                    <!-- S9: the "Saved" confirmation renders beside the very cell that changed,
+                         `role="status"` present at load (this element, always rendered, empty
+                         until `showSaved` fills it) rather than only the page-level line above the
+                         toolbar, which sits well off-screen from a row an officer is dating deep in
+                         a long ledger. Outside the edit/rest toggle above (not inside the `<form>`)
+                         so it keeps announcing after a successful save returns the row to rest. -->
+                    <span
+                      class="events-row-saved type-meta text-muted"
+                      class:events-row-saved-empty={savedRowId !== eventId}
+                      role="status"
+                      aria-live="polite"
+                      aria-atomic="true"
+                    >{savedRowId === eventId ? 'Saved' : ''}</span>
                   </div>
                 {:else}
                   <!-- A class row's own current-season text (never a form -- Task 5's own
@@ -855,6 +969,14 @@ season (S11).
      plenty of room at 1440. */
   .events-date-form-wrap {
     display: inline-flex;
+    /* The wrap's own "Saved" span (below) is now a direct sibling of the rest button/form, not
+       nested inside either -- an `inline-flex` container with no gap of its own left the two
+       flush against each other (measured 0px) and let "Saved" top-align against a stacked edit-
+       mode form at 390 (fix round finding 1). A `display: none` "Saved" span (the at-rest,
+       non-saved case) still contributes no gap on either side of it, so this leaves that layout
+       unchanged. */
+    gap: 0.25rem;
+    align-items: center;
   }
 
   .events-date-form-wrap form {
@@ -895,6 +1017,33 @@ season (S11).
   .events-end-date-note,
   .events-add-end-date-link {
     white-space: nowrap;
+  }
+
+  /* The at-rest typeset date button (probe verdict, 2026-08-24): full ink, no box, only a dashed
+     underline marks the edit affordance -- `currentColor`, not a hardcoded ink value, so it reads
+     correctly against the cell's own `type-body` color in both themes. */
+  .events-date-rest-btn {
+    border: none;
+    border-bottom: 1px dashed color-mix(in oklab, currentColor 35%, transparent);
+    background: none;
+    padding: 0;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* State coverage (fix round finding 5): the dashed underline solidifies on hover, and the
+     focus ring matches the cell's other controls' own S10 recipe (`.events-date-form-wrap`'s
+     input focus rule, above), rather than falling back to whatever `cairn-admin.css`'s
+     unqualified default gives an unstyled `<button>`. */
+  .events-date-rest-btn:hover {
+    border-bottom-style: solid;
+  }
+
+  .events-date-rest-btn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
   }
 
   /* A quiet text-button, not a `.btn` (S2/S3): reads as an affordance beside the date, never a
