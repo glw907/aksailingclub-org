@@ -15,24 +15,60 @@
    `.table-zebra` even row), and adds a second, warning-toned variant of the `quiet` register
    that `StatusChip` itself has no equivalent for.
 
-   Usage: wrap a `<StatusChip>` call in a marker span, passing the base `register` value
-   ("quiet" for the quiet and warning tints, "bounded" for the outline) that these selectors key
-   off of. The wrapper follows the events page's own `events-cat-chip` idiom (`display: contents`
-   keeps the wrapper from blockifying and floating the chip off the row's shared vertical
-   center, per that page's own recorded finding):
+   Usage (wrapper markup): wrap a `<StatusChip>` call in a marker span, passing the base
+   `register` value ("quiet" for the quiet and warning tints, "bounded" for the outline) that
+   these selectors key off of. The wrapper follows the events page's own `events-cat-chip`
+   idiom (`display: contents` keeps the wrapper from blockifying and floating the chip off the
+   row's shared vertical center, per that page's own recorded finding):
 
      <span class="asc-admin-chip-quiet"><StatusChip tone="neutral" register="quiet" ... /></span>
      <span class="asc-admin-chip-warning"><StatusChip tone="warning" register="quiet" ... /></span>
      <span class="asc-admin-chip-outline"><StatusChip tone="neutral" register="bounded" ... /></span>
 
-   Percentages are tuned per theme, not to one shared value (no single percentage lands all
-   four theme/stripe combinations in the same band, the events settle's own recorded finding):
-   each register's chip-ground contrast against both `--color-base-100` and the zebra-striped
-   `--color-base-200` is measured, via a 1x1 canvas `getImageData` readback (`getComputedStyle`
-   alone returns unresolved `oklch()`/`color-mix()` strings in this Chromium), inside the
-   1.16-1.47:1 band `docs/design-benchmark/decisions.md` sets as the standard for a chip that
-   should recede into its row rather than compete with it. `scripts/verify-chip-registers.mjs`
-   is the standing check; its output is recorded in the task report that added this file. */
+   Usage (wiring the stylesheet in): a consuming admin page pulls this file in with a per-page
+   side-effect import in its own `<script>` block, not a global import:
+
+     import '$theme/admin-chip-registers.css';
+
+   Task 1 (this file) ships the grammar and its standing verification script but does not wire
+   any page; Task 2 (`docs/plans/2026-08-24-assets-register.md`) lands the first real import,
+   on the Assets admin screen, and Task 3 follows on asset-requests. Until then this sheet is
+   inert in the built site (nothing imports it), by design -- the Usage block above plus
+   `scripts/verify-chip-registers.mjs`'s standing measurements are Task 1's proof that the
+   grammar is correct, not a live page render.
+
+   Two standards govern this file, and they are different standards for different registers:
+
+   - The two TINTED registers (quiet, warning) hold the 1.16-1.47:1 ground-contrast band
+     `docs/design-benchmark/decisions.md` sets for a chip that should recede into its row
+     rather than compete with it. Percentages are tuned per theme, not to one shared value (no
+     single percentage lands all four theme/stripe combinations in the same band, the events
+     settle's own recorded finding): each register's chip-ground contrast against both
+     `--color-base-100` and the zebra-striped `--color-base-200` is measured, via a 1x1 canvas
+     `getImageData` readback (`getComputedStyle` alone returns unresolved `oklch()`/
+     `color-mix()` strings in this Chromium). Final tuned values: quiet 11%/8% (light/dark)
+     into `--color-base-100`, warning 40%/10% into `--color-base-100`.
+
+   - The OUTLINE register holds a different standard: a >= 3:1 non-text (border) contrast floor
+     against the row ground, matching `StatusChip`'s own `bounded` register and the events
+     page's Hidden chip -- the 1.16-1.47:1 ground band does not apply to it, since it carries no
+     fill to measure a ground-contrast ratio against. Border = `color-mix(in oklab,
+     var(--color-base-content) 55%, transparent)`, the same value in both themes (no per-theme
+     tuning needed here, unlike the tints above), transparent fill, muted ink
+     (`var(--color-muted)`).
+
+   In dark theme the warning and quiet tinted grounds are luminance-identical (the 40%/10%
+   percentage asymmetry above lands both in the same recede-into-the-row band, which means
+   they are visually indistinguishable from each other by ground alone in that theme). The
+   warning register's INK now carries the tone in both themes instead, tuned per theme against
+   its own chip ground to clear a >= 4.5:1 text-contrast floor (measured: light 40% warning mix
+   at 5.323:1, dark 70% warning mix at 8.342:1, both against their own register's ground). The
+   quiet and outline registers' inks are unchanged.
+
+   All measured via `scripts/verify-chip-registers.mjs`'s canvas-readback method (paint the
+   ground color into a 1x1 canvas first, then the target color on top with default `source-over`
+   compositing -- this correctly resolves the outline register's translucent border, not just
+   the opaque tinted fills and inks). Run with `node scripts/verify-chip-registers.mjs`. */
 
 .asc-admin-chip-quiet,
 .asc-admin-chip-warning,
@@ -46,6 +82,8 @@
 }
 
 .asc-admin-chip-outline .status-chip.status-chip-bounded {
+  background-color: transparent;
+  border-color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
   color: var(--color-muted);
   font-weight: 400;
 }
@@ -60,16 +98,10 @@
 
 [data-theme='cairn-admin'] .asc-admin-chip-warning .status-chip.status-chip-quiet {
   background-color: color-mix(in oklab, var(--color-warning) 40%, var(--color-base-100));
+  color: color-mix(in oklab, var(--color-warning) 40%, var(--color-base-content));
 }
 
 [data-theme='cairn-admin-dark'] .asc-admin-chip-warning .status-chip.status-chip-quiet {
   background-color: color-mix(in oklab, var(--color-warning) 10%, var(--color-base-100));
-}
-
-[data-theme='cairn-admin'] .asc-admin-chip-outline .status-chip.status-chip-bounded {
-  border-color: color-mix(in oklab, var(--color-base-content) 12%, transparent);
-}
-
-[data-theme='cairn-admin-dark'] .asc-admin-chip-outline .status-chip.status-chip-bounded {
-  border-color: color-mix(in oklab, var(--color-base-content) 11%, transparent);
+  color: color-mix(in oklab, var(--color-warning) 70%, var(--color-base-content));
 }
