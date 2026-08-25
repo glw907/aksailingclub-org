@@ -68,12 +68,24 @@
    All measured via `scripts/verify-chip-registers.mjs`'s canvas-readback method (paint the
    ground color into a 1x1 canvas first, then the target color on top with default `source-over`
    compositing -- this correctly resolves the outline register's translucent border, not just
-   the opaque tinted fills and inks). Run with `node scripts/verify-chip-registers.mjs`. */
+   the opaque tinted fills and inks). Run with `node scripts/verify-chip-registers.mjs`.
+
+   The tone dot retires across all three registers (Task 2's own probe verdict, decisions ledger
+   2026-08-24: "the dot is so small it's hard to tell what color it is"), the same finding the
+   events ledger's category chip already carries site-side. `StatusChip`'s own `.status` span is
+   the dot; this file is a plain (unscoped) stylesheet, so no `:global()` wrapper is needed the
+   way a Svelte `<style>` block would require to reach into another component's markup. */
 
 .asc-admin-chip-quiet,
 .asc-admin-chip-warning,
 .asc-admin-chip-outline {
   display: contents;
+}
+
+.asc-admin-chip-quiet .status,
+.asc-admin-chip-warning .status,
+.asc-admin-chip-outline .status {
+  display: none;
 }
 
 .asc-admin-chip-quiet .status-chip.status-chip-quiet,
