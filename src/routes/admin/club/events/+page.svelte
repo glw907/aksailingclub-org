@@ -96,23 +96,28 @@ season (S11).
     }
   });
 
-  // The blank "New event" panel closes on a season change (a real navigation, so `data.season`
-  // itself is the signal `$state` alone can't catch) or a filter change (the two `onChange`
-  // handlers below, a client-side change this effect never sees) -- an abandoned draft should
-  // never survive the officer changing what they are even looking at.
+  /** Everything the ledger holds that belongs to the view an officer is currently looking at: a
+   *  blank "New event" draft, a row mid-edit in its date cell, and the return-focus target that
+   *  edit is holding. A season change or a filter change closes all three -- an abandoned draft
+   *  should never survive the officer changing what they are even looking at, and a season change
+   *  besides swaps every row's form out for a fresh one keyed to the new season's own event ids
+   *  (fix round finding 6), leaving a mid-flight edit nothing to return to. */
+  function closeViewScopedState() {
+    newRowOpen = false;
+    editingDateId = null;
+    returnFocusId = null;
+  }
+
+  // A season change is a real navigation, so `data.season` itself is the signal `$state` alone
+  // can't catch; a filter change is client-side, handled by the two `onChange` handlers below,
+  // which this effect never sees.
   let lastSeason = $state(untrack(() => data.season));
   $effect(() => {
     if (data.season !== lastSeason) {
       lastSeason = data.season;
-      newRowOpen = false;
-      // A season change swaps every row's `editingDateId`-bearing form out for a fresh one keyed
-      // to the new season's own event ids (fix round finding 6): an edit mid-flight on the old
-      // season has nothing left to return to.
-      editingDateId = null;
-      returnFocusId = null;
+      closeViewScopedState();
     }
   });
-
 
   function toggleExpanded(id: string) {
     expandedId = expandedId === id ? null : id;
@@ -241,9 +246,7 @@ season (S11).
       ],
       onChange: (value) => {
         datesFilter = value;
-        newRowOpen = false;
-        editingDateId = null;
-        returnFocusId = null;
+        closeViewScopedState();
       },
     },
     {
@@ -257,9 +260,7 @@ season (S11).
       ],
       onChange: (value) => {
         rowsFilter = value;
-        newRowOpen = false;
-        editingDateId = null;
-        returnFocusId = null;
+        closeViewScopedState();
       },
     },
   ]);
@@ -555,7 +556,7 @@ season (S11).
           <th class="{HEADER_CELL} events-name-header" scope="col">Event</th>
           <th class="{HEADER_CELL} tabular-nums events-narrow-hide" scope="col">{data.season - 2}</th>
           <th class="{HEADER_CELL} tabular-nums events-narrow-hide" scope="col">{data.season - 1}</th>
-          <th class="{HEADER_CELL} tabular-nums" scope="col">{data.season}</th>
+          <th class="{HEADER_CELL} tabular-nums events-season-header-current" scope="col">{data.season}</th>
           <!-- A REAL (though visually blank) narrow cell, not a `sr-only`-on-the-`<th>` one (S8
                of the second coherence read's fix brief): Tailwind's `sr-only` utility is
                `position: absolute`, which per the table layout spec computes an absolutely
@@ -634,7 +635,7 @@ season (S11).
               </td>
               <td class="events-date-cell tabular-nums type-body text-muted events-narrow-hide">{instanceText(row.prior[1])}</td>
               <td class="events-date-cell tabular-nums type-body text-muted events-narrow-hide">{instanceText(row.prior[0])}</td>
-              <td class="events-date-cell tabular-nums type-body">
+              <td class="events-date-cell events-date-cell-current tabular-nums type-body">
                 {#if row.kind === 'event' && row.event}
                   <!-- `eventId`, not `row.event.id` inline: TS control-flow narrowing on
                        `row.event` (the outer `{#if}` above) does not survive into a closure body
@@ -747,16 +748,21 @@ season (S11).
                         {instanceText(row.current)}
                       </button>
                     {:else}
-                      <!-- The undated case (probe verdict): a quiet "+ add date" link, styled
-                           identically to the form's own "+ end date" link below (same class,
-                           reused rather than duplicated) -- both read as the same kind of
-                           affordance, "there is a date missing here, click to add it". No
-                           `aria-label` (fix round finding 4, label-in-name): the sr-only suffix
+                      <!-- The undated case (probe verdict, then C of the settle round): its own
+                           AT-REST class (`events-date-rest-add-link`), not the in-form "+ end
+                           date"/"to <date>" links' `events-add-end-date-link` -- that shared class
+                           is a 13px purple solid-underline register, which beside a column of 14px
+                           ink, dash-underlined dates read as a stray form control rather than this
+                           column's own affordance (measured: its own row 51px against 52px for
+                           every dated sibling). This class matches `.events-date-rest-btn`'s own
+                           recipe instead (dashed underline, hover solidifies, the S10 focus ring),
+                           just muted rather than full ink, since there is no date yet to typeset.
+                           No `aria-label` (fix round finding 4, label-in-name): the sr-only suffix
                            keeps "+ add date" itself as a literal prefix of the accessible name,
                            rather than replacing it with text that omits the visible string. -->
                       <button
                         type="button"
-                        class="events-add-end-date-link"
+                        class="events-date-rest-add-link"
                         use:focusIfReturning={eventId}
                         onclick={() => (editingDateId = eventId)}
                       >
@@ -781,8 +787,19 @@ season (S11).
                   <!-- A class row's own current-season text (never a form -- Task 5's own
                        header comment): allowed to wrap onto a second line at the narrow
                        breakpoint (below) rather than ellipsizing, so a range's own year never
-                       silently drops (the second coherence read's own S1 finding). -->
-                  <span class="events-current-text">{instanceText(row.current)}</span>
+                       silently drops (the second coherence read's own S1 finding). D of the
+                       settle round: an UNDATED class row named its own state instead of the
+                       0x0 blank span the sibling event row's own "+ add date" affordance left
+                       beside it -- "not scheduled" (quiet, `text-muted`; class dates are set in
+                       Classes, so this cell carries no affordance of its own to add one). Scoped
+                       to `row.kind === 'class'` specifically: an event row with no current-season
+                       instance at all falls into this same `{:else}` branch and keeps its prior
+                       blank rendering, since D's own finding named only the class row. -->
+                  {#if row.kind === 'class' && !row.current?.startDate}
+                    <span class="events-current-empty text-muted">not scheduled</span>
+                  {:else}
+                    <span class="events-current-text">{instanceText(row.current)}</span>
+                  {/if}
                 {/if}
               </td>
             {/snippet}
@@ -932,9 +949,16 @@ season (S11).
     width: 1px;
   }
 
+  /* B (settle round): `flex-start`, not `center` -- a two-line wrapped title (the narrow
+     breakpoint's own clamp, below) floated the star between its two lines under `center`
+     (measured 7.5px low, the star's own center sitting under the gap between lines rather than
+     the first line's own center). `flex-start` marks the FIRST line instead: the star and the
+     title share the same 15px line box (both this element's own font metrics), so a single-line
+     title's own alignment is unchanged (measured 0px delta) -- `flex-start` and `center` agree
+     whenever both children are the same height. */
   .events-name-text {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.375rem;
     font-weight: 600;
   }
@@ -980,6 +1004,25 @@ season (S11).
 
   .events-cat-social :global(.status-chip) {
     background-color: color-mix(in oklab, oklch(46% 0.14 155) 15%, var(--color-base-100));
+  }
+
+  /* F (settle round, cosmetic 6): Operations/Governance keep `StatusChip`'s own quiet gray ground
+     unmodified (this file's earlier comment on `events-cat-chip`), which measured 1.68-1.80:1
+     against the zebra ground the tinted three above measure ~1.19-1.28:1 against on their own
+     usual (light theme, unstriped) condition -- the "quiet" gray chips were, by measurement, the
+     LOUDEST ones on the row. A tint of `--color-base-content` itself (not a hue) keeps the
+     category vocabulary honest -- these two categories carry no color of their own. 10% is tuned
+     against the tinted three's own REAL measured spread across both zebra stripes and both themes
+     (measured via the canvas-readback method, `color-mix`/`oklch` computed values never round-trip
+     through a plain `rgb\(...\)` regex), not an idealized single band: this same fixed-against-
+     `--color-base-100` mechanism already lets the tinted three swing from 1.11:1 (dark, unstriped)
+     to 1.56:1 (dark, striped) depending on which zebra stripe and theme a row lands on, so "sits
+     with the siblings" means landing inside THAT observed spread, which 10% does (light
+     1.16-1.24:1, dark 1.24-1.47:1) while staying well clear of the original 1.68-1.80:1 defect.
+     Label ink stays a comfortable 10-12:1 throughout, well past the 4.5:1 floor. */
+  .events-cat-operations :global(.status-chip),
+  .events-cat-governance :global(.status-chip) {
+    background-color: color-mix(in oklab, var(--color-base-content) 10%, var(--color-base-100));
   }
 
   /* The state-marker chip (cosmetic item, second coherence read): no colored dot -- see the
@@ -1035,6 +1078,22 @@ season (S11).
     white-space: nowrap;
   }
 
+  /* A (settle round, 2026-08-24): a fixed literal width, reserved at REST too, so entering
+     date-edit mode never grows or shrinks any column (measured: 240 -> 406px at 1440 before this
+     fix, which at 390 also re-wrapped an unrelated row). The header `<th>` carries the identical
+     value (`events-season-header-current`, the header snippet above), since a plain-auto table
+     layout sizes a column off whichever cell in it specifies the largest `width`; giving the body
+     `td` the same value keeps rest and edit from ever asking for a different one. 284px is the
+     edit form's own natural footprint at the default width -- two 128px (`8rem`) date inputs plus
+     their 4px flex gap (`.events-date-form-wrap form`'s own `gap: 0.25rem`), plus this cell's own
+     12px/12px padding (measured, all four dated/undated/ranged rows fit inside it with no
+     wrapping or overflow). 140px at the narrow breakpoint below is the same reasoning against the
+     narrow-mode input's own 116px floor (S1's `min-width: 112px` plus its rendered 116px). */
+  .events-date-cell-current,
+  .events-season-header-current {
+    width: 284px;
+  }
+
   /* item 37/38: `inline-flex`, not `flex` -- a block-level flex container stretches to its own
      parent's (the `<td>`) full content width regardless of how narrow its own children are,
      which was silently defeating every width this file's date inputs were ever given (measured:
@@ -1063,10 +1122,16 @@ season (S11).
     gap: 0.25rem;
   }
 
+  /* H (settle round, cosmetic 10): the default-width value read at the sheet's own `.input-sm`
+     size (`--font-size-min: .75rem`, 12px) -- a shrink from the 14px `type-body` register the
+     at-rest typeset text just left, now that A's own column reservation means there is width to
+     spare for the full 14px value. Narrow keeps 12px (its own `min-width: 112px` fit rule, below,
+     still needs it). */
   .events-date-form-wrap :global(input[type='date']) {
     width: 8rem;
     min-width: 0;
     font-variant-numeric: tabular-nums;
+    font-size: var(--cairn-type-body, 0.875rem);
   }
 
   /* Matches the button ring (S10 of the second coherence read's fix brief); `EventRowForm.svelte`
@@ -1096,31 +1161,47 @@ season (S11).
     white-space: nowrap;
   }
 
-  /* The at-rest typeset date button (probe verdict, 2026-08-24): full ink, no box, only a dashed
-     underline marks the edit affordance -- `currentColor`, not a hardcoded ink value, so it reads
-     correctly against the cell's own `type-body` color in both themes. */
-  .events-date-rest-btn {
+  /* The date column's two AT-REST affordances share one dashed-underline recipe: no box, no
+     calendar glyph, only the underline marks that the cell is editable. `currentColor`, not a
+     hardcoded ink value, so the underline follows whichever ink the two rules below set, in both
+     admin themes. State coverage (fix round finding 5): the underline solidifies on hover, and
+     the focus ring matches the cell's other controls' own S10 recipe (`.events-date-form-wrap`'s
+     input focus rule, above), rather than falling back to whatever `cairn-admin.css`'s
+     unqualified default gives an unstyled `<button>`. */
+  .events-date-rest-btn,
+  .events-date-rest-add-link {
     border: none;
     border-bottom: 1px dashed color-mix(in oklab, currentColor 35%, transparent);
     background: none;
     padding: 0;
-    color: inherit;
     cursor: pointer;
     font: inherit;
-    font-variant-numeric: tabular-nums;
   }
 
-  /* State coverage (fix round finding 5): the dashed underline solidifies on hover, and the
-     focus ring matches the cell's other controls' own S10 recipe (`.events-date-form-wrap`'s
-     input focus rule, above), rather than falling back to whatever `cairn-admin.css`'s
-     unqualified default gives an unstyled `<button>`. */
-  .events-date-rest-btn:hover {
+  .events-date-rest-btn:hover,
+  .events-date-rest-add-link:hover {
     border-bottom-style: solid;
   }
 
-  .events-date-rest-btn:focus-visible {
+  .events-date-rest-btn:focus-visible,
+  .events-date-rest-add-link:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
+  }
+
+  /* The dated row's typeset date (probe verdict, 2026-08-24): full ink and tabular figures, the
+     same register the read-only prior columns use. */
+  .events-date-rest-btn {
+    color: inherit;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* C (settle round): the undated row's own "+ add date" affordance -- see the summary snippet's
+     comment on the button itself for the register mismatch this fixes. Sized to the column's own
+     14px `--cairn-type-body` register and muted, since there is no date yet to carry full ink. */
+  .events-date-rest-add-link {
+    color: var(--color-muted);
+    font-size: var(--cairn-type-body, 0.875rem);
   }
 
   /* A quiet text-button, not a `.btn` (S2/S3): reads as an affordance beside the date, never a
@@ -1178,6 +1259,13 @@ season (S11).
       max-width: 10rem;
     }
 
+    /* A (settle round): the same column-reservation rule as the default width above, narrowed to
+       this breakpoint's own edit-input floor (see that rule's comment for the full reasoning). */
+    .events-date-cell-current,
+    .events-season-header-current {
+      width: 140px;
+    }
+
     /* S1: wraps to a second line instead of ellipsizing a long title (the cosmetic item, second
        coherence read). `-webkit-line-clamp` is Chromium/WebKit-only, matching this admin surface's
        own Chromium-only browser target; a third line still ellipsizes rather than growing the row
@@ -1198,9 +1286,13 @@ season (S11).
       -webkit-box-orient: vertical;
     }
 
+    /* H (settle round): stays at the sheet's own 12px here -- the narrow input's own
+       `min-width: 112px` fit rule (this block's own header comment) leaves no room for the
+       wider 14px value the default width now carries. */
     .events-date-form-wrap :global(input[type='date']) {
       width: 7.25rem;
       min-width: 112px;
+      font-size: 0.75rem;
     }
 
     /* S1: Chromium's own calendar-picker glyph rendered inside the input's own box at this width,

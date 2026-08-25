@@ -28,7 +28,7 @@ after that commit deploys -- there is no live read of the library from an admin 
 vertical listbox with oval-rounded thumbs (below) read as busy against the row's own typeset
 columns and was rejected. At rest -- the default whenever the row form mounts, and the state
 `Clear` returns to -- the picker shows only a large landscape preview beside a caption, the
-entry's name and alt, and a `Change photo`/`Choose photo` button; the library itself (search plus
+entry's name, and a `Change photo`/`Choose photo` button; the library itself (search plus
 a photos-first thumbnail grid, keeping the same listbox semantics and keyboard operation) opens
 only on demand and closes again the moment an option is chosen. Because the trigger button is
 destroyed and remounted across that toggle (`{#if open}`/`{:else}`, not a persisting bound ref),
@@ -40,6 +40,21 @@ back onto `$state`: this repo's Vitest setup (`environment: 'node'` plus vitest'
 of `.svelte` files) has no client `mount()`, so a real mount-and-click test of this component's
 own open/close/select interaction is not available, and the module is what a test can actually
 reach.
+
+**Settle round (Geoff, 2026-08-24): the rest state's own composition.** A cold coherence read
+flagged three defects in the layout above: the caption sat below the preview it named ("Hero
+photo" wrapped under the image, since `FieldRow`'s `items-end` row put the caption and the name
+text on the same line as the buttons), `Clear` fell short of the row's own right margin, and
+`Change photo`/`Choose photo` jumped 602px between the chosen and unchosen states (no preview
+column at all in the unchosen state). The fix: a plain caption span above a single non-wrapping
+row (`hero-image-rest-row`), the preview column ALWAYS present (a real thumbnail, its blank
+placeholder, or -- unchosen -- that same blank placeholder standing in for "no photo yet") at an
+identical 264px 3:2 box, so the button column's own x position never depends on which state is
+showing. The name line drops the "· alt" suffix it used to carry (`heroImageAlt`, unconditionally
+shown): the real `Alt text` field right below already carries that value, so repeating it here
+was the same fact twice, and that field now CSS-hides itself (`hero-image-alt-hidden`, not removed
+-- it must keep posting) while no photo is chosen, since there is nothing yet for its alt text to
+describe.
 
 **Reviewer fan-out fix round (docs/plans/2026-08-22-events-admin.md's fix brief, item 28, plus
 item 43's "Hero photo" label and landscape thumb), still load-bearing after the rest/open split
@@ -63,7 +78,7 @@ a grid thumbnail.
 </script>
 
 <script lang="ts">
-  import { FieldLabel, FieldRow, TextInput } from '@glw907/cairn-cms/admin-toolkit';
+  import { FieldLabel, TextInput } from '@glw907/cairn-cms/admin-toolkit';
   import {
     clearHero,
     closeLibrary as closeLibraryState,
@@ -97,13 +112,13 @@ a grid thumbnail.
   let query = $state('');
   let optionEls: Record<string, HTMLLIElement | undefined> = $state({});
 
-  const filtered = $derived(
-    library.filter((entry) => {
-      const q = query.trim().toLowerCase();
-      if (!q) return true;
-      return entry.displayName.toLowerCase().includes(q) || entry.alt.toLowerCase().includes(q);
-    }),
-  );
+  const filtered = $derived.by(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return library;
+    return library.filter(
+      (entry) => entry.displayName.toLowerCase().includes(q) || entry.alt.toLowerCase().includes(q),
+    );
+  });
 
   const current = $derived(library.find((entry) => entry.token === heroImage) ?? null);
 
@@ -209,35 +224,50 @@ a grid thumbnail.
   <input type="hidden" name="heroImage" value={heroImage} />
 
   {#if !open}
+    <!-- E (settle round): a caption line first (a plain span styled like `FieldLabel`'s own
+         stacked caption, NOT a `<label>` -- the cold read flagged a label wrapping no control),
+         then one non-wrapping row (`hero-image-rest-row`, below) rather than `FieldRow`'s own
+         `items-end` composition, which put the caption and the name/alt text on the SAME line as
+         the buttons and let that line wrap under the preview it was meant to sit beside.
+         `displayName` only in the chosen state's name line (fix round finding, this row's own
+         header note): the alt text below already shows `heroImageAlt`, so repeating it here as
+         "· alt" was the same fact twice. -->
     <div class="hero-image-rest">
-      {#if current}
-        {#if current.url}
+      <span class="hero-image-caption type-body font-medium">Hero photo</span>
+      <div class="hero-image-rest-row">
+        <!-- The preview column, unconditional: a real thumbnail when the chosen entry resolves to
+             a URL, its blank placeholder when it does not, and that same placeholder standing in
+             for "no photo yet" when nothing is chosen at all. Rendering it in every state at the
+             identical 264px 3:2 box is what pins `Change photo`/`Choose photo` to the same x
+             position throughout (measured: the two states used to jump 602px apart). -->
+        {#if current?.url}
           <img class="hero-image-preview" src={current.url} alt="" />
         {:else}
           <span class="hero-image-preview hero-image-preview-blank" aria-hidden="true"></span>
         {/if}
-        <FieldRow>
-          <FieldLabel label="Hero photo">
-            <span class="type-body">
-              <span class="font-medium">{current.displayName}</span>
-              {#if heroImageAlt}<span class="text-muted"> &middot; {heroImageAlt}</span>{/if}
-            </span>
-          </FieldLabel>
-          <button type="button" class="btn btn-sm" onclick={openLibrary} use:focusIfReturning>
-            Change photo
-          </button>
-          <button type="button" class="btn btn-ghost btn-sm" onclick={clear}>Clear</button>
-        </FieldRow>
-      {:else}
-        <FieldRow>
-          <FieldLabel label="Hero photo">
+        <!-- Two branches, not one row with a conditional label: flipping `current` (choosing a
+             photo, or `Clear`) must DESTROY and remount the trigger button, which is what re-runs
+             `focusIfReturning` on it. A single button whose text swapped would keep the same DOM
+             node, and focus would drop to `<body>` instead. -->
+        <div class="hero-image-rest-text">
+          {#if current}
+            <span class="type-body font-medium">{current.displayName}</span>
+            <div class="hero-image-rest-actions">
+              <button type="button" class="btn btn-sm" onclick={openLibrary} use:focusIfReturning>
+                Change photo
+              </button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick={clear}>Clear</button>
+            </div>
+          {:else}
             <span class="type-body text-muted">No hero photo chosen.</span>
-          </FieldLabel>
-          <button type="button" class="btn btn-sm" onclick={openLibrary} use:focusIfReturning>
-            Choose photo
-          </button>
-        </FieldRow>
-      {/if}
+            <div class="hero-image-rest-actions">
+              <button type="button" class="btn btn-sm" onclick={openLibrary} use:focusIfReturning>
+                Choose photo
+              </button>
+            </div>
+          {/if}
+        </div>
+      </div>
     </div>
   {:else}
     <FieldLabel label={`Hero photo · ${library.length} ${library.length === 1 ? 'photo' : 'photos'}`}>
@@ -293,7 +323,13 @@ a grid thumbnail.
     </FieldLabel>
   {/if}
 
-  <TextInput label="Alt text" name="heroImageAlt" bind:value={heroImageAlt} />
+  <!-- E: CSS-hidden (not removed) while no photo is chosen -- `display: none` never drops a
+       field from its form's own submission, only a genuinely absent or `disabled` one does
+       (`+page.svelte`'s own end-date input carries the identical reasoning), so a placement that
+       already carried an alt text before its photo was cleared still round-trips it unchanged. -->
+  <div class="hero-image-alt-wrap" class:hero-image-alt-hidden={!current}>
+    <TextInput label="Alt text" name="heroImageAlt" bind:value={heroImageAlt} />
+  </div>
 </div>
 
 <style>
@@ -305,15 +341,40 @@ a grid thumbnail.
     gap: 0.75rem;
   }
 
+  /* E (settle round): caption above one non-wrapping row, rather than `FieldRow`'s own
+     `items-end` row of caption/name/buttons -- see this file's own header comment for the
+     defects that composition measured. */
   .hero-image-rest {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: var(--cairn-gap-label, 0.25rem);
+  }
+
+  .hero-image-rest-row {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: nowrap;
     gap: 1rem;
+  }
+
+  .hero-image-rest-text {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .hero-image-rest-actions {
+    display: flex;
+    gap: 0.5rem;
   }
 
   /* Landscape, not a near-square "squircle": a real photo crop reads as a photo at this aspect
      ratio, where a square box (with a radius large relative to its own size) reads as an icon
-     glyph instead. */
+     glyph instead. `flex: none` keeps this column at its own literal width regardless of the
+     text column beside it -- what pins `Change photo`/`Choose photo` to the same x position in
+     both the chosen and unchosen states (this box renders, blank, in the unchosen state too). */
   .hero-image-preview {
     width: 264px;
     aspect-ratio: 3 / 2;
@@ -359,6 +420,10 @@ a grid thumbnail.
     /* A hairline that clears the audit's own 3:1 border-contrast floor against both themes'
        page and card grounds, rather than the fixed `--cairn-card-border` token. */
     border: 1px solid color-mix(in oklab, var(--color-base-content) 30%, transparent);
+    /* I (settle round, cosmetic 9): a subtle inset shadow along the bottom edge, so a photo grid
+       taller than its own 21rem scroll clip reads as "more below", rather than clipping a row of
+       thumbnails mid-image with no cue that anything was cut off. */
+    box-shadow: inset 0 -14px 12px -14px color-mix(in oklab, var(--color-base-content) 25%, transparent);
   }
 
   .hero-image-empty {
@@ -420,5 +485,26 @@ a grid thumbnail.
     font-size: 0.75rem;
     font-weight: 600;
     color: var(--cairn-warning-ink);
+  }
+
+  /* E (settle round): CSS-hidden, not removed -- see the field's own markup comment for why. */
+  .hero-image-alt-hidden {
+    display: none;
+  }
+
+  /* E (settle round): the panel's own narrow regime (`+page.svelte`/`EventRowForm.svelte`'s
+     shared `@media (max-width: 640px)` breakpoint, matched here so this field stacks at the same
+     width its own row form does) -- a deliberate column stack (caption, full-width preview, text,
+     buttons) rather than the default row, which has no room for a 264px preview beside a text
+     column at the expanded panel's own ~320px content width. */
+  @media (max-width: 640px) {
+    .hero-image-rest-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .hero-image-preview {
+      width: 100%;
+    }
   }
 </style>

@@ -351,10 +351,16 @@ the field it concerns rather than only at the top of the page.
     grid-column: 1 / -1;
   }
 
+  /* G (settle round, cosmetic 7): `margin-top` closes the gap this block's own top edge left
+     against the field grid above it -- both are plain block children of the same `<form>` with no
+     layout of its own, so with neither carrying a margin they sat flush at 0px (measured) where
+     every other field boundary in this form holds the same 1rem the grid's own `gap` and the hero
+     picker's own `border-top`/`padding-top` both use. */
   .event-row-form-prose {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    margin-top: 1rem;
   }
 
   /* Chromium's UA stylesheet's own `textarea { font-family: monospace }` outranks cairn-admin.css's
