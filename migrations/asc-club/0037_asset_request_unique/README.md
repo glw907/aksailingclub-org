@@ -126,7 +126,7 @@ Run entirely against a local, disposable D1 replica (`--persist-to` distinct fro
 
 No unexpected error at any step; every check resolved to its expected value, both directions.
 
-## Live apply record (2026-08-25)
+## Live apply record (2026-08-24, Alaska time)
 
 Pre-apply live read (`--remote`): `SELECT status, COUNT(*) FROM asset_requests GROUP BY status`
 returned **zero rows** — `asset_requests` is genuinely empty live, confirming the plan's own

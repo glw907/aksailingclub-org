@@ -131,6 +131,25 @@ describe('createAssetRequest', () => {
     const result = await createAssetRequest(db, { assetType: 'mooring', householdId: 'hh-1', requestedBy: 'mem-1', kind: 'new', note: null });
     expect(result).toEqual({ error: expect.stringContaining('already have a pending request') });
   });
+
+  // Pins isUniqueViolation's own branch: a non-UNIQUE constraint failure (shaped like a real D1
+  // FOREIGN KEY rejection) must fall through to the generic refusal, never the duplicate-request
+  // message a mis-mapped substring match could produce.
+  it('turns a non-UNIQUE rejection into the generic refusal, not the duplicate-request message', async () => {
+    const { db } = fakeD1();
+    db.prepare = (sql: string) => {
+      const stmt = {
+        sql,
+        bind: () => stmt,
+        run: () => Promise.reject(new Error('FOREIGN KEY constraint failed: SQLITE_CONSTRAINT')),
+        first: async () => null,
+        all: async () => ({ results: [], success: true, meta: {} }),
+      };
+      return stmt as unknown as ReturnType<typeof db.prepare>;
+    };
+    const result = await createAssetRequest(db, { assetType: 'mooring', householdId: 'hh-1', requestedBy: 'mem-1', kind: 'new', note: null });
+    expect(result).toEqual({ error: 'Something went wrong recording your request. Please try again.' });
+  });
 });
 
 describe('cancelAssetRequest', () => {

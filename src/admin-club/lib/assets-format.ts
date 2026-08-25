@@ -2,8 +2,10 @@
 // `scripts/import/ops-assets.mjs` carried over from the legacy ops stack largely in shouting
 // case ("TRAILER", "BAT BOAT"). Kept out of `assets-store.ts` (data access only, per that
 // module's own header) and out of `member-format.ts` (that file's chip vocabulary is
-// member-domain specific; this helper is asset-domain and consumed by the Assets and
-// asset-requests screens too, not just the household desk).
+// member-domain specific; this helper is asset-domain). Consumed by
+// `routes/admin/club/assets/+page.svelte` and `routes/admin/club/members/[id]/+page.svelte`
+// (the household desk); the asset-requests review screen has no raw description field of its
+// own to format (see that screen's header comment).
 
 /**
  * Recase one description for display, never for storage: the stored value never changes,

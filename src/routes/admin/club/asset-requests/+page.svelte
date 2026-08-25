@@ -30,8 +30,8 @@ the shared `$theme/admin-chip-registers.css` quiet register, matching the Assets
 Task 2 re-entry. Pending rows alternate the events ledger's own stripe once more than one request
 is waiting. `AdminRequestRow` carries no raw free-text description of its own (`priorHolding` is
 a fully composed sentence, never a stored description substring), so `displayDescription` has
-nothing to wire on this screen today; see that helper's own header comment for where it is
-consumed instead.
+nothing to wire on this screen today; it is consumed instead by the Assets screen and the
+member-detail household desk (see that helper's own header comment).
 
 `.asset-request-row` overrides daisyUI's own `.list-row` grid below `sm` (the grader-prompt read
 this rebuild ran caught it): that component's default two-column grid gives its SECOND column the
