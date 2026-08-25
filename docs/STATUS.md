@@ -40,16 +40,29 @@ Geoff's steps: the before/after (`/events` at 1440 and 390; Register shows only 
 class) and the owed fresh-context coherence read. Harvest:
 `docs/2026-08-22-events-redesign-harvest-findings.md`.
 
-**Next pass (prep, 2026-08-24; Geoff's pick: Assets + asset-requests).** The
-`admin-screen-passes` series continues with the Assets and asset-requests screens. Same shape:
-functional brainstorm first (superpowers:brainstorming), probe from the real admin shell with
-live rows, toolkit harvest to cairn at close. Inputs: the four 2026-07-29/30 assets docs
-(functional design + input, the substrate plan, the substrate harvest),
-`docs/2026-07-20-admin-toolkit-catalog.md`, and the Events pass entries in `docs/HISTORY.md`.
-Riders: the `asset_requests` uniqueness race migration; the `asset_types` id defect is already
-fixed (`0034`, applied live 2026-07-30). Resume prompt: "Start the
-Assets admin pass: read ROADMAP.md's admin-screen-passes entry and docs/STATUS.md, then open
-the functional brainstorm with Geoff before any visual work." Launch a fresh session here.
+**assets-register pass (IN FLIGHT, 2026-08-24, branch `assets-register`).** Contract
+`docs/2026-08-24-assets-register-design.md` (six brainstorm rulings); plan
+`docs/plans/2026-08-24-assets-register.md` (five probe verdicts, six tasks). Geoff granted
+proceed-to-completion, pushing, and next-pass prep (Email + Announce) with a workflow; the
+before/after folds into this pass's close and still gates the apex. Ledger: T1 accepted after
+a ruled fix round (`a3b3f1e`+`1c3bc0b`; outline holds the 55% hairline at a >=3:1 border
+floor, tinted grounds hold the 1.16-1.47 band, warning ink carries the tone, wiring is
+per-page `import '$theme/admin-chip-registers.css'`); T4 accepted (`20751e4`); T5 accepted
+(`fa756d2`; four portal baselines stale by content, regenerate at close); T2 built gate-green
+(`e151a09`), review NOT yet dispatched, not render-verified. Remaining: T2 review; the ruled
+micro-change (renew heading off "gear" + `e2e/portal-visual.spec.ts:112` assertion + empty
+copy "no storage or mooring space yet"); T3; T6; then close per the plan's "Order and close"
+(simplifier, fan-out, own read + cold read against the seeded replica, CI-dispatch baselines,
+PR/merge/deploy, before/after artifact, harvest incl. finding-12 evidence and the third-copy
+consolidation trigger, decisions.md settle, HISTORY). Spend ~1.1M agent tokens against the
+1.5M ceiling; close will overrun, record per the events precedent. Probe infra: seed +
+captures + verify at `~/.local/asc-data/probes/assets-register/` (apply: bootstrap, then
+`wrangler d1 execute asc-club --local --file .../probe-seed.sql`; capture script copy in the
+session scratchpad; admin session recipe `e2e/helpers/admin-session.ts`). Sequential
+implementer dispatches only, pathspec'd commits (a parallel pair raced the index once).
+Resume prompt: "Resume the assets-register pass: read docs/STATUS.md's assets-register entry,
+the plan, and the contract; dispatch the T2 diff review, then the micro-change, T3, T6, and
+the close." Launch from this repo.
 
 **Geoff's review queue (full entries in docs/status-archive.md).** Before/afters on dev: the
 rebuilt Assets screens (gates the apex), Classes, the pass-B sidebar walkthrough per role, the
