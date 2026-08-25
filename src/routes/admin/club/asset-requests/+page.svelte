@@ -57,7 +57,9 @@ against daisyUI's own `@layer`-wrapped declaration. -->
 
   let dialogs: Record<string, HTMLDialogElement> = {};
 
-  const subtitle = $derived(`${itemNoun(data.requests.length, { one: 'request', many: 'requests' })} awaiting a decision.`);
+  const subtitle = $derived(
+    `${data.requests.length} ${itemNoun(data.requests.length, { one: 'request', many: 'requests' })} awaiting a decision.`,
+  );
 </script>
 
 <OfficeList eyebrow="Club" title="Asset requests" {subtitle}>
@@ -171,9 +173,17 @@ against daisyUI's own `@layer`-wrapped declaration. -->
      (`assets/+page.svelte`'s `.holding-row:nth-child(even)`). No inline margin bleed is needed
      here the way that page needs one: `.list-row`'s own compiled padding is the row's whole box,
      with no padded ancestor between the `<ul>` and `OfficeList`'s card shell for the stripe to
-     bleed past. */
+     bleed past.
+
+     `.list-row` also compiles with `border-radius: var(--radius-box)` (a daisyUI default meant
+     for a standalone card-like row), which reads as a rounded lozenge of tint floating inside
+     this card's own square corners, plus a bare sliver of the card's background peeking through
+     the last row's rounded bottom corners. This rule's own plain, unlayered selector already
+     beats that `@layer utilities` declaration outright (the `@component` comment above names the
+     idiom), so no extra specificity or `!important` is needed to zero it out. */
   .asset-request-row:nth-child(even) {
     background-color: var(--color-base-200);
+    border-radius: 0;
   }
 
   /* Neither this admin's build nor the browser's own UA styles reset a bare `<ul>`'s

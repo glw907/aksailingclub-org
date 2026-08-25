@@ -47,6 +47,7 @@ own list header, matching this file's existing release/payment/edit-type dialog 
   import {
     EmptyState,
     FieldLabel,
+    itemNoun,
     OfficeList,
     SelectInput,
     StatusChip,
@@ -303,7 +304,9 @@ own list header, matching this file's existing release/payment/edit-type dialog 
   });
 
   const subtitle = $derived(
-    data.error ? data.error : `${data.assignments.length} active assignment(s) across ${data.assetTypes.length} asset type(s).`,
+    data.error
+      ? data.error
+      : `${data.assignments.length} active ${itemNoun(data.assignments.length, { one: 'assignment', many: 'assignments' })} across ${data.assetTypes.length} asset ${itemNoun(data.assetTypes.length, { one: 'type', many: 'types' })}.`,
   );
 </script>
 
@@ -690,8 +693,13 @@ own list header, matching this file's existing release/payment/edit-type dialog 
        otherwise draw a bare bullet with no compiled `list-style: none` reset to stop it --
        Tailwind's Preflight reset lives in this site's OWN build, never in the precompiled
        `cairn-admin.css` this route renders against (see this file's own top-of-style-block
-       comment). */
+       comment). The same absent-Preflight gap leaves the UA `40px` `padding-inline-start` a
+       bare `<ul>` reserves for its bullets in place too, which reads as a left gutter each
+       striped row's own `margin-inline: -1.5rem` bleed only escapes on the right; `margin: 0;
+       padding: 0` resets both so the stripe bleeds to the card's real edge on both sides. */
     list-style: none;
+    margin: 0;
+    padding: 0;
   }
 
   /* The row every view (by-asset, by-person, waitlist) shares: an identity block on the left, a
