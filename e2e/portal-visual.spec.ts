@@ -109,7 +109,7 @@ for (const width of WIDTHS) {
       await page.emulateMedia({ colorScheme });
       await page.goto('/my-account/renew');
       await expect(page.getByRole('heading', { level: 1, name: 'Renew your membership' })).toBeVisible();
-      await expect(page.getByText('Your gear and moorings', { exact: false }).first()).toBeVisible();
+      await expect(page.getByText('Your storage and moorings', { exact: false }).first()).toBeVisible();
       await expect(page).toHaveScreenshot(`my-account-renew-${colorScheme}-${width}.png`, { fullPage: true });
     });
   }

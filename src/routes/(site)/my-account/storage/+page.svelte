@@ -1,7 +1,8 @@
 <!-- @component
-/my-account/gear: the gear-and-moorings home (T2b of the portal redesign pass,
-docs/design-benchmark/decisions.md's own "the gear door" ruling). Absorbed off the landing: the
-household's current assignments with payment standing, waitlist positions, pending or
+/my-account/storage: the storage-and-moorings home (T2b of the portal redesign pass,
+docs/design-benchmark/decisions.md's own "the gear door" ruling; renamed off the old `gear` route
+by the assets-register pass's ruling 5, "Gear" is wrong for a mooring or a rack slot). Absorbed off
+the landing: the household's current assignments with payment standing, waitlist positions, pending or
 approved-awaiting-payment requests (with cancel), the request form, and per-row release. Paying an
 outstanding fee POSTs to the landing's own `?/payAssetFee`/`?/payRequest` (a cross-route form
 action, `ActionRow.svelte`'s own established precedent) rather than duplicating either checkout
@@ -13,6 +14,7 @@ confirm, keyboard reachable and focus-managed, "Keep it" returns to rest). -->
   import type { ActionData, PageData } from './$types';
   import { siteConfig } from '$theme/cairn.config';
   import { formatMemberCents } from '$member-auth/lib/format';
+  import { displayDescription } from '$lib/assets-format';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -57,32 +59,32 @@ confirm, keyboard reachable and focus-managed, "Keep it" returns to rest). -->
 </script>
 
 <svelte:head>
-  <title>Gear &amp; moorings — My Account — {siteConfig.siteName}</title>
+  <title>Storage &amp; moorings — My Account — {siteConfig.siteName}</title>
 </svelte:head>
 
 <a href="/my-account" class="portal-back-link">&larr; My account</a>
 
-<h1 class="portal-page-title">Gear &amp; moorings</h1>
+<h1 class="portal-page-title">Storage &amp; moorings</h1>
 <p class="mt-s max-w-measure-wide text-step-0 text-muted">
   What your household holds today, any waitlist positions, and any request in progress.
 </p>
 
 {#if form && 'error' in form && form.error}
-  <p class="mt-s max-w-measure-wide rounded-field border border-error bg-error/10 px-s py-xs text-step--1 text-error">{form.error}</p>
+  <p class="mt-s max-w-measure-wide rounded-field border border-error bg-error/10 px-s py-xs text-step--1 text-error" role="alert">{form.error}</p>
 {/if}
 
 <section class="mt-l max-w-measure-wide">
   <h2 class="m-0 text-step-1 font-semibold text-base-content">Your assets</h2>
 
   {#if data.assignments.length === 0 && data.waitlistEntries.length === 0}
-    <p class="mt-xs mb-0 text-step--1 text-muted">Your household holds no gear or moorings yet.</p>
+    <p class="mt-xs mb-0 text-step--1 text-muted">Your household holds no storage or mooring space yet.</p>
   {/if}
 
   {#each data.assignments as assignment (assignment.id)}
     <div class="gear-row">
       <div class="gear-row-info">
         <p class="gear-row-name">{assignment.assetTypeName}</p>
-        {#if assignment.description}<p class="gear-row-detail">{assignment.description}</p>{/if}
+        {#if assignment.description}<p class="gear-row-detail">{displayDescription(assignment.description)}</p>{/if}
       </div>
 
       {#if confirmingReleaseId === assignment.id}
@@ -188,7 +190,7 @@ confirm, keyboard reachable and focus-managed, "Keep it" returns to rest). -->
       <input type="hidden" name="csrf" value={data.csrf} />
       <fieldset class="fieldset">
         <legend class="fieldset-legend portal-field-label">Asset type</legend>
-        <select class="select select-sm" name="assetType" required>
+        <select class="select select-sm" name="assetType" aria-label="Asset type" required>
           {#each data.assetTypes as type (type.id)}
             <option value={type.id}>{type.name}</option>
           {/each}
@@ -196,7 +198,7 @@ confirm, keyboard reachable and focus-managed, "Keep it" returns to rest). -->
       </fieldset>
       <fieldset class="fieldset grow">
         <legend class="fieldset-legend portal-field-label">Note (optional)</legend>
-        <input class="input input-sm w-full" type="text" name="note" placeholder="A word about why" />
+        <input class="input input-sm w-full" type="text" name="note" aria-label="Note (optional)" placeholder="A word about why" />
       </fieldset>
       <button type="submit" class="btn btn-primary btn-sm">Request</button>
     </form>

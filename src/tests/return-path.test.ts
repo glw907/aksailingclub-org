@@ -10,6 +10,13 @@ describe('isSafeNextPath', () => {
     expect(isSafeNextPath('/my-account/sign?context=renewal')).toBe(true);
   });
 
+  // Fix round B, item 2: the two asset-decision emails (asset-decision-notify.ts) mint a
+  // `next=/my-account/storage` deep link; missing from the allowlist, it was silently dropped to
+  // the portal default instead of landing the member back on the storage screen.
+  it('accepts the storage & moorings deep link', () => {
+    expect(isSafeNextPath('/my-account/storage')).toBe(true);
+  });
+
   it('refuses an arbitrary path, an off-origin URL, and null', () => {
     expect(isSafeNextPath('/my-account')).toBe(false);
     expect(isSafeNextPath('https://evil.example/phish')).toBe(false);

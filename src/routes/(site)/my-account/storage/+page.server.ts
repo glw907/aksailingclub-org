@@ -1,5 +1,6 @@
-// /my-account/gear: the gear-and-moorings home (T2b of the portal redesign pass, "the gear
-// door" ruling in docs/design-benchmark/decisions.md). Absorbs the landing's own asset verbs
+// /my-account/storage: the storage-and-moorings home (T2b of the portal redesign pass, "the
+// gear door" ruling in docs/design-benchmark/decisions.md; renamed off the old `gear` route by
+// the assets-register pass's ruling 5). Absorbs the landing's own asset verbs
 // (release a held assignment, request an asset, cancel a pending request) verbatim from
 // `/my-account/+page.server.ts`: their logic, validation, and CSRF handling are unchanged, only
 // their route moved. `?/payAssetFee` and `?/payRequest` stay on the landing (the design doc's
@@ -69,7 +70,8 @@ export const actions: Actions = {
     const assetType = String(form.get('assetType') ?? '').trim();
     if (!assetType) return fail(400, { error: 'Please choose an asset type.' });
     const note = String(form.get('note') ?? '').trim() || null;
-    await createAssetRequest(ctx.db, { assetType, householdId: ctx.member.householdId, requestedBy: ctx.member.id, kind: 'new', note });
+    const result = await createAssetRequest(ctx.db, { assetType, householdId: ctx.member.householdId, requestedBy: ctx.member.id, kind: 'new', note });
+    if ('error' in result) return fail(400, { error: result.error });
     return { requested: true as const };
   }),
 };

@@ -103,7 +103,7 @@ export const load: PageServerLoad = async (event) => {
 
   // The retention step (design spec ruling 3, task 4): every asset TYPE the household holds
   // today, read through the same `listHouseholdAssignments`/`listHouseholdRequests`
-  // `/my-account/gear` already uses, never a new query. A household with no active assignments
+  // `/my-account/storage` already uses, never a new query. A household with no active assignments
   // gets an empty array, which the template reads as "no step at all".
   //
   // Deduplicated by asset type (finding 1): a household can hold more than one active assignment
@@ -122,9 +122,12 @@ export const load: PageServerLoad = async (event) => {
       assetType: assignment.assetType,
       assetTypeName: assignment.assetTypeName,
       feeDollars: assignment.feeDollars,
-      alreadyRequested: requests.some(
-        (request) => request.assetType === assignment.assetType && request.kind === 'retention' && OPEN_RETENTION_STATUSES.has(request.status),
-      ),
+      // Matches on type and status alone, never `kind` (fix round B, item 3): `0037`'s unique
+      // index is kind-agnostic (`household_id, asset_type WHERE status = 'pending'`), so a
+      // pending `kind: 'new'` request from `/my-account/storage` for this same type already
+      // occupies the index slot a `retention` insert would collide with. Filtering this guard to
+      // `kind === 'retention'` alone would render an enabled button the insert below always fails.
+      alreadyRequested: requests.some((request) => request.assetType === assignment.assetType && OPEN_RETENTION_STATUSES.has(request.status)),
     });
   }
 
@@ -161,9 +164,9 @@ export const actions: Actions = {
   }),
 
   // The retention step's own create action (design spec ruling 3, task 4): one row, one button, a
-  // "yes" per held asset (`/my-account/gear`'s own per-row action shape). A "no" is simply never
+  // "yes" per held asset (`/my-account/storage`'s own per-row action shape). A "no" is simply never
   // submitting this action, so it creates nothing by construction -- releasing a held asset stays
-  // the separate, deliberate action on `/my-account/gear`, never reachable from here.
+  // the separate, deliberate action on `/my-account/storage`, never reachable from here.
   //
   // Its own `retainError` key, distinct from `?/renew`'s `error` (finding 5): the two actions
   // share this route's one `form` prop, and the retention section renders its own error surface
@@ -190,11 +193,20 @@ export const actions: Actions = {
     // create a second pending row, so this checks the household's own existing requests before
     // inserting -- across every OPEN_RETENTION_STATUSES status, not just 'pending', so a request
     // an admin has already approved does not reopen the button and let a second click duplicate
-    // an asset already granted.
+    // an asset already granted. Matches on type and status alone, never `kind` (fix round B, item
+    // 3): `0037_asset_request_unique`'s partial unique index is kind-agnostic
+    // (`household_id, asset_type WHERE status = 'pending'`), so it backs this check only if the
+    // guard and the index agree on what counts as "already pending" -- a `kind === 'retention'`
+    // filter here would let a pending `kind: 'new'` request for the same type past the guard and
+    // straight into an index collision at insert. That race the SELECT-then-insert shape itself
+    // cannot close (two concurrent submissions both passing the SELECT before either insert
+    // lands) surfaces through `createAssetRequest`'s own friendly refusal rather than a raw D1
+    // error.
     const requests = await listHouseholdRequests(ctx.db, ctx.member.householdId);
-    const alreadyOpen = requests.some((request) => request.assetType === assetType && request.kind === 'retention' && OPEN_RETENTION_STATUSES.has(request.status));
+    const alreadyOpen = requests.some((request) => request.assetType === assetType && OPEN_RETENTION_STATUSES.has(request.status));
     if (!alreadyOpen) {
-      await createAssetRequest(ctx.db, { assetType, householdId: ctx.member.householdId, requestedBy: ctx.member.id, kind: 'retention', note: null });
+      const result = await createAssetRequest(ctx.db, { assetType, householdId: ctx.member.householdId, requestedBy: ctx.member.id, kind: 'retention', note: null });
+      if ('error' in result) return fail(400, { retainError: result.error });
     }
 
     return { retained: true as const };

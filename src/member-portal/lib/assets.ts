@@ -181,21 +181,68 @@ export async function listHouseholdRequests(db: D1Database, householdId: string)
 export type { AssetTypeRow };
 export const listRequestableAssetTypes = listAssetTypes;
 
+/** Flattens `err`'s own message together with up to `depth` levels of its `.cause` chain, joined
+ *  with a space -- workerd sometimes rejects with a generic outer message and puts the real
+ *  SQLite text on `.cause` (or a wrapper rethrow drops the original message's own substring
+ *  entirely), so matching `err.message` alone can miss a real constraint failure. Walks `unknown`
+ *  defensively rather than requiring `instanceof Error` at every hop, since `.cause` is typed
+ *  `unknown` even on a real `Error`. */
+function errorText(err: unknown, depth = 4): string {
+  const parts: string[] = [];
+  let current: unknown = err;
+  for (let i = 0; i < depth && current != null; i++) {
+    if (current instanceof Error) {
+      parts.push(current.message);
+      current = current.cause;
+    } else if (typeof current === 'string') {
+      parts.push(current);
+      break;
+    } else {
+      break;
+    }
+  }
+  return parts.join(' ');
+}
+
+/** Whether `err` is a raw D1 UNIQUE-constraint failure against `table` (fix round B, item 5:
+ *  hardened here against a wrapped or cause-chained rejection; `enrollments.ts`'s,
+ *  `household-surgery.ts`'s, and `profile.ts`'s own copies stay on the plain `err instanceof
+ *  Error && err.message.includes(...)` match, each its own small copy rather than a shared
+ *  import). */
+function isUniqueViolation(err: unknown, table: string): boolean {
+  const text = errorText(err);
+  return text.includes('UNIQUE') && text.includes(table);
+}
+
 /**
  * Request an asset (design doc's own "Request an asset"; any adult member may). Lands as
  * `status: 'pending'` in the admin's review inbox, entity `'asset-request'` (the signup queue's
  * own pattern). `kind: 'retention'` is the year-to-year "request your mooring again" ask a
  * renewing member sees in their task list; `kind: 'new'` is a first-time ask.
+ *
+ * `0037_asset_request_unique`'s partial unique index (`household_id, asset_type WHERE status =
+ * 'pending'`) backs this insert: neither caller's own app-level guard (`requestAsset` has none,
+ * `retainAsset`'s SELECT-then-insert) can close the double-click race where two concurrent
+ * requests both pass a pre-check before either insert lands. A collision surfaces here as the one
+ * friendly refusal, never a raw D1 error escaping to a 500.
  */
 export async function createAssetRequest(
   db: D1Database,
   args: { assetType: string; householdId: string; requestedBy: string; kind: 'new' | 'retention'; note: string | null },
-): Promise<{ id: string }> {
+): Promise<{ id: string } | AssetActionError> {
   const id = crypto.randomUUID();
-  await db
-    .prepare('INSERT INTO asset_requests (id, asset_type, household_id, requested_by, kind, note) VALUES (?1, ?2, ?3, ?4, ?5, ?6)')
-    .bind(id, args.assetType, args.householdId, args.requestedBy, args.kind, args.note)
-    .run();
+  try {
+    await db
+      .prepare('INSERT INTO asset_requests (id, asset_type, household_id, requested_by, kind, note) VALUES (?1, ?2, ?3, ?4, ?5, ?6)')
+      .bind(id, args.assetType, args.householdId, args.requestedBy, args.kind, args.note)
+      .run();
+  } catch (err) {
+    if (isUniqueViolation(err, 'asset_requests')) {
+      return { error: 'You already have a pending request for this asset type.' };
+    }
+    console.error('member-portal: asset request insert failed', err);
+    return { error: 'Something went wrong recording your request. Please try again.' };
+  }
   return { id };
 }
 

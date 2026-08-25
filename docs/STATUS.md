@@ -40,16 +40,38 @@ Geoff's steps: the before/after (`/events` at 1440 and 390; Register shows only 
 class) and the owed fresh-context coherence read. Harvest:
 `docs/2026-08-22-events-redesign-harvest-findings.md`.
 
-**Next pass (prep, 2026-08-24; Geoff's pick: Assets + asset-requests).** The
-`admin-screen-passes` series continues with the Assets and asset-requests screens. Same shape:
-functional brainstorm first (superpowers:brainstorming), probe from the real admin shell with
-live rows, toolkit harvest to cairn at close. Inputs: the four 2026-07-29/30 assets docs
-(functional design + input, the substrate plan, the substrate harvest),
-`docs/2026-07-20-admin-toolkit-catalog.md`, and the Events pass entries in `docs/HISTORY.md`.
-Riders: the `asset_requests` uniqueness race migration; the `asset_types` id defect is already
-fixed (`0034`, applied live 2026-07-30). Resume prompt: "Start the
-Assets admin pass: read ROADMAP.md's admin-screen-passes entry and docs/STATUS.md, then open
-the functional brainstorm with Geoff before any visual work." Launch a fresh session here.
+**assets-register pass (IN FLIGHT, 2026-08-24, branch `assets-register`).** Contract
+`docs/2026-08-24-assets-register-design.md` (six brainstorm rulings); plan
+`docs/plans/2026-08-24-assets-register.md` (five probe verdicts, six tasks). Geoff granted
+proceed-to-completion, pushing, and next-pass prep (Email + Announce) with a workflow; the
+before/after folds into this pass's close and still gates the apex. Ledger: T1 accepted after
+a ruled fix round (`a3b3f1e`+`1c3bc0b`; outline holds the 55% hairline at a >=3:1 border
+floor, tinted grounds hold the 1.16-1.47 band, warning ink carries the tone, wiring is
+per-page `import '$theme/admin-chip-registers.css'`); T4 accepted (`20751e4`); T5 accepted
+(`fa756d2`; four portal baselines stale by content, regenerate at close); T2 accepted after
+one fix round (`e151a09`+`3684198`, heading typography restored under the toggle's
+`font: inherit`); the ruled micro-change landed (`7f59fd2`); T3 accepted (`339007b`;
+`displayDescription` vacuously satisfied, no description field reaches that screen, reviewer
+verified); T6 accepted (`eb6d983`; index `uq_asset_requests_pending_household_type` applied
+to remote asc-club, zero rows pre-apply, remote DDL verified byte-identical; the uniqueness
+carry-forward is discharged). All tasks done; the close sequence is next per the plan's
+"Order and close", preceded by a small cleanup dispatch for three review findings (negative
+non-UNIQUE test case, stale `assets-format.ts` consumer comment, README future-date).
+Close carry list from reviews: `hidden="until-found"` on collapsed groups; stripe-box
+asymmetry on first/last assets rows; the rounded stripe on asset-requests rows (design call
+at the render read); the 390 `scrollWidth` measurement is load-bearing against T2's
+negative-margin bleed; asset-requests gets an explicit capture stop (no visual baseline);
+ratify the accordion-pattern substitution (button+`aria-expanded`, not `details/summary`) in
+decisions.md; harvest now records a FOURTH `isUniqueViolation` copy (consolidation trigger).
+Spend ~1.35M agent tokens against the 1.5M ceiling; close will overrun, record per the
+events precedent. Probe infra: seed +
+captures + verify at `~/.local/asc-data/probes/assets-register/` (apply: bootstrap, then
+`wrangler d1 execute asc-club --local --file .../probe-seed.sql`; capture script copy in the
+session scratchpad; admin session recipe `e2e/helpers/admin-session.ts`). Sequential
+implementer dispatches only, pathspec'd commits (a parallel pair raced the index once).
+Resume prompt: "Resume the assets-register pass at the close: read docs/STATUS.md's
+assets-register entry and the plan's 'Order and close'; run the cleanup dispatch, simplifier,
+fan-out, cold read, baselines, PR/merge/deploy, artifacts." Launch from this repo.
 
 **Geoff's review queue (full entries in docs/status-archive.md).** Before/afters on dev: the
 rebuilt Assets screens (gates the apex), Classes, the pass-B sidebar walkthrough per role, the

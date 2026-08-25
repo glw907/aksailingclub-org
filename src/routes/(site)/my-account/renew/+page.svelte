@@ -149,15 +149,24 @@ money-committing step here reads the same as every other portal payment action
          posts `?/retainAsset`; a "no" is simply not clicking, which creates nothing. Reuses
          `/my-account/household`'s own bordered-row list idiom, not a new component. -->
     <section class="mt-l max-w-measure-wide">
-      <h2 class="m-0 text-step-1 font-semibold text-base-content">Your gear and moorings</h2>
+      <h2 class="m-0 text-step-1 font-semibold text-base-content">Your storage and moorings</h2>
       <p class="mt-2xs mb-0 text-step--1 text-muted">Request the same asset again for {data.renewalSeason}, or leave it for now.</p>
 
-      {#if form && 'retained' in form && form.retained}
-        <p class="mt-xs mb-0 text-step--1 text-base-content">Your request is in. The club will review it and follow up.</p>
-      {/if}
-      {#if form && 'retainError' in form && form.retainError}
-        <p class="mt-xs mb-0 max-w-measure-wide rounded-field border border-error bg-error/10 px-s py-xs text-step--1 text-error">{form.retainError}</p>
-      {/if}
+      <!-- Both status paragraphs stay in the DOM from load (WCAG 4.1.3): the retention form is
+           `use:enhance`d, so a conditionally-rendered `{#if}` block never reaches assistive tech
+           at all -- the container itself, not just its text, has to exist before the message
+           lands for a screen reader to pick up the mutation. `hidden` (not the block being
+           absent) collapses each to zero space while empty, so nothing here reserves layout. -->
+      <p class="mt-xs mb-0 text-step--1 text-base-content" class:hidden={!(form && 'retained' in form && form.retained)} role="status">
+        {form && 'retained' in form && form.retained ? 'Your request is in. The club will review it and follow up.' : ''}
+      </p>
+      <p
+        class="mt-xs mb-0 max-w-measure-wide rounded-field border border-error bg-error/10 px-s py-xs text-step--1 text-error"
+        class:hidden={!(form && 'retainError' in form && form.retainError)}
+        role="alert"
+      >
+        {form && 'retainError' in form && form.retainError ? form.retainError : ''}
+      </p>
 
       <ul class="mt-xs flex flex-col gap-xs">
         {#each data.heldAssets as asset (asset.assetType)}
@@ -268,7 +277,7 @@ money-committing step here reads the same as every other portal payment action
      `.renew-tier-text` above already uses), the control on its own line underneath, always in the
      same left-aligned spot regardless of the name's length. From `40rem` up there is room for all
      three on one line, matching `.gear-row`'s own established stack-then-row breakpoint
-     (`/my-account/gear`). */
+     (`/my-account/storage`). */
   .retain-row {
     display: flex;
     flex-direction: column;

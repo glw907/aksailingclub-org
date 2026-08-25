@@ -2,18 +2,19 @@
 // both per the design doc's own IA ("the landing" doubles as sign-in when no session exists).
 // The signed-in state is the portal redesign pass's rebuilt member home
 // (docs/2026-07-16-portal-redesign-design.md): the standing/renewal masthead, the value mirror,
-// weighted action rows, recent receipts, the subordinate rail (household / gear & moorings /
+// weighted action rows, recent receipts, the subordinate rail (household / storage & moorings /
 // classes), and the doors row. The asset-fee pay door (`payments.ts`'s own deferred-consumer
 // note) mints or reuses a real row and hands it to a real Stripe Checkout Session; a
 // checkout-unavailable submission degrades to the same stub message every other payment form on
 // this site shows, never a broken button.
 //
 // The three asset VERBS that carry no fee (release, request, cancel a request) moved to
-// `/my-account/gear` in T2b (the design doc's own "gear door" ruling,
-// docs/design-benchmark/decisions.md): the gear route owns their server actions and forms now.
-// `?/payAssetFee` and `?/payRequest` stay here, since paying is the landing's one weighted
-// "Needs your attention" action row; the gear page's own outstanding-fee rows POST to these two
-// actions by their full route-relative path. `?/renew` moved to `/my-account/renew` in T2c (the
+// `/my-account/storage` in T2b (the design doc's own "gear door" ruling,
+// docs/design-benchmark/decisions.md; the route itself was later renamed off the old `gear`
+// route by the assets-register pass's ruling 5): the storage route owns their server actions and
+// forms now. `?/payAssetFee` and `?/payRequest` stay here, since paying is the landing's one
+// weighted "Needs your attention" action row; the storage page's own outstanding-fee rows POST
+// to these two actions by their full route-relative path. `?/renew` moved to `/my-account/renew` in T2c (the
 // design doc's own "the renewal door" ruling, docs/design-benchmark/decisions.md): the masthead's
 // fireweed CTA is now a plain link to that route, never a form posting a hidden tier field.
 import { fail, redirect } from '@sveltejs/kit';

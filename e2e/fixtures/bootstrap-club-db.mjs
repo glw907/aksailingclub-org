@@ -13,13 +13,17 @@
  * table `0001_substrate` always creates), then reseeds the suite's own fixture rows fresh every
  * run, so both a cold CI checkout and a warm workstation replica end up in the identical state.
  *
- * A second, narrower probe covers the gap between those two states: a warm workstation replica
- * that already has `settings` (so the first probe short-circuits `applyMigrations()` for it) can
- * still predate a migration added after that replica was last bootstrapped. Rather than re-run
- * every migration for it (0001_substrate's own `CREATE TABLE` statements fail outright against an
- * already-populated replica), the script checks for `event_series` (`0035_event_series`) and
- * applies just that one migration's `forward.sql` when it is missing -- the same narrow-probe
- * shape a later migration should extend rather than replace.
+ * A second, narrower kind of probe covers the gap between those two states: a warm workstation
+ * replica that already has `settings` (so the first probe short-circuits `applyMigrations()` for
+ * it) can still predate a migration added after that replica was last bootstrapped. Rather than
+ * re-run every migration for it (0001_substrate's own `CREATE TABLE` statements fail outright
+ * against an already-populated replica), the script checks for one artifact a later migration
+ * adds and applies just that one migration's `forward.sql` on its own when the artifact is
+ * missing. Two such probes exist today, each keyed on the schema object its own migration adds:
+ * `event_series` the table for `0035_event_series`, and `uq_asset_requests_pending_household_type`
+ * the index for `0037_asset_request_unique`. A migration between the two (`0036_event_indexes`)
+ * carries no probe of its own; a future migration a warm replica needs to catch up on should add
+ * one following either shape above, not assume 0035's alone covers everything since.
  *
  * `wrangler d1 execute --local` never touches the real asc-club data the admin screens and the
  * import scripts own; it only ever writes the gitignored local replica.
@@ -58,6 +62,25 @@ function tableExists(name) {
   return results.length > 0;
 }
 
+function indexExists(name) {
+  const out = execFileSync(
+    'npx',
+    [
+      'wrangler',
+      'd1',
+      'execute',
+      'asc-club',
+      '--local',
+      '--json',
+      '--command',
+      `SELECT name FROM sqlite_master WHERE type='index' AND name='${name}'`,
+    ],
+    { cwd: repoRoot },
+  ).toString();
+  const [{ results }] = JSON.parse(out);
+  return results.length > 0;
+}
+
 function applyMigrations() {
   const migrationDirs = readdirSync(migrationsDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -70,13 +93,19 @@ function applyMigrations() {
 
 if (!tableExists('settings')) {
   applyMigrations();
-} else if (!tableExists('event_series')) {
+} else {
   // A warm workstation replica that already carries 0001-0034 (the `settings` probe above short-
-  // circuits `applyMigrations()` for it) still needs 0035_event_series applied on its own: a
+  // circuits `applyMigrations()` for it) still needs later migrations applied on their own: a
   // blanket re-run of every migration is not the fix, since re-running 0001_substrate's own
-  // `CREATE TABLE` statements against an already-populated replica fails outright. This narrow,
-  // additive probe is how a new migration reaches an existing local replica without one.
-  d1File(path.join(migrationsDir, '0035_event_series', 'forward.sql'));
+  // `CREATE TABLE` statements against an already-populated replica fails outright. Each narrow,
+  // additive probe below is how one such migration reaches an existing local replica without one.
+  if (!tableExists('event_series')) d1File(path.join(migrationsDir, '0035_event_series', 'forward.sql'));
+  // 0037_asset_request_unique (fix round B, item 6): a warm replica bootstrapped before this
+  // migration existed never gets the partial unique index the retention/request duplicate-guard
+  // tests rely on, since it already has `settings` and short-circuits `applyMigrations()` above.
+  if (!indexExists('uq_asset_requests_pending_household_type')) {
+    d1File(path.join(migrationsDir, '0037_asset_request_unique', 'forward.sql'));
+  }
 }
 
 d1File(path.join(repoRoot, 'e2e/fixtures/events-seed.sql'));

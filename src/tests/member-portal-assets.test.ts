@@ -105,8 +105,59 @@ describe('createAssetRequest', () => {
     const { db, calls } = fakeD1();
     const result = await createAssetRequest(db, { assetType: 'mooring', householdId: 'hh-1', requestedBy: 'mem-1', kind: 'new', note: 'Need a spot' });
     expect(result).toEqual({ id: expect.any(String) });
+    if ('error' in result) throw new Error('expected success');
     const insert = calls.find((c) => c.sql.startsWith('INSERT INTO asset_requests'));
     expect(insert?.args).toEqual([result.id, 'mooring', 'hh-1', 'mem-1', 'new', 'Need a spot']);
+  });
+
+  /** A `fakeD1` whose every `.run()` rejects with `error` (a plain message string, the shape a
+   *  real D1 constraint failure arrives in, or a ready-built `Error` for a wrapped/cause-chained
+   *  rejection). Follows `member-portal-profile.test.ts`'s own UNIQUE(email) test, since `fakeD1`
+   *  never executes real SQL and so can never enforce a constraint of its own. */
+  function rejectingDb(error: string | Error) {
+    const { db } = fakeD1();
+    db.prepare = (sql: string) => {
+      const stmt = {
+        sql,
+        bind: () => stmt,
+        run: () => Promise.reject(typeof error === 'string' ? new Error(error) : error),
+        first: async () => null,
+        all: async () => ({ results: [], success: true, meta: {} }),
+      };
+      return stmt as unknown as ReturnType<typeof db.prepare>;
+    };
+    return db;
+  }
+
+  const NEW_REQUEST = { assetType: 'mooring', householdId: 'hh-1', requestedBy: 'mem-1', kind: 'new' as const, note: null };
+
+  // 0037_asset_request_unique's own partial unique index closes the double-click race the
+  // app-level guards (requestAsset's own lack of one, retainAsset's SELECT-then-insert) cannot:
+  // two concurrent inserts can both pass a pre-check before either lands. A household with a
+  // pending request already on file for this asset type is exactly what the real index rejects.
+  it('turns a UNIQUE(household_id, asset_type) collision into a plain-words refusal, not a 500', async () => {
+    const db = rejectingDb('UNIQUE constraint failed: asset_requests.household_id, asset_requests.asset_type: SQLITE_CONSTRAINT');
+    const result = await createAssetRequest(db, NEW_REQUEST);
+    expect(result).toEqual({ error: expect.stringContaining('already have a pending request') });
+  });
+
+  // Pins isUniqueViolation's own branch: a non-UNIQUE constraint failure (shaped like a real D1
+  // FOREIGN KEY rejection) must fall through to the generic refusal, never the duplicate-request
+  // message a mis-mapped substring match could produce.
+  it('turns a non-UNIQUE rejection into the generic refusal, not the duplicate-request message', async () => {
+    const db = rejectingDb('FOREIGN KEY constraint failed: SQLITE_CONSTRAINT');
+    const result = await createAssetRequest(db, NEW_REQUEST);
+    expect(result).toEqual({ error: 'Something went wrong recording your request. Please try again.' });
+  });
+
+  // Fix round B, item 5: workerd can reject with a generic outer message and put the real SQLite
+  // text on `.cause` instead, or a wrapper can rethrow with the original message lost entirely --
+  // `isUniqueViolation` has to walk the cause chain, not just `err.message`, to still catch this.
+  it('finds the UNIQUE text on err.cause when the outer message is generic', async () => {
+    const cause = new Error('UNIQUE constraint failed: asset_requests.household_id, asset_requests.asset_type: SQLITE_CONSTRAINT');
+    const db = rejectingDb(new Error('D1_EXEC_ERROR', { cause }));
+    const result = await createAssetRequest(db, NEW_REQUEST);
+    expect(result).toEqual({ error: expect.stringContaining('already have a pending request') });
   });
 });
 

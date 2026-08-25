@@ -17,22 +17,45 @@ replaces. `/admin/club/asset-requests`'s own `<ul class="list">` review-inbox ro
 sibling precedent for leaving `<table>` behind on a small, ungated result set; this file writes its
 own flex rows rather than daisyUI's `.list`/`.list-row` grid component because that component's
 column count is driven by nth-child position of a `.list-col-grow` marker, which is a poor fit for
-a row carrying a variable number of trailing actions (Record payment appears only when a payment
-is outstanding-eligible, waitlist rows carry two actions, assignment rows carry two different
-ones) -- the plain flex-wrap row reflows correctly regardless of how many trailing controls a given
-row happens to carry.
+a row carrying its own kind of trailing actions (an assignment row always carries Record payment
+and Release, regardless of payment standing; a waitlist row always carries a different two, Move
+to end and Remove) -- the plain flex-wrap row reflows correctly regardless of how many trailing
+controls a given row happens to carry.
 
 Waitlist promotion is reachable from two places, deliberately not a third: the by-asset view's own
 type header (whenever that type currently carries any waitlist entries, independent of any release)
 and the release-confirm dialog (when the assignment being released belongs to a type that currently
 has a queue, so freeing the slot and filling it from the queue are one visit). Both post the same
 `?/waitlistPromote` action and never touch capacity, matching the store's own promotion contract.
+
+**Register re-entry (`docs/2026-08-24-assets-register-design.md`, Task 2).** Every payment-standing
+chip and the waitlist type chip now render through `StatusChip`, wrapped in the shared
+`$theme/admin-chip-registers.css` tinted-ground registers (Paid quiet, Outstanding warning, Not
+billed the hairline outline). Each by-asset type group is an explicit disclosure, default open, no
+collapse persisted across a reload: the toggle is a real `<button>` (not `<summary>`, which cannot
+also host the Promote form and Edit button its own header carries without breaking the
+interactive-content model). The Assign form and the waitlist-add form both moved off the bottom of
+their own view into top-anchored `<dialog>` elements, launched from a quiet button in that view's
+own list header, matching this file's existing release/payment/edit-type dialog idiom.
 -->
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { tick, untrack } from 'svelte';
+  import { enhance } from '$app/forms';
+  import type { SubmitFunction } from '@sveltejs/kit';
   import type { ActionData, PageData } from './$types';
   import { CsrfField } from '@glw907/cairn-cms/components';
-  import { FieldLabel, OfficeList, SelectInput, StatusChip, TextInput, type StatusChipTone } from '@glw907/cairn-cms/admin-toolkit';
+  import {
+    EmptyState,
+    FieldLabel,
+    itemNoun,
+    OfficeList,
+    SelectInput,
+    StatusChip,
+    TextInput,
+    type StatusChipRegister,
+    type StatusChipTone,
+  } from '@glw907/cairn-cms/admin-toolkit';
+  import { displayDescription } from '$lib/assets-format';
   import { formatCivilDate, formatDollars } from '$admin-club/lib/ui';
   import {
     PAYMENT_METHODS,
@@ -42,8 +65,13 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
     type AssignmentDisplayRow,
     type PaymentMethod,
   } from '$admin-club/lib/assets-store';
+  // The register re-entry's shared chip stylesheet (assets-register Task 1): a per-page
+  // side-effect import, this screen's the FIRST consumer (see that file's own header comment).
+  import '$theme/admin-chip-registers.css';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
+
+  const uid = $props.id();
 
   type View = 'by-asset' | 'by-person' | 'waitlist';
   let view = $state<View>('by-asset');
@@ -56,12 +84,33 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
 
   // The same tone vocabulary the Members screen's own holdings panel uses for this identical
   // `AssetPaymentStanding` derivation (`households-store.ts`'s shared type), so a payment standing
-  // reads identically wherever an admin encounters it rather than drifting screen to screen.
-  const HOLDING_STATUS: Record<AssetPaymentStanding, { label: string; tone: StatusChipTone }> = {
-    paid: { label: 'Paid', tone: 'success' },
-    outstanding: { label: 'Outstanding', tone: 'warning' },
-    'not-billed': { label: 'Not billed', tone: 'neutral' },
+  // reads identically wherever an admin encounters it rather than drifting screen to screen. The
+  // `register`/`wrapperClass` pair rides the events-admin settle round's tinted-ground grammar
+  // (`$theme/admin-chip-registers.css`): Paid recedes on the quiet tint, Outstanding carries the
+  // warning tint, Not billed reads as the transient hairline outline.
+  const HOLDING_STATUS: Record<AssetPaymentStanding, { label: string; tone: StatusChipTone; register: StatusChipRegister; wrapperClass: string }> = {
+    paid: { label: 'Paid', tone: 'neutral', register: 'quiet', wrapperClass: 'asc-admin-chip-quiet' },
+    outstanding: { label: 'Outstanding', tone: 'warning', register: 'quiet', wrapperClass: 'asc-admin-chip-warning' },
+    'not-billed': { label: 'Not billed', tone: 'neutral', register: 'bounded', wrapperClass: 'asc-admin-chip-outline' },
   };
+
+  // Per-type disclosure state (probe verdict, 2026-08-24): default open (an id absent from this
+  // set), no persistence across a reload. A `Set`, not a per-type boolean map, since most types
+  // never collapse in a session and this keeps the common case's memory footprint at zero.
+  let collapsedTypes = $state<Set<string>>(new Set());
+  function toggleTypeOpen(id: string) {
+    const next = new Set(collapsedTypes);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    collapsedTypes = next;
+  }
+
+  // Asset type ids are otherwise a free-form column with no format constraint enforced today; a
+  // future id containing whitespace would otherwise land straight inside the panel/aria-controls
+  // IDREF pair below and break it. One collapse, applied at the single source both ids share.
+  function idSlug(value: string): string {
+    return value.replace(/\s+/g, '-');
+  }
 
   const METHOD_LABEL: Record<PaymentMethod, string> = { card: 'Card', check: 'Check', cash: 'Cash' };
 
@@ -95,12 +144,43 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
     return map;
   });
 
-  // -- assign form --
+  // -- assign dialog (probe verdict, 2026-08-24: top-anchored, not a form six viewports down) --
+  let assignDialog: HTMLDialogElement | undefined = $state();
   const assetTypeOptions = $derived(data.assetTypes.map((t) => ({ value: t.id, label: `${t.name} (${formatDollars(t.fee)})` })));
   let assignAssetType = $state(untrack(() => data.assetTypes[0]?.id ?? ''));
   let householdQuery = $state('');
   let assignMembershipId = $state('');
   let assignDescription = $state('');
+  let assignError: string | null = $state(null);
+  let assignErrorEl: HTMLParagraphElement | undefined = $state();
+  function openAssignDialog() {
+    assignError = null;
+    assignDialog?.showModal();
+  }
+  function resetAssignFields() {
+    assignAssetType = data.assetTypes[0]?.id ?? '';
+    householdQuery = '';
+    assignMembershipId = '';
+    assignDescription = '';
+  }
+  /** Keeps a rejected assign (e.g. a stale household) inside the still-open dialog with whatever
+   *  the admin already typed, instead of the plain-POST default: a full page reload that closes
+   *  the dialog and wipes every typed field. `fail(400, { error })` is `?/assign`'s only failure
+   *  shape (`+page.server.ts`), so `result.data.error` is read directly rather than re-deriving it. */
+  const assignEnhance: SubmitFunction = () => {
+    return async ({ result, update }) => {
+      if (result.type === 'failure') {
+        assignError = (result.data as { error?: string } | undefined)?.error ?? 'Something went wrong.';
+        await tick();
+        assignErrorEl?.focus();
+        return;
+      }
+      assignError = null;
+      await update({ reset: false });
+      resetAssignFields();
+      assignDialog?.close();
+    };
+  };
   const filteredMemberships = $derived(
     data.membershipOptions.filter((m) => {
       const q = householdQuery.trim().toLowerCase();
@@ -173,11 +253,40 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
   }
   const paymentMethodOptions = PAYMENT_METHODS.map((m) => ({ value: m, label: METHOD_LABEL[m] }));
 
-  // -- waitlist add form --
+  // -- waitlist add dialog (probe verdict, 2026-08-24: top-anchored, same reasoning as assign) --
+  let waitlistDialog: HTMLDialogElement | undefined = $state();
   let waitlistAssetType = $state(untrack(() => data.assetTypes[0]?.id ?? ''));
   let memberQuery = $state('');
   let waitlistMemberId = $state('');
   let waitlistNotes = $state('');
+  let waitlistError: string | null = $state(null);
+  let waitlistErrorEl: HTMLParagraphElement | undefined = $state();
+  function openWaitlistDialog() {
+    waitlistError = null;
+    waitlistDialog?.showModal();
+  }
+  function resetWaitlistFields() {
+    waitlistAssetType = data.assetTypes[0]?.id ?? '';
+    memberQuery = '';
+    waitlistMemberId = '';
+    waitlistNotes = '';
+  }
+  /** Same keep-open-with-typed-input fix as `assignEnhance` above, for `?/waitlistAdd`'s identical
+   *  `fail(400, { error })` shape. */
+  const waitlistEnhance: SubmitFunction = () => {
+    return async ({ result, update }) => {
+      if (result.type === 'failure') {
+        waitlistError = (result.data as { error?: string } | undefined)?.error ?? 'Something went wrong.';
+        await tick();
+        waitlistErrorEl?.focus();
+        return;
+      }
+      waitlistError = null;
+      await update({ reset: false });
+      resetWaitlistFields();
+      waitlistDialog?.close();
+    };
+  };
   const filteredMembers = $derived(
     data.memberOptions.filter((m) => {
       const q = memberQuery.trim().toLowerCase();
@@ -195,18 +304,37 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
   });
 
   const subtitle = $derived(
-    data.error ? data.error : `${data.assignments.length} active assignment(s) across ${data.assetTypes.length} asset type(s).`,
+    data.error
+      ? data.error
+      : `${data.assignments.length} active ${itemNoun(data.assignments.length, { one: 'assignment', many: 'assignments' })} across ${data.assetTypes.length} asset ${itemNoun(data.assetTypes.length, { one: 'type', many: 'types' })}.`,
   );
 </script>
 
+<!-- The trailing half of a `.holding-row`, identical in the by-asset and by-person views (only
+     their identity blocks differ): the payment-standing chip in its register wrapper, then the two
+     verbs an assignment carries. Declared outside `<OfficeList>` so it stays a template snippet
+     rather than an implicit prop passed to that component. -->
+{#snippet assignmentActions(row: AssignmentDisplayRow)}
+  {@const standing = HOLDING_STATUS[row.paymentStanding]}
+  <div class="holding-row-actions">
+    <span class={standing.wrapperClass}>
+      <StatusChip tone={standing.tone} register={standing.register} label={standing.label} size="xs" />
+    </span>
+    <button type="button" class="btn btn-ghost btn-xs" onclick={() => openPaymentDialog(row)}>Record payment</button>
+    <button type="button" class="btn btn-ghost btn-xs text-error" onclick={() => openReleaseDialog(row)}>Release</button>
+  </div>
+{/snippet}
+
 <OfficeList eyebrow="Club" title="Assets" {subtitle}>
   {#snippet action()}
-    <div class="join" role="tablist" aria-label="Assets view">
+    <!-- Plain pressed buttons, not the full APG tabs pattern (no roving tabindex, no arrow-key
+         navigation between them, and each one drives independent page content rather than a
+         single tabpanel) -- `aria-pressed` states honestly what these three actually are. -->
+    <div class="join" aria-label="Assets view">
       {#each VIEW_TABS as tab (tab.id)}
         <button
           type="button"
-          role="tab"
-          aria-selected={view === tab.id}
+          aria-pressed={view === tab.id}
           class="view-tab join-item btn btn-sm {view === tab.id ? 'btn-active' : ''}"
           onclick={() => (view = tab.id)}
         >
@@ -223,192 +351,166 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
   {/if}
 
   {#if view === 'by-asset'}
-    {#each byAssetGroups as group (group.type.id)}
-      <div class="border-b border-[var(--cairn-card-border)] p-6">
-        <div class="mb-3 flex flex-wrap items-center gap-2">
-          <h2 class="type-body font-semibold">
-            {group.type.name}
-            <span class="count-qualifier font-normal text-muted">
-              {group.rows.length}{group.type.capacity != null ? `/${group.type.capacity}` : ''} assigned &middot; {formatDollars(group.type.fee)}
-            </span>
-          </h2>
-          <div class="type-header-actions flex items-center gap-2">
-            {#if (waitlistByType.get(group.type.id)?.length ?? 0) > 0}
-              {@const queue = waitlistByType.get(group.type.id)!}
-              <form method="post" action="?/waitlistPromote" class="flex items-center gap-2">
-                <CsrfField />
-                <input type="hidden" name="assetType" value={group.type.id} />
-                <span class="type-meta text-muted">
-                  {queue.length} waiting &middot; next: {queue[0].memberName}
+    <div class="assets-list-header border-b border-[var(--cairn-card-border)] px-6 py-3">
+      <button type="button" class="btn btn-sm" onclick={openAssignDialog}>Assign an asset</button>
+    </div>
+    {#if byAssetGroups.length === 0}
+      <EmptyState
+        heading="No asset types yet"
+        message="Asset types are configured in the club database; once one exists, its assignments show up here."
+      />
+    {:else}
+      {#each byAssetGroups as group (group.type.id)}
+        {@const panelId = `${uid}-type-panel-${idSlug(group.type.id)}`}
+        {@const panelToggleId = `${panelId}-toggle`}
+        {@const isOpen = !collapsedTypes.has(group.type.id)}
+        {@const overCapacity = group.type.capacity != null && group.rows.length > group.type.capacity}
+        {@const queue = waitlistByType.get(group.type.id) ?? []}
+        <div class="border-b border-[var(--cairn-card-border)] p-6">
+          <div class="mb-3 flex flex-wrap items-center gap-2">
+            <h2 class="asset-type-heading type-body font-semibold">
+              <!-- The explicit disclosure-button pattern (probe verdict, 2026-08-24), not
+                   `<details>/<summary>`: `<summary>` is an implicit button, and this header also
+                   needs its OWN interactive controls (Promote, Edit) -- nesting a real button
+                   inside a `<summary>` breaks both the interactive-content model and keyboard
+                   activation. The heading wraps only the toggle (name, count/capacity, fee); the
+                   Promote form and Edit button below are the toggle's siblings, never its
+                   children, matching the WAI-ARIA accordion header pattern. -->
+              <button
+                type="button"
+                id={panelToggleId}
+                class="asset-type-toggle type-body font-semibold"
+                aria-expanded={isOpen}
+                aria-controls={panelId}
+                onclick={() => toggleTypeOpen(group.type.id)}
+              >
+                <span class="asset-type-chevron" aria-hidden="true">&#9656;</span>
+                {group.type.name}
+                <span class="count-qualifier font-normal text-muted">
+                  <span class:count-warning={overCapacity}>{group.rows.length}</span>{group.type.capacity != null
+                    ? `/${group.type.capacity}`
+                    : ''} assigned &middot; {formatDollars(group.type.fee)}
                 </span>
-                <button type="submit" class="btn btn-ghost btn-xs" aria-label={`Promote the next household waiting for ${group.type.name}`}>
-                  Promote
-                </button>
-              </form>
-            {/if}
-            <button type="button" class="btn btn-ghost btn-xs" onclick={() => openEditTypeDialog(group.type)} aria-label={`Edit ${group.type.name}`}>
-              Edit
-            </button>
+              </button>
+            </h2>
+            <div class="type-header-actions flex items-center gap-2">
+              {#if queue.length > 0}
+                <form method="post" action="?/waitlistPromote" class="flex items-center gap-2">
+                  <CsrfField />
+                  <input type="hidden" name="assetType" value={group.type.id} />
+                  <span class="type-meta text-muted">
+                    {queue.length} waiting &middot; next: {queue[0].memberName}
+                  </span>
+                  <button type="submit" class="btn btn-ghost btn-xs" aria-label={`Promote the next household waiting for ${group.type.name}`}>
+                    Promote
+                  </button>
+                </form>
+              {/if}
+              <button type="button" class="btn btn-ghost btn-xs" onclick={() => openEditTypeDialog(group.type)} aria-label={`Edit ${group.type.name}`}>
+                Edit
+              </button>
+            </div>
+          </div>
+          <div id={panelId} role="region" aria-labelledby={panelToggleId} hidden={!isOpen}>
+            <ul class="holding-list">
+              {#each group.rows as row (row.id)}
+                {@const desc = displayDescription(row.description)}
+                <li class="holding-row">
+                  <div class="min-w-0">
+                    <p class="type-body font-medium">
+                      {row.householdName}
+                      {#if row.primaryMemberName && row.primaryMemberName !== row.householdName}<span class="text-muted"> &middot; {row.primaryMemberName}</span>{/if}
+                    </p>
+                    {#if desc}<p class="type-meta text-muted">{desc}</p>{/if}
+                  </div>
+                  {@render assignmentActions(row)}
+                </li>
+              {:else}
+                <li class="py-6 text-center type-body text-muted">No one holds this asset right now.</li>
+              {/each}
+            </ul>
           </div>
         </div>
-        <ul class="holding-list">
-          {#each group.rows as row (row.id)}
-            {@const standing = HOLDING_STATUS[row.paymentStanding]}
-            <li class="holding-row">
-              <div class="min-w-0">
-                <p class="type-body font-medium">
-                  {row.householdName}
-                  {#if row.primaryMemberName}<span class="text-muted"> &middot; {row.primaryMemberName}</span>{/if}
-                </p>
-                {#if row.description}<p class="type-meta text-muted">{row.description}</p>{/if}
-              </div>
-              <div class="holding-row-actions">
-                <StatusChip tone={standing.tone} label={standing.label} size="xs" />
-                <button type="button" class="btn btn-ghost btn-xs" onclick={() => openPaymentDialog(row)}>Record payment</button>
-                <button type="button" class="btn btn-ghost btn-xs text-error" onclick={() => openReleaseDialog(row)}>Release</button>
-              </div>
-            </li>
-          {:else}
-            <li class="py-6 text-center type-body text-muted">No one holds this asset right now.</li>
-          {/each}
-        </ul>
-      </div>
-    {/each}
-
-    <form method="post" action="?/assign" class="p-6">
-      <h2 class="mb-3 type-body font-semibold">Assign an asset</h2>
-      <div class="grid gap-3 sm:grid-cols-2">
-        <label class="flex flex-col gap-label">
-          <span class="type-body font-medium">Asset type</span>
-          <select class="select select-sm" name="assetType" bind:value={assignAssetType}>
-            {#each assetTypeOptions as option (option.value)}
-              <option value={option.value}>{option.label}</option>
-            {/each}
-          </select>
-        </label>
-        <label class="flex flex-col gap-label">
-          <span class="type-body font-medium">Search household</span>
-          <input class="input input-sm" type="search" name="householdQuery" placeholder="Name" bind:value={householdQuery} />
-        </label>
-        <label class="flex flex-col gap-label">
-          <span class="type-body font-medium">Household</span>
-          <select class="select select-sm" name="membershipId" bind:value={assignMembershipId}>
-            {#each membershipOptions as option (option.value)}
-              <option value={option.value}>{option.label}</option>
-            {/each}
-          </select>
-        </label>
-        <label class="flex flex-col gap-label">
-          <span class="type-body font-medium">Description</span>
-          <input class="input input-sm" name="description" placeholder="Buoy M-14" bind:value={assignDescription} />
-        </label>
-      </div>
-      <div class="mt-3 flex justify-end gap-2">
-        <CsrfField />
-        <button type="submit" class="btn btn-primary btn-sm">Assign</button>
-      </div>
-    </form>
+      {/each}
+    {/if}
   {:else if view === 'by-person'}
-    {#each byPersonGroups as group (group.householdId)}
-      <div class="border-b border-[var(--cairn-card-border)] p-6">
-        <h2 class="mb-3 type-body font-semibold">
-          {group.householdName}
-          {#if group.primaryMemberName}<span class="count-qualifier font-normal text-muted">{group.primaryMemberName}</span>{/if}
-        </h2>
+    {#if byPersonGroups.length === 0}
+      <EmptyState
+        heading="No household holds an asset right now."
+        message="Assignments you make in the By asset view show up here, grouped by household."
+      />
+    {:else}
+      {#each byPersonGroups as group (group.householdId)}
+        <div class="border-b border-[var(--cairn-card-border)] p-6">
+          <h2 class="mb-3 type-body font-semibold">
+            {group.householdName}
+            {#if group.primaryMemberName && group.primaryMemberName !== group.householdName}<span class="count-qualifier font-normal text-muted">{group.primaryMemberName}</span>{/if}
+          </h2>
+          <ul class="holding-list">
+            {#each group.rows as row (row.id)}
+              {@const desc = displayDescription(row.description)}
+              <li class="holding-row">
+                <div class="min-w-0">
+                  <p class="type-body font-medium">{row.assetTypeName}</p>
+                  {#if desc}<p class="type-meta text-muted">{desc}</p>{/if}
+                </div>
+                {@render assignmentActions(row)}
+              </li>
+            {/each}
+          </ul>
+        </div>
+      {/each}
+    {/if}
+  {:else}
+    <div class="assets-list-header border-b border-[var(--cairn-card-border)] px-6 py-3">
+      <button type="button" class="btn btn-sm" onclick={openWaitlistDialog}>Add to waitlist</button>
+    </div>
+    {#if data.waitlist.length === 0}
+      <EmptyState
+        heading="No one is waiting for an asset right now."
+        message="Members join a waitlist once a type reaches capacity; entries appear here in order."
+      />
+    {:else}
+      <div class="p-6">
         <ul class="holding-list">
-          {#each group.rows as row (row.id)}
-            {@const standing = HOLDING_STATUS[row.paymentStanding]}
+          {#each data.waitlist as entry (entry.id)}
             <li class="holding-row">
               <div class="min-w-0">
-                <p class="type-body font-medium">{row.assetTypeName}</p>
-                {#if row.description}<p class="type-meta text-muted">{row.description}</p>{/if}
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="asc-admin-chip-quiet">
+                    <StatusChip tone="neutral" register="quiet" label={entry.assetTypeName} legend={entry.assetTypeName} size="xs" />
+                  </span>
+                  <span class="type-meta tabular-nums text-muted">#{entry.position}</span>
+                </div>
+                <p class="mt-1 type-body font-medium">
+                  {entry.memberName}
+                  {#if entry.memberEmail}<span class="text-muted"> &middot; {entry.memberEmail}</span>{/if}
+                </p>
+                <p class="type-meta text-muted">Requested {formatCivilDate(entry.requestedAt)}</p>
               </div>
               <div class="holding-row-actions">
-                <StatusChip tone={standing.tone} label={standing.label} size="xs" />
-                <button type="button" class="btn btn-ghost btn-xs" onclick={() => openPaymentDialog(row)}>Record payment</button>
-                <button type="button" class="btn btn-ghost btn-xs text-error" onclick={() => openReleaseDialog(row)}>Release</button>
+                <form method="post" action="?/waitlistMoveToEnd">
+                  <CsrfField />
+                  <input type="hidden" name="waitlistId" value={entry.id} />
+                  <button type="submit" class="btn btn-ghost btn-xs">Move to end</button>
+                </form>
+                <form method="post" action="?/waitlistRemove">
+                  <CsrfField />
+                  <input type="hidden" name="waitlistId" value={entry.id} />
+                  <button type="submit" class="btn btn-ghost btn-xs text-error">Remove</button>
+                </form>
               </div>
             </li>
           {/each}
         </ul>
       </div>
-    {:else}
-      <p class="px-6 py-10 text-center type-body text-muted">No household holds an asset right now.</p>
-    {/each}
-  {:else}
-    <div class="p-6">
-      <ul class="holding-list">
-        {#each data.waitlist as entry (entry.id)}
-          <li class="holding-row">
-            <div class="min-w-0">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="badge badge-sm badge-neutral font-medium">{entry.assetTypeName}</span>
-                <span class="type-meta tabular-nums text-muted">#{entry.position}</span>
-              </div>
-              <p class="mt-1 type-body font-medium">
-                {entry.memberName}
-                {#if entry.memberEmail}<span class="text-muted"> &middot; {entry.memberEmail}</span>{/if}
-              </p>
-              <p class="type-meta text-muted">Requested {formatCivilDate(entry.requestedAt)}</p>
-            </div>
-            <div class="holding-row-actions">
-              <form method="post" action="?/waitlistMoveToEnd">
-                <CsrfField />
-                <input type="hidden" name="waitlistId" value={entry.id} />
-                <button type="submit" class="btn btn-ghost btn-xs">Move to end</button>
-              </form>
-              <form method="post" action="?/waitlistRemove">
-                <CsrfField />
-                <input type="hidden" name="waitlistId" value={entry.id} />
-                <button type="submit" class="btn btn-ghost btn-xs text-error">Remove</button>
-              </form>
-            </div>
-          </li>
-        {:else}
-          <li class="py-10 text-center type-body text-muted">No one is waiting for an asset right now.</li>
-        {/each}
-      </ul>
-    </div>
-
-    <form method="post" action="?/waitlistAdd" class="border-t border-[var(--cairn-card-border)] p-6">
-      <h2 class="mb-3 type-body font-semibold">Add to the waitlist</h2>
-      <div class="grid gap-3 sm:grid-cols-2">
-        <label class="flex flex-col gap-label">
-          <span class="type-body font-medium">Asset type</span>
-          <select class="select select-sm" name="assetType" bind:value={waitlistAssetType}>
-            {#each assetTypeOptions as option (option.value)}
-              <option value={option.value}>{option.label}</option>
-            {/each}
-          </select>
-        </label>
-        <label class="flex flex-col gap-label">
-          <span class="type-body font-medium">Search member</span>
-          <input class="input input-sm" type="search" name="memberQuery" placeholder="Name or email" bind:value={memberQuery} />
-        </label>
-        <label class="flex flex-col gap-label">
-          <span class="type-body font-medium">Member</span>
-          <select class="select select-sm" name="memberId" bind:value={waitlistMemberId}>
-            {#each memberSelectOptions as option (option.value)}
-              <option value={option.value}>{option.label}</option>
-            {/each}
-          </select>
-        </label>
-        <label class="flex flex-col gap-label">
-          <span class="type-body font-medium">Notes</span>
-          <input class="input input-sm" name="notes" bind:value={waitlistNotes} />
-        </label>
-      </div>
-      <div class="mt-3 flex justify-end gap-2">
-        <CsrfField />
-        <button type="submit" class="btn btn-primary btn-sm">Add to waitlist</button>
-      </div>
-    </form>
+    {/if}
   {/if}
 </OfficeList>
 
-<dialog bind:this={releaseDialog} class="assets-dialog modal" oncancel={(event) => event.preventDefault()}>
+<dialog bind:this={releaseDialog} class="assets-dialog modal" aria-labelledby={`${uid}-release-dialog-title`}>
   <div class="modal-box">
-    <h2 class="type-heading font-bold">Release {releaseTargetLabel}?</h2>
+    <h2 id={`${uid}-release-dialog-title`} class="type-heading font-bold">Release {releaseTargetLabel}?</h2>
     <p class="py-2 type-body text-muted">The asset returns to the pool. This does not remove its payment history.</p>
     <form method="dialog">
       <CsrfField />
@@ -434,9 +536,9 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
   </div>
 </dialog>
 
-<dialog bind:this={paymentDialog} class="assets-dialog modal">
+<dialog bind:this={paymentDialog} class="assets-dialog modal" aria-labelledby={`${uid}-payment-dialog-title`}>
   <div class="modal-box">
-    <h2 class="type-heading font-bold">Record a payment</h2>
+    <h2 id={`${uid}-payment-dialog-title`} class="type-heading font-bold">Record a payment</h2>
     <p class="py-2 type-body text-muted">{paymentTargetLabel}</p>
     <form method="post" action="?/recordPayment" class="flex flex-col gap-3">
       <CsrfField />
@@ -449,6 +551,86 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
       <div class="modal-action">
         <button type="button" class="btn btn-sm" onclick={() => paymentDialog?.close()}>Cancel</button>
         <button type="submit" class="btn btn-primary btn-sm">Record payment</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog bind:this={assignDialog} class="assets-dialog modal" aria-labelledby={`${uid}-assign-dialog-title`}>
+  <div class="modal-box">
+    <h2 id={`${uid}-assign-dialog-title`} class="type-heading font-bold">Assign an asset</h2>
+    {#if assignError}
+      <p bind:this={assignErrorEl} tabindex="-1" class="mt-2 type-body font-medium text-error" role="alert">{assignError}</p>
+    {/if}
+    <form method="post" action="?/assign" class="flex flex-col gap-3" use:enhance={assignEnhance}>
+      <CsrfField />
+      <label class="flex flex-col gap-label">
+        <span class="type-body font-medium">Asset type</span>
+        <select class="select select-sm" name="assetType" bind:value={assignAssetType}>
+          {#each assetTypeOptions as option (option.value)}
+            <option value={option.value}>{option.label}</option>
+          {/each}
+        </select>
+      </label>
+      <label class="flex flex-col gap-label">
+        <span class="type-body font-medium">Search household</span>
+        <input class="input input-sm" type="search" name="householdQuery" placeholder="Name" bind:value={householdQuery} />
+      </label>
+      <label class="flex flex-col gap-label">
+        <span class="type-body font-medium">Household</span>
+        <select class="select select-sm" name="membershipId" bind:value={assignMembershipId}>
+          {#each membershipOptions as option (option.value)}
+            <option value={option.value}>{option.label}</option>
+          {/each}
+        </select>
+      </label>
+      <label class="flex flex-col gap-label">
+        <span class="type-body font-medium">Description</span>
+        <input class="input input-sm" name="description" placeholder="Buoy M-14" bind:value={assignDescription} />
+      </label>
+      <div class="modal-action">
+        <button type="button" class="btn btn-sm" onclick={() => assignDialog?.close()}>Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Assign</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog bind:this={waitlistDialog} class="assets-dialog modal" aria-labelledby={`${uid}-waitlist-add-dialog-title`}>
+  <div class="modal-box">
+    <h2 id={`${uid}-waitlist-add-dialog-title`} class="type-heading font-bold">Add to the waitlist</h2>
+    {#if waitlistError}
+      <p bind:this={waitlistErrorEl} tabindex="-1" class="mt-2 type-body font-medium text-error" role="alert">{waitlistError}</p>
+    {/if}
+    <form method="post" action="?/waitlistAdd" class="flex flex-col gap-3" use:enhance={waitlistEnhance}>
+      <CsrfField />
+      <label class="flex flex-col gap-label">
+        <span class="type-body font-medium">Asset type</span>
+        <select class="select select-sm" name="assetType" bind:value={waitlistAssetType}>
+          {#each assetTypeOptions as option (option.value)}
+            <option value={option.value}>{option.label}</option>
+          {/each}
+        </select>
+      </label>
+      <label class="flex flex-col gap-label">
+        <span class="type-body font-medium">Search member</span>
+        <input class="input input-sm" type="search" name="memberQuery" placeholder="Name or email" bind:value={memberQuery} />
+      </label>
+      <label class="flex flex-col gap-label">
+        <span class="type-body font-medium">Member</span>
+        <select class="select select-sm" name="memberId" bind:value={waitlistMemberId}>
+          {#each memberSelectOptions as option (option.value)}
+            <option value={option.value}>{option.label}</option>
+          {/each}
+        </select>
+      </label>
+      <label class="flex flex-col gap-label">
+        <span class="type-body font-medium">Notes</span>
+        <input class="input input-sm" name="notes" bind:value={waitlistNotes} />
+      </label>
+      <div class="modal-action">
+        <button type="button" class="btn btn-sm" onclick={() => waitlistDialog?.close()}>Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Add to waitlist</button>
       </div>
     </form>
   </div>
@@ -495,6 +677,13 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
     margin-left: var(--cairn-gap-label);
   }
 
+  /* Inside the disclosure toggle button (below), the button's own `inline-flex` `gap` already
+     spaces every child evenly (chevron, name, this qualifier); the base rule's `margin-left`
+     would stack on top of that gap and read as extra space only before this one item. */
+  .asset-type-toggle .count-qualifier {
+    margin-left: 0;
+  }
+
   .holding-list {
     display: flex;
     flex-direction: column;
@@ -504,8 +693,13 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
        otherwise draw a bare bullet with no compiled `list-style: none` reset to stop it --
        Tailwind's Preflight reset lives in this site's OWN build, never in the precompiled
        `cairn-admin.css` this route renders against (see this file's own top-of-style-block
-       comment). */
+       comment). The same absent-Preflight gap leaves the UA `40px` `padding-inline-start` a
+       bare `<ul>` reserves for its bullets in place too, which reads as a left gutter each
+       striped row's own `margin-inline: -1.5rem` bleed only escapes on the right; `margin: 0;
+       padding: 0` resets both so the stripe bleeds to the card's real edge on both sides. */
     list-style: none;
+    margin: 0;
+    padding: 0;
   }
 
   /* The row every view (by-asset, by-person, waitlist) shares: an identity block on the left, a
@@ -513,25 +707,49 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
      `exemplar-detail.md` states for a detail screen's own related-data rows. `flex-wrap` is what a
      `<table>` cannot do -- once the two blocks no longer fit one line, the actions block drops to
      its own full-width line below the identity block instead of forcing the row past the card's
-     edge, which is the 390px defect this rebuild replaces. */
+     edge, which is the 390px defect this rebuild replaces.
+
+     Vertical padding tightens from the register re-entry's own prior 94px-row scale toward the
+     events ledger's row scale (probe verdict, 2026-08-24): `--cairn-gap-control` (0.5rem) is the
+     exact value `table-sm`'s own compiled `padding-block` uses, so this row's rhythm matches the
+     events ledger's rather than approximating it. `margin-inline`/`padding-inline` bleed the row
+     out to its own container's edge (each view's own `p-6` ancestor, 1.5rem) and back in, so the
+     zebra stripe below reaches the card's real edge rather than sitting indented inside it. */
   .holding-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: var(--cairn-gap-group);
-    padding-block: var(--cairn-gap-group);
+    padding-block: var(--cairn-gap-control);
+    margin-inline: -1.5rem;
+    padding-inline: 1.5rem;
   }
 
   .holding-row:not(:first-child) {
     border-top: 1px solid var(--cairn-card-border);
   }
 
-  .holding-row:first-child {
+  /* Alternating stripes, the events ledger's own `table-zebra` register re-expressed for this
+     page's `<ul>`/`<li>` rows (no `<table>` here, this file's own header comment explains why):
+     `$theme/admin-chip-registers.css`'s tint percentages were tuned against this exact ground. */
+  .holding-row:nth-child(even) {
+    background-color: var(--color-base-200);
+  }
+
+  /* The edge-padding trim, qualified to an UNSTRIPED edge row only (`:nth-child(odd)`, the exact
+     inverse of the stripe rule above): on an even-count group the last row lands on an even index,
+     which the stripe rule above already fills top-to-bottom with `--cairn-gap-control`. Trimming
+     that row's `padding-bottom` to 0 the way an unstriped edge row gets trimmed left its own fill
+     asymmetric -- 0.5rem of tint above the text, none below -- a visible defect inside a filled
+     band that the plain untinted case never showed. Leaving a striped edge row at its full
+     padding-block on both sides keeps its fill symmetric; an unstriped edge row (odd index) is
+     untouched, so the row rhythm everywhere else is unchanged. */
+  .holding-row:first-child:nth-child(odd) {
     padding-top: 0;
   }
 
-  .holding-row:last-child {
+  .holding-row:last-child:nth-child(odd) {
     padding-bottom: 0;
   }
 
@@ -553,6 +771,66 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
      than chasing a per-content wrap point. */
   .type-header-actions {
     margin-left: auto;
+  }
+
+  /* The launcher row for the Assign/Add-to-waitlist dialogs (probe verdict, 2026-08-24): a
+     quiet button, top-anchored above the list it acts on rather than a form six viewports down.
+     Each dialog's own submit is the sole filled primary on its surface. */
+  .assets-list-header {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  /* The per-type disclosure toggle: a plain reset button (no daisyUI `.btn`, which would read as
+     a boxed control rather than the heading it stands in for), wrapped by a real `<h2>` so the
+     accordion still carries a heading in the accessible tree -- the explicit disclosure-button
+     pattern this page's markup comment explains, since `<summary>` cannot also host the Promote
+     form and Edit button beside it. */
+  .asset-type-heading {
+    margin: 0;
+    min-width: 0;
+  }
+
+  .asset-type-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    /* A floor under the button's own box, not its line-height (which stays whatever the inherited
+       `type-body` resolves to): the reset button otherwise measured 20px tall, under the 24px
+       minimum target size a `role="button"`-shaped control needs. `align-items: center` on the
+       parent `<h2>`'s sibling row keeps the taller box vertically centered rather than stretching
+       the row itself. */
+    min-height: 1.5rem;
+    border: none;
+    background: none;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .asset-type-chevron {
+    display: inline-block;
+    font-size: 0.625rem;
+    color: var(--color-muted);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .asset-type-chevron {
+      transition: transform 0.15s ease;
+    }
+  }
+
+  .asset-type-toggle[aria-expanded='true'] .asset-type-chevron {
+    transform: rotate(90deg);
+  }
+
+  /* The over-capacity count (probe verdict, 2026-08-24): warning-toned ink on the COUNT only,
+     not the whole "N/M assigned" qualifier -- `--cairn-warning-ink` is the same token the events
+     ledger's own `.events-class-star` reaches for. */
+  .count-warning {
+    color: var(--cairn-warning-ink);
   }
 
   /* cairn-admin.css caps `.input`, `.select`, and `.textarea` at `width: clamp(3rem, 20rem,
@@ -578,7 +856,7 @@ has a queue, so freeing the slot and filling it from the queue are one visit). B
      is dark in light mode (still darkens, matching the previous read) and light in dark mode
      (lightens, giving the same kind of highlight `btn-active` gives in light). No accent hue is
      introduced, so the screen keeps its one filled action (the `Assign` submit). */
-  .view-tab[aria-selected='true'] {
+  .view-tab[aria-pressed='true'] {
     --btn-bg: color-mix(in oklab, var(--color-base-content) 16%, var(--color-base-200));
     border-color: color-mix(in oklab, var(--color-base-content) 30%, transparent);
   }

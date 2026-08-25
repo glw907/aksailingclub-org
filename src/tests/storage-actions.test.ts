@@ -1,4 +1,5 @@
-// `/my-account/gear`'s own server actions (T2b of the portal redesign pass): `releaseAsset`,
+// `/my-account/storage`'s own server actions (T2b of the portal redesign pass; the route was
+// renamed off the old `gear` route by the assets-register pass's ruling 5): `releaseAsset`,
 // `cancelRequest`, and `requestAsset` moved here verbatim from `/my-account/+page.server.ts`,
 // where they carried no dedicated route-level test of their own (`my-account-actions.test.ts`
 // only ever covered `?/requestLink`, `?/renew`, `?/payAssetFee`, `?/payRequest`). This file
@@ -7,7 +8,7 @@
 // owns their own logic; this file only proves the route composes them correctly).
 import { describe, expect, it } from 'vitest';
 import { isActionFailure } from '@sveltejs/kit';
-import { actions } from '../routes/(site)/my-account/gear/+page.server';
+import { actions } from '../routes/(site)/my-account/storage/+page.server';
 import { fakeD1 } from './_fake-d1';
 
 const MEMBER_ROW = { id: 'mem-1', household_id: 'hh-1', name: 'Scratch Member', email: 'scratch@example.com', archived_at: null };
@@ -18,7 +19,7 @@ function fakeEvent(form: Record<string, string>, db: unknown) {
   for (const [key, value] of Object.entries(form)) fd.append(key, value);
   const cookies: Record<string, string> = { 'asc-member-csrf': 'token', 'asc-member': 'sess-1' };
   return {
-    url: new URL('http://localhost/my-account/gear'),
+    url: new URL('http://localhost/my-account/storage'),
     request: { clone: () => ({ formData: async () => fd }) } as unknown as Request,
     cookies: { get: (name: string) => cookies[name], set: () => {} },
     platform: { env: { CLUB_DB: db } },
