@@ -96,18 +96,28 @@ season (S11).
     }
   });
 
-  // The blank "New event" panel closes on a season change (a real navigation, so `data.season`
-  // itself is the signal `$state` alone can't catch) or a filter change (the two `onChange`
-  // handlers below, a client-side change this effect never sees) -- an abandoned draft should
-  // never survive the officer changing what they are even looking at.
+  /** Everything the ledger holds that belongs to the view an officer is currently looking at: a
+   *  blank "New event" draft, a row mid-edit in its date cell, and the return-focus target that
+   *  edit is holding. A season change or a filter change closes all three -- an abandoned draft
+   *  should never survive the officer changing what they are even looking at, and a season change
+   *  besides swaps every row's form out for a fresh one keyed to the new season's own event ids
+   *  (fix round finding 6), leaving a mid-flight edit nothing to return to. */
+  function closeViewScopedState() {
+    newRowOpen = false;
+    editingDateId = null;
+    returnFocusId = null;
+  }
+
+  // A season change is a real navigation, so `data.season` itself is the signal `$state` alone
+  // can't catch; a filter change is client-side, handled by the two `onChange` handlers below,
+  // which this effect never sees.
   let lastSeason = $state(untrack(() => data.season));
   $effect(() => {
     if (data.season !== lastSeason) {
       lastSeason = data.season;
-      newRowOpen = false;
+      closeViewScopedState();
     }
   });
-
 
   function toggleExpanded(id: string) {
     expandedId = expandedId === id ? null : id;
@@ -141,6 +151,40 @@ season (S11).
     savedClearTimer = setTimeout(() => {
       savedRowId = null;
     }, 2000);
+  }
+
+  /** The current-season date cell's own rest/edit toggle (probe verdict, 2026-08-24): a row reads
+   *  as typeset text (`instanceText`, the same formatter the read-only prior columns use) or a
+   *  quiet "+ add date" link until an officer activates it, rather than always showing the boxed
+   *  native inputs. Keyed by `event.id` (matching `savedRowId`/`keepDateOnScreen` below), not
+   *  toggled by row id, since only one row is ever mid-edit at a time. */
+  let editingDateId: string | null = $state(null);
+
+  /** Focuses the start-date input the moment a row enters edit mode: the `{#if editingDateId ===
+   *  row.event.id}` block mounts a fresh `<input>` each time that condition turns true, so a plain
+   *  `use:` action is enough -- it runs once the node is already in the DOM, with no queued ref or
+   *  `tick()` needed (contrast `EventRowForm`'s own `focusField` effect, which tracks a ref across
+   *  an entire panel rather than one input). */
+  function focusDateInput(node: HTMLInputElement) {
+    node.focus();
+  }
+
+  /** The date cell's own return-focus idiom (fix round finding 2), mirroring the roll-forward
+   *  disclosure's `closeRollPanel`/`rollTriggerEl` pair above: set wherever `editingDateId`
+   *  clears (the Escape path in `onDateCellKeydown` and the successful-save path in
+   *  `keepDateOnScreen`, both below), so focus never drops to `<body>` when edit mode exits.
+   *  Consumed by `focusIfReturning`, the `use:` action on this row's own rest button. */
+  let returnFocusId: string | null = $state(null);
+
+  /** Focuses this row's own rest button (the typeset date or "+ add date" link) once edit mode
+   *  closes for it: the `{#if editingDateId === eventId} ... {:else if ...}` block mounts a fresh
+   *  rest button each time editing closes, so a plain `use:` action run once at mount is enough --
+   *  the same reasoning `focusDateInput` above gives for the edit-mode input. */
+  function focusIfReturning(node: HTMLButtonElement, id: string) {
+    if (returnFocusId === id) {
+      node.focus();
+      returnFocusId = null;
+    }
   }
 
   /** Pushes a new `?season=`, the Classes screen's own `pushSeason` idiom: a season change is a
@@ -202,7 +246,7 @@ season (S11).
       ],
       onChange: (value) => {
         datesFilter = value;
-        newRowOpen = false;
+        closeViewScopedState();
       },
     },
     {
@@ -216,7 +260,7 @@ season (S11).
       ],
       onChange: (value) => {
         rowsFilter = value;
-        newRowOpen = false;
+        closeViewScopedState();
       },
     },
   ]);
@@ -234,7 +278,9 @@ season (S11).
    *  either year there would misstate the date. */
   function instanceText(instance: EventInstance | null): string {
     if (!instance || !instance.startDate) return '';
-    if (!instance.endDate) return formatCivilDate(instance.startDate);
+    // A same-day "range" collapses to the single date: the form can save endDate === startDate,
+    // and "Nov 5–5, 2026" is a tell (settle-round read, 2026-08-24).
+    if (!instance.endDate || instance.endDate === instance.startDate) return formatCivilDate(instance.startDate);
     const start = parseCivil(instance.startDate);
     const end = parseCivil(instance.endDate);
     if (start.getFullYear() === end.getFullYear()) {
@@ -271,13 +317,37 @@ season (S11).
     return () => {
       return async ({ update, result }) => {
         await update({ reset: false });
-        if (result.type === 'success') showSaved(rowId);
+        if (result.type === 'success') {
+          showSaved(rowId);
+          // Returns the row to at-rest typeset on a successful save (the probe verdict's own
+          // wording); a failed save leaves the officer in edit mode with whatever they typed.
+          // `returnFocusId` (fix round finding 2) sends focus back to that row's own rest button
+          // rather than dropping it to `<body>`.
+          if (editingDateId === rowId) {
+            editingDateId = null;
+            returnFocusId = rowId;
+          }
+        }
       };
     };
   }
 
   function stopRowToggle(event: Event) {
     event.stopPropagation();
+  }
+
+  /** The date form wrap's own keydown handler while a row is mid-edit: still stops the
+   *  `ExpandableRow` row-toggle bubble (`stopRowToggle`'s own job), plus Escape exits edit mode
+   *  without saving. A no-op past the propagation stop at rest, where there is no edit to leave. */
+  function onDateCellKeydown(event: KeyboardEvent, eventId: string) {
+    event.stopPropagation();
+    if (event.key === 'Escape' && editingDateId === eventId) {
+      event.preventDefault();
+      editingDateId = null;
+      // Same return-focus idiom as the successful-save path in `keepDateOnScreen`: focus goes
+      // back to this row's own rest button rather than dropping to `<body>`.
+      returnFocusId = eventId;
+    }
   }
 
   /** The series-link control's own option list for `row`: every OTHER event series the currently
@@ -486,7 +556,7 @@ season (S11).
           <th class="{HEADER_CELL} events-name-header" scope="col">Event</th>
           <th class="{HEADER_CELL} tabular-nums events-narrow-hide" scope="col">{data.season - 2}</th>
           <th class="{HEADER_CELL} tabular-nums events-narrow-hide" scope="col">{data.season - 1}</th>
-          <th class="{HEADER_CELL} tabular-nums" scope="col">{data.season}</th>
+          <th class="{HEADER_CELL} tabular-nums events-season-header-current" scope="col">{data.season}</th>
           <!-- A REAL (though visually blank) narrow cell, not a `sr-only`-on-the-`<th>` one (S8
                of the second coherence read's fix brief): Tailwind's `sr-only` utility is
                `position: absolute`, which per the table layout spec computes an absolutely
@@ -529,7 +599,20 @@ season (S11).
                   <span class="events-name-title">{row.title}</span>
                 </span>
                 <span class="events-name-chips">
-                  <StatusChip tone={EVENT_CATEGORY_TONE[row.category]} label={EVENT_CATEGORY_LABEL[row.category]} size="xs" register="quiet" />
+                  <!-- Category color moves off `StatusChip`'s own 6px dot onto the chip's own
+                       ground (probe verdict, 2026-08-24: "the dot is so small it's hard to tell
+                       what color it is"). `events-cat-chip` hides the dot for every category (the
+                       tinted three below and the two quiet-gray ones alike, so the vocabulary
+                       stays one dressing); `events-cat-{row.category}` tints only racing/class/
+                       social, since operations/governance keep `StatusChip`'s own quiet gray
+                       ground unmodified. This is a site-side carry of a toolkit-wide ruling (Geoff:
+                       "it would need to apply to everything") -- the tinted-ground grammar
+                       belongs to `StatusChip` itself, filed in the events-admin harvest; this
+                       component reaches into `StatusChip`'s scoped markup via `:global()` below
+                       until the engine ships it. -->
+                  <span class="events-cat-chip events-cat-{row.category}">
+                    <StatusChip tone={EVENT_CATEGORY_TONE[row.category]} label={EVENT_CATEGORY_LABEL[row.category]} size="xs" register="quiet" />
+                  </span>
                   <!-- `events-state-chip`, not `StatusChip` (cosmetic item, second coherence
                        read): a category chip's colored dot marks WHAT a row is, so a state marker
                        (Hidden/Retired) carrying the same dot read as a sixth category rather than
@@ -537,119 +620,186 @@ season (S11).
                        assistive tech too, not only sighted readers. Hidden is omitted while the
                        "Undated only" filter is active: every row in that view is hidden by the
                        publish-on-date rule, so the marker would repeat on every single row rather
-                       than adding information. -->
+                       than adding information. Hidden and Retired now split registers (probe
+                       verdict, 2026-08-24, "must not read identically"): Hidden is the quiet
+                       hairline-outline chip (a transient, reversible absence), Retired keeps the
+                       filled darker-gray ground (a settled state) -- both at the normalized 400
+                       weight the flagged 600 inconsistency dropped to. -->
                   {#if row.kind === 'event' && row.current && !row.current.visible && datesFilter !== 'undated'}
-                    <span class="events-state-chip"><span class="sr-only">State: </span>Hidden</span>
+                    <span class="events-state-chip events-state-chip-outline"><span class="sr-only">State: </span>Hidden</span>
                   {/if}
                   {#if row.kind === 'event' && row.retiredAt}
-                    <span class="events-state-chip"><span class="sr-only">State: </span>Retired</span>
+                    <span class="events-state-chip events-state-chip-filled"><span class="sr-only">State: </span>Retired</span>
                   {/if}
                 </span>
               </td>
               <td class="events-date-cell tabular-nums type-body text-muted events-narrow-hide">{instanceText(row.prior[1])}</td>
               <td class="events-date-cell tabular-nums type-body text-muted events-narrow-hide">{instanceText(row.prior[0])}</td>
-              <td class="events-date-cell tabular-nums type-body">
+              <td class="events-date-cell events-date-cell-current tabular-nums type-body">
                 {#if row.kind === 'event' && row.event}
-                  <!-- Stops the date form's own click/keydown from bubbling to `ExpandableRow`'s
+                  <!-- `eventId`, not `row.event.id` inline: TS control-flow narrowing on
+                       `row.event` (the outer `{#if}` above) does not survive into a closure body
+                       (`onclick`/`onkeydown` below all capture it), so a local const the narrowing
+                       DOES apply to (this is a direct property access, not a closure) is what the
+                       closures actually read. -->
+                  {@const eventId = row.event.id}
+                  <!-- Stops the date cell's own click/keydown from bubbling to `ExpandableRow`'s
                        row-toggle `onclick` on the summary `<tr>`; this file's header comment
-                       explains the wider contract. -->
+                       explains the wider contract. Wraps BOTH states below (rest and edit), not
+                       just the form, since the rest-state buttons need the same guard: clicking
+                       either one must open edit mode, never toggle the whole row. -->
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
-                  <div class="events-date-form-wrap" onclick={stopRowToggle} onkeydown={stopRowToggle}>
-                    <form method="post" action="?/setDate" use:enhance={keepDateOnScreen(row.event.id)}>
-                      <CsrfField />
-                      <input type="hidden" name="id" value={row.event.id} />
-                      <span class="events-start-date-wrap">
+                  <div
+                    class="events-date-form-wrap"
+                    onclick={stopRowToggle}
+                    onkeydown={(event) => onDateCellKeydown(event, eventId)}
+                  >
+                    {#if editingDateId === eventId}
+                      <form method="post" action="?/setDate" use:enhance={keepDateOnScreen(eventId)}>
+                        <CsrfField />
+                        <input type="hidden" name="id" value={eventId} />
+                        <span class="events-start-date-wrap">
+                          <input
+                            class="input input-sm events-date-input"
+                            type="date"
+                            name="startDate"
+                            value={row.current?.startDate ?? ''}
+                            aria-label={`${row.title} start date, ${data.season}`}
+                            use:focusDateInput
+                            onchange={(event) => event.currentTarget.form?.requestSubmit()}
+                          />
+                          {#if row.current?.endDate}
+                            <!-- Narrow width only (S2 of the second coherence read's fix brief): the
+                                 end-date input itself is CSS-hidden below, so this reads the range's
+                                 own end date as quiet text where the unlabeled 6px dot used to sit
+                                 -- readable on its own, not just a decorative cue a screen reader had
+                                 to be told about separately. At the default width the real,
+                                 pre-filled end-date input already shows this, so the text stays
+                                 narrow-only. Third coherence read (item 2): a real button, not inert
+                                 text -- the narrow width has no visible end-date input to tap, so
+                                 this note is the only way to reach that field there, and it opens the
+                                 row's own panel focused on End date exactly like "+ end date" below.
+                                 `events-saved-active` (this file's narrow media block) hides it while
+                                 this row's own save confirmation is showing, the same swap the "+ end
+                                 date" button gets. -->
+                            <button
+                              type="button"
+                              class="events-add-end-date-link events-end-date-note events-narrow-only"
+                              class:events-saved-active={savedRowId === eventId}
+                              onclick={() => openEndDateField(row)}
+                            >
+                              to {monthDayFmt.format(parseCivil(row.current.endDate))}
+                            </button>
+                          {:else}
+                            <!-- The "+ end date" quiet link (S2 and S3): narrow-only when the row
+                                 already carries a start date (the real end-date input handles that
+                                 case at the default width instead, below); visible at every width
+                                 for a fully undated row, since S3's own fix is exactly "don't show
+                                 an empty end-date input beside an empty start-date input" -- there is
+                                 nothing for it to pair with yet at ANY width until a start date
+                                 exists. `events-saved-active` (item 4): hidden at the narrow width
+                                 while this row's own save confirmation is showing, so "Saved" has
+                                 room to render in its place instead of forcing the nowrap date form
+                                 past the cell's own measured width. -->
+                            <button
+                              type="button"
+                              class="events-add-end-date-link"
+                              class:events-narrow-only={row.current?.startDate != null}
+                              class:events-saved-active={savedRowId === eventId}
+                              onclick={() => openEndDateField(row)}
+                            >
+                              + end date
+                            </button>
+                          {/if}
+                        </span>
+                        <!-- Always in the DOM, so its own value posts even while CSS-hidden at a
+                             phone width or an undated row: `display: none` never drops a field from
+                             its form's own submission, only a genuinely absent or `disabled` one
+                             does, so an officer who edits only the start date still round-trips
+                             whatever end date this row already carries, unchanged; editing the end
+                             date itself then happens in the row's own expanded panel (Start date/End
+                             date pair) or through the "+ end date" link above, which opens exactly
+                             that panel. `events-end-date-input-hidden` (S3): don't render the empty
+                             end-date input at all until a start date exists -- two empty
+                             `mm/dd/yyyy` boxes side by side read as "half a form", not a date. -->
                         <input
-                          class="input input-sm events-date-input"
+                          class="input input-sm events-date-input events-end-date-input"
+                          class:events-end-date-input-hidden={row.current?.startDate == null}
                           type="date"
-                          name="startDate"
-                          value={row.current?.startDate ?? ''}
-                          aria-label={`${row.title} start date, ${data.season}`}
+                          name="endDate"
+                          value={row.current?.endDate ?? ''}
+                          aria-label={`${row.title} end date, ${data.season}`}
                           onchange={(event) => event.currentTarget.form?.requestSubmit()}
                         />
-                        {#if row.current?.endDate}
-                          <!-- Narrow width only (S2 of the second coherence read's fix brief): the
-                               end-date input itself is CSS-hidden below, so this reads the range's
-                               own end date as quiet text where the unlabeled 6px dot used to sit
-                               -- readable on its own, not just a decorative cue a screen reader had
-                               to be told about separately. At the default width the real,
-                               pre-filled end-date input already shows this, so the text stays
-                               narrow-only. Third coherence read (item 2): a real button, not inert
-                               text -- the narrow width has no visible end-date input to tap, so
-                               this note is the only way to reach that field there, and it opens the
-                               row's own panel focused on End date exactly like "+ end date" below.
-                               `events-saved-active` (this file's narrow media block) hides it while
-                               this row's own save confirmation is showing, the same swap the "+ end
-                               date" button gets. -->
-                          <button
-                            type="button"
-                            class="events-add-end-date-link events-end-date-note events-narrow-only"
-                            class:events-saved-active={savedRowId === row.event.id}
-                            onclick={() => openEndDateField(row)}
-                          >
-                            to {monthDayFmt.format(parseCivil(row.current.endDate))}
-                          </button>
-                        {:else}
-                          <!-- The "+ end date" quiet link (S2 and S3): narrow-only when the row
-                               already carries a start date (the real end-date input handles that
-                               case at the default width instead, below); visible at every width
-                               for a fully undated row, since S3's own fix is exactly "don't show
-                               an empty end-date input beside an empty start-date input" -- there is
-                               nothing for it to pair with yet at ANY width until a start date
-                               exists. `events-saved-active` (item 4): hidden at the narrow width
-                               while this row's own save confirmation is showing, so "Saved" has
-                               room to render in its place instead of forcing the nowrap date form
-                               past the cell's own measured width. -->
-                          <button
-                            type="button"
-                            class="events-add-end-date-link"
-                            class:events-narrow-only={row.current?.startDate != null}
-                            class:events-saved-active={savedRowId === row.event.id}
-                            onclick={() => openEndDateField(row)}
-                          >
-                            + end date
-                          </button>
-                        {/if}
-                      </span>
-                      <!-- Always in the DOM, so its own value posts even while CSS-hidden at a
-                           phone width or an undated row: `display: none` never drops a field from
-                           its form's own submission, only a genuinely absent or `disabled` one
-                           does, so an officer who edits only the start date still round-trips
-                           whatever end date this row already carries, unchanged; editing the end
-                           date itself then happens in the row's own expanded panel (Start date/End
-                           date pair) or through the "+ end date" link above, which opens exactly
-                           that panel. `events-end-date-input-hidden` (S3): don't render the empty
-                           end-date input at all until a start date exists -- two empty
-                           `mm/dd/yyyy` boxes side by side read as "half a form", not a date. -->
-                      <input
-                        class="input input-sm events-date-input events-end-date-input"
-                        class:events-end-date-input-hidden={row.current?.startDate == null}
-                        type="date"
-                        name="endDate"
-                        value={row.current?.endDate ?? ''}
-                        aria-label={`${row.title} end date, ${data.season}`}
-                        onchange={(event) => event.currentTarget.form?.requestSubmit()}
-                      />
-                      <!-- S9: the "Saved" confirmation renders beside the very input that changed,
-                           `role="status"` present at load (this element, always rendered, empty
-                           until `showSaved` fills it) rather than only the page-level line above
-                           the toolbar, which sits well off-screen from a row an officer is dating
-                           deep in a long ledger. -->
-                      <span
-                        class="events-row-saved type-meta text-muted"
-                        class:events-row-saved-empty={savedRowId !== row.event.id}
-                        role="status"
-                        aria-live="polite"
-                        aria-atomic="true"
-                      >{savedRowId === row.event.id ? 'Saved' : ''}</span>
-                    </form>
+                      </form>
+                    {:else if row.current?.startDate}
+                      <!-- At-rest typeset text (probe verdict, 2026-08-24): the same register the
+                           read-only prior columns use (`tabular-nums type-body`, full ink, no
+                           `text-muted`), a real button rather than a styled span so the edit
+                           affordance is keyboard-reachable and announced. No box, no calendar
+                           glyph until activated -- just the dashed underline below. -->
+                      <button
+                        type="button"
+                        class="events-date-rest-btn"
+                        aria-label={`Edit ${row.title} dates, ${data.season}: ${instanceText(row.current)}`}
+                        use:focusIfReturning={eventId}
+                        onclick={() => (editingDateId = eventId)}
+                      >
+                        {instanceText(row.current)}
+                      </button>
+                    {:else}
+                      <!-- The undated case (probe verdict, then C of the settle round): its own
+                           AT-REST class (`events-date-rest-add-link`), not the in-form "+ end
+                           date"/"to <date>" links' `events-add-end-date-link` -- that shared class
+                           is a 13px purple solid-underline register, which beside a column of 14px
+                           ink, dash-underlined dates read as a stray form control rather than this
+                           column's own affordance (measured: its own row 51px against 52px for
+                           every dated sibling). This class matches `.events-date-rest-btn`'s own
+                           recipe instead (dashed underline, hover solidifies, the S10 focus ring),
+                           just muted rather than full ink, since there is no date yet to typeset.
+                           No `aria-label` (fix round finding 4, label-in-name): the sr-only suffix
+                           keeps "+ add date" itself as a literal prefix of the accessible name,
+                           rather than replacing it with text that omits the visible string. -->
+                      <button
+                        type="button"
+                        class="events-date-rest-add-link"
+                        use:focusIfReturning={eventId}
+                        onclick={() => (editingDateId = eventId)}
+                      >
+                        + add date<span class="sr-only"> for {row.title}, {data.season}</span>
+                      </button>
+                    {/if}
+                    <!-- S9: the "Saved" confirmation renders beside the very cell that changed,
+                         `role="status"` present at load (this element, always rendered, empty
+                         until `showSaved` fills it) rather than only the page-level line above the
+                         toolbar, which sits well off-screen from a row an officer is dating deep in
+                         a long ledger. Outside the edit/rest toggle above (not inside the `<form>`)
+                         so it keeps announcing after a successful save returns the row to rest. -->
+                    <span
+                      class="events-row-saved type-meta text-muted"
+                      class:events-row-saved-empty={savedRowId !== eventId}
+                      role="status"
+                      aria-live="polite"
+                      aria-atomic="true"
+                    >{savedRowId === eventId ? 'Saved' : ''}</span>
                   </div>
                 {:else}
                   <!-- A class row's own current-season text (never a form -- Task 5's own
                        header comment): allowed to wrap onto a second line at the narrow
                        breakpoint (below) rather than ellipsizing, so a range's own year never
-                       silently drops (the second coherence read's own S1 finding). -->
-                  <span class="events-current-text">{instanceText(row.current)}</span>
+                       silently drops (the second coherence read's own S1 finding). D of the
+                       settle round: an UNDATED class row named its own state instead of the
+                       0x0 blank span the sibling event row's own "+ add date" affordance left
+                       beside it -- "not scheduled" (quiet, `text-muted`; class dates are set in
+                       Classes, so this cell carries no affordance of its own to add one). Scoped
+                       to `row.kind === 'class'` specifically: an event row with no current-season
+                       instance at all falls into this same `{:else}` branch and keeps its prior
+                       blank rendering, since D's own finding named only the class row. -->
+                  {#if row.kind === 'class' && !row.current?.startDate}
+                    <span class="events-current-empty text-muted">not scheduled</span>
+                  {:else}
+                    <span class="events-current-text">{instanceText(row.current)}</span>
+                  {/if}
                 {/if}
               </td>
             {/snippet}
@@ -799,9 +949,16 @@ season (S11).
     width: 1px;
   }
 
+  /* B (settle round): `flex-start`, not `center` -- a two-line wrapped title (the narrow
+     breakpoint's own clamp, below) floated the star between its two lines under `center`
+     (measured 7.5px low, the star's own center sitting under the gap between lines rather than
+     the first line's own center). `flex-start` marks the FIRST line instead: the star and the
+     title share the same 15px line box (both this element's own font metrics), so a single-line
+     title's own alignment is unchanged (measured 0px delta) -- `flex-start` and `center` agree
+     whenever both children are the same height. */
   .events-name-text {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.375rem;
     font-weight: 600;
   }
@@ -813,19 +970,96 @@ season (S11).
     white-space: nowrap;
   }
 
+  /* Category color moves off `StatusChip`'s own 6px dot onto the chip's own ground (probe
+     verdict, 2026-08-24: "the dot is so small it's hard to tell what color it is"). `:global()`
+     reaches into `StatusChip`'s own scoped markup -- its `.status-chip` span carries the ground,
+     its `.status` span is the dot -- since this page has no other route to that component's
+     internals. This block carries no `@layer` wrapper (an unlayered rule always outranks a
+     layered one, the `layer-cascade-gotcha` finding), and wins on specificity besides: three
+     classes once Svelte's scope class lands (`.events-cat-racing.svelte-* .status-chip`) against
+     `StatusChip`'s own two. Values and percentages are the public Season list's own palette (racing
+     blue, class gold, social sage); operations/governance keep `StatusChip`'s quiet gray ground
+     unmodified. Every label's contrast against its tinted ground clears 4.5:1 by a wide margin in
+     both admin themes (light 11.8-12.2:1, dark 10.2-12.1:1 -- the pass's own report carries the
+     full numbers), so neither tint needs a dark-mode adjustment. */
+  /* `display: contents`: as a bare flex item this wrapper blockifies and its line box grows
+     past the chip inside it, floating the category chip 1.6px off the state chips' shared
+     center (measured at 1440). With `contents` the chip itself is the flex item again; the
+     descendant selectors below still match, since they key on DOM ancestry, not boxes. */
+  .events-cat-chip {
+    display: contents;
+  }
+
+  .events-cat-chip :global(.status) {
+    display: none;
+  }
+
+  .events-cat-racing :global(.status-chip) {
+    background-color: color-mix(in oklab, oklch(53% 0.15 245) 16%, var(--color-base-100));
+  }
+
+  .events-cat-class :global(.status-chip) {
+    background-color: color-mix(in oklab, oklch(62% 0.155 78.3) 22%, var(--color-base-100));
+  }
+
+  .events-cat-social :global(.status-chip) {
+    background-color: color-mix(in oklab, oklch(46% 0.14 155) 15%, var(--color-base-100));
+  }
+
+  /* F (settle round, cosmetic 6): Operations/Governance keep `StatusChip`'s own quiet gray ground
+     unmodified (this file's earlier comment on `events-cat-chip`), which measured 1.68-1.80:1
+     against the zebra ground the tinted three above measure ~1.19-1.28:1 against on their own
+     usual (light theme, unstriped) condition -- the "quiet" gray chips were, by measurement, the
+     LOUDEST ones on the row. A tint of `--color-base-content` itself (not a hue) keeps the
+     category vocabulary honest -- these two categories carry no color of their own. 10% is tuned
+     against the tinted three's own REAL measured spread across both zebra stripes and both themes
+     (measured via the canvas-readback method, `color-mix`/`oklch` computed values never round-trip
+     through a plain `rgb\(...\)` regex), not an idealized single band: this same fixed-against-
+     `--color-base-100` mechanism already lets the tinted three swing from 1.11:1 (dark, unstriped)
+     to 1.56:1 (dark, striped) depending on which zebra stripe and theme a row lands on, so "sits
+     with the siblings" means landing inside THAT observed spread, which 10% does (light
+     1.16-1.24:1, dark 1.24-1.47:1) while staying well clear of the original 1.68-1.80:1 defect.
+     Label ink stays a comfortable 10-12:1 throughout, well past the 4.5:1 floor. */
+  .events-cat-operations :global(.status-chip),
+  .events-cat-governance :global(.status-chip) {
+    background-color: color-mix(in oklab, var(--color-base-content) 10%, var(--color-base-100));
+  }
+
   /* The state-marker chip (cosmetic item, second coherence read): no colored dot -- see the
      summary snippet's own comment for why a category chip's dot and a state marker's dot would
-     otherwise read as the same vocabulary. Literal values, matching `StatusChip`'s own quiet
-     register (`color-mix(in oklab, var(--color-base-content) 14%, var(--color-base-300))`), since
-     that component's own scoped classes are not a reachable selector from here. */
+     otherwise read as the same vocabulary. Weight normalizes to 400 here (the flagged 600
+     inconsistency the coherence read measured, invisible at 10px without zoom); Hidden and
+     Retired split into their own registers below, per the probe verdict's "must not read
+     identically". */
   .events-state-chip {
     display: inline-flex;
     align-items: center;
     border-radius: 9999px;
     padding: 0.0625rem 0.5rem;
     font-size: var(--cairn-type-chip, 0.625rem);
-    font-weight: 600;
-    background-color: color-mix(in oklab, var(--color-base-content) 14%, var(--color-base-300));
+    font-weight: 400;
+  }
+
+  /* HIDDEN (probe verdict, 2026-08-24): a transient, reversible absence, so it reads as the
+     quieter hairline-outline register rather than a filled chip. `--color-muted` clears 4.5:1
+     against both admin themes' page and zebra grounds (light 5.9-6.4:1, dark 6.6-7.9:1). The
+     border mixes on `--color-base-content`, not the muted ink, to clear the 3:1 non-text floor
+     `StatusChip`'s own bounded register holds itself to; `padding-block: 0` gives the border's
+     2px back so this pill and the filled one measure the same 16px height. */
+  .events-state-chip-outline {
+    background-color: transparent;
+    border: 1px solid color-mix(in oklab, var(--color-base-content) 55%, transparent);
+    padding-block: 0;
+    color: var(--color-muted);
+  }
+
+  /* RETIRED: a settled state, on a filled ground one step DARKER than `StatusChip`'s quiet
+     14% -- with the dot and the 600 weight both gone, the old shared value left Retired
+     identical to an untinted category chip (Operations/Governance), and the probe verdict's
+     wording is "the filled darker state gray". Ink is unset (inherits `--color-base-content`);
+     the step is measured, not guessed (see the settle report's contrast table). */
+  .events-state-chip-filled {
+    background-color: color-mix(in oklab, var(--color-base-content) 24%, var(--color-base-300));
   }
 
   .events-name-chips {
@@ -844,6 +1078,22 @@ season (S11).
     white-space: nowrap;
   }
 
+  /* A (settle round, 2026-08-24): a fixed literal width, reserved at REST too, so entering
+     date-edit mode never grows or shrinks any column (measured: 240 -> 406px at 1440 before this
+     fix, which at 390 also re-wrapped an unrelated row). The header `<th>` carries the identical
+     value (`events-season-header-current`, the header snippet above), since a plain-auto table
+     layout sizes a column off whichever cell in it specifies the largest `width`; giving the body
+     `td` the same value keeps rest and edit from ever asking for a different one. 284px is the
+     edit form's own natural footprint at the default width -- two 128px (`8rem`) date inputs plus
+     their 4px flex gap (`.events-date-form-wrap form`'s own `gap: 0.25rem`), plus this cell's own
+     12px/12px padding (measured, all four dated/undated/ranged rows fit inside it with no
+     wrapping or overflow). 140px at the narrow breakpoint below is the same reasoning against the
+     narrow-mode input's own 116px floor (S1's `min-width: 112px` plus its rendered 116px). */
+  .events-date-cell-current,
+  .events-season-header-current {
+    width: 284px;
+  }
+
   /* item 37/38: `inline-flex`, not `flex` -- a block-level flex container stretches to its own
      parent's (the `<td>`) full content width regardless of how narrow its own children are,
      which was silently defeating every width this file's date inputs were ever given (measured:
@@ -855,6 +1105,14 @@ season (S11).
      plenty of room at 1440. */
   .events-date-form-wrap {
     display: inline-flex;
+    /* The wrap's own "Saved" span (below) is now a direct sibling of the rest button/form, not
+       nested inside either -- an `inline-flex` container with no gap of its own left the two
+       flush against each other (measured 0px) and let "Saved" top-align against a stacked edit-
+       mode form at 390 (fix round finding 1). A `display: none` "Saved" span (the at-rest,
+       non-saved case) still contributes no gap on either side of it, so this leaves that layout
+       unchanged. */
+    gap: 0.25rem;
+    align-items: center;
   }
 
   .events-date-form-wrap form {
@@ -864,10 +1122,16 @@ season (S11).
     gap: 0.25rem;
   }
 
+  /* H (settle round, cosmetic 10): the default-width value read at the sheet's own `.input-sm`
+     size (`--font-size-min: .75rem`, 12px) -- a shrink from the 14px `type-body` register the
+     at-rest typeset text just left, now that A's own column reservation means there is width to
+     spare for the full 14px value. Narrow keeps 12px (its own `min-width: 112px` fit rule, below,
+     still needs it). */
   .events-date-form-wrap :global(input[type='date']) {
     width: 8rem;
     min-width: 0;
     font-variant-numeric: tabular-nums;
+    font-size: var(--cairn-type-body, 0.875rem);
   }
 
   /* Matches the button ring (S10 of the second coherence read's fix brief); `EventRowForm.svelte`
@@ -895,6 +1159,49 @@ season (S11).
   .events-end-date-note,
   .events-add-end-date-link {
     white-space: nowrap;
+  }
+
+  /* The date column's two AT-REST affordances share one dashed-underline recipe: no box, no
+     calendar glyph, only the underline marks that the cell is editable. `currentColor`, not a
+     hardcoded ink value, so the underline follows whichever ink the two rules below set, in both
+     admin themes. State coverage (fix round finding 5): the underline solidifies on hover, and
+     the focus ring matches the cell's other controls' own S10 recipe (`.events-date-form-wrap`'s
+     input focus rule, above), rather than falling back to whatever `cairn-admin.css`'s
+     unqualified default gives an unstyled `<button>`. */
+  .events-date-rest-btn,
+  .events-date-rest-add-link {
+    border: none;
+    border-bottom: 1px dashed color-mix(in oklab, currentColor 35%, transparent);
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .events-date-rest-btn:hover,
+  .events-date-rest-add-link:hover {
+    border-bottom-style: solid;
+  }
+
+  .events-date-rest-btn:focus-visible,
+  .events-date-rest-add-link:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* The dated row's typeset date (probe verdict, 2026-08-24): full ink and tabular figures, the
+     same register the read-only prior columns use. */
+  .events-date-rest-btn {
+    color: inherit;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* C (settle round): the undated row's own "+ add date" affordance -- see the summary snippet's
+     comment on the button itself for the register mismatch this fixes. Sized to the column's own
+     14px `--cairn-type-body` register and muted, since there is no date yet to carry full ink. */
+  .events-date-rest-add-link {
+    color: var(--color-muted);
+    font-size: var(--cairn-type-body, 0.875rem);
   }
 
   /* A quiet text-button, not a `.btn` (S2/S3): reads as an affordance beside the date, never a
@@ -952,6 +1259,13 @@ season (S11).
       max-width: 10rem;
     }
 
+    /* A (settle round): the same column-reservation rule as the default width above, narrowed to
+       this breakpoint's own edit-input floor (see that rule's comment for the full reasoning). */
+    .events-date-cell-current,
+    .events-season-header-current {
+      width: 140px;
+    }
+
     /* S1: wraps to a second line instead of ellipsizing a long title (the cosmetic item, second
        coherence read). `-webkit-line-clamp` is Chromium/WebKit-only, matching this admin surface's
        own Chromium-only browser target; a third line still ellipsizes rather than growing the row
@@ -972,9 +1286,13 @@ season (S11).
       -webkit-box-orient: vertical;
     }
 
+    /* H (settle round): stays at the sheet's own 12px here -- the narrow input's own
+       `min-width: 112px` fit rule (this block's own header comment) leaves no room for the
+       wider 14px value the default width now carries. */
     .events-date-form-wrap :global(input[type='date']) {
       width: 7.25rem;
       min-width: 112px;
+      font-size: 0.75rem;
     }
 
     /* S1: Chromium's own calendar-picker glyph rendered inside the input's own box at this width,

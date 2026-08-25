@@ -22,6 +22,22 @@ import type { EventInstance, EventRow, LedgerRow } from '$admin-club/lib/events-
 
 const SHELL = { public: true, siteName: 'ASC', theme: 'cairn-admin' };
 
+/** One resolvable library entry, the whole fixture the hero-picker tests need. */
+const HERO_TOKEN = 'media:a.0123456789abcdef';
+const HERO_LIBRARY = [{ token: HERO_TOKEN, displayName: 'A photo', alt: 'An alt', url: '/media/a.jpg' }];
+
+/** The source text of the date cell's edit-mode branch, from `{#if editingDateId === eventId}` up
+ *  to its `{:else if}`. An SSR-only render never mounts that branch (the rest/edit toggle, this
+ *  file's header comment), so the tests that need it read the page source directly -- and scoping
+ *  to the branch is what keeps them from matching markup that has drifted out to the rest state. */
+function dateEditBranch(source: string): string {
+  const ifIdx = source.indexOf('{#if editingDateId === eventId}');
+  expect(ifIdx).toBeGreaterThan(-1);
+  const elseIdx = source.indexOf('{:else if row.current?.startDate}', ifIdx);
+  expect(elseIdx).toBeGreaterThan(ifIdx);
+  return source.slice(ifIdx, elseIdx);
+}
+
 function instance(overrides: Partial<EventInstance> = {}): EventInstance {
   return { id: 'x', startDate: null, endDate: null, visible: false, ...overrides };
 }
@@ -121,11 +137,39 @@ describe('/admin/club/events ledger markup', () => {
     expect(i2026).toBeGreaterThan(i2025);
   });
 
-  it('renders a prior-season cell as read-only text and the current-season cell as a date input', () => {
+  it('renders a prior-season cell as read-only text and the current-season cell as at-rest typeset text (probe verdict, 2026-08-24)', () => {
     const { body } = render(Page, { props: { data: baseData(), form: null } });
     expect(body).toContain(formatCivilDate('2025-08-03'));
-    expect(body).toContain('type="date"');
-    expect(body).toContain('value="2026-08-01"');
+    // The current-season cell reads as typeset text at rest, the same register as the prior
+    // columns -- the native `type="date"` form only mounts once the row enters edit mode, which an
+    // SSR-only render (this suite's own idiom, see this file's header comment) never reaches.
+    expect(body).toContain('events-date-rest-btn');
+    expect(body).toContain(formatCivilDate('2026-08-01'));
+    expect(body).not.toContain('type="date"');
+  });
+
+  it('the ?/setDate edit form still sits inside the editingDateId branch with its full field set (fix round finding 3)', () => {
+    // The rest/edit toggle means an SSR-only render never mounts the edit-mode `<form>` (this
+    // file's own header comment); this asserts against the source directly instead, the same
+    // idiom the "second coherence read" describe block below uses throughout.
+    const branch = dateEditBranch(readFileSync(new URL('../routes/admin/club/events/+page.svelte', import.meta.url), 'utf-8'));
+    const formIdx = branch.indexOf('<form method="post" action="?/setDate"');
+    expect(formIdx).toBeGreaterThan(-1);
+    const formBlock = branch.slice(formIdx, branch.indexOf('</form>', formIdx) + '</form>'.length);
+    expect(formBlock).toContain('<CsrfField />');
+    expect(formBlock).toMatch(/type="hidden"\s+name="id"/);
+    expect(formBlock).toContain('name="startDate"');
+    expect(formBlock).toContain('name="endDate"');
+    expect(formBlock).toContain('use:enhance={keepDateOnScreen(eventId)}');
+  });
+
+  it('a same-day range collapses to the single date, never "Nov 5–5" (settle-round read, 2026-08-24)', () => {
+    const row = eventRow({
+      current: instance({ id: 'board-meeting-2026', startDate: '2026-11-05', endDate: '2026-11-05', visible: true }),
+    });
+    const { body } = render(Page, { props: { data: baseData({ rows: [row] }), form: null } });
+    expect(body).toContain(formatCivilDate('2026-11-05'));
+    expect(body).not.toContain('–5, 2026');
   });
 
   it('an empty prior-season cell renders nothing, not a dash, for a season the series did not run', () => {
@@ -332,20 +376,41 @@ describe('EventRowForm panel (events-admin Task 5)', () => {
     expect(body).toContain('name="heroImageAlt"');
   });
 
-  it('the hero picker renders a visible "Hero photo" label and its own library count', () => {
+  it('E (settle round): the rest state\'s "Hero photo" caption is a plain span, not a `<label>` wrapping no control', () => {
     const row = eventRow();
     const { body } = render(Page, {
-      props: {
-        data: baseData({
-          rows: [row],
-          openId: row.id,
-          heroLibrary: [{ token: 'media:a.0123456789abcdef', displayName: 'A photo', alt: 'An alt', url: '/media/a.jpg' }],
-        }),
-        form: null,
-      },
+      props: { data: baseData({ rows: [row], openId: row.id, heroLibrary: HERO_LIBRARY }), form: null },
+    });
+    expect(body).toContain('<span class="hero-image-caption type-body font-medium">Hero photo</span>');
+    expect(body).not.toContain('<label class="flex flex-col gap-label cairn-field-stacked"><span class="type-body font-medium">Hero photo</span>');
+  });
+
+  it('E (settle round): the Alt text field CSS-hides (does not remove) while no photo is chosen, and shows once one is', () => {
+    const unchosen = eventRow();
+    const { body: unchosenBody } = render(Page, { props: { data: baseData({ rows: [unchosen], openId: unchosen.id }), form: null } });
+    expect(unchosenBody).toContain('hero-image-alt-hidden');
+    expect(unchosenBody).toContain('name="heroImageAlt"');
+
+    const chosen = eventRow();
+    if (chosen.event) chosen.event.heroImage = HERO_TOKEN;
+    const { body: chosenBody } = render(Page, {
+      props: { data: baseData({ rows: [chosen], openId: chosen.id, heroLibrary: HERO_LIBRARY }), form: null },
+    });
+    expect(chosenBody).not.toContain('hero-image-alt-hidden');
+  });
+
+  it('the hero picker renders a visible "Hero photo" label, closed at rest with no library grid (probe verdict, 2026-08-24)', () => {
+    const row = eventRow();
+    const { body } = render(Page, {
+      props: { data: baseData({ rows: [row], openId: row.id, heroLibrary: HERO_LIBRARY }), form: null },
     });
     expect(body).toContain('Hero photo');
-    expect(body).toContain('1 photos');
+    expect(body).toContain('Choose photo');
+    // The library count folds into the open-state caption, so it never renders at rest; the
+    // open/close/select transitions are pinned as plain functions by hero-image-picker.test.ts
+    // (no test in this repo mounts a component -- see that module's header).
+    expect(body).not.toContain('· 1 photo');
+    expect(body).not.toContain('role="listbox"');
   });
 
   it('Hidden and Retired render as their own chips beside the category chip, not a raw badge', () => {
@@ -356,6 +421,39 @@ describe('EventRowForm panel (events-admin Task 5)', () => {
     const { body } = render(Page, { props: { data: baseData({ rows: [row] }), form: null } });
     expect(body).toContain('>Hidden<');
     expect(body).toContain('>Retired<');
+  });
+
+  it('the category chip carries a per-category wrapper class the page CSS tints (probe verdict, 2026-08-24; F of the settle round widens the tint to all five)', () => {
+    // All five categories render their own wrapper class; F of the settle round (cosmetic 6)
+    // added a quiet content-mix tint for operations/governance too, since `StatusChip`'s own
+    // untinted quiet gray measured LOUDER against the row than the three hue-tinted categories.
+    for (const category of ['racing', 'class', 'operations', 'social', 'governance'] as const) {
+      const row = eventRow({ category });
+      const { body } = render(Page, { props: { data: baseData({ rows: [row] }), form: null } });
+      expect(body).toContain(`events-cat-chip events-cat-${category}`);
+    }
+    const source = readFileSync(new URL('../routes/admin/club/events/+page.svelte', import.meta.url), 'utf-8');
+    for (const tinted of ['racing', 'class', 'social']) {
+      expect(source).toMatch(new RegExp(`\\.events-cat-${tinted} :global\\(\\.status-chip\\)`));
+    }
+    // Operations/Governance share one rule (a quiet `--color-base-content` tint, not a hue).
+    expect(source).toMatch(/\.events-cat-operations :global\(\.status-chip\),\s*\n\s*\.events-cat-governance :global\(\.status-chip\)/);
+  });
+
+  it('Hidden reads as the outline register and Retired as the filled register, both at the normalized weight', () => {
+    const row = eventRow({
+      retiredAt: '2026-01-01 00:00:00',
+      current: instance({ id: 'board-meeting-2026', startDate: '2026-08-01', visible: false }),
+    });
+    const { body } = render(Page, { props: { data: baseData({ rows: [row] }), form: null } });
+    expect(body).toMatch(/class="events-state-chip events-state-chip-outline[^"]*"[^>]*>[\s\S]{0,80}Hidden</);
+    expect(body).toMatch(/class="events-state-chip events-state-chip-filled[^"]*"[^>]*>[\s\S]{0,80}Retired</);
+    // Both registers now share one weight -- the flagged 600-vs-400 inconsistency the coherence
+    // read measured is gone, so no state chip declares its own font-weight anymore.
+    const source = readFileSync(new URL('../routes/admin/club/events/+page.svelte', import.meta.url), 'utf-8');
+    expect(source).toMatch(/\.events-state-chip\s*\{[^}]*font-weight:\s*400/);
+    expect(source).not.toMatch(/\.events-state-chip-outline\s*\{[^}]*font-weight/);
+    expect(source).not.toMatch(/\.events-state-chip-filled\s*\{[^}]*font-weight/);
   });
 });
 
@@ -476,7 +574,7 @@ describe('second coherence read fix round (docs/plans/2026-08-22-events-admin.md
     expect(source).toMatch(/\.events-current-text\s*\{[^}]*white-space:\s*normal/);
   });
 
-  it('S2: the unlabeled range dot is gone, replaced by an end-date note or a "+ end date" link', () => {
+  it('S2: the unlabeled range dot is gone; a ranged event collapses to one typeset range at rest, and edit mode still carries the end-date note (probe verdict, 2026-08-24)', () => {
     expect(source).not.toContain('events-range-dot');
     const { body } = render(Page, {
       props: {
@@ -512,19 +610,50 @@ describe('second coherence read fix round (docs/plans/2026-08-22-events-admin.md
         form: null,
       },
     });
-    expect(body).toContain('events-end-date-note');
-    expect(body).toContain('to Jun 3');
+    // At rest, the whole range collapses into one typeset button -- the end-date note only exists
+    // once the row enters edit mode, which an SSR-only render never reaches (this file's header
+    // comment on the rest/edit toggle), so the note itself is checked against the source below.
+    expect(body).toContain('Jun 1–3, 2026');
+    expect(body).toContain('events-date-rest-btn');
+    expect(body).not.toContain('events-end-date-note');
     // Third coherence read (item 2): a real `<button>`, not inert text -- the narrow width has no
     // visible end-date input to tap, so the note is the only reachable path to that field there.
-    expect(body).toMatch(/<button[^>]*class="[^"]*events-end-date-note[^"]*"[^>]*>\s*to Jun 3/);
+    // Fix round finding 3 (tightened): scoped to the `{#if editingDateId === eventId}` branch
+    // specifically (not merely somewhere in the file), so a note that drifted out to the rest
+    // state would fail this rather than still matching a bare file-wide search.
+    const editBranch = dateEditBranch(source);
+    const noteButton = editBranch.match(/<button[\s\S]*?<\/button>/g)?.find((tag) => tag.includes('events-end-date-note'));
+    expect(noteButton).toContain('to {monthDayFmt.format(parseCivil(row.current.endDate))}');
   });
 
-  it('S2/S3: an undated row renders the "+ end date" link instead of a raw empty end-date input', () => {
+  it('S2/S3: an undated row renders a quiet "+ add date" link at rest, not a raw empty date input (probe verdict, 2026-08-24)', () => {
     const undated = eventRow({ current: instance({ id: 'board-meeting-2026', startDate: null, endDate: null, visible: false }) });
     const { body } = render(Page, { props: { data: baseData({ rows: [undated] }), form: null } });
-    expect(body).toContain('events-add-end-date-link');
-    expect(body).toContain('+ end date');
-    expect(body).toContain('events-end-date-input-hidden');
+    expect(body).toContain('+ add date');
+    expect(body).not.toContain('type="date"');
+    // The form's own "+ end date"/`events-end-date-input-hidden` markup only mounts in edit mode;
+    // the source-level check confirms it is still there, gated behind `editingDateId`.
+    expect(source).toContain('events-end-date-input-hidden');
+  });
+
+  it('C (settle round): the AT-REST "+ add date" link carries its own column-register class, not the in-form links\' purple `events-add-end-date-link`', () => {
+    const undated = eventRow({ current: instance({ id: 'board-meeting-2026', startDate: null, endDate: null, visible: false }) });
+    const { body } = render(Page, { props: { data: baseData({ rows: [undated] }), form: null } });
+    expect(body).toContain('events-date-rest-add-link');
+    // Only the in-form links (edit mode, not rendered at rest) still carry the purple class.
+    expect(body).not.toContain('events-add-end-date-link');
+  });
+
+  it('D (settle round): an undated class row names its own state ("not scheduled") instead of an empty cell; a dated one still typesets normally', () => {
+    const undated = classRow({ current: instance({ id: 'youth-racing-clinic-2026', startDate: null, endDate: null, visible: false }) });
+    const { body } = render(Page, { props: { data: baseData({ rows: [undated] }), form: null } });
+    expect(body).toContain('not scheduled');
+    expect(body).toContain('events-current-empty');
+
+    const dated = classRow();
+    const { body: datedBody } = render(Page, { props: { data: baseData({ rows: [dated] }), form: null } });
+    expect(datedBody).not.toContain('not scheduled');
+    expect(datedBody).toContain(formatCivilDate('2026-07-01'));
   });
 
   it('S4: the class category chip carries a neutral dot, never the reserved warning tone', () => {

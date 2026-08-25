@@ -6,6 +6,43 @@
 > than the ones here live in `docs/status-archive.md` (the pre-2026-08-21 rolling status,
 > moved whole).
 
+## 2026-08-24: events-probe-settle, the probe round built
+
+Branch `events-probe-settle`, PR #9. Verdicts and the settle record:
+`docs/design-benchmark/decisions.md` (the 2026-08-24 entries). Harvest addition: finding 12 in
+`docs/2026-08-22-events-admin-harvest-findings.md` (StatusChip's tinted-ground grammar as an
+engine ask). Spend is partially recorded (the session compacted mid-round); the settle's large
+dispatches were the cold-read fix round at 319k and two cold reads near 100k each, over three
+implementer→diff-reviewer chains. Human interaction points: the "Next pass" trigger, three
+question rounds (pass pick + probe-first; regions 1–2; regions 3–4 after Geoff's own
+overlay-not-dot widening), two clarifying notes (weight uniformity; Hidden≠Retired plus
+"implement now"), and one proceed-to-completion grant.
+
+**What landed.** The four held probe questions, ruled by Geoff and built: the date column
+typeset at rest (dashed-underline affordance, native inputs only while editing), the hero
+picker closed at rest (264px 3:2 preview, photos-first grid on demand, a Cancel in the open
+library), category color moved off the 6px dot onto tinted chip grounds (public Season palette,
+toolkit-wide ruling, uniform weight, Hidden as hairline outline vs Retired filled), and the
+390 prior-season drop ratified. Same-day ranges collapse to one date. The settle's own cold
+read failed on five reflow/register tells; the fix round reserved the current-season column
+width (0.00px movement entering edit), put the star on a wrapped title's first line, gave
+"+ add date" and "not scheduled" the muted column register, fixed the picker's accidental
+flex wrap, and tinted the operations/governance grounds; the re-read graded CLEAN.
+
+**What a later pass would be wrong to rediscover.** A cell whose content swaps between regimes
+(typeset date ↔ edit form) needs its column width reserved at the widest regime's measured
+footprint, or every entry into the small state reflows the table; the acceptance is identical
+column boundingBoxes before/after, not "looks stable". `getComputedStyle` in this Chromium
+returns unresolved `oklch()`/`oklab()` strings — resolve colors through a 1×1 canvas fill and
+`getImageData`; pixel-sampling "farthest ink" breaks on antialiased 10px text (it graded a
+6.74:1 chip at 2.24:1). A wrapper span around chips blockifies as a flex item and floats its
+content off-center; `display: contents` is the fix. No single tint percentage lands all four
+theme/stripe combinations in one contrast band — tune per pair against the measured band. The
+vitest setup (`environment: 'node'` + SSR transform) has no client `mount()`; behavior worth
+unit-testing gets extracted to a pure module (`hero-image-picker.ts`) instead of forcing
+source-string assertions. `bootstrap-club-db.mjs` and the Playwright webServer reseed the
+local replica; a hand-seeded coherence-read fixture does not survive either.
+
 ## 2026-08-22/23: events-admin, the series ledger
 
 Contract: `docs/2026-08-22-events-admin-design.md`. Plan: `docs/plans/2026-08-22-events-admin.md`.
