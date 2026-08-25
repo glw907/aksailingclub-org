@@ -4,6 +4,7 @@
 // entries into the same stacked two-line rows (name, then detail plus chip), so the two
 // compositions can never drift on which fee, waitlist position, or chip a member sees.
 import type { HouseholdAssignmentRow, HouseholdWaitlistRow } from './assets';
+import { displayDescription } from '$lib/assets-format';
 
 /** One stacked two-line storage/moorings row: a name and an optional detail/chip line below it (mock
  *  D's own fix for the cramped mid-phrase wrap a single flex row produced at rail width). */
@@ -22,7 +23,10 @@ export function deriveAssetRows(assignments: HouseholdAssignmentRow[], waitlistE
     ...assignments.map((a) => ({
       id: a.id,
       name: a.assetTypeName,
-      detail: a.description,
+      // Recased for display (contract ruling 3, fix round B, item 8): the member portal must
+      // match the admin desk's own `displayDescription` treatment of the legacy shouting-case
+      // import data, never show it raw.
+      detail: displayDescription(a.description),
       chip: a.paymentStanding === 'outstanding' ? 'Payment due' : null,
     })),
     ...waitlistEntries.map((w) => ({

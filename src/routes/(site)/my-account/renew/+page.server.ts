@@ -122,9 +122,12 @@ export const load: PageServerLoad = async (event) => {
       assetType: assignment.assetType,
       assetTypeName: assignment.assetTypeName,
       feeDollars: assignment.feeDollars,
-      alreadyRequested: requests.some(
-        (request) => request.assetType === assignment.assetType && request.kind === 'retention' && OPEN_RETENTION_STATUSES.has(request.status),
-      ),
+      // Matches on type and status alone, never `kind` (fix round B, item 3): `0037`'s unique
+      // index is kind-agnostic (`household_id, asset_type WHERE status = 'pending'`), so a
+      // pending `kind: 'new'` request from `/my-account/storage` for this same type already
+      // occupies the index slot a `retention` insert would collide with. Filtering this guard to
+      // `kind === 'retention'` alone would render an enabled button the insert below always fails.
+      alreadyRequested: requests.some((request) => request.assetType === assignment.assetType && OPEN_RETENTION_STATUSES.has(request.status)),
     });
   }
 
@@ -190,12 +193,17 @@ export const actions: Actions = {
     // create a second pending row, so this checks the household's own existing requests before
     // inserting -- across every OPEN_RETENTION_STATUSES status, not just 'pending', so a request
     // an admin has already approved does not reopen the button and let a second click duplicate
-    // an asset already granted. `0037_asset_request_unique`'s partial unique index backs this
-    // check against the race the SELECT-then-insert shape itself cannot close (two concurrent
-    // submissions both passing the SELECT before either insert lands); a collision there surfaces
-    // through `createAssetRequest`'s own friendly refusal rather than a raw D1 error.
+    // an asset already granted. Matches on type and status alone, never `kind` (fix round B, item
+    // 3): `0037_asset_request_unique`'s partial unique index is kind-agnostic
+    // (`household_id, asset_type WHERE status = 'pending'`), so it backs this check only if the
+    // guard and the index agree on what counts as "already pending" -- a `kind === 'retention'`
+    // filter here would let a pending `kind: 'new'` request for the same type past the guard and
+    // straight into an index collision at insert. That race the SELECT-then-insert shape itself
+    // cannot close (two concurrent submissions both passing the SELECT before either insert
+    // lands) surfaces through `createAssetRequest`'s own friendly refusal rather than a raw D1
+    // error.
     const requests = await listHouseholdRequests(ctx.db, ctx.member.householdId);
-    const alreadyOpen = requests.some((request) => request.assetType === assetType && request.kind === 'retention' && OPEN_RETENTION_STATUSES.has(request.status));
+    const alreadyOpen = requests.some((request) => request.assetType === assetType && OPEN_RETENTION_STATUSES.has(request.status));
     if (!alreadyOpen) {
       const result = await createAssetRequest(ctx.db, { assetType, householdId: ctx.member.householdId, requestedBy: ctx.member.id, kind: 'retention', note: null });
       if ('error' in result) return fail(400, { retainError: result.error });

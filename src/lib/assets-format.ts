@@ -2,10 +2,20 @@
 // `scripts/import/ops-assets.mjs` carried over from the legacy ops stack largely in shouting
 // case ("TRAILER", "BAT BOAT"). Kept out of `assets-store.ts` (data access only, per that
 // module's own header) and out of `member-format.ts` (that file's chip vocabulary is
-// member-domain specific; this helper is asset-domain). Consumed by
-// `routes/admin/club/assets/+page.svelte` and `routes/admin/club/members/[id]/+page.svelte`
-// (the household desk); the asset-requests review screen has no raw description field of its
-// own to format (see that screen's header comment).
+// member-domain specific; this helper is asset-domain).
+//
+// Lives under SvelteKit's own `$lib` (fix round B, item 8), not `$admin-club/lib/` where it
+// started: contract ruling 3 requires the SAME recasing on both the admin desk and the member
+// portal, and this repo's domain aliases are otherwise one-way (`$member-portal` builds on
+// `$admin-club`'s data-access layer, never the reverse; `(site)` routes never reach into
+// `$admin-club` at all, only through `$member-portal/lib` wrappers) -- a pure, side-effect-free
+// formatter with no natural single-domain owner is exactly what SvelteKit's default shared-lib
+// alias is for, and no other cross-domain shared dir exists in this repo to prefer instead.
+// Consumed by `routes/admin/club/assets/+page.svelte`, `routes/admin/club/members/[id]/+page.svelte`
+// (the household desk; the asset-requests review screen has no raw description field of its own
+// to format, see that screen's header comment), `member-portal/lib/rail-rows.ts` (the landing's
+// desktop rail tile and mobile section alike, both built from its one `deriveAssetRows`), and
+// `routes/(site)/my-account/storage/+page.svelte`.
 
 /**
  * Recase one description for display, never for storage: the stored value never changes,

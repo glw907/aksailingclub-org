@@ -110,16 +110,17 @@ describe('createAssetRequest', () => {
     expect(insert?.args).toEqual([result.id, 'mooring', 'hh-1', 'mem-1', 'new', 'Need a spot']);
   });
 
-  /** A `fakeD1` whose every `.run()` rejects with `message`, the shape a real D1 constraint
-   *  failure arrives in. Follows `member-portal-profile.test.ts`'s own UNIQUE(email) test, since
-   *  `fakeD1` never executes real SQL and so can never enforce a constraint of its own. */
-  function rejectingDb(message: string) {
+  /** A `fakeD1` whose every `.run()` rejects with `error` (a plain message string, the shape a
+   *  real D1 constraint failure arrives in, or a ready-built `Error` for a wrapped/cause-chained
+   *  rejection). Follows `member-portal-profile.test.ts`'s own UNIQUE(email) test, since `fakeD1`
+   *  never executes real SQL and so can never enforce a constraint of its own. */
+  function rejectingDb(error: string | Error) {
     const { db } = fakeD1();
     db.prepare = (sql: string) => {
       const stmt = {
         sql,
         bind: () => stmt,
-        run: () => Promise.reject(new Error(message)),
+        run: () => Promise.reject(typeof error === 'string' ? new Error(error) : error),
         first: async () => null,
         all: async () => ({ results: [], success: true, meta: {} }),
       };
@@ -147,6 +148,16 @@ describe('createAssetRequest', () => {
     const db = rejectingDb('FOREIGN KEY constraint failed: SQLITE_CONSTRAINT');
     const result = await createAssetRequest(db, NEW_REQUEST);
     expect(result).toEqual({ error: 'Something went wrong recording your request. Please try again.' });
+  });
+
+  // Fix round B, item 5: workerd can reject with a generic outer message and put the real SQLite
+  // text on `.cause` instead, or a wrapper can rethrow with the original message lost entirely --
+  // `isUniqueViolation` has to walk the cause chain, not just `err.message`, to still catch this.
+  it('finds the UNIQUE text on err.cause when the outer message is generic', async () => {
+    const cause = new Error('UNIQUE constraint failed: asset_requests.household_id, asset_requests.asset_type: SQLITE_CONSTRAINT');
+    const db = rejectingDb(new Error('D1_EXEC_ERROR', { cause }));
+    const result = await createAssetRequest(db, NEW_REQUEST);
+    expect(result).toEqual({ error: expect.stringContaining('already have a pending request') });
   });
 });
 

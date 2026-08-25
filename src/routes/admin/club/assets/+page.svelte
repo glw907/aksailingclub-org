@@ -54,7 +54,7 @@ own list header, matching this file's existing release/payment/edit-type dialog 
     type StatusChipRegister,
     type StatusChipTone,
   } from '@glw907/cairn-cms/admin-toolkit';
-  import { displayDescription } from '$admin-club/lib/assets-format';
+  import { displayDescription } from '$lib/assets-format';
   import { formatCivilDate, formatDollars } from '$admin-club/lib/ui';
   import {
     PAYMENT_METHODS,

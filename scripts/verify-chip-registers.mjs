@@ -29,18 +29,21 @@
 //   - OUTLINE: no ground-contrast band applies. Instead the border's own composited color must
 //     measure >= 3:1 against the row ground (both themes, both stripes), matching StatusChip's
 //     own `bounded` register and the events page's Hidden chip.
-//   - WARNING INK: because the warning and quiet tinted grounds are luminance-identical in dark
-//     theme (the 40%/10% percentage asymmetry needed to land both in the recede-into-the-row band
-//     also makes them indistinguishable from each other there), the warning register's ink must
-//     itself measure >= 4.5:1 against its own chip ground (both themes, both stripes, though the
-//     chip's own background is a fixed literal color so the two stripes read identically today --
-//     the per-stripe measurement stands so a future change that makes it stripe-dependent stays
-//     covered), and must differ from the quiet register's own (unstyled, default) ink -- a simple
-//     channel-delta check, so a
-//     regression back to identical inks fails loudly instead of only showing up as a hue that
-//     happens to read fine in isolation.
+//   - INK: every register's own text must measure >= 4.5:1 (both themes, both stripes) against
+//     the ground it actually sits on -- quiet and warning composite against their own chip's
+//     resolved (tinted) background, since that fill is what the ink paints over; outline
+//     composites against the ROW ground underneath instead, since `status-chip-bounded`'s own
+//     `background-color: transparent` leaves it nothing of its own to composite against. Because
+//     the warning and quiet tinted grounds are luminance-identical in dark theme (the 40%/10%
+//     percentage asymmetry needed to land both in the recede-into-the-row band also makes them
+//     indistinguishable from each other there), warning's own ink additionally must differ from
+//     quiet's (unstyled, default) ink -- a simple channel-delta check, so a regression back to
+//     identical inks fails loudly instead of only showing up as a hue that happens to read fine
+//     in isolation.
 //
-// Run with `node scripts/verify-chip-registers.mjs`.
+// Run BY HAND via `npm run verify:chips` (not wired into CI -- a real Chromium contrast readback
+// against the built package's own shipped CSS, checked here as a standing local verification
+// step rather than a gate that would need a browser in every CI run).
 import { chromium } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -74,9 +77,12 @@ function statusChipScopedCss() {
   return match[1];
 }
 
+// Renders at `xs` (fix round B, item 7b): `StatusChip.svelte`'s own `size` prop, replicated class
+// for class rather than approximated, since both real consuming pages (assets/+page.svelte,
+// asset-requests/+page.svelte) pass `size="xs"`, not the `sm` default this probe used to render.
 function statusChip({ wrapperClass, tone, register }) {
   const registerClass = register === 'quiet' ? 'status-chip-quiet' : 'status-chip-bounded';
-  return `<span class="${wrapperClass}"><span class="badge badge-outline badge-sm status-chip ${registerClass}"><span class="status status-${tone} status-sm"></span><span class="status-chip-label">Label</span></span></span>`;
+  return `<span class="${wrapperClass}"><span class="badge badge-outline badge-xs status-chip ${registerClass} status-chip-xs"><span class="status status-${tone} status-xs"></span><span class="status-chip-label">Label</span></span></span>`;
 }
 
 function buildHtml(theme) {
@@ -178,20 +184,21 @@ async function measure(page) {
     }
 
     const inkResults = [];
-    const inkColorsByStripe = { quiet: {}, warning: {} };
-    for (const label of ['quiet', 'warning']) {
+    const inkColorsByStripe = { quiet: {}, warning: {}, outline: {} };
+    for (const label of ['quiet', 'warning', 'outline']) {
       for (const stripe of ['unstriped', 'striped']) {
         const chip = document.querySelector(`#${label}-${stripe} .status-chip`);
-        // Composite against the chip's own resolved ground (not the page ground): the
-        // register's tinted fill, not the row underneath it, is what the ink actually sits on.
-        const chipGroundCss = getComputedStyle(chip).backgroundColor;
+        const rowGround = stripe === 'unstriped' ? groundUnstriped : groundStriped;
+        // Composite against the register's OWN ground: quiet and warning's tinted fill, since
+        // that is what their ink actually paints over; the row ground underneath for outline,
+        // whose own `status-chip-bounded` fill is transparent and so has nothing to composite
+        // against (fix round B, item 7c).
+        const inkGroundCss = label === 'outline' ? rowGround : getComputedStyle(chip).backgroundColor;
         const inkCss = getComputedStyle(chip).color;
-        const chipGround = canvasColor(chipGroundCss, chipGroundCss);
-        const ink = canvasColor(inkCss, chipGroundCss);
+        const inkGround = canvasColor(inkGroundCss, inkGroundCss);
+        const ink = canvasColor(inkCss, inkGroundCss);
         inkColorsByStripe[label][stripe] = ink;
-        if (label === 'warning') {
-          inkResults.push({ stripe, contrast: contrast(ink, chipGround) });
-        }
+        inkResults.push({ register: label, stripe, contrast: contrast(ink, inkGround) });
       }
     }
 
@@ -272,11 +279,11 @@ for (const row of borderRows) {
   );
 }
 
-console.log(`\nInk floor (warning, vs its own chip ground): >= ${INK_FLOOR}:1\n`);
+console.log(`\nInk floor (quiet/warning vs their own chip ground, outline vs the row ground): >= ${INK_FLOOR}:1\n`);
 for (const row of inkRows) {
   const mark = row.pass ? 'PASS' : 'FAIL';
   console.log(
-    `${mark}  ${row.theme.padEnd(16)} warning ink ${row.stripe.padEnd(10)} ${row.contrast.toFixed(3)}:1`
+    `${mark}  ${row.theme.padEnd(16)} ${row.register.padEnd(8)} ink ${row.stripe.padEnd(10)} ${row.contrast.toFixed(3)}:1`
   );
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { displayDescription } from '$admin-club/lib/assets-format';
+import { displayDescription } from '$lib/assets-format';
 
 describe('displayDescription', () => {
   it('title-cases a single all-caps token', () => {

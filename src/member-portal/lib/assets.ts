@@ -181,12 +181,37 @@ export async function listHouseholdRequests(db: D1Database, householdId: string)
 export type { AssetTypeRow };
 export const listRequestableAssetTypes = listAssetTypes;
 
-/** Whether `err` is a raw D1 UNIQUE-constraint failure against `table`, `enrollments.ts`'s and
- *  `profile.ts`'s own substring-match convention (each write path that can hit a real constraint
- *  keeps its own small copy rather than importing one, matching `household-surgery.ts`'s own
- *  precedent). */
+/** Flattens `err`'s own message together with up to `depth` levels of its `.cause` chain, joined
+ *  with a space -- workerd sometimes rejects with a generic outer message and puts the real
+ *  SQLite text on `.cause` (or a wrapper rethrow drops the original message's own substring
+ *  entirely), so matching `err.message` alone can miss a real constraint failure. Walks `unknown`
+ *  defensively rather than requiring `instanceof Error` at every hop, since `.cause` is typed
+ *  `unknown` even on a real `Error`. */
+function errorText(err: unknown, depth = 4): string {
+  const parts: string[] = [];
+  let current: unknown = err;
+  for (let i = 0; i < depth && current != null; i++) {
+    if (current instanceof Error) {
+      parts.push(current.message);
+      current = current.cause;
+    } else if (typeof current === 'string') {
+      parts.push(current);
+      break;
+    } else {
+      break;
+    }
+  }
+  return parts.join(' ');
+}
+
+/** Whether `err` is a raw D1 UNIQUE-constraint failure against `table` (fix round B, item 5:
+ *  hardened here against a wrapped or cause-chained rejection; `enrollments.ts`'s,
+ *  `household-surgery.ts`'s, and `profile.ts`'s own copies stay on the plain `err instanceof
+ *  Error && err.message.includes(...)` match, each its own small copy rather than a shared
+ *  import). */
 function isUniqueViolation(err: unknown, table: string): boolean {
-  return err instanceof Error && err.message.includes('UNIQUE') && err.message.includes(table);
+  const text = errorText(err);
+  return text.includes('UNIQUE') && text.includes(table);
 }
 
 /**

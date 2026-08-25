@@ -21,7 +21,7 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
   import { FieldLabel, SelectInput, TextInput } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL, formatCents, formatCivilDate, formatClubTimestamp, formatDollars } from '$admin-club/lib/ui';
   import { HOUSEHOLD_STANDING_CHIP, LINE_ITEM_LABEL, TIER_LABEL, TRANSACTION_KIND_LABEL, TRANSACTION_SOURCE_LABEL, VISIBILITY_CHIP } from '$admin-club/lib/member-format';
-  import { displayDescription } from '$admin-club/lib/assets-format';
+  import { displayDescription } from '$lib/assets-format';
   import type { TransactionSource } from '$admin-club/lib/ledger';
   import type { DirectoryVisibility, MembershipTier } from '$admin-club/lib/member-types';
   import type { HouseholdMembershipRow, HouseholdRosterMember } from '$admin-club/lib/households-store';

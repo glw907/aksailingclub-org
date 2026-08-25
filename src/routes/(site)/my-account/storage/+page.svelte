@@ -14,6 +14,7 @@ confirm, keyboard reachable and focus-managed, "Keep it" returns to rest). -->
   import type { ActionData, PageData } from './$types';
   import { siteConfig } from '$theme/cairn.config';
   import { formatMemberCents } from '$member-auth/lib/format';
+  import { displayDescription } from '$lib/assets-format';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -69,7 +70,7 @@ confirm, keyboard reachable and focus-managed, "Keep it" returns to rest). -->
 </p>
 
 {#if form && 'error' in form && form.error}
-  <p class="mt-s max-w-measure-wide rounded-field border border-error bg-error/10 px-s py-xs text-step--1 text-error">{form.error}</p>
+  <p class="mt-s max-w-measure-wide rounded-field border border-error bg-error/10 px-s py-xs text-step--1 text-error" role="alert">{form.error}</p>
 {/if}
 
 <section class="mt-l max-w-measure-wide">
@@ -83,7 +84,7 @@ confirm, keyboard reachable and focus-managed, "Keep it" returns to rest). -->
     <div class="gear-row">
       <div class="gear-row-info">
         <p class="gear-row-name">{assignment.assetTypeName}</p>
-        {#if assignment.description}<p class="gear-row-detail">{assignment.description}</p>{/if}
+        {#if assignment.description}<p class="gear-row-detail">{displayDescription(assignment.description)}</p>{/if}
       </div>
 
       {#if confirmingReleaseId === assignment.id}
@@ -189,7 +190,7 @@ confirm, keyboard reachable and focus-managed, "Keep it" returns to rest). -->
       <input type="hidden" name="csrf" value={data.csrf} />
       <fieldset class="fieldset">
         <legend class="fieldset-legend portal-field-label">Asset type</legend>
-        <select class="select select-sm" name="assetType" required>
+        <select class="select select-sm" name="assetType" aria-label="Asset type" required>
           {#each data.assetTypes as type (type.id)}
             <option value={type.id}>{type.name}</option>
           {/each}
@@ -197,7 +198,7 @@ confirm, keyboard reachable and focus-managed, "Keep it" returns to rest). -->
       </fieldset>
       <fieldset class="fieldset grow">
         <legend class="fieldset-legend portal-field-label">Note (optional)</legend>
-        <input class="input input-sm w-full" type="text" name="note" placeholder="A word about why" />
+        <input class="input input-sm w-full" type="text" name="note" aria-label="Note (optional)" placeholder="A word about why" />
       </fieldset>
       <button type="submit" class="btn btn-primary btn-sm">Request</button>
     </form>

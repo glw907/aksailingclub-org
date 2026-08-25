@@ -14,6 +14,7 @@ export interface NextTarget {
 const NEXT_TARGETS: readonly NextTarget[] = [
   { path: '/my-account/renew', label: 'Back to renewal' },
   { path: '/my-account/classes', label: 'Back to class signup' },
+  { path: '/my-account/storage', label: 'Back to storage & moorings' },
   { path: '/my-account/finish-joining', label: 'Continue to payment' },
   { path: '/my-account/sign?context=join', label: null },
   { path: '/my-account/sign?context=renewal', label: null },
