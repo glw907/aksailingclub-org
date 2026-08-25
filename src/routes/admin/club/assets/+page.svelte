@@ -273,7 +273,7 @@ own list header, matching this file's existing release/payment/edit-type dialog 
       {@const overCapacity = group.type.capacity != null && group.rows.length > group.type.capacity}
       <div class="border-b border-[var(--cairn-card-border)] p-6">
         <div class="mb-3 flex flex-wrap items-center gap-2">
-          <h2 class="asset-type-heading">
+          <h2 class="asset-type-heading type-body font-semibold">
             <!-- The explicit disclosure-button pattern (probe verdict, 2026-08-24), not
                  `<details>/<summary>`: `<summary>` is an implicit button, and this header also
                  needs its OWN interactive controls (Promote, Edit) -- nesting a real button
