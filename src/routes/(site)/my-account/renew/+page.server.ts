@@ -190,11 +190,15 @@ export const actions: Actions = {
     // create a second pending row, so this checks the household's own existing requests before
     // inserting -- across every OPEN_RETENTION_STATUSES status, not just 'pending', so a request
     // an admin has already approved does not reopen the button and let a second click duplicate
-    // an asset already granted.
+    // an asset already granted. `0037_asset_request_unique`'s partial unique index backs this
+    // check against the race the SELECT-then-insert shape itself cannot close (two concurrent
+    // submissions both passing the SELECT before either insert lands); a collision there surfaces
+    // through `createAssetRequest`'s own friendly refusal rather than a raw D1 error.
     const requests = await listHouseholdRequests(ctx.db, ctx.member.householdId);
     const alreadyOpen = requests.some((request) => request.assetType === assetType && request.kind === 'retention' && OPEN_RETENTION_STATUSES.has(request.status));
     if (!alreadyOpen) {
-      await createAssetRequest(ctx.db, { assetType, householdId: ctx.member.householdId, requestedBy: ctx.member.id, kind: 'retention', note: null });
+      const result = await createAssetRequest(ctx.db, { assetType, householdId: ctx.member.householdId, requestedBy: ctx.member.id, kind: 'retention', note: null });
+      if ('error' in result) return fail(400, { retainError: result.error });
     }
 
     return { retained: true as const };

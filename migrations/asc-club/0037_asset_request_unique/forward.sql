@@ -1,0 +1,26 @@
+-- asc-club migration 0037: asset_requests unique pending-request guard (assets-register pass,
+-- Task 6).
+--
+-- `member-portal/lib/assets.ts`'s two write paths each guard a household from filing a second
+-- open request for the same asset type BEFORE this migration, but neither guard is a real
+-- constraint: `requestAsset` (`/my-account/storage`) has no pre-check at all, and `retainAsset`
+-- (`/my-account/renew`'s retention step) runs a SELECT-then-insert (`listHouseholdRequests`, then
+-- `createAssetRequest`). Two concurrent submissions for the same household/asset-type pair -- a
+-- double-clicked button, the same page open in two tabs, an `enhance` retry -- can both pass the
+-- SELECT (or, for `requestAsset`, skip straight past having no check) before either INSERT lands,
+-- leaving two `pending` rows for what the admin's review inbox and the retention step both assume
+-- is at most one open ask per household/asset-type. This is the same shape
+-- `0004_waitlist_integrity` closed for `class_waitlist` and `0032_signature_uniqueness` closed for
+-- `waiver_acceptances`: a real index backing an app-level check-then-insert guard, not replacing
+-- it (the app-level guard stays, since it turns most collisions into a plain-words refusal before
+-- ever touching the database; this index only ever fires on the race the guard cannot see).
+--
+-- ONE partial unique index, not a plain `UNIQUE(household_id, asset_type)`: `asset_requests` is a
+-- state machine (0011_member_portal's own header: pending -> queued | assigned | denied |
+-- cancelled | approved_awaiting_payment), and a household's full history for one asset type
+-- legitimately holds many resolved rows over the years (an assigned mooring released, then
+-- requested again the next season; a denied ask, then a fresh one). Only a currently-`pending`
+-- row is the double-click hazard this migration closes; scoping the index to `WHERE status =
+-- 'pending'` leaves every resolved row, at any count, untouched.
+CREATE UNIQUE INDEX uq_asset_requests_pending_household_type
+  ON asset_requests(household_id, asset_type) WHERE status = 'pending';

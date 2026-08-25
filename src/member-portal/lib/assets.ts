@@ -181,21 +181,43 @@ export async function listHouseholdRequests(db: D1Database, householdId: string)
 export type { AssetTypeRow };
 export const listRequestableAssetTypes = listAssetTypes;
 
+/** Whether `err` is a raw D1 UNIQUE-constraint failure against `table`, `enrollments.ts`'s and
+ *  `profile.ts`'s own substring-match convention (each write path that can hit a real constraint
+ *  keeps its own small copy rather than importing one, matching `household-surgery.ts`'s own
+ *  precedent). */
+function isUniqueViolation(err: unknown, table: string): boolean {
+  return err instanceof Error && err.message.includes('UNIQUE') && err.message.includes(table);
+}
+
 /**
  * Request an asset (design doc's own "Request an asset"; any adult member may). Lands as
  * `status: 'pending'` in the admin's review inbox, entity `'asset-request'` (the signup queue's
  * own pattern). `kind: 'retention'` is the year-to-year "request your mooring again" ask a
  * renewing member sees in their task list; `kind: 'new'` is a first-time ask.
+ *
+ * `0037_asset_request_unique`'s partial unique index (`household_id, asset_type WHERE status =
+ * 'pending'`) backs this insert: neither caller's own app-level guard (`requestAsset` has none,
+ * `retainAsset`'s SELECT-then-insert) can close the double-click race where two concurrent
+ * requests both pass a pre-check before either insert lands. A collision surfaces here as the one
+ * friendly refusal, never a raw D1 error escaping to a 500.
  */
 export async function createAssetRequest(
   db: D1Database,
   args: { assetType: string; householdId: string; requestedBy: string; kind: 'new' | 'retention'; note: string | null },
-): Promise<{ id: string }> {
+): Promise<{ id: string } | AssetActionError> {
   const id = crypto.randomUUID();
-  await db
-    .prepare('INSERT INTO asset_requests (id, asset_type, household_id, requested_by, kind, note) VALUES (?1, ?2, ?3, ?4, ?5, ?6)')
-    .bind(id, args.assetType, args.householdId, args.requestedBy, args.kind, args.note)
-    .run();
+  try {
+    await db
+      .prepare('INSERT INTO asset_requests (id, asset_type, household_id, requested_by, kind, note) VALUES (?1, ?2, ?3, ?4, ?5, ?6)')
+      .bind(id, args.assetType, args.householdId, args.requestedBy, args.kind, args.note)
+      .run();
+  } catch (err) {
+    if (isUniqueViolation(err, 'asset_requests')) {
+      return { error: 'You already have a pending request for this asset type.' };
+    }
+    console.error('member-portal: asset request insert failed', err);
+    return { error: 'Something went wrong recording your request. Please try again.' };
+  }
   return { id };
 }
 

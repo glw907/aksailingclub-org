@@ -70,7 +70,8 @@ export const actions: Actions = {
     const assetType = String(form.get('assetType') ?? '').trim();
     if (!assetType) return fail(400, { error: 'Please choose an asset type.' });
     const note = String(form.get('note') ?? '').trim() || null;
-    await createAssetRequest(ctx.db, { assetType, householdId: ctx.member.householdId, requestedBy: ctx.member.id, kind: 'new', note });
+    const result = await createAssetRequest(ctx.db, { assetType, householdId: ctx.member.householdId, requestedBy: ctx.member.id, kind: 'new', note });
+    if ('error' in result) return fail(400, { error: result.error });
     return { requested: true as const };
   }),
 };

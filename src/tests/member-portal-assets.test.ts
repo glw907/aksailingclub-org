@@ -105,8 +105,31 @@ describe('createAssetRequest', () => {
     const { db, calls } = fakeD1();
     const result = await createAssetRequest(db, { assetType: 'mooring', householdId: 'hh-1', requestedBy: 'mem-1', kind: 'new', note: 'Need a spot' });
     expect(result).toEqual({ id: expect.any(String) });
+    if ('error' in result) throw new Error('expected success');
     const insert = calls.find((c) => c.sql.startsWith('INSERT INTO asset_requests'));
     expect(insert?.args).toEqual([result.id, 'mooring', 'hh-1', 'mem-1', 'new', 'Need a spot']);
+  });
+
+  // 0037_asset_request_unique's own partial unique index closes the double-click race the
+  // app-level guards (requestAsset's own lack of one, retainAsset's SELECT-then-insert) cannot:
+  // two concurrent inserts can both pass a pre-check before either lands. Simulated the same way
+  // `member-portal-profile.test.ts`'s own UNIQUE(email) test does, since `fakeD1` never executes
+  // real SQL and so cannot itself enforce a partial index -- a household with a pending request
+  // already on file for this asset type is exactly what the real index would reject.
+  it('turns a UNIQUE(household_id, asset_type) collision into a plain-words refusal, not a 500', async () => {
+    const { db } = fakeD1();
+    db.prepare = (sql: string) => {
+      const stmt = {
+        sql,
+        bind: () => stmt,
+        run: () => Promise.reject(new Error('UNIQUE constraint failed: asset_requests.household_id, asset_requests.asset_type: SQLITE_CONSTRAINT')),
+        first: async () => null,
+        all: async () => ({ results: [], success: true, meta: {} }),
+      };
+      return stmt as unknown as ReturnType<typeof db.prepare>;
+    };
+    const result = await createAssetRequest(db, { assetType: 'mooring', householdId: 'hh-1', requestedBy: 'mem-1', kind: 'new', note: null });
+    expect(result).toEqual({ error: expect.stringContaining('already have a pending request') });
   });
 });
 
