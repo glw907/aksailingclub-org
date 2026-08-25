@@ -240,6 +240,21 @@ own list header, matching this file's existing release/payment/edit-type dialog 
   );
 </script>
 
+<!-- The trailing half of a `.holding-row`, identical in the by-asset and by-person views (only
+     their identity blocks differ): the payment-standing chip in its register wrapper, then the two
+     verbs an assignment carries. Declared outside `<OfficeList>` so it stays a template snippet
+     rather than an implicit prop passed to that component. -->
+{#snippet assignmentActions(row: AssignmentDisplayRow)}
+  {@const standing = HOLDING_STATUS[row.paymentStanding]}
+  <div class="holding-row-actions">
+    <span class={standing.wrapperClass}>
+      <StatusChip tone={standing.tone} register={standing.register} label={standing.label} size="xs" />
+    </span>
+    <button type="button" class="btn btn-ghost btn-xs" onclick={() => openPaymentDialog(row)}>Record payment</button>
+    <button type="button" class="btn btn-ghost btn-xs text-error" onclick={() => openReleaseDialog(row)}>Release</button>
+  </div>
+{/snippet}
+
 <OfficeList eyebrow="Club" title="Assets" {subtitle}>
   {#snippet action()}
     <div class="join" role="tablist" aria-label="Assets view">
@@ -271,6 +286,7 @@ own list header, matching this file's existing release/payment/edit-type dialog 
       {@const panelId = `${uid}-type-panel-${group.type.id}`}
       {@const isOpen = !collapsedTypes.has(group.type.id)}
       {@const overCapacity = group.type.capacity != null && group.rows.length > group.type.capacity}
+      {@const queue = waitlistByType.get(group.type.id) ?? []}
       <div class="border-b border-[var(--cairn-card-border)] p-6">
         <div class="mb-3 flex flex-wrap items-center gap-2">
           <h2 class="asset-type-heading type-body font-semibold">
@@ -298,8 +314,7 @@ own list header, matching this file's existing release/payment/edit-type dialog 
             </button>
           </h2>
           <div class="type-header-actions flex items-center gap-2">
-            {#if (waitlistByType.get(group.type.id)?.length ?? 0) > 0}
-              {@const queue = waitlistByType.get(group.type.id)!}
+            {#if queue.length > 0}
               <form method="post" action="?/waitlistPromote" class="flex items-center gap-2">
                 <CsrfField />
                 <input type="hidden" name="assetType" value={group.type.id} />
@@ -319,7 +334,6 @@ own list header, matching this file's existing release/payment/edit-type dialog 
         <div id={panelId} hidden={!isOpen}>
           <ul class="holding-list">
             {#each group.rows as row (row.id)}
-              {@const standing = HOLDING_STATUS[row.paymentStanding]}
               {@const desc = displayDescription(row.description)}
               <li class="holding-row">
                 <div class="min-w-0">
@@ -329,13 +343,7 @@ own list header, matching this file's existing release/payment/edit-type dialog 
                   </p>
                   {#if desc}<p class="type-meta text-muted">{desc}</p>{/if}
                 </div>
-                <div class="holding-row-actions">
-                  <span class={standing.wrapperClass}>
-                    <StatusChip tone={standing.tone} register={standing.register} label={standing.label} size="xs" />
-                  </span>
-                  <button type="button" class="btn btn-ghost btn-xs" onclick={() => openPaymentDialog(row)}>Record payment</button>
-                  <button type="button" class="btn btn-ghost btn-xs text-error" onclick={() => openReleaseDialog(row)}>Release</button>
-                </div>
+                {@render assignmentActions(row)}
               </li>
             {:else}
               <li class="py-6 text-center type-body text-muted">No one holds this asset right now.</li>
@@ -359,20 +367,13 @@ own list header, matching this file's existing release/payment/edit-type dialog 
           </h2>
           <ul class="holding-list">
             {#each group.rows as row (row.id)}
-              {@const standing = HOLDING_STATUS[row.paymentStanding]}
               {@const desc = displayDescription(row.description)}
               <li class="holding-row">
                 <div class="min-w-0">
                   <p class="type-body font-medium">{row.assetTypeName}</p>
                   {#if desc}<p class="type-meta text-muted">{desc}</p>{/if}
                 </div>
-                <div class="holding-row-actions">
-                  <span class={standing.wrapperClass}>
-                    <StatusChip tone={standing.tone} register={standing.register} label={standing.label} size="xs" />
-                  </span>
-                  <button type="button" class="btn btn-ghost btn-xs" onclick={() => openPaymentDialog(row)}>Record payment</button>
-                  <button type="button" class="btn btn-ghost btn-xs text-error" onclick={() => openReleaseDialog(row)}>Release</button>
-                </div>
+                {@render assignmentActions(row)}
               </li>
             {/each}
           </ul>

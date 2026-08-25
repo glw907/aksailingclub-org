@@ -110,25 +110,33 @@ describe('createAssetRequest', () => {
     expect(insert?.args).toEqual([result.id, 'mooring', 'hh-1', 'mem-1', 'new', 'Need a spot']);
   });
 
-  // 0037_asset_request_unique's own partial unique index closes the double-click race the
-  // app-level guards (requestAsset's own lack of one, retainAsset's SELECT-then-insert) cannot:
-  // two concurrent inserts can both pass a pre-check before either lands. Simulated the same way
-  // `member-portal-profile.test.ts`'s own UNIQUE(email) test does, since `fakeD1` never executes
-  // real SQL and so cannot itself enforce a partial index -- a household with a pending request
-  // already on file for this asset type is exactly what the real index would reject.
-  it('turns a UNIQUE(household_id, asset_type) collision into a plain-words refusal, not a 500', async () => {
+  /** A `fakeD1` whose every `.run()` rejects with `message`, the shape a real D1 constraint
+   *  failure arrives in. Follows `member-portal-profile.test.ts`'s own UNIQUE(email) test, since
+   *  `fakeD1` never executes real SQL and so can never enforce a constraint of its own. */
+  function rejectingDb(message: string) {
     const { db } = fakeD1();
     db.prepare = (sql: string) => {
       const stmt = {
         sql,
         bind: () => stmt,
-        run: () => Promise.reject(new Error('UNIQUE constraint failed: asset_requests.household_id, asset_requests.asset_type: SQLITE_CONSTRAINT')),
+        run: () => Promise.reject(new Error(message)),
         first: async () => null,
         all: async () => ({ results: [], success: true, meta: {} }),
       };
       return stmt as unknown as ReturnType<typeof db.prepare>;
     };
-    const result = await createAssetRequest(db, { assetType: 'mooring', householdId: 'hh-1', requestedBy: 'mem-1', kind: 'new', note: null });
+    return db;
+  }
+
+  const NEW_REQUEST = { assetType: 'mooring', householdId: 'hh-1', requestedBy: 'mem-1', kind: 'new' as const, note: null };
+
+  // 0037_asset_request_unique's own partial unique index closes the double-click race the
+  // app-level guards (requestAsset's own lack of one, retainAsset's SELECT-then-insert) cannot:
+  // two concurrent inserts can both pass a pre-check before either lands. A household with a
+  // pending request already on file for this asset type is exactly what the real index rejects.
+  it('turns a UNIQUE(household_id, asset_type) collision into a plain-words refusal, not a 500', async () => {
+    const db = rejectingDb('UNIQUE constraint failed: asset_requests.household_id, asset_requests.asset_type: SQLITE_CONSTRAINT');
+    const result = await createAssetRequest(db, NEW_REQUEST);
     expect(result).toEqual({ error: expect.stringContaining('already have a pending request') });
   });
 
@@ -136,18 +144,8 @@ describe('createAssetRequest', () => {
   // FOREIGN KEY rejection) must fall through to the generic refusal, never the duplicate-request
   // message a mis-mapped substring match could produce.
   it('turns a non-UNIQUE rejection into the generic refusal, not the duplicate-request message', async () => {
-    const { db } = fakeD1();
-    db.prepare = (sql: string) => {
-      const stmt = {
-        sql,
-        bind: () => stmt,
-        run: () => Promise.reject(new Error('FOREIGN KEY constraint failed: SQLITE_CONSTRAINT')),
-        first: async () => null,
-        all: async () => ({ results: [], success: true, meta: {} }),
-      };
-      return stmt as unknown as ReturnType<typeof db.prepare>;
-    };
-    const result = await createAssetRequest(db, { assetType: 'mooring', householdId: 'hh-1', requestedBy: 'mem-1', kind: 'new', note: null });
+    const db = rejectingDb('FOREIGN KEY constraint failed: SQLITE_CONSTRAINT');
+    const result = await createAssetRequest(db, NEW_REQUEST);
     expect(result).toEqual({ error: 'Something went wrong recording your request. Please try again.' });
   });
 });
