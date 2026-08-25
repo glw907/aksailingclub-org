@@ -24,6 +24,15 @@ dialog no longer blocks `Escape`: every sibling confirm dialog on this admin (`c
 edit dialogs included) closes on it, and this one diverging read as an inconsistency with no
 documented reason, not a deliberate house rule.
 
+**Register re-entry (`docs/2026-08-24-assets-register-design.md`, Task 3).** The New/Retention
+kind badge moves off the hand-rolled `badge cairn-chip-quiet` span onto `StatusChip`, wrapped in
+the shared `$theme/admin-chip-registers.css` quiet register, matching the Assets screen's own
+Task 2 re-entry. Pending rows alternate the events ledger's own stripe once more than one request
+is waiting. `AdminRequestRow` carries no raw free-text description of its own (`priorHolding` is
+a fully composed sentence, never a stored description substring), so `displayDescription` has
+nothing to wire on this screen today; see that helper's own header comment for where it is
+consumed instead.
+
 `.asset-request-row` overrides daisyUI's own `.list-row` grid below `sm` (the grader-prompt read
 this rebuild ran caught it): that component's default two-column grid gives its SECOND column the
 `1fr` growth track and its first only `minmax(0, auto)`, so a wide retention button ("Approve (opens
@@ -38,8 +47,11 @@ against daisyUI's own `@layer`-wrapped declaration. -->
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
   import { CsrfField } from '@glw907/cairn-cms/components';
-  import { EmptyState, OfficeList, itemNoun } from '@glw907/cairn-cms/admin-toolkit';
+  import { EmptyState, OfficeList, StatusChip, itemNoun } from '@glw907/cairn-cms/admin-toolkit';
   import { formatClubTimestamp, formatDollars } from '$admin-club/lib/ui';
+  // The register re-entry's shared chip stylesheet (assets-register Task 1), following the
+  // Assets screen's own per-page side-effect import (Task 2).
+  import '$theme/admin-chip-registers.css';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -66,7 +78,11 @@ against daisyUI's own `@layer`-wrapped declaration. -->
             <div class="asset-request-identity">
               <span class="font-semibold">{row.assetTypeName}</span>
               <span class="type-body text-muted ml-2">&middot; {row.householdName}</span>
-              <span class="badge cairn-chip-quiet badge-sm font-medium ml-2">{row.kind === 'retention' ? 'Retention' : 'New'}</span>
+              <span class="ml-2">
+                <span class="asc-admin-chip-quiet">
+                  <StatusChip tone="neutral" register="quiet" label={row.kind === 'retention' ? 'Retention' : 'New'} size="xs" />
+                </span>
+              </span>
             </div>
             <p class="mt-1 type-body text-muted">Requested by {row.requesterName} &middot; {formatClubTimestamp(row.createdAt)}</p>
             {#if row.note}<p class="mt-1 type-body text-muted">"{row.note}"</p>{/if}
@@ -148,6 +164,16 @@ against daisyUI's own `@layer`-wrapped declaration. -->
     .asset-request-row > form {
       grid-row-start: 1;
     }
+  }
+
+  /* Alternating stripes, the events ledger's own `table-zebra` register re-expressed for this
+     screen's `<ul>`/`<li>` rows, matching the Assets screen's own Task 2 re-entry
+     (`assets/+page.svelte`'s `.holding-row:nth-child(even)`). No inline margin bleed is needed
+     here the way that page needs one: `.list-row`'s own compiled padding is the row's whole box,
+     with no padded ancestor between the `<ul>` and `OfficeList`'s card shell for the stripe to
+     bleed past. */
+  .asset-request-row:nth-child(even) {
+    background-color: var(--color-base-200);
   }
 
   /* Neither this admin's build nor the browser's own UA styles reset a bare `<ul>`'s
