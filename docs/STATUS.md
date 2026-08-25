@@ -48,21 +48,30 @@ before/after folds into this pass's close and still gates the apex. Ledger: T1 a
 a ruled fix round (`a3b3f1e`+`1c3bc0b`; outline holds the 55% hairline at a >=3:1 border
 floor, tinted grounds hold the 1.16-1.47 band, warning ink carries the tone, wiring is
 per-page `import '$theme/admin-chip-registers.css'`); T4 accepted (`20751e4`); T5 accepted
-(`fa756d2`; four portal baselines stale by content, regenerate at close); T2 built gate-green
-(`e151a09`), review NOT yet dispatched, not render-verified. Remaining: T2 review; the ruled
-micro-change (renew heading off "gear" + `e2e/portal-visual.spec.ts:112` assertion + empty
-copy "no storage or mooring space yet"); T3; T6; then close per the plan's "Order and close"
-(simplifier, fan-out, own read + cold read against the seeded replica, CI-dispatch baselines,
-PR/merge/deploy, before/after artifact, harvest incl. finding-12 evidence and the third-copy
-consolidation trigger, decisions.md settle, HISTORY). Spend ~1.1M agent tokens against the
-1.5M ceiling; close will overrun, record per the events precedent. Probe infra: seed +
+(`fa756d2`; four portal baselines stale by content, regenerate at close); T2 accepted after
+one fix round (`e151a09`+`3684198`, heading typography restored under the toggle's
+`font: inherit`); the ruled micro-change landed (`7f59fd2`); T3 accepted (`339007b`;
+`displayDescription` vacuously satisfied, no description field reaches that screen, reviewer
+verified); T6 accepted (`eb6d983`; index `uq_asset_requests_pending_household_type` applied
+to remote asc-club, zero rows pre-apply, remote DDL verified byte-identical; the uniqueness
+carry-forward is discharged). All tasks done; the close sequence is next per the plan's
+"Order and close", preceded by a small cleanup dispatch for three review findings (negative
+non-UNIQUE test case, stale `assets-format.ts` consumer comment, README future-date).
+Close carry list from reviews: `hidden="until-found"` on collapsed groups; stripe-box
+asymmetry on first/last assets rows; the rounded stripe on asset-requests rows (design call
+at the render read); the 390 `scrollWidth` measurement is load-bearing against T2's
+negative-margin bleed; asset-requests gets an explicit capture stop (no visual baseline);
+ratify the accordion-pattern substitution (button+`aria-expanded`, not `details/summary`) in
+decisions.md; harvest now records a FOURTH `isUniqueViolation` copy (consolidation trigger).
+Spend ~1.35M agent tokens against the 1.5M ceiling; close will overrun, record per the
+events precedent. Probe infra: seed +
 captures + verify at `~/.local/asc-data/probes/assets-register/` (apply: bootstrap, then
 `wrangler d1 execute asc-club --local --file .../probe-seed.sql`; capture script copy in the
 session scratchpad; admin session recipe `e2e/helpers/admin-session.ts`). Sequential
 implementer dispatches only, pathspec'd commits (a parallel pair raced the index once).
-Resume prompt: "Resume the assets-register pass: read docs/STATUS.md's assets-register entry,
-the plan, and the contract; dispatch the T2 diff review, then the micro-change, T3, T6, and
-the close." Launch from this repo.
+Resume prompt: "Resume the assets-register pass at the close: read docs/STATUS.md's
+assets-register entry and the plan's 'Order and close'; run the cleanup dispatch, simplifier,
+fan-out, cold read, baselines, PR/merge/deploy, artifacts." Launch from this repo.
 
 **Geoff's review queue (full entries in docs/status-archive.md).** Before/afters on dev: the
 rebuilt Assets screens (gates the apex), Classes, the pass-B sidebar walkthrough per role, the
