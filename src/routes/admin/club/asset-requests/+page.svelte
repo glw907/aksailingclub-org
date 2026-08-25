@@ -110,9 +110,9 @@ against daisyUI's own `@layer`-wrapped declaration. -->
             </div>
           </form>
 
-          <dialog bind:this={dialogs[row.id]} class="asset-request-dialog modal">
+          <dialog bind:this={dialogs[row.id]} class="asset-request-dialog modal" aria-labelledby={`deny-dialog-title-${row.id}`}>
             <div class="modal-box">
-              <h2 class="type-heading font-bold">Deny {row.householdName}'s request</h2>
+              <h2 id={`deny-dialog-title-${row.id}`} class="type-heading font-bold">Deny {row.householdName}'s request</h2>
               <p class="py-2 type-body text-muted">This clears the case from the queue. The household automatically receives the reason below by email.</p>
               <form method="dialog">
                 <input type="hidden" name="id" value={row.id} />

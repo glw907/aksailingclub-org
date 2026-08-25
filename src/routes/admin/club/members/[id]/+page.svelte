@@ -391,7 +391,7 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
               <div>
                 <p class="font-semibold">{asset.assetTypeName}</p>
                 <p class="type-body text-muted">
-                  {asset.season} season{#if asset.description}&middot; {displayDescription(asset.description)}{/if}
+                  {asset.season} season{#if asset.description} &middot; {displayDescription(asset.description)}{/if}
                 </p>
               </div>
               <span class="badge badge-sm {asset.status === 'active' ? 'border-transparent bg-primary/10 font-medium text-primary' : 'cairn-chip-quiet font-medium'}">
