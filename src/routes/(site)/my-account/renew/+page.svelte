@@ -149,7 +149,7 @@ money-committing step here reads the same as every other portal payment action
          posts `?/retainAsset`; a "no" is simply not clicking, which creates nothing. Reuses
          `/my-account/household`'s own bordered-row list idiom, not a new component. -->
     <section class="mt-l max-w-measure-wide">
-      <h2 class="m-0 text-step-1 font-semibold text-base-content">Your gear and moorings</h2>
+      <h2 class="m-0 text-step-1 font-semibold text-base-content">Your storage and moorings</h2>
       <p class="mt-2xs mb-0 text-step--1 text-muted">Request the same asset again for {data.renewalSeason}, or leave it for now.</p>
 
       {#if form && 'retained' in form && form.retained}

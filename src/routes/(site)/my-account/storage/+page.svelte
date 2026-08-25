@@ -76,7 +76,7 @@ confirm, keyboard reachable and focus-managed, "Keep it" returns to rest). -->
   <h2 class="m-0 text-step-1 font-semibold text-base-content">Your assets</h2>
 
   {#if data.assignments.length === 0 && data.waitlistEntries.length === 0}
-    <p class="mt-xs mb-0 text-step--1 text-muted">Your household holds no storage or moorings yet.</p>
+    <p class="mt-xs mb-0 text-step--1 text-muted">Your household holds no storage or mooring space yet.</p>
   {/if}
 
   {#each data.assignments as assignment (assignment.id)}
