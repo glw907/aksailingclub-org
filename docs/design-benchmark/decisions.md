@@ -486,6 +486,31 @@ Dates are 2026-07-07/08 (the home convergence arc) unless noted.
   wrapping to a second line inside the reserved column; siblings translate but never
   re-wrap, and the affordance is part of the accepted in-form vocabulary.
 
+- **Assets register settle (2026-08-25, the assets-register pass close, PR #10)**: the plan's
+  five probe verdicts built and settled. NO CATEGORY COLOR for asset types: the by-asset view
+  groups by type and the inbox leads with the type name, so per-type hue would be a fourth
+  color vocabulary with no discrimination need; type labels take the quiet neutral chip. STATE
+  CHIPS take the tinted-ground grammar site-wide via `src/theme/admin-chip-registers.css`
+  (quiet tint for Paid/settled, warning tint for Outstanding, hairline outline for Not billed,
+  one 400 weight, no tone dots), consumed per-page; the grammar is StatusChip's to absorb
+  (harvest finding 1). The ACCORDION SUBSTITUTION is ratified: per-type groups are a real
+  `<button>` with `aria-expanded`/`aria-controls` over a `hidden` panel plus `role="region"`,
+  not `<details>/<summary>`, because the group header hosts the Promote form and Edit, which
+  cannot live inside a summary; the a11y sweep graded the outcome equivalent or better. STRIPE
+  GEOMETRY is one dialect family-wide: square and full-bleed to the card edge on both sides
+  (the UA `<ul>` `padding-inline-start` survives `list-style: none` under the no-Preflight
+  admin and must be zeroed; daisyUI `.list-row`'s 1rem radius is zeroed on striped rows; edge
+  padding trims are parity-scoped so a striped edge row keeps its full fill). VIEW SWITCHERS
+  are plain `aria-pressed` buttons, not `role="tablist"`. DUPLICATE REQUESTS are kind-agnostic:
+  one pending request per household and asset type, enforced by migration 0037's partial
+  unique index, and the app guards match the index's shape. The close's cold read failed on
+  four tells (the 40px left stripe gutter, a subtitle with its count dropped, the rounded
+  stripe lozenge, mechanical "(s)" plurals), fixed in one round and re-measured CLEAN with
+  pixel evidence (fill flush both edges at 0.0px delta, exact subtitle strings, radius 0,
+  zero horizontal overflow at 390 in all four theme/screen combinations). FLAGGED TO GEOFF,
+  not settled: the 10px StatusChip ink is the smallest text on the screens and carries payment
+  standing; the cold read graded it legible but at the floor.
+
 ## Benchmark provenance
 
 Pinned by the owner 2026-07-08 ("that's our new design benchmark"): the home page at commit

@@ -6,6 +6,51 @@
 > than the ones here live in `docs/status-archive.md` (the pre-2026-08-21 rolling status,
 > moved whole).
 
+## 2026-08-25: assets-register, both Assets screens at the events bar
+
+Branch `assets-register`, PR #10, merged and deployed to dev. Contract
+`docs/2026-08-24-assets-register-design.md`; plan `docs/plans/2026-08-24-assets-register.md`;
+settle entry in `docs/design-benchmark/decisions.md` (2026-08-25); harvest
+`docs/2026-08-24-assets-register-harvest-findings.md` (nine engine findings, two rulings).
+
+**What landed.** T1: the shared chip-state stylesheet (`src/theme/admin-chip-registers.css`)
+plus `npm run verify:chips` (26 canvas-readback measurements, both themes, both grounds). T4:
+`displayDescription`, finally in `src/lib/` serving both domains. T5: the gear→storage rename
+(no redirect, ruled). T2/T3: both admin screens on the register (disclosure groups, zebra
+rows, StatusChip grammar, top-anchored dialogs, EmptyStates). T6: migration 0037's partial
+unique index on pending `asset_requests` (applied to remote at zero rows) with cause-chain
+error mapping. Three close rounds from the reviewer fan-out and cold read: A (13 admin-screen
+findings, the dialog failure path now `use:enhance` with a dialog-local alert), B (the renew
+live-region blocker, the `NEXT_TARGETS` deep-link drop, kind-agnostic guards, the hardened
+`errorText` matcher, the 0037 bootstrap probe, member-side recasing), C (the four cold-read
+tells). Eight visual baselines regenerated via the CI dispatch; the 390 doors label read, no
+wrap.
+
+**What the gates caught, in order of embarrassment prevented.** A scoped `font: inherit`
+clobbering utility classes shipped a 24px/700 heading through every mechanical gate; only a
+measured render caught it. The cold read caught the UA `<ul>` padding gutter, the dropped
+subtitle count, the rounded stripe, and "(s)" plurals after two accepted task reviews and a
+three-reviewer fan-out missed them all: whole-page reads earn their keep. The a11y sweep
+caught the retention step's refusal message being announced to nobody, on the exact path T6
+had just created.
+
+**What a later pass would be wrong to rediscover.** The UA `<ul>` `padding-inline-start`
+survives `list-style: none` under the no-Preflight admin. Edge-padding trims and zebra
+stripes must be parity-scoped together. An unlayered scoped rule beats daisyUI's `@layer`
+regardless of specificity (used for the `.list-row` radius). `itemNoun` returns only the
+noun, never the count. D1's SQLite text may live on `error.cause`; match through the chain
+(`errorText` in `member-portal/lib/assets.ts` is the shape the four-copy consolidation should
+adopt). A warm local replica needs a per-migration probe in `bootstrap-club-db.mjs` until a
+`_migrations` ledger exists. Probe and e2e seeds must not violate new unique indexes.
+
+**Budgets.** Token spend blew the plan's 1.5M ceiling roughly twofold (~1.35M through the six
+tasks, ~2.1M more across the close's fan-out, three fix rounds, captures, and two cold
+reads), the same close-heavy shape as the events settle; recorded, not excused. The overrun
+lives in the close: three reviewers at ~100-145k each, every fix round ~55-165k, each
+capture/verify cycle ~100-130k. Human interaction points: one proceed-to-completion
+reconfirmation, one "what's the next pass" question, two continue nudges; zero mid-execution
+questions.
+
 ## 2026-08-24: events-probe-settle, the probe round built
 
 Branch `events-probe-settle`, PR #9. Verdicts and the settle record:
