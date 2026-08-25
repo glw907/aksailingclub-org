@@ -1,11 +1,11 @@
-// The landing's "gear & moorings" list shape, shared by the desktop rail tile (`PortalRail.svelte`)
+// The landing's "storage & moorings" list shape, shared by the desktop rail tile (`PortalRail.svelte`)
 // and the mobile composition's own full-width section (T3 of the portal redesign pass,
 // docs/2026-07-16-portal-redesign-design.md): both read the household's assignments and waitlist
 // entries into the same stacked two-line rows (name, then detail plus chip), so the two
 // compositions can never drift on which fee, waitlist position, or chip a member sees.
 import type { HouseholdAssignmentRow, HouseholdWaitlistRow } from './assets';
 
-/** One stacked two-line gear/moorings row: a name and an optional detail/chip line below it (mock
+/** One stacked two-line storage/moorings row: a name and an optional detail/chip line below it (mock
  *  D's own fix for the cramped mid-phrase wrap a single flex row produced at rail width). */
 export interface RailAssetRow {
   id: string;

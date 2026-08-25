@@ -11,9 +11,9 @@ same weighted actions in stacked anatomy, then full-width reference sections in 
 (no value mirror, no Classes tile -- see that block's own comment).
 
 The masthead, action row, and rail are portal-scoped, licensed one-time components
-(`$member-portal/components/`), not sitewide markdown vocabulary. The gear & moorings rail tile
+(`$member-portal/components/`), not sitewide markdown vocabulary. The storage & moorings rail tile
 (desktop) and section (mobile) are reference-only: their own verbs (release, request, cancel a
-request) live on `/my-account/gear` instead (docs/design-benchmark/decisions.md's "the gear door"
+request) live on `/my-account/storage` instead (docs/design-benchmark/decisions.md's "the gear door"
 ruling) and are not rendered here; this route's own server actions for those verbs moved there with
 them (T2b). -->
 <script lang="ts">
@@ -140,7 +140,7 @@ them (T2b). -->
     <footer class="portal-doors">
       <a href="/my-account/profile">Profile</a>
       <a href="/my-account/household">Household</a>
-      <a href="/my-account/gear">Gear</a>
+      <a href="/my-account/storage">Storage &amp; moorings</a>
       <a href="/my-account/classes">Classes</a>
       <a href="/my-account/directory">Directory</a>
       <a href="/my-account/committees">Committees</a>
@@ -157,11 +157,11 @@ them (T2b). -->
     </div>
   {/snippet}
 
-  <!-- `?/payAssetFee`/`?/payRequest` (this route's own actions) and the gear page's own
+  <!-- `?/payAssetFee`/`?/payRequest` (this route's own actions) and the storage page's own
        cross-route submits to them all re-render THIS template with `form` set on every
        failure path (a checkout-unavailable degrade, an expired CSRF token, a rate limit, a
        stale re-submit, or the no-Stripe-key stub) -- rendered once here so both a same-route
-       submit and a gear-page hand-off surface the same message, never a byte-identical
+       submit and a storage-page hand-off surface the same message, never a byte-identical
        repaint with no explanation. -->
   {#snippet paymentFormMessage()}
     {#if form && 'error' in form && form.error}
@@ -244,7 +244,7 @@ them (T2b). -->
          is its own composition, not a collapse"): a compact masthead, the "Needs your attention"
          section immediately beneath it with T3's stacked action-row anatomy
          (`ActionRow.svelte`'s own `stacked` prop -- the named fix for mock D's own mid-phrase
-         wrap), then full-width reference sections in recognition order (gear & moorings,
+         wrap), then full-width reference sections in recognition order (storage & moorings,
          household, receipts) and the doors row. No value mirror (mock D's own 390px composition
          omits it, portal-directions.html L1143-1209) and no Classes tile (ruled acceptable on
          the probe: an occasional phone check does not need its empty-state line; Classes stays
@@ -281,7 +281,7 @@ them (T2b). -->
         {/if}
 
         <div class="portal-mobile-section">
-          <p class="portal-mobile-label">Your gear &amp; moorings</p>
+          <p class="portal-mobile-label">Your storage &amp; moorings</p>
           {#if assetRows.length > 0}
             <ul class="portal-mobile-asset-list">
               {#each assetRows as row (row.id)}
@@ -295,10 +295,10 @@ them (T2b). -->
               {/each}
             </ul>
           {:else}
-            <p class="portal-mobile-empty">You hold no gear or moorings yet.</p>
+            <p class="portal-mobile-empty">You hold no storage or moorings yet.</p>
           {/if}
           <p class="portal-mobile-foot">
-            <a href="/my-account/gear" class="text-primary underline-offset-2 hover:underline">Manage gear &amp; moorings</a>
+            <a href="/my-account/storage" class="text-primary underline-offset-2 hover:underline">Manage storage &amp; moorings</a>
           </p>
         </div>
 

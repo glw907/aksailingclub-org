@@ -36,7 +36,7 @@ export function formatMemberDate(value: Date | string): string {
  * still render whenever they exist, so an odd amount is never silently rounded away.
  *
  * This is the ONE member-facing money formatter: the receipts list, the action row's amount, and
- * the gear page's fees all render through it. Do not reach for a bare
+ * the storage page's fees all render through it. Do not reach for a bare
  * `` `$${(cents / 100).toLocaleString()}` `` at a call site instead. That shape looks equivalent
  * and is not: `toLocaleString` drops a trailing zero, so 24750 renders "$247.5" rather than
  * "$247.50". It reads as correct against whole-dollar fixture data and misprints the first real

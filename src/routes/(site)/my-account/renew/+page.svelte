@@ -268,7 +268,7 @@ money-committing step here reads the same as every other portal payment action
      `.renew-tier-text` above already uses), the control on its own line underneath, always in the
      same left-aligned spot regardless of the name's length. From `40rem` up there is room for all
      three on one line, matching `.gear-row`'s own established stack-then-row breakpoint
-     (`/my-account/gear`). */
+     (`/my-account/storage`). */
   .retain-row {
     display: flex;
     flex-direction: column;

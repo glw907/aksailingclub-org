@@ -103,7 +103,7 @@ export const load: PageServerLoad = async (event) => {
 
   // The retention step (design spec ruling 3, task 4): every asset TYPE the household holds
   // today, read through the same `listHouseholdAssignments`/`listHouseholdRequests`
-  // `/my-account/gear` already uses, never a new query. A household with no active assignments
+  // `/my-account/storage` already uses, never a new query. A household with no active assignments
   // gets an empty array, which the template reads as "no step at all".
   //
   // Deduplicated by asset type (finding 1): a household can hold more than one active assignment
@@ -161,9 +161,9 @@ export const actions: Actions = {
   }),
 
   // The retention step's own create action (design spec ruling 3, task 4): one row, one button, a
-  // "yes" per held asset (`/my-account/gear`'s own per-row action shape). A "no" is simply never
+  // "yes" per held asset (`/my-account/storage`'s own per-row action shape). A "no" is simply never
   // submitting this action, so it creates nothing by construction -- releasing a held asset stays
-  // the separate, deliberate action on `/my-account/gear`, never reachable from here.
+  // the separate, deliberate action on `/my-account/storage`, never reachable from here.
   //
   // Its own `retainError` key, distinct from `?/renew`'s `error` (finding 5): the two actions
   // share this route's one `form` prop, and the retention section renders its own error surface

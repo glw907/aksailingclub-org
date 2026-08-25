@@ -8,7 +8,7 @@
 // Sends through `sendClubEmail`'s `raw` path (`$admin-club/lib/club-email.ts`), following
 // `waiver-notify.ts`'s own precedent for a lib module owning its send rather than leaving it to
 // the route, and mints a fresh sign-in link the same way so the household lands signed in on
-// `/my-account/gear` -- except `denied`, which has nothing on that page to act on (a denied
+// `/my-account/storage` -- except `denied`, which has nothing on that page to act on (a denied
 // request is filtered out of its Requests section) and so mints no link at all.
 //
 // Recipient resolution: the request's own `requested_by` member, falling back to the household's
@@ -137,7 +137,7 @@ export async function sendAssetDecisionEmail(db: D1Database, env: EmailBindingEn
       if (!recipient) return NO_RECIPIENT;
       if (!env.EMAIL) return NO_EMAIL_BINDING;
 
-      const link = await mintMemberSignInLink(db, recipient.memberId, args.origin, '/my-account/gear');
+      const link = await mintMemberSignInLink(db, recipient.memberId, args.origin, '/my-account/storage');
       return sendClubEmail(db, env, {
         to: recipient.email,
         raw: {
@@ -166,7 +166,7 @@ export async function sendAssetDecisionEmail(db: D1Database, env: EmailBindingEn
 
     if (args.kind === 'denied') {
       // No link, no sign-in token: a denied request has nothing left to act on, and a denied
-      // row is filtered out of `/my-account/gear`'s own Requests section, so the link would land
+      // row is filtered out of `/my-account/storage`'s own Requests section, so the link would land
       // the household on a page with no trace of what they clicked through for.
       return sendClubEmail(db, env, {
         to: recipient.email,
@@ -179,7 +179,7 @@ export async function sendAssetDecisionEmail(db: D1Database, env: EmailBindingEn
       });
     }
 
-    const link = await mintMemberSignInLink(db, recipient.memberId, args.origin, '/my-account/gear');
+    const link = await mintMemberSignInLink(db, recipient.memberId, args.origin, '/my-account/storage');
     const segment = assetDecisionSegment(args.requestId, args.kind);
     const vars = { assetTypeName: request.asset_type_name, link };
 

@@ -27,7 +27,7 @@ describe('sendAssetDecisionEmail: assigned', () => {
     expect(message.to).toBe('requester@example.com');
     expect(message.text).toContain('Mooring');
     expect(message.text).toContain(`${ORIGIN}/my-account/confirm?token=`);
-    expect(message.text).toContain('next=%2Fmy-account%2Fgear');
+    expect(message.text).toContain('next=%2Fmy-account%2Fstorage');
 
     const logWrite = calls.find((c) => c.sql.startsWith('INSERT INTO email_log'));
     expect(logWrite?.args[2]).toBe(assetDecisionSegment('req-1', 'assigned'));
@@ -110,7 +110,7 @@ describe('sendAssetDecisionEmail: slot_opened', () => {
 
     expect(result).toEqual({ ok: true });
     const message = send.mock.calls[0][0];
-    expect(message.text).toContain('next=%2Fmy-account%2Fgear');
+    expect(message.text).toContain('next=%2Fmy-account%2Fstorage');
     expect(message.text).toContain('your place on the waitlist');
     expect(message.text).not.toContain('claim');
 

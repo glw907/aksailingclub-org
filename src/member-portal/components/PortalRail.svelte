@@ -1,13 +1,14 @@
 <!-- @component
-The member portal landing's own subordinate rail (mock D lines 1077-1099): Household / Your gear &
+The member portal landing's own subordinate rail (mock D lines 1077-1099): Household / Your storage &
 moorings / Classes, one type step down from the main column, muted eyebrow-style tile labels, a
 fainter hairline, links only, never a button (the design doc's own rail-subordination acceptance
 criterion). Portal-scoped and licensed one-time.
 
-The gear & moorings tile is reference-only (docs/design-benchmark/decisions.md's "the gear door"
+The storage & moorings tile is reference-only (docs/design-benchmark/decisions.md's "the gear door"
 ruling): it lists the household's current assignments and waitlist positions with no forms at all,
-and always carries a "Manage gear & moorings" foot link to `/my-account/gear` (T2b's own page,
-which holds the release/request/cancel forms this tile deliberately omits). -->
+and always carries a "Manage storage & moorings" foot link to `/my-account/storage` (T2b's own page,
+renamed off the old `gear` route by the assets-register pass's ruling 5, which holds the
+release/request/cancel forms this tile deliberately omits). -->
 <script lang="ts">
   import { formatMemberDate } from '$member-auth/lib/format';
   import type { HouseholdAssignmentRow, HouseholdWaitlistRow } from '$member-portal/lib/assets';
@@ -45,7 +46,7 @@ which holds the release/request/cancel forms this tile deliberately omits). -->
 </div>
 
 <div class="portal-rail-tile">
-  <p class="portal-rail-label">Your gear &amp; moorings</p>
+  <p class="portal-rail-label">Your storage &amp; moorings</p>
   {#if assetRows.length > 0}
     <ul class="portal-rail-list">
       {#each assetRows as row (row.id)}
@@ -59,10 +60,10 @@ which holds the release/request/cancel forms this tile deliberately omits). -->
       {/each}
     </ul>
   {:else}
-    <p class="portal-rail-empty">You hold no gear or moorings yet.</p>
+    <p class="portal-rail-empty">You hold no storage or moorings yet.</p>
   {/if}
   <p class="portal-rail-foot">
-    <a href="/my-account/gear" class="text-primary underline-offset-2 hover:underline">Manage gear &amp; moorings</a>
+    <a href="/my-account/storage" class="text-primary underline-offset-2 hover:underline">Manage storage &amp; moorings</a>
   </p>
 </div>
 
