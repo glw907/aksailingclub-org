@@ -12,8 +12,13 @@ bar, the storage rename live, migration `0037` (pending-request unique index) ap
 remote. The record: `docs/design-benchmark/decisions.md` (the 2026-08-25 settle),
 `docs/HISTORY.md` (2026-08-25), harvest `docs/2026-08-24-assets-register-harvest-findings.md`.
 Events-admin and its probe round (PRs #8/#9) are likewise settled and on dev. The apex
-cutover remains its own deliberate DNS change. Next initiative: the Email + Announce pass;
-prep runs as a workflow under Geoff's 2026-08-24 grant.
+cutover remains its own deliberate DNS change. Next initiative: the Email + Announce pass,
+prepped — the brief is `docs/2026-08-25-email-announce-prep-brief.md` (five screens mapped,
+the 471-row email_log cluster is one CLOSED 2026-07-14 quota incident, not a backlog; two
+probe subjects; nine-task first cut; the split fork if announce-on-publish or a Compose
+rework enters). Resume prompt for a fresh session: "Start the Email + Announce pass: read
+docs/STATUS.md and docs/2026-08-25-email-announce-prep-brief.md, then run the functional
+brainstorm with Geoff (the brief's section 5 holds the eight open questions)."
 
 **Immediate next action (Geoff's).** The assets before/after (delivered 2026-08-25 as a
 machine-local HTML file in the session; ask for a re-send if lost) — it gates the apex, and
