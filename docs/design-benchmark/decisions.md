@@ -446,6 +446,46 @@ Dates are 2026-07-07/08 (the home convergence arc) unless noted.
   the month is the chapter and the running-head treatment was "easy to miss" when scrolling.
   Smooth scrolling is site-wide per the earlier ruling.
 
+- **Events admin probe round (Geoff, 2026-08-24, the four questions held from the
+  events-admin coherence reads; probe page rendered from the live local page with the
+  coherence-read seed)**: the EDITABLE DATE COLUMN reads typeset at rest in the prior
+  columns' register (full ink, dashed-underline affordance, "+ add date" on undated rows)
+  and swaps to the native inputs only while editing — the boxed mm/dd/yyyy chrome beside
+  typeset columns was the rejected state. The HERO PICKER closes at rest: a large 3:2
+  preview with name and alt beside "Change photo"/Clear, the library opening on demand as a
+  photos-first 3:2 thumbnail grid (the always-open vertical listbox with oval-rounded thumbs
+  was rejected; photo display names are a Library question, noted, not a picker one).
+  CATEGORY COLOR moves off the 6px dot onto the chip's own ground ("the dot is so small
+  it's hard to tell what color it is"): tinted chip grounds carrying the public Season
+  palette — racing blue oklch(53% 0.15 245) at 16%, class gold oklch(62% 0.155 78.3) at
+  22%, social sage oklch(46% 0.14 155) at 15%, operations/governance on the quiet gray —
+  no dots, every chip at one font weight (the state chips' 600 against the labels' 400 was
+  the flagged inconsistency, proven by measurement, invisible at 10px without zoom). The
+  ruling is TOOLKIT-WIDE ("it would need to apply to everything"): the tinted-ground
+  grammar is cairn StatusChip's, filed in the events-admin harvest; this site carries it
+  until the engine ships it. HIDDEN AND RETIRED must not read identically (Geoff): Hidden
+  is the quiet hairline-outline chip (transient absence), Retired keeps the filled darker
+  state gray (settled), both at the normalized weight. The 390 PRIOR-SEASON DROP is
+  RATIFIED as-is — no substitute history line; the candidates (a quiet line under the
+  name, a panel line above Start date) were both declined.
+
+- **Events admin probe settle (2026-08-24, the build of the four verdicts above)**: the
+  settle round's own cold coherence read failed on five assembly tells, all fixed and
+  re-measured to a CLEAN verdict: the current-season column reserves its edit-form width
+  (284px, 140px narrow) so entering date-edit moves nothing (0.00px column deltas at 1440
+  and 390); the star rides the first line of a wrapped title; the at-rest "+ add date"
+  joins the muted column register (14px, muted ink, dashed rule) instead of the in-form
+  purple link voice; an undated row's current cell says "not scheduled" in the muted step
+  rather than rendering blank; and the hero picker's rest state is a fixed non-wrap row
+  (caption, 264px 3:2 preview or placeholder, text column, left-aligned buttons at one x
+  in both chosen states). Operations/governance chip grounds take a 10% base-content tint
+  to sit in the tinted siblings' contrast band (1.16–1.47:1 across themes and stripes) —
+  no single percentage lands an idealized 1.15–1.35 in all four theme/stripe combinations,
+  so the band is the standard, not the number. Ruled settled-by-design: the +19px row
+  growth at 390 when date-edit opens, caused by the narrow-only end-date affordance
+  wrapping to a second line inside the reserved column; siblings translate but never
+  re-wrap, and the affordance is part of the accepted in-form vocabulary.
+
 ## Benchmark provenance
 
 Pinned by the owner 2026-07-08 ("that's our new design benchmark"): the home page at commit

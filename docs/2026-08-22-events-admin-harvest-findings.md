@@ -86,3 +86,18 @@
 11. **`ExpandableRow`'s trigger is a 24px target.** At 390 it is the only way to open a row and
     it sits under the family's own ~30px floor (and the polish brief's 44px). The trigger's hit
     area belongs to the component, not to each consuming screen's scoped styles.
+
+12. **`StatusChip`'s color rides a 6px dot nobody can read; the ratified grammar is a tinted
+    chip ground.** The owner's probe verdict (2026-08-24, this repo's
+    `docs/design-benchmark/decisions.md`): at dot scale hue is illegible — the same finding
+    that reworked the public Season dots at 8px — so the tone's color belongs on the pill's
+    own ground as a light tint (measured recipe: the tone color mixed 15–22% into the row
+    ground in oklab), with the dot gone and every chip at one font weight (the component's
+    labels run 400 while consuming screens' state chips ran 600). The ruling is explicitly
+    toolkit-wide, so the mapping belongs to `StatusChip` itself: each tone resolves to a
+    tint, plus a surface for site-supplied category colors beyond the five semantic tones
+    (this site needs racing/class/social brand tints that no daisyUI tone names). A quiet
+    outline variant for transient states (Hidden) beside the filled state gray (Retired)
+    is part of the same register. Until the engine ships it, this site carries the grammar
+    as admin-scope CSS overrides.
+
