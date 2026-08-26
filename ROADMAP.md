@@ -93,6 +93,20 @@ program's centerpiece; Geoff authorized Fable time for its brainstorm. Builds on
 
 ## Planned
 
+### Club notifications: announce-on-publish + SMS `club-notifications`
+Ruled 2026-08-25 in the Email + Announce brainstorm. Two halves that ship together: the
+on-publish hook (consuming cairn's `newlyPublishedEntries` seam, with a persistence home
+for the prior manifest), and the SMS channel for announcements — provider integration
+(Twilio or equivalent), A2P 10DLC brand/campaign registration (Geoff-attended, weeks of
+lead time, startable any time), the mandated STOP/HELP inbound webhook, an SMS delivery
+log, and the SMS row in the portal Notifications section. Head-of-household by default
+with per-member portal opt-in, mirroring email. The Email + Announce pass lays the
+groundwork deliberately (its design contract's "Groundwork for the notifications pass"
+section, `docs/2026-08-25-email-announce-design.md`): per-channel opt-in columns, the
+audience-selection/channel-projection split in segments, parallel announce channel
+blocks, and the reusable log-view register. Member phones are already E.164 on every
+write path.
+
 ### Members & Memberships admin on live data `membership-admin` — DONE 2026-07-14
 Shipped (merge 22c10b0; spec docs/2026-07-14-membership-admin-design.md). The one piece
 deliberately still open: the staff-roles collapse onto cairn's editor-roles seam, which
@@ -236,6 +250,10 @@ served by the legacy aksailingclub-org WORKER via routes (no GCE serving path; t
 the apex A record is a proxied placeholder), so the flip is a custom-domain/route
 reassignment, edge-instant both ways — the low-TTL ruling's intent (instant rollback) is
 satisfied by the mechanism, stated in the doc.
+Margin item (2026-08-25): the account's Email Sending quota measured 200/day. Whole-club
+sends fit under the head-of-household audience model (89 households, measured live), but
+Geoff files Cloudflare's Limit Increase Request form before cutover for stacking margin
+(a blast plus the cron's 50-send budget on one day approaches the ceiling).
 
 ### Fragments migration & the DX/contract harvest `fragments-migration`
 Migrate repeated content onto cairn's Fragments, shipped in **0.87.0** (Geoff, 2026-07-16), and use
