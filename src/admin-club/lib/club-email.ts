@@ -221,11 +221,16 @@ export interface SendClubEmailArgs {
   templateId?: string;
   raw?: { subject: string; body: string; replyTo?: string | null };
   vars: Record<string, string>;
-  /** The batch this send belongs to, or `null` for a single, one-off send (a class-touch
-   *  reminder, a payment receipt, an offer notification). The vocabulary writers actually emit:
-   *  `blast:<id>` (`bulk-email.ts`'s `sendSegmentBlast`), `blast-test` (that module's own test
-   *  send, which writes no `email_blasts` row), and `announce:<postId>`
-   *  (`announcements.ts`'s post-publish send). */
+  /** Either the batch a bulk send belongs to, or a unique per-send tag some single sends use as
+   *  a sent-once/cooldown key, or `null` for a single, one-off send with no such key (a
+   *  class-touch reminder, a payment receipt, an offer notification). The vocabulary writers
+   *  actually emit: `blast:<id>` (`bulk-email.ts`'s `sendSegmentBlast`), `blast-test` (that
+   *  module's own test send, which writes no `email_blasts` row), `announce:<postId>`
+   *  (`announcements.ts`'s post-publish send), `waiver-nudge:<memberId>:<season>` and
+   *  `waiver-resumption:<householdId>:<season>` (`waiver-notify.ts`'s cooldown and
+   *  at-most-once guards, both enforced by a `SELECT ... WHERE segment = ?` read against this
+   *  same column), and `asset-decision:<kind>:<requestId>` /
+   *  `asset-decision:slot_opened:<waitlistId>` (`asset-decision-notify.ts`). */
   segment?: string | null;
 }
 
