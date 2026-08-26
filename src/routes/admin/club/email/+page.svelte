@@ -115,6 +115,11 @@ each inside its own marker span.
       if (outcomeFilter === 'sent') continue;
       const rows = templateFilter === 'all' ? unit.rows : unit.rows.filter((row) => row.templateId === templateFilter);
       if (rows.length === 0) continue;
+      // `templateIds` is derived from the narrowed `rows`, not copied from the unfiltered
+      // fold, so the summary line names exactly the templates the expanded state shows.
+      const templateIds = Array.from(
+        new Set(rows.map((row) => row.templateId).filter((id): id is string => id !== null)),
+      ).sort();
       units.push({
         kind: 'incident',
         key: incidentKey(unit),
@@ -122,7 +127,7 @@ each inside its own marker span.
         firstSentAt: unit.firstSentAt,
         lastSentAt: unit.lastSentAt,
         errorDetail: unit.errorDetail,
-        templateIds: unit.templateIds,
+        templateIds,
         rows,
       });
     }
@@ -144,13 +149,15 @@ each inside its own marker span.
 
   const countLine = $derived(computeCountLine(filteredEntryCount, { one: 'entry', many: 'entries' }, appliedFilterLabels));
 
-  // Any filter or view change can strand the current page past the new result count, so it
-  // resets to page 1 rather than showing an empty page with real rows still above it.
+  // Any filter or view change can strand the current page (or, for an expanded incident, the
+  // current in-incident page) past the new result count, so both reset to page 1 rather than
+  // showing an empty page with real rows still above it.
   $effect(() => {
     outcomeFilter;
     templateFilter;
     view;
     page = 1;
+    incidentPage = 1;
   });
 
   const totalPages = $derived(Math.max(1, Math.ceil(filteredUnits.length / PAGE_SIZE)));
@@ -351,7 +358,7 @@ each inside its own marker span.
     {/if}
 
     <div class="border-t border-[var(--cairn-card-border)] px-6 py-3">
-      <Pagination {page} pageCount={totalPages} onPageChange={(p) => (page = p)} totalItems={filteredUnits.length} pageSize={PAGE_SIZE} itemLabel={{ one: 'entry', many: 'entries' }} />
+      <Pagination {page} pageCount={totalPages} onPageChange={(p) => (page = p)} totalItems={filteredUnits.length} pageSize={PAGE_SIZE} itemLabel={{ one: 'row', many: 'rows' }} />
     </div>
   {/if}
 </OfficeList>

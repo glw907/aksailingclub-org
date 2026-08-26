@@ -7,9 +7,12 @@
 // folding, the send log's own history reads as 471 separate "Failed" rows.
 //
 // Grouping runs once, over the whole ordered chronology (`sent_at DESC, id DESC`, `club-email.ts`'s
-// own `listEmailLog`), BEFORE any outcome or template filter and before any pagination: an
-// incident's count and window never shrink when a later filter narrows what is shown, since
-// filtering operates on this function's own output rather than re-deriving it.
+// own `listEmailLog`), BEFORE any outcome or template filter and before any pagination: which rows
+// belong to a run and where that run's window starts and ends is decided here alone and never
+// becomes filter-dependent, since a later filter operates on this function's own output rather
+// than re-deriving it. A consumer is free to narrow what it DISPLAYS for a folded incident (the
+// send-log screen's own template filter states a filtered count for the rows it actually shows,
+// `email/+page.svelte`'s own header) -- that narrowing never reaches back into this fold.
 
 import type { EmailLogRow } from './club-email';
 
