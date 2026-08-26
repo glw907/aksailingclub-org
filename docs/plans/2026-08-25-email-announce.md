@@ -545,6 +545,33 @@ e2e/` must show no new PNG; delete any that appeared. The new visual specs are c
 no baselines, and the PR's visual job is expected red until the CI dispatch at close mints
 them. Gate green. Depends on all prior tasks.
 
+## Overnight standing orders (Geoff, 2026-08-25)
+
+Granted for an unattended run to completion; a fresh session executing this plan acts on
+these without asking:
+
+- **Budget: run to completion.** The 2.5M ceiling is recorded against, not stopped at;
+  the recap states actual spend and the overrun size.
+- **Execution:** tasks run via `pass-execute.js` with the args in
+  `docs/plans/2026-08-25-email-announce-dispatch.json`, minus any task whose commit
+  already sits on branch `email-announce` (check `git log`). Arm the runaway guard.
+  Sequential order is the dependency order.
+- **Taste calls** surfacing at reviews or the coherence read are the conductor's,
+  each recorded in `decisions.md` or the recap. A member-facing product fork holds for
+  Geoff; none is expected on this path.
+- **At close:** remote migrations 0038 and 0039 applied to live `asc-club` and verified;
+  merge on green plus dev deploy under the standing pre-cutover authorization, including
+  API-approving held bot-commit CI runs and the `update_snapshots` dispatch.
+- **Before/after:** the "before" frames come from a main worktree's local build (dev
+  will already be "after" once merged); the "after" from dev. Machine-local HTML, PII,
+  never published.
+- **Not blocking, Geoff's whenever:** the optional read-only Email Sending token mint
+  (headroom shows unknown until then, a supported state) and the Cloudflare quota
+  Limit Increase form.
+- **Morning deliverable:** the before/after HTML plus the recap with both budget
+  numbers (tokens against ceiling; Geoff interaction points, which should be zero
+  overnight).
+
 ## Pass-end checklist
 
 - [ ] `code-simplifier` agent (plugin name `code-simplifier:code-simplifier`) on changed code
