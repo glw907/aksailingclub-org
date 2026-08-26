@@ -257,12 +257,36 @@ body {
    (join/apply's membership-tier radios, the liability-waiver checkbox on join/apply and class
    signup) renders the browser's own UA-default cornflower blue, a color from no palette this
    site owns. One accent-color rule reaches every native form control under the public site
-   shell, DaisyUI's own `.checkbox`/`.radio` classes included, since accent-color is the same
-   channel DaisyUI itself would set (this rule composes with those classes rather than fighting
-   them). */
+   shell, since accent-color is the channel a browser's own default-rendered checkbox/radio
+   reads. */
 .site-main input[type='radio'],
 .site-main input[type='checkbox'] {
   accent-color: var(--color-primary);
+}
+
+/* Checkbox edge contrast (close round item 19, a11y blocker). DaisyUI's own `.checkbox` sets
+   `appearance: none` and draws its own box, so it never reads `accent-color` above -- its border
+   defaults to `--input-color`'s own fallback, `color-mix(in oklab, var(--color-base-content) 20%,
+   transparent)`, which measures well under the 3:1 non-text floor against the card ground in
+   both themes. DaisyUI's own utilities compile inside a Tailwind `@layer` (`daisyui.l1.l2.l3`,
+   verified against the shipped `daisyui/components/checkbox.css`), and this file's own unlayered
+   rules always outrank a layered declaration regardless of selector specificity (the same
+   mechanism the link-color comment above documents), so one plain rule fixes every `.checkbox`
+   under the public site shell; `--color-primary` is already theme-adjusted per `[data-theme]`,
+   so it needs no dual selector for dark mode. (`checkbox` also had to come out of
+   `chassis/tokens.css`'s own DaisyUI `exclude` list -- the public site's Notifications toggle
+   had been rendering as a bare unstyled native checkbox with no `.checkbox` CSS at all, the
+   exclude list never updated for the Task 11 use that introduced it.)
+
+   Canvas readback against the BUILT css (a synthetic page loading the real compiled `theme.css`
+   and `cairn-admin.css`, an unchecked `.checkbox checkbox-sm` against `--color-base-100`,
+   sampled a few device px inside the 1px stroke at 4x device scale to avoid anti-aliased edge
+   blending -- WCAG relative-luminance contrast): public site `asc` (light) 9.72:1, `asc-dark`
+   7.55:1; the admin shell's own identical scoped-style fix (`announce/[id]/+page.svelte`)
+   against `cairn-admin`/`cairn-admin-dark` (a different `--color-primary`, the admin app's own
+   purple, not this site's navy): 5.82:1 / 5.43:1. All four clear the 3:1 floor by a wide margin. */
+.site-main .checkbox {
+  border-color: var(--color-primary);
 }
 
 /* Reserved Turnstile slot: the `<div class="cf-turnstile">`

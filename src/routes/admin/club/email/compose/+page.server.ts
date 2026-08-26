@@ -12,11 +12,11 @@
 //   could join or lapse between the review click and the send click, and the recorded
 //   `email_blasts` row must reflect who the segment reaches right now, not a stale snapshot.
 import { fail } from '@sveltejs/kit';
-import { itemNoun } from '@glw907/cairn-cms/admin-toolkit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
 import { resolveClubDb } from '$admin-club/lib/club-db';
 import { clubAdminAction } from '$admin-club/lib/club-action';
+import { itemNoun } from '$admin-club/lib/ui';
 import {
   listSegmentOptions,
   resolveSegment,

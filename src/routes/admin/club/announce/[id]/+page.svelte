@@ -62,6 +62,13 @@ that used to name them compiles against the precompiled admin stylesheet.
    *  load), the same wording Compose's own review step uses: "unknown" is a supported, permanent
    *  state, never an error, and this line never blocks a send. */
   const headroomLine = $derived(formatHeadroomLine(data.headroom));
+
+  /** The Discord block's own right-side meta (close round item 24): whether the currently
+   *  selected `discordChannel` actually has a webhook configured, read from the same
+   *  `data.channelOptions` the `<select>` itself renders "(not configured)" from -- so the meta
+   *  line can never assert a bare "#general" while the picker shows "General (not configured)"
+   *  right beside it. */
+  const selectedChannelConfigured = $derived(data.channelOptions.find((option) => option.value === discordChannel)?.configured ?? false);
 </script>
 
 <a href="/admin/club/announce" class="mb-4 inline-flex items-center gap-1 type-body text-muted hover:text-primary">
@@ -122,7 +129,7 @@ that used to name them compiles against the precompiled admin stylesheet.
               <p class="m-0 type-meta text-muted">{headroomLine}</p>
             </div>
             <div>
-              <h2 class={HEADER_CELL}>Preview</h2>
+              <h2 class={HEADER_CELL}>Email preview</h2>
               <p class="mt-2 type-body font-medium">{subject}</p>
               <div class="prose announce-preview mt-2 rounded-box border border-[var(--cairn-card-border)] p-4 type-body">
                 {@html emailPreview}
@@ -138,7 +145,7 @@ that used to name them compiles against the precompiled admin stylesheet.
               <input type="checkbox" class="checkbox checkbox-sm" name="notifyDiscord" bind:checked={notifyDiscordOn} />
               Discord
             </label>
-            <span class="type-body text-muted">#{discordChannel}</span>
+            <span class="type-body text-muted">{selectedChannelConfigured ? `#${discordChannel}` : `#${discordChannel} (not configured)`}</span>
           </div>
           <div class="mt-4 grid gap-section lg:grid-cols-2">
             <div class="flex flex-col gap-3">
@@ -153,7 +160,7 @@ that used to name them compiles against the precompiled admin stylesheet.
               </FieldLabel>
             </div>
             <div>
-              <h2 class={HEADER_CELL}>Preview</h2>
+              <h2 class={HEADER_CELL}>Discord preview</h2>
               {#if discordPreview}
                 <div class="announce-discord-preview mt-2 rounded-box bg-base-200/60 p-4 type-body">
                   <a class="font-semibold text-primary hover:underline" href={discordPreview.url} target="_blank" rel="noreferrer">
@@ -201,5 +208,26 @@ that used to name them compiles against the precompiled admin stylesheet.
      them rather than collapsing them the way ordinary flowed text would. */
   .announce-discord-preview-text {
     white-space: pre-line;
+  }
+
+  /* Checkbox edge contrast (close round item 19, a11y blocker). DaisyUI's `.checkbox` border
+     color defaults to `--input-color`'s own fallback, `color-mix(in oklab, var(--color-base-
+     content) 20%, transparent)`, which measures well under the 3:1 non-text floor against the
+     card ground in both themes. `--color-primary` here is the admin shell's own established
+     primary accent (the packaged `cairn-admin`/`cairn-admin-dark` themes' own purple, distinct
+     from this site's public navy -- `--color-primary` is already theme-adjusted per
+     `[data-theme]`, so the same rule text picks up the right value in each shell), and one rule
+     -- unwrapped, like every other override in this block, since daisyUI's own utilities compile
+     inside a Tailwind `@layer` a component's plain scoped style always outranks -- covers both
+     themes with no dual selector needed.
+
+     Canvas readback against the BUILT css (a synthetic page loading the real compiled
+     `cairn-admin.css`, an unchecked `.checkbox checkbox-sm` against `--color-base-100`, sampled
+     a few device px inside the 1px stroke at 4x device scale to avoid anti-aliased edge blending
+     -- WCAG relative-luminance contrast): `cairn-admin` (light) 5.82:1, `cairn-admin-dark`
+     5.43:1. The public site's own identical fix (`site.css`) measured 9.72:1 / 7.55:1. All four
+     clear the 3:1 floor by a wide margin. */
+  .checkbox {
+    border-color: var(--color-primary);
   }
 </style>

@@ -20,7 +20,6 @@ ground registers (the assets-register pass's stylesheet), each inside its own ma
   import type { PageData } from './$types';
   import { EmptyState, OfficeList, StatusChip, computeCountLine } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL, formatCivilDate, formatClubTimestamp } from '$admin-club/lib/ui';
-  import { ANNOUNCE_CHANNEL_LABEL } from '$admin-club/lib/discord';
   // The register re-entry's shared chip stylesheet (assets-register Task 1): a per-page
   // side-effect import, this screen's marker spans below key off it.
   import '$theme/admin-chip-registers.css';
@@ -32,13 +31,19 @@ ground registers (the assets-register pass's stylesheet), each inside its own ma
   const countLine = $derived(computeCountLine(data.posts.length, { one: 'post', many: 'posts' }, []));
 
   /** The muted detail text beside the "Announced" chip: the timestamp plus `email to N` and
-   *  `#channel` when either applies. The chip itself now supplies the leading "Announced" word. */
+   *  `#channel` when either applies. The chip itself now supplies the leading "Announced" word.
+   *
+   *  **Channel casing (close round item 24).** `#{discordChannel}` renders the raw lowercase
+   *  channel id ("#general"), not `ANNOUNCE_CHANNEL_LABEL`'s Title Case display label
+   *  ("General") -- the same lowercase form the announce form's own confirmation and
+   *  "Already announced" banners already use, so a channel reads identically wherever it
+   *  appears on this screen. */
   function announcedDetail(row: PageData['posts'][number]): string {
     if (!row.announced) return '';
     const when = formatClubTimestamp(row.announced.createdAt);
     const parts: string[] = [];
     if (row.announced.emailCount > 0) parts.push(`email to ${row.announced.emailCount}`);
-    if (row.announced.discordChannel) parts.push(`#${ANNOUNCE_CHANNEL_LABEL[row.announced.discordChannel] ?? row.announced.discordChannel}`);
+    if (row.announced.discordChannel) parts.push(`#${row.announced.discordChannel}`);
     return parts.length > 0 ? `${when} (${parts.join(', ')})` : when;
   }
 </script>
@@ -95,5 +100,18 @@ ground registers (the assets-register pass's stylesheet), each inside its own ma
 
   .announce-table tbody tr:nth-child(even) {
     background-color: var(--color-base-200);
+  }
+
+  /* `focus-within:bg-base-200/60` never compiles into the precompiled admin stylesheet (only
+     the `hover:` variant of this exact utility does, verified against `cairn-admin.css`), so a
+     keyboard user tabbing to the row's own link gets no equivalent to the mouse-hover row tint
+     (design-probe's parity rule) without this plain-CSS mirror of the compiled hover rule. */
+  .announce-table tbody tr:focus-within {
+    background-color: var(--color-base-200);
+  }
+  @supports (color: color-mix(in lab, red, red)) {
+    .announce-table tbody tr:focus-within {
+      background-color: color-mix(in oklab, var(--color-base-200) 60%, transparent);
+    }
   }
 </style>

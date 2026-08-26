@@ -4,10 +4,15 @@
 // or the `announcements` table this file's sibling covers.
 import { describe, expect, it } from 'vitest';
 import { render } from 'svelte/server';
-import { orderByPublished } from '$theme/announce-stamps';
+import { orderByPublished, postPublishedAt } from '$theme/announce-stamps';
 import type { AnnounceListRow } from '../routes/admin/club/announce/+page.server';
 import Page from '../routes/admin/club/announce/+page.svelte';
 import type { PageData } from '../routes/admin/club/announce/$types';
+// A plain JSON import (`resolveJsonModule`, `tsconfig.json`), a resolution path independent of
+// `announce-stamps.ts`'s own `import.meta.glob`: this file reads the same committed manifest a
+// second way, so the assertion below pins `postPublishedAt` to the real file rather than trusting
+// the module's own glob blindly.
+import manifestRaw from '../content/.cairn/index.json';
 
 describe('orderByPublished', () => {
   it('sorts a backdated `date` with a newer `publishedAt` first', () => {
@@ -77,7 +82,9 @@ describe('/admin/club/announce list: the chip pair', () => {
   it('keeps both the email count and the Discord channel as muted detail beside the chip', () => {
     const { body } = render(Page, { props: { data: data([announced]) } });
     expect(body).toContain('email to 12');
-    expect(body).toContain('#Fleet');
+    // Lowercase raw channel id (close round item 24), matching the announce form's own
+    // confirmation banners rather than `ANNOUNCE_CHANNEL_LABEL`'s Title Case display label.
+    expect(body).toContain('#fleet');
   });
 });
 
@@ -87,5 +94,25 @@ describe('/admin/club/announce list: the visible count line', () => {
     const statusMatch = body.match(/<p[^>]*role="status"[^>]*aria-live="polite"[^>]*>\s*2 posts\s*<\/p>/);
     expect(statusMatch).not.toBeNull();
     expect(body.indexOf(statusMatch![0])).toBeLessThan(body.indexOf('<table'));
+  });
+});
+
+describe('announce-stamps.ts: the manifest seam (close round item 29)', () => {
+  it('postPublishedAt is built from the real committed manifest, not a silently-empty glob', () => {
+    // `readManifest`'s own fallback for a glob match miss is `{ version: 1, entries: [] }`
+    // (announce-stamps.ts's own header comment): reading the SAME file a second, independent
+    // way (a plain JSON import, never through `import.meta.glob`) proves the committed manifest
+    // this module is supposed to read is real and non-trivial, not the empty-glob degenerate.
+    const rawPosts = (manifestRaw as { entries: Array<{ id: string; concept: string; publishedAt?: string }> }).entries.filter(
+      (entry) => entry.concept === 'posts',
+    );
+    expect(rawPosts.length).toBeGreaterThan(0);
+
+    // `postPublishedAt` (the module's own glob-built map) must exactly match the same filter
+    // run against this independently-read copy of the file: an empty-glob regression would
+    // leave the module's map permanently empty regardless of what the real manifest says, which
+    // this equality check catches the moment any post's `publishedAt` actually differs from {}.
+    const expected = new Map(rawPosts.filter((entry) => Boolean(entry.publishedAt)).map((entry) => [entry.id, entry.publishedAt as string]));
+    expect(postPublishedAt).toEqual(expected);
   });
 });

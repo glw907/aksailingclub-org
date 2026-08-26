@@ -40,9 +40,23 @@ own "3. Profile"). -->
   // blanket header is this site's own choice on every route (`/classes/offer/`'s token-bearing
   // URLs are why it exists) and out of this fix's reach; every other plain form on `/my-account/**`
   // carries the identical latent defect and is tracked separately, not fixed here.
+  //
+  // Close round item 21: this action's own inline `role="status"` line reads `notificationsResult`
+  // (captured from `use:enhance`'s own `result` here, not the page-level `form` prop every OTHER
+  // form on this page also writes) so a save inside this mid-page section stays perceivable
+  // without depending on which of the page's several forms most recently posted.
+  let notificationsResult: { text: string; failed: boolean } | null = $state(null);
+
   function submitNotifications(): SubmitFunction {
-    return () => async ({ update }) => {
+    return () => async ({ update, result }) => {
       await update({ reset: false });
+      if (result.type === 'failure' && result.data && 'error' in result.data && typeof result.data.error === 'string') {
+        notificationsResult = { text: result.data.error, failed: true };
+      } else if (result.type === 'success' && result.data && 'saved' in result.data && result.data.saved) {
+        notificationsResult = { text: 'Saved.', failed: false };
+      } else {
+        notificationsResult = null;
+      }
     };
   }
 </script>
@@ -105,22 +119,42 @@ own "3. Profile"). -->
   <form method="POST" action="?/updateNotifications" class="mt-2xs" use:enhance={submitNotifications()}>
     <input type="hidden" name="csrf" value={data.csrf} />
     <ul class="mt-xs flex flex-col gap-s">
+      <!-- Label-wrapped checkbox (close round item 20, mirroring the announce form's own
+           label-wrapped channel checkboxes): a real visible `<label>` gives the control its
+           accessible name (replacing the aria-label-only naming) and a click/touch target
+           beyond the bare 20px box, while the longer helper sentence stays a sibling paragraph
+           linked in only via `aria-describedby` -- inside the label, its own text would have
+           been folded into the accessible NAME rather than staying a DESCRIPTION. `min-w-0` on
+           the helper (a flex item with no default min-width otherwise refuses to shrink below
+           its own intrinsic text width) is what lets it wrap instead of pushing the label to a
+           naked second row at 1440; `shrink-0` keeps the short label from being squeezed in turn.
+           Shaped so a second channel row is another `<li>` of the identical shape. -->
       <li class="flex flex-wrap items-center justify-between gap-xs">
-        <div>
-          <p class="m-0 text-step--1 font-medium text-base-content">Email</p>
-          <p class="mt-3xs mb-0 text-step--2 text-muted">
-            Household announcements go to the head of household by default; turn this on to receive them yourself too.
-          </p>
-        </div>
-        <input
-          type="checkbox"
-          class="checkbox checkbox-sm"
-          name="clubEmailOptIn"
-          checked={data.notifications.clubEmailOptIn}
-          aria-label="Receive club email"
-        />
+        <p id="notif-email-helper" class="m-0 min-w-0 flex-1 text-step--2 text-muted">
+          Household announcements go to the head of household by default; turn this on to receive them yourself too.
+        </p>
+        <label class="flex shrink-0 items-center gap-2 text-step--1 font-medium text-base-content">
+          <input
+            type="checkbox"
+            class="checkbox checkbox-sm"
+            name="clubEmailOptIn"
+            checked={data.notifications.clubEmailOptIn}
+            aria-describedby="notif-email-helper"
+          />
+          Email
+        </label>
       </li>
     </ul>
+    <!-- Perceivable save confirmation (close round item 21, a11y blocker): rendered
+         unconditionally so the live region already exists in the DOM before the first reply
+         lands (a screen reader does not reliably announce a `role="status"` node inserted AND
+         populated in the same tick, only a later text-content change on a node it already
+         knows about) -- `empty:mt-0` drops the row's own top margin while there is nothing to
+         show, so the empty state opens no visible gap before "Update". -->
+    <p
+      class="mt-xs mb-0 empty:mt-0 text-step--2 {notificationsResult?.failed ? 'text-error' : 'text-success'}"
+      role="status"
+    >{notificationsResult?.text ?? ''}</p>
     <button type="submit" class="btn btn-sm mt-s">Update</button>
   </form>
 </section>

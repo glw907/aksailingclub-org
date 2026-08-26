@@ -278,7 +278,11 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
                   {#if member.birthdate}&middot; {formatCivilDate(member.birthdate)}{/if}
                 </p>
               </div>
-              <div class="flex items-center gap-2">
+              <!-- Roster action group (close round item 23): six controls at ~430px wide with
+                   no wrap of their own clipped the row at 390 (the `<li>`'s own `flex-wrap`
+                   only ever wrapped this whole group down against the name block, never the
+                   group's own children). -->
+              <div class="flex flex-wrap items-center gap-2">
                 <span class="badge {visibility.cls}">{visibility.label}</span>
                 {#if member.archived}<span class="badge cairn-chip-quiet badge-sm font-medium opacity-60">Archived</span>{/if}
                 <a class="btn btn-ghost btn-xs" href="/admin/club/documents/member/{member.id}">Signatures</a>
@@ -286,12 +290,16 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
                 <button type="button" class="btn btn-ghost btn-xs" onclick={() => openMoveDialog(member)}>Move&hellip;</button>
                 <!-- The admin half of the Email + Announce opt-in surface: a bare form, no
                      use:enhance (the global constraint's "no use:enhance at all" option), so a
-                     full page reload always reflects the write, matching `setArchived` beside it. -->
+                     full page reload always reflects the write, matching `setArchived` beside it.
+                     Close round item 22: a per-row accessible name (the assets idiom, e.g.
+                     `admin/club/assets/+page.svelte`'s own `aria-label={`Edit ${group.type.name}`}`)
+                     plus `aria-pressed` names this as the toggle it is -- the visible "Email:
+                     on/off" text alone repeats across every row with no way to tell them apart. -->
                 <form method="post" action="?/setEmailOptIn">
                   <CsrfField />
                   <input type="hidden" name="memberId" value={member.id} />
                   <input type="hidden" name="optedIn" value={emailOptIn ? '0' : '1'} />
-                  <button type="submit" class="btn btn-ghost btn-xs">
+                  <button type="submit" class="btn btn-ghost btn-xs" aria-label={`Club email for ${member.name}`} aria-pressed={emailOptIn}>
                     {emailOptIn ? 'Email: on' : 'Email: off'}
                   </button>
                 </form>

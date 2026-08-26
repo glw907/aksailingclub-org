@@ -4,7 +4,16 @@
 // vocabularies once a second consumer needed them). Member-domain chips and labels stay in
 // member-format.ts, which reads `ChipStyle` from here.
 
+import { itemNoun } from '@glw907/cairn-cms/admin-toolkit';
 import type { EmailQuotaHeadroom } from './email-limits';
+
+// Re-exported so a `+page.server.ts` never imports `@glw907/cairn-cms/admin-toolkit` directly
+// (close round item 28): that package is UI toolkit surface, and the two server files that only
+// wanted its plain pluralization helper for an `ctx.audit` detail string had no other reason to
+// pull it into the server bundle. `ui.ts` already re-exports every other screen-agnostic
+// presentation primitive from one place; this one just happens to originate in cairn-cms rather
+// than being written here.
+export { itemNoun };
 
 /** One chip's display: the label it reads, and the badge classes carrying its color. */
 export interface ChipStyle {

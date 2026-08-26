@@ -5,11 +5,11 @@
 // `events/[id]/+page.server.ts`'s own header gives: a thrown SvelteKit error would rebuild the
 // public site's chrome, not the admin shell.
 import { fail } from '@sveltejs/kit';
-import { itemNoun } from '@glw907/cairn-cms/admin-toolkit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
 import { resolveClubDb } from '$admin-club/lib/club-db';
 import { clubAdminAction } from '$admin-club/lib/club-action';
+import { itemNoun } from '$admin-club/lib/ui';
 import {
   announceChannelOptions,
   currentMemberEmails,

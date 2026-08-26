@@ -17,9 +17,12 @@
        subtracted every family with a live use: this site's public template is much larger than the
        showcase's (a member portal, auth forms, a join form, class registration, the season list,
        plus every content page), so button, badge, alert, and card are joined by dropdown, radio,
-       select, modal, hero, fieldset, textarea, input, and menu, all in real use in
+       select, modal, hero, fieldset, textarea, input, checkbox, and menu, all in real use in
        `src/routes/(site)`, `src/theme`, `src/member-portal`, `src/member-auth`, and
-       `src/member-signup`. Method: build once, extract the compiled public `theme.css`'s
+       `src/member-signup` (`checkbox` joined 2026-08-26, the Email + Announce close round: the
+       `/my-account/profile` Notifications toggle had been rendering as an unstyled native
+       checkbox since the section landed, the exclude list never updated for the new use).
+       Method: build once, extract the compiled public `theme.css`'s
        class-selector set, add the showcase's full exclude list, build again, diff the two sets.
        Every class that vanished got grepped against the site's own public template directories and
        the engine's delivery render markup (`node_modules/@glw907/cairn-cms/dist/render` and
@@ -64,7 +67,7 @@
      OWNERSHIP SPLIT note above (button, badge, alert, card, dropdown, radio, select, modal, hero,
      fieldset, textarea, input, menu, and typography stay in). */
   exclude: footer, status, collapse, avatar, textrotate, otp, chat, toast, drawer,
-    checkbox, diff, swap, calendar, label, toggle, validator, filter, skeleton, fileinput, countdown,
+    diff, swap, calendar, label, toggle, validator, filter, skeleton, fileinput, countdown,
     link, mask, hovergallery, progress, table, indicator, list, megamenu, rating, kbd,
     radialprogress, range, aura, stack, stat, tooltip, breadcrumbs, loading, mockup,
     timeline, tab, divider, carousel, hover3d, navbar, steps, fab, dock,
