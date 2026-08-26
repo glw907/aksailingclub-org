@@ -562,7 +562,9 @@ these without asking:
 - **Execution:** tasks run via `pass-execute.js` with the args in
   `docs/plans/2026-08-25-email-announce-dispatch.json`, in the three stages its `_readme`
   names (2–5, then 6–10, then 11), minus any task already committed (the `Pass-Task: N`
-  trailer; task 1 predates the trailer and is `6003a26`). Arm the runaway guard. A task
+  trailer; task 1 predates the trailer and is `6003a26`). First act before stage one:
+  dispatch `diff-reviewer` on `6003a26` against dispatch task 1's criteria — its chain's
+  verdict was lost at the session handoff — and fold a `fix` verdict before proceeding. Arm the runaway guard. A task
   record returning anything but `accepted` HALTS progression: re-dispatch that task alone
   with the reviewer's blocking findings before any dependent task, and record the halt in
   the recap. Do not set a Workflow token budget (`pass-execute` silently defers tasks
