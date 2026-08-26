@@ -4,11 +4,14 @@
 -- to their populated states for e2e/design work, since it is not this repo's job to write real
 -- pending requests into production to get a screenshot.
 --
--- Wired into e2e/fixtures/bootstrap-club-db.mjs's own seed list, applied LAST, after
--- waivers-seed.sql. That is the only correct slot: signup-seed.sql deletes `asset_requests`,
--- `asset_waitlist`, `asset_payments`, and `asset_assignments` UNCONDITIONALLY (no WHERE clause),
--- and portal-seed.sql deletes and reinserts the three real `asset_types` rows this file also
--- touches. Any earlier slot loses this file's rows or breaks their foreign keys.
+-- Wired into e2e/fixtures/bootstrap-club-db.mjs's own seed list, applied after waivers-seed.sql
+-- and before email-seed.sql (Email + Announce Task 11, the pipeline's own newest fixture). This
+-- file's own required slot is still after waivers-seed.sql: signup-seed.sql deletes
+-- `asset_requests`, `asset_waitlist`, `asset_payments`, and `asset_assignments` UNCONDITIONALLY
+-- (no WHERE clause), and portal-seed.sql deletes and reinserts the three real `asset_types` rows
+-- this file also touches. Any earlier slot loses this file's rows or breaks their foreign keys.
+-- email-seed.sql running after this one is harmless either way: it touches only `email_log` and
+-- `announcements`, two tables this file never reads or writes.
 --
 -- ASSET-TYPE-ID RULE (Assets substrate Task 2, `src/member-portal/lib/waiver-requirements.ts`'s
 -- own `parseAssetKind`): every `asset_type` value below is one of the three REAL, unprefixed

@@ -4,18 +4,47 @@
 own "3. Profile"). -->
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { enhance } from '$app/forms';
+  import type { SubmitFunction } from '@sveltejs/kit';
   import type { ActionData, PageData } from './$types';
   import { siteConfig } from '$theme/cairn.config';
   import { profilePreviewLines } from '$member-portal/lib/profile-preview';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
-  // A full page load follows every form POST here (no use:enhance), so this component remounts
-  // on every save; the one-time snapshot svelte-check warns about is exactly what is wanted, so
-  // `untrack` marks the read as deliberate (the documented escape hatch for this warning).
+  // A full page load follows every OTHER form POST on this page (no use:enhance), so the
+  // component remounts on every save; the one-time snapshot svelte-check warns about is exactly
+  // what is wanted, so `untrack` marks the read as deliberate (the documented escape hatch for
+  // this warning).
   let visibility = $state(untrack(() => data.profile.directoryVisibility));
 
   const previewLines = $derived(profilePreviewLines(visibility, data.preview));
+
+  // The Notifications form's own submit (Email + Announce Task 11 fix): `use:enhance` with
+  // `update({ reset: false })`, the plan's own sanctioned alternative to "no use:enhance at all"
+  // (Global constraints, the `CsrfField` + `use:enhance` reset trap note) -- `reset: false`
+  // because this form's checkbox is server-driven (`checked={data.notifications.clubEmailOptIn}`,
+  // never `bind:checked`), so the default `update()` reset would otherwise wipe it back to
+  // unchecked the instant a save response lands, before the refreshed `data` even arrives.
+  //
+  // Every OTHER form on this page stays a plain, unenhanced POST on purpose (this file's own
+  // established precedent, still correct for them). This one form differs because a plain
+  // top-level POST navigation's `Origin` header follows the page's `Referrer-Policy`
+  // (`no-referrer`, `src/hooks.server.ts`), which a real browser resolves to `Origin: null` even
+  // for a same-origin request -- and `cairn-cms`'s own non-admin CSRF guard requires that header
+  // to equal the request's own origin, so a plain POST here always 403s "Cross-site POST form
+  // submissions are forbidden" (found by this task's own e2e coverage, the first real-browser
+  // exercise of this route; confirmed by intercepting the actual request and by reproducing the
+  // identical 403 with a bare `curl` POST carrying no `Origin` header). A `fetch()`-based submit
+  // is unaffected: its own `Origin` header is unconditional, never referrer-policy-governed. The
+  // blanket header is this site's own choice on every route (`/classes/offer/`'s token-bearing
+  // URLs are why it exists) and out of this fix's reach; every other plain form on `/my-account/**`
+  // carries the identical latent defect and is tracked separately, not fixed here.
+  function submitNotifications(): SubmitFunction {
+    return () => async ({ update }) => {
+      await update({ reset: false });
+    };
+  }
 </script>
 
 <svelte:head>
@@ -73,7 +102,7 @@ own "3. Profile"). -->
 
 <section class="mt-l max-w-measure-wide rounded-box border border-card-border bg-base-100 p-m">
   <h2 class="m-0 text-step-0 font-semibold text-base-content">Notifications</h2>
-  <form method="POST" action="?/updateNotifications" class="mt-2xs">
+  <form method="POST" action="?/updateNotifications" class="mt-2xs" use:enhance={submitNotifications()}>
     <input type="hidden" name="csrf" value={data.csrf} />
     <ul class="mt-xs flex flex-col gap-s">
       <li class="flex flex-wrap items-center justify-between gap-xs">
