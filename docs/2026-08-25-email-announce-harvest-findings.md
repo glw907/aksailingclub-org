@@ -144,12 +144,22 @@ belongs to cairn, a design choice belongs to this site.
 
 ## Workstation finding (2026-08-26 close)
 
-39. **`wrangler dev`'s esbuild pass fails on an admin-toolkit barrel import on this
-    workstation** (surfaced during close-A-fix2's measurements; the implementer fell
-    back to `vite dev` with platformProxy bindings, which worked). Undiagnosed beyond
-    the symptom; worth one look before the next pass leans on `wrangler dev` locally,
-    and possibly an engine packaging question if the barrel resolves differently
-    under esbuild than under Vite.
+39. **CORRECTED at close: the `wrangler dev` esbuild failure was a branch regression,
+    not a workstation quirk.** Close round item 28's `itemNoun` re-export put
+    `@glw907/cairn-cms/admin-toolkit` into `ui.ts`; Vite's SSR build left the package
+    import external in a server chunk, and wrangler's own esbuild pass then failed on
+    the barrel's twelve `.svelte` files ("No loader is configured") — while the dev
+    server's port stayed open serving nothing. That silent-port failure mode hung
+    CI's e2e jobs for hours (every `page.goto` aborts, every test times out, retries
+    multiply). Fixed at close (close-C: the pluralization implemented locally in
+    `ui.ts`, no toolkit import in the server graph). Two durable lessons: **the repo
+    gate cannot see a wrangler-bundle break** — `check`, `test`, and `npm run build`
+    all stay green because none runs wrangler's bundler; a `wrangler deploy
+    --dry-run` (or a one-request `wrangler dev` smoke) belongs in CI ahead of the
+    e2e job, and the e2e webServer wants a failure signature that closes the port
+    instead of hanging it. And the engine half of item 30 stands sharpened: the
+    admin-toolkit barrel is radioactive to any server-graph import, so a pure-utils
+    subpath export is the real fix.
 
 ## A11y review findings (2026-08-26 close), engine-level and deferred
 

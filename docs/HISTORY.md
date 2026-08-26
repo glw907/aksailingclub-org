@@ -45,7 +45,12 @@ contradicted by `signup-seed.sql`'s blanket `DELETE FROM email_log`, and a stran
 in-incident page after the reset `$effect` became a clamp for only one of its two
 values. The a11y sweep measured the invisible unchecked checkbox on three surfaces. The
 cold read caught the UA `<ul>` indent AGAIN (second pass in a row) and the fixed-width
-`.select` stacking an intended inline filter row at 1440.
+`.select` stacking an intended inline filter row at 1440. The baselines dispatch caught
+the one break no repo gate can see: a server-chunk import of the admin-toolkit barrel (a
+close-round refactor) fails wrangler's esbuild while `check`, `test`, and `npm run
+build` all stay green — the dev server's port opens and serves nothing, so CI's e2e
+ground silently for hours instead of failing (harvest 39; a `wrangler deploy --dry-run`
+CI step is the standing ask).
 
 **What a later pass would be wrong to rediscover.** The default-recipient CTE is
 email-determined by ruling 2's own definition; the SMS pass inherits that and must
