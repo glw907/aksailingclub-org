@@ -81,6 +81,16 @@ declare global {
           // between baseline runs. A binding, not a request header or a query parameter, so
           // nothing a visitor sends can shift what the public page calls past.
           ASC_FIXED_TODAY?: string;
+          // Email + Announce pass, Task 2 (src/admin-club/lib/email-limits.ts): the advisory
+          // quota headroom check against the account's Email Sending allowance.
+          // CLOUDFLARE_ACCOUNT_ID is a `wrangler.toml` `[vars]` value (mirrors that file's own
+          // top-level `account_id` deploy field, which the Worker runtime cannot read).
+          // CLOUDFLARE_EMAIL_SENDING_TOKEN is a Worker secret, read-only Email Sending scope,
+          // optional here because it may never be minted at all (a supported, permanent
+          // degrade-to-unknown state, not a transient gap; see the design doc's "Data and
+          // infrastructure" section).
+          CLOUDFLARE_ACCOUNT_ID?: string;
+          CLOUDFLARE_EMAIL_SENDING_TOKEN?: string;
         };
       context: ExecutionContext;
       caches: CacheStorage & { default: Cache };
