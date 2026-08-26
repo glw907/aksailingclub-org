@@ -435,6 +435,11 @@ each inside its own marker span.
     padding-left: 2.75rem;
   }
 
+  .email-incident-pager td {
+    padding: 0;
+    border-bottom: 0;
+  }
+
   .email-incident-pager-line {
     display: flex;
     flex-wrap: wrap;
