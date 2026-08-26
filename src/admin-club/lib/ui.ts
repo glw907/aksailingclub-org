@@ -4,16 +4,33 @@
 // vocabularies once a second consumer needed them). Member-domain chips and labels stay in
 // member-format.ts, which reads `ChipStyle` from here.
 
-import { itemNoun } from '@glw907/cairn-cms/admin-toolkit';
 import type { EmailQuotaHeadroom } from './email-limits';
 
-// Re-exported so a `+page.server.ts` never imports `@glw907/cairn-cms/admin-toolkit` directly
-// (close round item 28): that package is UI toolkit surface, and the two server files that only
-// wanted its plain pluralization helper for an `ctx.audit` detail string had no other reason to
-// pull it into the server bundle. `ui.ts` already re-exports every other screen-agnostic
-// presentation primitive from one place; this one just happens to originate in cairn-cms rather
-// than being written here.
-export { itemNoun };
+/** A count-line noun in both grammatical numbers: `one` is the singular form, used when the count
+ *  is exactly 1; `many` is the plural, used for every other count, zero included ("0 households").
+ *  Mirrors `@glw907/cairn-cms/admin-toolkit`'s own `ItemLabel`. */
+export interface ItemLabel {
+  one: string;
+  many: string;
+}
+
+/** Pick the grammatical number for a count surface: `one` at exactly 1, `many` otherwise. `label`
+ *  also accepts a plain string, which is invariant across every count.
+ *
+ *  A local copy of `@glw907/cairn-cms/admin-toolkit`'s `itemNoun`, not a re-export (close round
+ *  item 28 originally re-exported it here so no server file had to import the toolkit package
+ *  directly). That barrel also carries `.svelte` components, and Vite's SSR build leaves a
+ *  package import like this one external in the server chunk rather than inlining it; wrangler
+ *  dev's own esbuild pass then tries to bundle that external barrel and fails, because esbuild
+ *  has no loader configured for `.svelte` files. `npm run build` never surfaces this (Vite
+ *  bundles the whole graph itself), so the break only shows up against wrangler's own bundler.
+ *  The fix is the same one item 28 already established for the two server files: the toolkit
+ *  package never enters the server import graph. This copy keeps the exported name and call-site
+ *  shape identical to the toolkit's own function. */
+export function itemNoun(count: number, label: string | ItemLabel): string {
+  if (typeof label === 'string') return label;
+  return count === 1 ? label.one : label.many;
+}
 
 /** One chip's display: the label it reads, and the badge classes carrying its color. */
 export interface ChipStyle {
