@@ -73,7 +73,7 @@ recipient count exceeds the remaining headroom. Unknown headroom never blocks a 
 </script>
 
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { enhance } from '$app/forms';
   import type { ActionData, PageData } from './$types';
   import { CsrfField } from '@glw907/cairn-cms/components';
@@ -97,6 +97,22 @@ recipient count exceeds the remaining headroom. Unknown headroom never blocks a 
   let review: ComposeReviewResult | null = $state(null);
   let testStatus: ComposeTestResult | null = $state(null);
   let sendResult: ComposeSendResult | null = $state(null);
+
+  // Step-transition focus targets (item 14, the 2026-08-26 close round): a `tabindex="-1"`
+  // wrapper around each step's own OfficeList, the same `data-focus-target` idiom
+  // `my-account/sign/+page.svelte` uses -- OfficeList's own `<h1>` carries no id an
+  // `aria-labelledby` could point at, so each wrapper names itself with `aria-label` instead.
+  let landingHeadingRef: HTMLElement | undefined = $state();
+  let composeHeadingRef: HTMLElement | undefined = $state();
+  let reviewHeadingRef: HTMLElement | undefined = $state();
+
+  /** Move focus to a step's own heading wrapper once it has rendered. `getRef` is read AFTER the
+   *  `tick()`, not captured before it, since the target step's wrapper only exists in the DOM
+   *  once Svelte has flushed the `step` change that triggered this call. */
+  async function focusStep(getRef: () => HTMLElement | undefined) {
+    await tick();
+    getRef()?.focus();
+  }
 
   const preview = $derived(buildPreview(subject, body));
 
@@ -145,6 +161,7 @@ recipient count exceeds the remaining headroom. Unknown headroom never blocks a 
       review = form;
       testStatus = null;
       step = 'review';
+      focusStep(() => reviewHeadingRef);
     } else if (form.kind === 'test') {
       testStatus = form;
     } else if (form.kind === 'sent') {
@@ -155,12 +172,14 @@ recipient count exceeds the remaining headroom. Unknown headroom never blocks a 
       subject = '';
       body = '';
       step = 'landing';
+      focusStep(() => landingHeadingRef);
     }
   });
 
   function startCompose() {
     sendResult = null;
     step = 'compose';
+    focusStep(() => composeHeadingRef);
   }
 
   /** Insert `{{token}}` at the body textarea's own cursor (the email template edit screen's own
@@ -203,6 +222,7 @@ recipient count exceeds the remaining headroom. Unknown headroom never blocks a 
 {/if}
 
 {#if step === 'landing'}
+  <div bind:this={landingHeadingRef} tabindex="-1" aria-label="Compose">
   <OfficeList
     eyebrow="Club"
     title="Compose"
@@ -255,7 +275,9 @@ recipient count exceeds the remaining headroom. Unknown headroom never blocks a 
       </table>
     {/if}
   </OfficeList>
+  </div>
 {:else if step === 'compose'}
+  <div bind:this={composeHeadingRef} tabindex="-1" aria-label="Compose">
   <OfficeList eyebrow="Club" title="Compose" subtitle="Pick a segment, write the email, then review who it reaches.">
     <form method="post" action="?/review" use:enhance={onSettle()}>
       <div class="grid gap-section p-6 lg:grid-cols-2">
@@ -271,10 +293,14 @@ recipient count exceeds the remaining headroom. Unknown headroom never blocks a 
             <textarea bind:this={bodyField} class="textarea textarea-sm w-full font-mono" name="body" rows="12" bind:value={body}
             ></textarea>
           </FieldLabel>
+          <p class="mt-1 type-meta text-muted">
+            This minimal renderer supports <strong>bold</strong> text, paragraph breaks, and
+            <code>---</code> horizontal rules; links render as literal text, not clickable.
+          </p>
           <div>
             <h2 class={HEADER_CELL}>Variables</h2>
             <p class="mt-1 type-meta text-muted">Click one to insert it into the body at your cursor.</p>
-            <ul class="mt-2 flex list-none flex-wrap gap-2">
+            <ul class="list-reset mt-2 flex flex-wrap gap-2">
               {#each VARIABLE_TOKENS as token (token)}
                 <li>
                   <button type="button" class="badge badge-outline font-mono" onclick={() => insertVariable(token)}>
@@ -307,7 +333,9 @@ recipient count exceeds the remaining headroom. Unknown headroom never blocks a 
       </div>
     </form>
   </OfficeList>
+  </div>
 {:else if step === 'review' && review}
+  <div bind:this={reviewHeadingRef} tabindex="-1" aria-label="Review">
   <OfficeList eyebrow="Club" title="Review" subtitle="{review.segmentLabel}: {recipientCountLabel}.">
     {#if testStatus}
       <p
@@ -326,7 +354,7 @@ recipient count exceeds the remaining headroom. Unknown headroom never blocks a 
     <div class="grid gap-section p-6 lg:grid-cols-2">
       <section>
         <h2 class={HEADER_CELL}>Sample of {review.sample.length} of {review.recipientCount} recipients</h2>
-        <ul class="mt-2 flex flex-col gap-1 type-body">
+        <ul class="list-reset mt-2 flex flex-col gap-1 type-body">
           {#each review.sample as recipient (recipient.memberId)}
             <li>{recipient.personName} &lt;{recipient.email}&gt;</li>
           {:else}
@@ -357,20 +385,31 @@ recipient count exceeds the remaining headroom. Unknown headroom never blocks a 
           <input type="hidden" name="body" value={body} />
           <button type="submit" class="btn btn-sm">Send test to me</button>
         </form>
-        <button type="button" class="btn btn-primary btn-sm" onclick={() => sendDialog?.showModal()}>
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          disabled={review.recipientCount === 0}
+          onclick={() => sendDialog?.showModal()}
+        >
           Send to {recipientCountLabel}
         </button>
       </div>
     </div>
   </OfficeList>
+  </div>
 
-  <dialog bind:this={sendDialog} class="modal">
+  <dialog
+    bind:this={sendDialog}
+    class="modal"
+    aria-labelledby="send-dialog-title"
+    aria-describedby={overHeadroom ? 'send-dialog-quota-warning' : undefined}
+  >
     <div class="modal-box">
-      <h2 class="type-heading font-bold">Send to {recipientCountLabel}?</h2>
+      <h2 id="send-dialog-title" class="type-heading font-bold">Send to {recipientCountLabel}?</h2>
       <p class="py-2 type-body text-muted">{review.segmentLabel}. This cannot be undone.</p>
       {#if overHeadroom && data.headroom}
-        <p class="py-2 type-body font-medium" role="alert">
-          This send's {review.recipientCount} recipients would exceed today's remaining quota of {data.headroom.remaining}.
+        <p id="send-dialog-quota-warning" class="py-2 type-body font-medium">
+          Warning: this send's {review.recipientCount} recipients would exceed today's remaining quota of {data.headroom.remaining}.
         </p>
       {/if}
       <form method="post" action="?/send" use:enhance={onSendSubmit()}>
@@ -380,7 +419,9 @@ recipient count exceeds the remaining headroom. Unknown headroom never blocks a 
         <input type="hidden" name="body" value={body} />
         <input type="hidden" name="confirm" value="on" />
         <div class="modal-action">
-          <!-- svelte-ignore a11y_autofocus -->
+          <!-- svelte-ignore a11y_autofocus -- the safe, non-destructive choice deserves the
+               initial focus in a confirm dialog, the same reasoning any "are you sure" pattern
+               uses. -->
           <button type="button" class="btn" autofocus onclick={() => sendDialog?.close()}>Cancel</button>
           <button type="submit" class="btn btn-primary">
             Send to {recipientCountLabel}
@@ -405,6 +446,16 @@ recipient count exceeds the remaining headroom. Unknown headroom never blocks a 
      it), so the prose preview's own max-width reset lives here instead. */
   .compose-preview {
     max-width: none;
+  }
+
+  /* `.list-none` in the precompiled `cairn-admin.css` only resets `list-style-type`, not the UA
+     default `padding-inline-start: 40px` (no Tailwind-preflight-style reset ships in that sheet,
+     `cairn-admin-css-missing-ua-resets` in agent memory): the variable palette and the review
+     step's sample list both kept the browser's default list padding and, for the sample list, its
+     own bullet (item 2, the 2026-08-26 close round). */
+  .list-reset {
+    padding: 0;
+    list-style: none;
   }
 
   /* Acknowledges a class from this site's own `admin-chip-registers.css` (a per-page side-effect

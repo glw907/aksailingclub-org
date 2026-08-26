@@ -73,7 +73,13 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
     subtitle="Last updated {formatClubTimestamp(data.template.updatedAt)} by {data.template.updatedBy}."
   >
     {#snippet action()}
-      <button type="button" class="btn btn-ghost btn-sm" onclick={() => resetDialog?.showModal()}>
+      <!-- `btn-ghost` reads as bare bold text at rest (no border, no fill) with nothing beside
+           it to lend visual affordance when OfficeList's own header stacks the action below the
+           title at narrow widths (item 17, the 2026-08-26 close round). `btn-outline` (the
+           settings screen's own rollover-reset idiom) keeps this secondary rather than the
+           primary-filled treatment every "New X" header action uses, while still carrying a
+           real border at rest. -->
+      <button type="button" class="btn btn-outline btn-sm" onclick={() => resetDialog?.showModal()}>
         Reset to default
       </button>
     {/snippet}
@@ -98,7 +104,7 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
       <h2 class={HEADER_CELL}>Variables this template supports</h2>
       {#if data.knownVariables.length > 0}
         <p class="mt-1 type-meta text-muted">Click one to insert it into the body at your cursor.</p>
-        <ul class="mt-2 flex list-none flex-wrap gap-2">
+        <ul class="list-reset mt-2 flex flex-wrap gap-2">
           {#each data.knownVariables as token (token)}
             <li>
               <button type="button" class="badge badge-outline font-mono" onclick={() => insertVariable(token)}>
@@ -125,6 +131,10 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
               bind:value={body}
             ></textarea>
           </FieldLabel>
+          <p class="mt-1 type-meta text-muted">
+            This minimal renderer supports <strong>bold</strong> text, paragraph breaks, and
+            <code>---</code> horizontal rules; links render as literal text, not clickable.
+          </p>
         </section>
 
         <section>
@@ -155,7 +165,9 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
       <form method="dialog">
         <CsrfField />
         <div class="modal-action">
-          <!-- svelte-ignore a11y_autofocus -->
+          <!-- svelte-ignore a11y_autofocus -- the safe, non-destructive choice deserves the
+               initial focus in a confirm dialog, the same reasoning any "are you sure" pattern
+               uses. -->
           <button type="submit" class="btn" autofocus formnovalidate>Cancel</button>
           <button type="submit" class="btn" formmethod="post" formaction="?/reset">Reset</button>
         </div>
@@ -171,5 +183,15 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
      Compose screen's `.compose-preview` rule takes the same approach). */
   .template-preview-body {
     max-width: none;
+  }
+
+  /* `.list-none` in the precompiled `cairn-admin.css` only resets `list-style-type`, not the UA
+     default `padding-inline-start: 40px` (no Tailwind-preflight-style reset ships in that sheet,
+     `cairn-admin-css-missing-ua-resets` in agent memory): the variable palette kept the browser's
+     default list padding (item 2, the 2026-08-26 close round, the sibling Compose screen's own
+     `.list-reset` rule takes the same approach). */
+  .list-reset {
+    padding: 0;
+    list-style: none;
   }
 </style>

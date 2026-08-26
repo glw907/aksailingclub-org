@@ -62,6 +62,21 @@ each inside its own marker span.
     return `${incident.errorDetail}::${incident.firstSentAt}::${incident.lastSentAt}`;
   }
 
+  /** The Segment column's known-key display labels: `segments.ts`'s own vocabulary (Task 1),
+   *  duplicated here as a small literal map rather than imported, since that module resolves
+   *  segments against the database and exports no static label table of its own. Any other raw
+   *  key (`class:<id>`, `household:<id>`) falls back to the raw string; `null` (a test send with
+   *  no segment) reads "Single". */
+  const SEGMENT_LABELS: Record<string, string> = {
+    current: 'Current households',
+    lapsed: 'Former households',
+    instructors: 'Instructors',
+  };
+
+  function segmentLabel(segment: string | null): string {
+    return segment === null ? 'Single' : (SEGMENT_LABELS[segment] ?? segment);
+  }
+
   type OutcomeFilter = 'all' | 'sent' | 'failed';
   let outcomeFilter = $state<OutcomeFilter>('all');
   let templateFilter = $state('all');
@@ -108,7 +123,19 @@ each inside its own marker span.
       const templateIds = Array.from(
         new Set(rows.map((row) => row.templateId).filter((id): id is string => id !== null)),
       ).sort();
-      units.push({ ...unit, key: incidentKey(unit), count: rows.length, templateIds, rows });
+      // The window narrows with the rows (item 10, the 2026-08-26 close round), the same
+      // sort-and-take-the-ends `email-log-groups.ts`'s own `buildIncident` uses: without this, a
+      // template-filtered incident kept stating the UNFILTERED chronology's own first/last send.
+      const sentAts = rows.map((row) => row.sentAt).sort();
+      units.push({
+        ...unit,
+        key: incidentKey(unit),
+        count: rows.length,
+        firstSentAt: sentAts[0],
+        lastSentAt: sentAts[sentAts.length - 1],
+        templateIds,
+        rows,
+      });
     }
     return units;
   });
@@ -126,21 +153,23 @@ each inside its own marker span.
     return labels;
   });
 
-  const countLine = $derived(computeCountLine(filteredEntryCount, { one: 'entry', many: 'entries' }, appliedFilterLabels));
-
-  // Any filter or view change can strand the current page (or, for an expanded incident, the
-  // current in-incident page) past the new result count, so both reset to page 1 rather than
-  // showing an empty page with real rows still above it.
-  $effect(() => {
-    outcomeFilter;
-    templateFilter;
-    view;
-    page = 1;
-    incidentPage = 1;
-  });
+  // The filter band counts real send attempts, not display units (an incident's own filtered
+  // membership, not itself as one row) -- "send"/"sends" names that (item 6, the 2026-08-26 close
+  // round); the subtitle above keeps "log entry/entries" (the raw row count) and the pager below
+  // counts "group/groups" (the folded display units it actually pages), so the screen's three
+  // counts each name a different thing instead of two `role="status"` regions disagreeing.
+  const countLine = $derived(computeCountLine(filteredEntryCount, { one: 'send', many: 'sends' }, appliedFilterLabels));
 
   const totalPages = $derived(Math.max(1, Math.ceil(filteredUnits.length / PAGE_SIZE)));
-  const pageStart = $derived((page - 1) * PAGE_SIZE);
+
+  // A filter or view change can strand `page` past the new result count; rather than an `$effect`
+  // resetting it back to 1 (which renders one empty frame before the reset commits), this derived
+  // clamp is what slicing and `Pagination` actually read, so an out-of-range `page` never shows an
+  // empty page even for the one frame between the filter change and a reset (item 11, the
+  // 2026-08-26 close round). `incidentPage` needs no equivalent: it already resets to 1 in
+  // `toggleIncident` whenever a new incident opens, the only place it can go stale.
+  const safePage = $derived(Math.min(page, totalPages));
+  const pageStart = $derived((safePage - 1) * PAGE_SIZE);
   const pagedUnits = $derived(filteredUnits.slice(pageStart, pageStart + PAGE_SIZE));
 
   function incidentWindowLabel(unit: IncidentUnit): string {
@@ -160,7 +189,7 @@ each inside its own marker span.
 <OfficeList eyebrow="Club" title="Email" {subtitle}>
   {#snippet action()}
     <div class="email-view-actions">
-      <div class="join" aria-label="Email view">
+      <div class="join" role="group" aria-label="Email view">
         {#each VIEW_TABS as tab (tab.id)}
           <button
             type="button"
@@ -196,7 +225,7 @@ each inside its own marker span.
           </thead>
           <tbody>
             {#each data.templates as template (template.id)}
-              <tr class="transition-colors hover:bg-base-200/60">
+              <tr class="email-template-row transition-colors hover:bg-base-200/60">
                 <td>
                   <a class="font-semibold hover:text-primary hover:underline" href={`/admin/club/email/${template.id}`}>
                     {template.id}
@@ -215,12 +244,12 @@ each inside its own marker span.
   {:else}
     <div class="email-filters border-b border-[var(--cairn-card-border)] p-6">
       <div class="email-filter-controls">
-        <select class="select select-sm" aria-label="Outcome" bind:value={outcomeFilter}>
+        <select class="select select-sm email-filter-select" aria-label="Outcome" bind:value={outcomeFilter}>
           <option value="all">All outcomes</option>
           <option value="sent">Sent</option>
           <option value="failed">Failed</option>
         </select>
-        <select class="select select-sm" aria-label="Template" bind:value={templateFilter}>
+        <select class="select select-sm email-filter-select" aria-label="Template" bind:value={templateFilter}>
           <option value="all">All templates</option>
           {#each templateOptions as id (id)}
             <option value={id}>{id}</option>
@@ -262,9 +291,11 @@ each inside its own marker span.
                           type="button"
                           class="btn btn-ghost btn-xs"
                           aria-expanded={isOpen}
+                          aria-label={`${isOpen ? 'Hide' : 'Show'} ${unit.count} sends for ${unit.errorDetail}`}
                           onclick={() => toggleIncident(unit.key)}
                         >
-                          {isOpen ? 'Hide sends ▾' : `Show ${unit.count} sends ▸`}
+                          {isOpen ? 'Hide sends' : `Show ${unit.count} sends`}
+                          <span aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
                         </button>
                       </span>
                     </div>
@@ -278,7 +309,7 @@ each inside its own marker span.
                     <tr class="email-member-row">
                       <td class="type-body">{row.recipient}</td>
                       <td class="type-body text-muted">{row.templateId ?? '—'}</td>
-                      <td class="type-body text-muted">{row.segment ?? 'Single'}</td>
+                      <td class="type-body text-muted">{segmentLabel(row.segment)}</td>
                       <td>
                         <span class="asc-admin-chip-warning">
                           <StatusChip tone="warning" register="quiet" label="Failed" size="xs" />
@@ -290,22 +321,26 @@ each inside its own marker span.
                   <tr class="email-incident-pager">
                     <td colspan="5">
                       <div class="email-incident-pager-line">
-                        <span class="type-body text-muted">
+                        <span class="type-body text-muted" role="status" aria-live="polite" aria-atomic="true">
                           {incidentPageStart + 1}&ndash;{Math.min(incidentPageStart + INCIDENT_PAGE_SIZE, unit.rows.length)} of {unit.rows.length} in this incident
                         </span>
                         <button
                           type="button"
-                          class="btn btn-ghost btn-xs"
-                          disabled={incidentPage === 1}
-                          onclick={() => (incidentPage -= 1)}
+                          class="btn btn-ghost btn-xs {incidentPage === 1 ? 'btn-disabled' : ''}"
+                          aria-disabled={incidentPage === 1}
+                          onclick={() => {
+                            if (incidentPage > 1) incidentPage -= 1;
+                          }}
                         >
                           &lsaquo; Prev
                         </button>
                         <button
                           type="button"
-                          class="btn btn-ghost btn-xs"
-                          disabled={incidentPage === incidentTotalPages}
-                          onclick={() => (incidentPage += 1)}
+                          class="btn btn-ghost btn-xs {incidentPage === incidentTotalPages ? 'btn-disabled' : ''}"
+                          aria-disabled={incidentPage === incidentTotalPages}
+                          onclick={() => {
+                            if (incidentPage < incidentTotalPages) incidentPage += 1;
+                          }}
                         >
                           Next &rsaquo;
                         </button>
@@ -317,7 +352,7 @@ each inside its own marker span.
                 <tr>
                   <td class="type-body">{unit.row.recipient}</td>
                   <td class="type-body text-muted">{unit.row.templateId ?? '—'}</td>
-                  <td class="type-body text-muted">{unit.row.segment ?? 'Single'}</td>
+                  <td class="type-body text-muted">{segmentLabel(unit.row.segment)}</td>
                   <td>
                     {#if unit.row.status === 'sent'}
                       <span class="asc-admin-chip-quiet">
@@ -339,7 +374,14 @@ each inside its own marker span.
     {/if}
 
     <div class="border-t border-[var(--cairn-card-border)] px-6 py-3">
-      <Pagination {page} pageCount={totalPages} onPageChange={(p) => (page = p)} totalItems={filteredUnits.length} pageSize={PAGE_SIZE} itemLabel={{ one: 'row', many: 'rows' }} />
+      <Pagination
+        page={safePage}
+        pageCount={totalPages}
+        onPageChange={(p) => (page = p)}
+        totalItems={filteredUnits.length}
+        pageSize={PAGE_SIZE}
+        itemLabel={{ one: 'group', many: 'groups' }}
+      />
     </div>
   {/if}
 </OfficeList>
@@ -369,6 +411,15 @@ each inside its own marker span.
     background-color: var(--color-base-200);
   }
 
+  /* `:focus-within` counterpart to the row's own `hover:bg-base-200/60` utility (item 18, the
+     2026-08-26 close round, the design-probe parity rule): a keyboard user tabbing to the row's
+     link gets the same highlight a mouse hover gives. No Tailwind `focus-within:` variant of that
+     exact utility compiles into the precompiled bundle, so this is the same formula that utility
+     itself resolves to (verified against the built `cairn-admin.css`), applied as plain CSS. */
+  .email-template-row:focus-within {
+    background-color: color-mix(in oklab, var(--color-base-200) 60%, transparent);
+  }
+
   .email-filters {
     display: flex;
     flex-wrap: wrap;
@@ -381,6 +432,16 @@ each inside its own marker span.
     display: flex;
     flex-wrap: wrap;
     gap: var(--cairn-gap-control);
+  }
+
+  /* The daisyUI `.select` base sizes to `clamp(3rem, 20rem, 100%)`: inside this row's own flex
+     layout, alongside the count line's own flexible width, that clamp let each select claim up to
+     20rem and forced the pair into a column at 1440 (item 1, the 2026-08-26 close round, the
+     coherence read's loudest tell -- measured at 234px). Sized to content instead, so both selects
+     sit in one row at any width their own option text allows. */
+  .email-filter-select {
+    width: auto;
+    flex: 0 1 auto;
   }
 
   /* Ordinary send-log rows stripe on the standard even/odd rhythm; incident, member, and
@@ -399,8 +460,15 @@ each inside its own marker span.
     padding-block: 0.15rem;
   }
 
+  /* `position: sticky` pins the toggle to the right edge of the `.overflow-x-auto` scroll
+     container (its own nearest scrolling ancestor), so it stays reachable at 390 without side-
+     scrolling past the incident row's other text (item 8, the 2026-08-26 close round); the plain
+     ground keeps rows scrolling under it opaque rather than letting them show through. */
   .email-incident-toggle {
     margin-left: auto;
+    position: sticky;
+    right: 0;
+    background-color: var(--color-base-100);
   }
 
   /* Inset member rows (probe verdict 2): a quiet, non-alternating tint distinct from the
