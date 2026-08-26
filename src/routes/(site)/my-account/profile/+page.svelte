@@ -71,6 +71,31 @@ own "3. Profile"). -->
   </form>
 </section>
 
+<section class="mt-l max-w-measure-wide rounded-box border border-card-border bg-base-100 p-m">
+  <h2 class="m-0 text-step-0 font-semibold text-base-content">Notifications</h2>
+  <form method="POST" action="?/updateNotifications" class="mt-2xs">
+    <input type="hidden" name="csrf" value={data.csrf} />
+    <ul class="mt-xs flex flex-col gap-s">
+      <li class="flex flex-wrap items-center justify-between gap-xs">
+        <div>
+          <p class="m-0 text-step--1 font-medium text-base-content">Email</p>
+          <p class="mt-3xs mb-0 text-step--2 text-muted">
+            Household announcements go to the head of household by default; turn this on to receive them yourself too.
+          </p>
+        </div>
+        <input
+          type="checkbox"
+          class="checkbox checkbox-sm"
+          name="clubEmailOptIn"
+          checked={data.notifications.clubEmailOptIn}
+          aria-label="Receive club email"
+        />
+      </li>
+    </ul>
+    <button type="submit" class="btn btn-sm mt-s">Update</button>
+  </form>
+</section>
+
 <section class="mt-l max-w-measure-wide">
   <h2 class="m-0 text-step-1 font-semibold text-base-content">Your boats</h2>
   <p class="mt-2xs mb-0 text-step--1 text-muted">A boat belongs to its owner; add, edit, or remove your own here.</p>
