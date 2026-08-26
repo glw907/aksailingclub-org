@@ -267,6 +267,7 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
         <ul class="mt-3 flex flex-col divide-y divide-[var(--cairn-card-border)]">
           {#each desk.roster as member (member.id)}
             {@const visibility = VISIBILITY_CHIP[member.directoryVisibility]}
+            {@const emailOptIn = data.emailOptIns[member.id]}
             <li class="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0">
               <div>
                 <p class="font-semibold {member.archived ? 'opacity-50' : ''}">
@@ -283,6 +284,17 @@ URL) -- a proper household picker is a follow-up, out of this task's scope.
                 <a class="btn btn-ghost btn-xs" href="/admin/club/documents/member/{member.id}">Signatures</a>
                 <button type="button" class="btn btn-ghost btn-xs" onclick={() => openEditMemberDialog(member)}>Edit</button>
                 <button type="button" class="btn btn-ghost btn-xs" onclick={() => openMoveDialog(member)}>Move&hellip;</button>
+                <!-- The admin half of the Email + Announce opt-in surface: a bare form, no
+                     use:enhance (the global constraint's "no use:enhance at all" option), so a
+                     full page reload always reflects the write, matching `setArchived` beside it. -->
+                <form method="post" action="?/setEmailOptIn">
+                  <CsrfField />
+                  <input type="hidden" name="memberId" value={member.id} />
+                  <input type="hidden" name="optedIn" value={emailOptIn ? '0' : '1'} />
+                  <button type="submit" class="btn btn-ghost btn-xs">
+                    {emailOptIn ? 'Email: on' : 'Email: off'}
+                  </button>
+                </form>
                 <form method="post" action="?/setArchived">
                   <CsrfField />
                   <input type="hidden" name="memberId" value={member.id} />

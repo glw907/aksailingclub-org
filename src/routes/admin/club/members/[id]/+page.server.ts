@@ -27,7 +27,7 @@ import {
 } from '$admin-club/lib/households-store';
 import { getHouseholdTimeline, type TimelineTransaction } from '$admin-club/lib/money-store';
 import { clearManualFormer, getHouseholdStanding, markHouseholdFormer, type HouseholdStanding } from '$member-auth/lib/standing';
-import { addHouseholdMember, setDirectoryVisibility, type DirectoryVisibility } from '$member-portal/lib/household';
+import { addHouseholdMember, setClubEmailOptIn, setDirectoryVisibility, type DirectoryVisibility } from '$member-portal/lib/household';
 import { buildMergePlan, buildMovePlan, isUniqueConstraintError, SEASON_CONFLICT_RACE_MESSAGE } from '$admin-club/lib/household-surgery';
 import { buildManualMembershipPayment, type ManualPaymentSource } from '$admin-club/lib/manual-payment';
 import { executeRefund, type RefundLineSelection } from '$admin-club/lib/refunds';
@@ -57,6 +57,7 @@ export const load: PageServerLoad = async (event) => {
       standing: null as HouseholdStanding | null,
       currentSeason: new Date().getUTCFullYear(),
       tierPrices: null as Record<MembershipTier, number> | null,
+      emailOptIns: {} as Record<string, boolean>,
       openAddMember,
       error: 'CLUB_DB is not bound.',
     };
@@ -72,19 +73,31 @@ export const load: PageServerLoad = async (event) => {
       standing: null as HouseholdStanding | null,
       currentSeason: new Date().getUTCFullYear(),
       tierPrices: null as Record<MembershipTier, number> | null,
+      emailOptIns: {} as Record<string, boolean>,
       openAddMember,
       error: null as string | null,
     };
   }
 
-  const [timeline, standing, currentSeason, tierPrices] = await Promise.all([
+  // The household desk's own roster read (`getHouseholdDesk`) does not carry
+  // `club_email_opt_in`; that column belongs to the Email + Announce audience model, not the
+  // household/member shape `households-store.ts` owns, so this task reads it directly rather
+  // than widening that module's return type.
+  const [timeline, standing, currentSeason, tierPrices, emailOptInRows] = await Promise.all([
     getHouseholdTimeline(db, desk.id),
     getHouseholdStanding(db, desk.id),
     getCurrentSeason(db),
     getTierPrices(db),
+    db
+      .prepare('SELECT id, club_email_opt_in FROM members WHERE household_id = ?1')
+      .bind(desk.id)
+      .all<{ id: string; club_email_opt_in: number }>(),
   ]);
+  const emailOptIns: Record<string, boolean> = Object.fromEntries(
+    emailOptInRows.results.map((row) => [row.id, row.club_email_opt_in === 1]),
+  );
 
-  return { desk, timeline, standing, currentSeason, tierPrices, openAddMember, error: null as string | null };
+  return { desk, timeline, standing, currentSeason, tierPrices, emailOptIns, openAddMember, error: null as string | null };
 };
 
 const DENIED_MESSAGE = 'A club role is required to manage members.';
@@ -168,6 +181,27 @@ export const actions: Actions = {
       return { ok: true };
     },
     { action: 'visibility', entity: 'member', deniedMessage: DENIED_MESSAGE },
+  ),
+
+  // The admin half of the Email + Announce audience model's one opt-in surface
+  // (docs/2026-08-25-email-announce-design.md's "the opt-in surfaces"): the portal's own
+  // Notifications toggle (`/my-account/profile`) writes the signed-in member's own row through
+  // the same shared `setClubEmailOptIn`, this action writes any household member's through
+  // `clubAdminAction`'s Club role gate. Mirrors `setVisibility` above.
+  setEmailOptIn: clubAdminAction(
+    async ({ form, ctx }) => {
+      const memberId = requiredField(form, 'memberId');
+      const optedInRaw = form.get('optedIn');
+      if (!memberId || (optedInRaw !== '1' && optedInRaw !== '0')) {
+        ctx.audit({ action: 'email-opt-in', entity: 'member', detail: 'rejected: missing memberId or bad optedIn value' });
+        return fail(400, { error: 'A valid opt-in value is required.' });
+      }
+      const optedIn = optedInRaw === '1';
+      await setClubEmailOptIn(ctx.db, memberId, optedIn);
+      ctx.audit({ action: 'email-opt-in', entity: 'member', entityId: memberId, detail: optedIn ? 'opted-in' : 'opted-out' });
+      return { ok: true };
+    },
+    { action: 'email-opt-in', entity: 'member', deniedMessage: DENIED_MESSAGE },
   ),
 
   updateHousehold: clubAdminAction(
