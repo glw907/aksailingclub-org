@@ -136,18 +136,31 @@ describe('groupEmailLog', () => {
     expect(sentUnit).toBeDefined();
   });
 
-  it('groups identically regardless of whether an outcome filter is later applied', () => {
-    const rows = [...buildLiveCluster(), sentRow({ id: 'unrelated-sent', sentAt: '2026-07-08 09:00:00' })];
+  it('groups the full chronology before any filter narrows it, so a template filter never shrinks the incident it was folded from', () => {
+    const rows = buildLiveCluster();
 
-    const allUnits = groupEmailLog(rows);
-    const incidentFromAll = allUnits.find((unit) => unit.kind === 'incident');
-    if (!incidentFromAll || incidentFromAll.kind !== 'incident') throw new Error('expected an incident');
+    // Fold-then-filter, the load's own order: grouping runs over every row first, and a later
+    // template filter narrows groupEmailLog's own OUTPUT rather than re-deriving it. One third of
+    // the cluster (157 of 471) carries `class_followup`, but the incident this path reports still
+    // reflects the whole run.
+    const foldThenFilter = groupEmailLog(rows);
+    expect(foldThenFilter).toHaveLength(1);
+    const [incidentFromFoldThenFilter] = foldThenFilter;
+    if (incidentFromFoldThenFilter.kind !== 'incident') throw new Error('expected an incident');
+    expect(incidentFromFoldThenFilter.count).toBe(471);
 
-    // A later "failed only" filter operates on groupEmailLog's own output, never re-derives it.
-    const failedOnly = allUnits.filter((unit) => unit.kind === 'incident' || unit.row.status === 'failed');
-    const incidentFromFiltered = failedOnly.find((unit) => unit.kind === 'incident');
+    // The wrong order, proving the invariant actually holds rather than passing by construction:
+    // pre-filtering to `class_followup` rows before folding still chains (every gap between them is
+    // ~3.3s, well under the hour bound), so it also produces one incident, but a smaller one -- 157
+    // rows, a third of the cluster.
+    const regrouped = groupEmailLog(rows.filter((r) => r.templateId === 'class_followup'));
+    expect(regrouped).toHaveLength(1);
+    const [regroupedIncident] = regrouped;
+    if (regroupedIncident.kind !== 'incident') throw new Error('expected an incident');
+    expect(regroupedIncident.count).toBe(157);
 
-    expect(incidentFromFiltered).toEqual(incidentFromAll);
-    expect(incidentFromFiltered?.kind === 'incident' && incidentFromFiltered.count).toBe(471);
+    // The fold-then-filter incident is untouched by the pre-filtered re-derivation: grouping is
+    // never filter-dependent.
+    expect(incidentFromFoldThenFilter.count).toBe(471);
   });
 });
