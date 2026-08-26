@@ -310,25 +310,27 @@ each inside its own marker span.
                   {/each}
                   <tr class="email-incident-pager">
                     <td colspan="5">
-                      <span class="type-body text-muted">
-                        {incidentPageStart + 1}&ndash;{Math.min(incidentPageStart + INCIDENT_PAGE_SIZE, unit.rows.length)} of {unit.rows.length} in this incident
-                      </span>
-                      <button
-                        type="button"
-                        class="btn btn-ghost btn-xs"
-                        disabled={incidentPage === 1}
-                        onclick={() => (incidentPage -= 1)}
-                      >
-                        &lsaquo; Prev
-                      </button>
-                      <button
-                        type="button"
-                        class="btn btn-ghost btn-xs"
-                        disabled={incidentPage === incidentTotalPages}
-                        onclick={() => (incidentPage += 1)}
-                      >
-                        Next &rsaquo;
-                      </button>
+                      <div class="email-incident-pager-line">
+                        <span class="type-body text-muted">
+                          {incidentPageStart + 1}&ndash;{Math.min(incidentPageStart + INCIDENT_PAGE_SIZE, unit.rows.length)} of {unit.rows.length} in this incident
+                        </span>
+                        <button
+                          type="button"
+                          class="btn btn-ghost btn-xs"
+                          disabled={incidentPage === 1}
+                          onclick={() => (incidentPage -= 1)}
+                        >
+                          &lsaquo; Prev
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn-ghost btn-xs"
+                          disabled={incidentPage === incidentTotalPages}
+                          onclick={() => (incidentPage += 1)}
+                        >
+                          Next &rsaquo;
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 {/if}
@@ -433,7 +435,7 @@ each inside its own marker span.
     padding-left: 2.75rem;
   }
 
-  .email-incident-pager td {
+  .email-incident-pager-line {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
