@@ -5,6 +5,7 @@
 // `events/[id]/+page.server.ts`'s own header gives: a thrown SvelteKit error would rebuild the
 // public site's chrome, not the admin shell.
 import { fail } from '@sveltejs/kit';
+import { itemNoun } from '@glw907/cairn-cms/admin-toolkit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
 import { resolveClubDb } from '$admin-club/lib/club-db';
@@ -22,6 +23,7 @@ import {
 } from '$admin-club/lib/announcements';
 import { ANNOUNCE_CHANNELS, buildStoryNotice, notifyDiscord, type DiscordBindingEnv, type DiscordChannel } from '$admin-club/lib/discord';
 import type { EmailBindingEnv } from '$admin-club/lib/club-email';
+import { getEmailQuotaHeadroom } from '$admin-club/lib/email-limits';
 import { posts, ORIGIN } from '$chassis/content';
 
 /** `CairnEvent`'s own type is narrowed to what `adminAction` itself needs, the same explained
@@ -64,12 +66,22 @@ export const load: PageServerLoad = async (event) => {
     previous = latestAnnouncementByPost(await listAnnouncements(db)).get(post.id) ?? null;
   }
 
+  // Task 2: advisory only, independent of `CLUB_DB`, and never blocks the load (see
+  // `email-limits.ts`'s own header on the degrade-to-null contract). Task 10's audience line
+  // resolves the same household-model recipients the `send` action itself resolves again from
+  // scratch before actually sending -- this is a live count for display, never a cached one the
+  // action trusts.
+  const headroom = await getEmailQuotaHeadroom(env ?? {});
+  const audienceCount = db ? (await currentMemberEmails(db)).length : 0;
+
   return {
     post,
     previous,
     error: db ? null : 'CLUB_DB is not bound.',
     channelOptions: announceChannelOptions(env ?? {}),
     defaultChannel: defaultAnnounceChannel(env ?? {}),
+    headroom,
+    audienceCount,
   };
 };
 
@@ -142,7 +154,7 @@ export const actions: Actions = {
         action: 'announce',
         entity: 'post',
         entityId: id,
-        detail: `emailed ${emailCount} member(s)${discordChannel ? `, discord #${discordChannel}` : ''}`,
+        detail: `emailed ${emailCount} ${itemNoun(emailCount, { one: 'member', many: 'members' })}${discordChannel ? `, discord #${discordChannel}` : ''}`,
       });
 
       return { ok: true as const, emailCount, discordChannel };
