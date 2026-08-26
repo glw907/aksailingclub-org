@@ -25,7 +25,7 @@ that used to name them compiles against the precompiled admin stylesheet.
   import type { ActionData, PageData } from './$types';
   import { CsrfField } from '@glw907/cairn-cms/components';
   import { FieldLabel, itemNoun, OfficeList, TextInput } from '@glw907/cairn-cms/admin-toolkit';
-  import { HEADER_CELL, formatClubTimestamp } from '$admin-club/lib/ui';
+  import { HEADER_CELL, formatClubTimestamp, formatHeadroomLine } from '$admin-club/lib/ui';
   import { buildAnnouncementEmailContent } from '$admin-club/lib/announcements';
   import { renderTemplatePreviewHtml } from '$admin-club/lib/club-email';
   import { buildStoryNotice, truncateForEmbed } from '$admin-club/lib/discord';
@@ -61,11 +61,7 @@ that used to name them compiles against the precompiled admin stylesheet.
   /** The account's advisory send-quota headroom (Task 2's `getEmailQuotaHeadroom`, read once at
    *  load), the same wording Compose's own review step uses: "unknown" is a supported, permanent
    *  state, never an error, and this line never blocks a send. */
-  const headroomLine = $derived(
-    data.headroom
-      ? `Daily quota ${data.headroom.quota}, sent today ${data.headroom.sentToday}, ${data.headroom.remaining} remaining.`
-      : 'Daily send headroom is unknown.',
-  );
+  const headroomLine = $derived(formatHeadroomLine(data.headroom));
 </script>
 
 <a href="/admin/club/announce" class="mb-4 inline-flex items-center gap-1 type-body text-muted hover:text-primary">

@@ -4,6 +4,8 @@
 // vocabularies once a second consumer needed them). Member-domain chips and labels stay in
 // member-format.ts, which reads `ChipStyle` from here.
 
+import type { EmailQuotaHeadroom } from './email-limits';
+
 /** One chip's display: the label it reads, and the badge classes carrying its color. */
 export interface ChipStyle {
   label: string;
@@ -83,4 +85,13 @@ const clubTimestampFmt = new Intl.DateTimeFormat(undefined, {
 export function formatClubTimestamp(sqliteDatetime: string): string {
   const parsed = new Date(`${sqliteDatetime.replace(' ', 'T')}Z`);
   return Number.isNaN(parsed.getTime()) ? sqliteDatetime : clubTimestampFmt.format(parsed);
+}
+
+/** The advisory send-quota line both send surfaces render word for word (Compose's own review
+ *  step and the Announce form's Email block), so the wording has one home rather than a copy per
+ *  screen. A `null` headroom is a supported, permanent state (the read failed, or the Email
+ *  Sending token was never minted), never an error, and never blocks a send. */
+export function formatHeadroomLine(headroom: EmailQuotaHeadroom | null): string {
+  if (!headroom) return 'Daily send headroom is unknown.';
+  return `Daily quota ${headroom.quota}, sent today ${headroom.sentToday}, ${headroom.remaining} remaining.`;
 }

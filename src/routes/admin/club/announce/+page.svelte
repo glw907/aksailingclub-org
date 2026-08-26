@@ -27,9 +27,7 @@ ground registers (the assets-register pass's stylesheet), each inside its own ma
 
   let { data }: { data: PageData } = $props();
 
-  const subtitle = $derived(
-    data.error ? data.error : `The ${data.posts.length} most recently published posts, newest first.`,
-  );
+  const subtitle = $derived(data.error ?? `The ${data.posts.length} most recently published posts, newest first.`);
 
   const countLine = $derived(computeCountLine(data.posts.length, { one: 'post', many: 'posts' }, []));
 

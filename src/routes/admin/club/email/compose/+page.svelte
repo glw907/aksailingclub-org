@@ -78,7 +78,7 @@ recipient count exceeds the remaining headroom. Unknown headroom never blocks a 
   import type { ActionData, PageData } from './$types';
   import { CsrfField } from '@glw907/cairn-cms/components';
   import { EmptyState, FieldLabel, itemNoun, OfficeList, SelectInput, StatusChip, TextInput } from '@glw907/cairn-cms/admin-toolkit';
-  import { HEADER_CELL, formatClubTimestamp } from '$admin-club/lib/ui';
+  import { HEADER_CELL, formatClubTimestamp, formatHeadroomLine } from '$admin-club/lib/ui';
   import type { ComposeReviewResult, ComposeSendResult, ComposeTestResult } from './+page.server';
   // The register re-entry's shared chip stylesheet (assets-register Task 1): a per-page
   // side-effect import, this screen's own marker span below keys off it.
@@ -104,6 +104,8 @@ recipient count exceeds the remaining headroom. Unknown headroom never blocks a 
    *  render it (the step subtitle, the send button, and the confirm dialog's heading and button).
    *  Empty off the review step; only ever rendered inside the `step === 'review' && review` block. */
   const recipientCountLabel = $derived.by(() => {
+    // The local read is load-bearing: `svelte-check` narrows a `$state` variable read directly
+    // inside a `$derived` expression to `never`, so `review` has to land in a local first.
     const resolved = review;
     return resolved ? `${resolved.recipientCount} ${itemNoun(resolved.recipientCount, { one: 'recipient', many: 'recipients' })}` : '';
   });
@@ -111,19 +113,14 @@ recipient count exceeds the remaining headroom. Unknown headroom never blocks a 
   /** The account's advisory send-quota headroom (Task 2's `getEmailQuotaHeadroom`, read once at
    *  load): the line the review step shows, or "unknown" when the read failed or the token was
    *  never minted -- a supported, permanent state, never an error. */
-  const headroomLine = $derived(
-    data.headroom
-      ? `Daily quota ${data.headroom.quota}, sent today ${data.headroom.sentToday}, ${data.headroom.remaining} remaining.`
-      : 'Daily send headroom is unknown.',
-  );
+  const headroomLine = $derived(formatHeadroomLine(data.headroom));
 
   /** Whether this send's resolved recipient count exceeds the remaining headroom. `null` headroom
    *  never trips this: unknown headroom reads as unknown and never blocks or warns (the 2026-07-14
    *  ruling stands -- there is no hard cap, the gate is a human seeing the number). */
   const overHeadroom = $derived.by(() => {
-    const resolvedReview = review;
-    const resolvedHeadroom = data.headroom;
-    return resolvedReview !== null && resolvedHeadroom !== null && resolvedReview.recipientCount > resolvedHeadroom.remaining;
+    const resolved = review;
+    return resolved !== null && data.headroom !== null && resolved.recipientCount > data.headroom.remaining;
   });
 
   /** The compose step's own page-top banner: any `fail()` this route's actions return with no

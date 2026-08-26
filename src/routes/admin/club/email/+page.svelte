@@ -27,8 +27,7 @@ each inside its own marker span.
   import type { PageData } from './$types';
   import { EmptyState, OfficeList, Pagination, StatusChip, computeCountLine, itemNoun } from '@glw907/cairn-cms/admin-toolkit';
   import { HEADER_CELL, formatClubTimestamp } from '$admin-club/lib/ui';
-  import { groupEmailLog, type EmailLogIncident } from '$admin-club/lib/email-log-groups';
-  import type { EmailLogRow } from '$admin-club/lib/club-email';
+  import { groupEmailLog, type EmailLogIncident, type EmailLogSingleRow } from '$admin-club/lib/email-log-groups';
   // The register re-entry's shared chip stylesheet (assets-register Task 1): a per-page
   // side-effect import, this screen's own marker spans below key off it.
   import '$theme/admin-chip-registers.css';
@@ -47,25 +46,14 @@ each inside its own marker span.
   //    constraints, "The send log's view selection, filters, and page number are client
   //    state over a fully loaded row set") --
 
-  /** One incident's own display unit, narrowed to whatever rows the current outcome/template
-   *  filter leaves it with: `count`/`rows` reflect the FILTERED membership, so a template
-   *  filter narrows an incident's own stated count rather than leaving it reporting the full
-   *  unfiltered size (Task 6's own acceptance). */
-  interface IncidentUnit {
-    kind: 'incident';
+  /** The fold's own incident, narrowed to whatever rows the current outcome/template filter
+   *  leaves it with: `count`/`rows` reflect the FILTERED membership, so a template filter narrows
+   *  an incident's own stated count rather than leaving it reporting the full unfiltered size
+   *  (Task 6's own acceptance). `key` is this screen's own addition, the render identity below. */
+  interface IncidentUnit extends EmailLogIncident {
     key: string;
-    count: number;
-    firstSentAt: string;
-    lastSentAt: string;
-    errorDetail: string;
-    templateIds: string[];
-    rows: EmailLogRow[];
   }
-  interface RowUnit {
-    kind: 'row';
-    row: EmailLogRow;
-  }
-  type DisplayUnit = IncidentUnit | RowUnit;
+  type DisplayUnit = IncidentUnit | EmailLogSingleRow;
 
   /** A stable identity for an incident across re-renders: incidents carry no id of their own
    *  (they are a derived grouping, not a stored row), so the fold's own error/window fields
@@ -80,7 +68,7 @@ each inside its own marker span.
   let page = $state(1);
   const PAGE_SIZE = 25;
 
-  let expandedIncidentKey: string | null = $state(null);
+  let expandedIncidentKey = $state<string | null>(null);
   let incidentPage = $state(1);
   const INCIDENT_PAGE_SIZE = 50;
 
@@ -120,16 +108,7 @@ each inside its own marker span.
       const templateIds = Array.from(
         new Set(rows.map((row) => row.templateId).filter((id): id is string => id !== null)),
       ).sort();
-      units.push({
-        kind: 'incident',
-        key: incidentKey(unit),
-        count: rows.length,
-        firstSentAt: unit.firstSentAt,
-        lastSentAt: unit.lastSentAt,
-        errorDetail: unit.errorDetail,
-        templateIds,
-        rows,
-      });
+      units.push({ ...unit, key: incidentKey(unit), count: rows.length, templateIds, rows });
     }
     return units;
   });
