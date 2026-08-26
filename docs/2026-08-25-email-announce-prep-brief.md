@@ -8,7 +8,7 @@ Five routes across two trees, sharing six library modules (`src/admin-club/lib/{
 
 | Screen | Route and file | What it does today |
 |---|---|---|
-| Email index | `/admin/club/email`, `+page.svelte` (94 lines) | Lists ~22 templates, then the entire `email_log` unpaginated below it (a 6,400px page, `docs/2026-07-20-admin-toolkit-catalog.md:279-283`). Load-only, no actions. |
+| Email index | `/admin/club/email`, `+page.svelte` (94 lines) | Lists ~22 templates, then the 100 most recent `email_log` rows below it, unpaginated and unfiltered (`listEmailLog` defaults `limit` to 100, `club-email.ts:114`), a 6,400px page as walked (`docs/2026-07-20-admin-toolkit-catalog.md:279-283`). Today every one of those 100 rows is a failed row from the 2026-07-14 cluster. Load-only, no actions. |
 | Template edit | `/admin/club/email/[id]` | Subject and body editor, click-to-insert variable palette, sample-data preview through the real render path, reset to shipped default. Unknown `{{tokens}}` warn and still save (`email-templates-store.ts:54`). |
 | Compose | `/admin/club/email/compose` (318 lines) | Three-step state machine in one component: landing (blast history), compose, review. Segment picker, server-resolved recipient count and 8-name sample, send-test-to-me, count-acknowledging confirm dialog. |
 | Announce list | `/admin/club/announce` (69 lines) | The 15 most recent published posts with an "Announced" column, all em dashes today (`docs/2026-07-20-admin-toolkit-catalog.md:277-278`). |
@@ -64,7 +64,7 @@ The bar is the settled admin register: StatusChip through the three tinted-groun
 
 ### Tier 3: genuine design work, probe territory
 
-13. **Email index information architecture.** Two hand-rolled cards on one 6,400px page, with the send log duplicating `OfficeList` chrome by hand (`email/+page.svelte:62-94`). Assets solved multiple lists with one `OfficeList` behind an `aria-pressed` switcher. Pagination, filtering, and how a 471-row single-incident cluster reads at rest are all unanswered.
+13. **Email index information architecture.** Two hand-rolled cards on one 6,400px page (the 100 rows the load returns, not all 750), with the send log duplicating `OfficeList` chrome by hand (`email/+page.svelte:62-94`). Assets solved multiple lists with one `OfficeList` behind an `aria-pressed` switcher. Pagination, filtering, and how a 471-row single-incident cluster reads at rest are all unanswered.
 14. **Compose as a wizard.** A three-step machine in one route with full-width inline forms and ad-hoc "Back" ghost buttons (lines 239, 283). No settled screen has a precedent for it. This is not the dialog divergence case; the dialog ruling covers list-view mutations, not a primary authoring flow.
 15. **The variable palette.** Chip vocabulary applied to interactive controls (`compose:216-224`, `email/[id]:101-109`). The bar has no ratified idiom for click-to-insert tokens.
 16. **Announce list ordering and the date column.** Ties directly to the `publishedAt` rider in section 4.
@@ -96,7 +96,7 @@ The count-confirm gate (server-resolved count in both the dialog heading and the
 | **Close mechanics.** Baselines are CI-canonical and regenerate only via the `ci.yml` `workflow_dispatch update_snapshots` run. Merging a green PR and deploying to dev is default behavior pre-cutover. | `CLAUDE.md`; Geoff, 2026-08-22 |
 | **Two cutover touchpoints sit inside this surface.** The post URL mailed to members is `${ORIGIN}${permalink}` with `ORIGIN` hardcoded to `https://dev.aksailingclub.org`, and template `reply_to` is not threaded into sends because the Cloudflare binding has no such field. | `src/chassis/content.ts:57`; `club-email.ts:263-270` |
 
-Two smaller constraints worth carrying into any query work: D1's 100-bound-parameter cap forces household `IN (...)` chunking at 90 (`segments.ts:122-126`), and the three class-reminder touch templates are absent from `KNOWN_TEMPLATE_VARIABLES`, so the unknown-variable guard silently skips them entirely.
+Two smaller constraints worth carrying into any query work: D1's 100-bound-parameter cap forces household `IN (...)` chunking at 90 (`segments.ts:122-126`), and eight shipped templates (the three class-reminder touches among them; the full list is in the plan's Task 8) are absent from `KNOWN_TEMPLATE_VARIABLES`, so the unknown-variable guard silently skips them entirely.
 
 Test coverage to extend rather than duplicate: fourteen relevant unit suites exist under `src/tests/` (`compose-actions`, `bulk-email`, `announce-actions`, `announcements`, `segments`, `club-email`, `email-template-actions`, `email-templates-store`, `send-cap`, and the job suites). There is **no e2e coverage of the email or announce admin at all** and no admin email visual baselines. The session-mint helper at `e2e/helpers/admin-session.ts` exists now, so the old "no editor-login helper" debt is paid.
 
@@ -111,7 +111,7 @@ Each of these is a fork where both branches are defensible and the answer change
 5. **Does an interactive send grow a cap or a quota pre-check?** The 2026-07-14 ruling was "no hard cap on deliberate admin sends", and the only failure this system has ever produced is quota exhaustion. A ~285-recipient blast against unmeasured quota headroom is the same shape as the incident, minus the automation. A pre-send headroom check is a middle path that does not reopen the ruling.
 6. **Does this pass consume `newlyPublishedEntries`, or only close the list-recency rider?** The rider is a one-file sort change with a mandatory fallback. Announce-on-publish is the feature the seam was built for and needs a persistence home for the prior manifest plus a hook at deploy or admin-publish time. This is the single largest scope lever in the brief.
 7. **Does the 2026-07-15 apology send get sequenced before this pass?** It is Geoff-attended either way. Sending first means the redesigned log renders `migration_apology` rows from day one; sending after means the pass ships against the incident data alone.
-8. **Do the templates themselves get work?** Twenty-two templates list with raw `{{item_display_name}}` placeholders as subjects, and three touch templates sit outside the known-variable map. Naming, grouping, and the guard gap are all in reach, and all are content work rather than register work.
+8. **Do the templates themselves get work?** Twenty-two templates list with raw `{{item_display_name}}` placeholders as subjects, and eight templates sit outside the known-variable map (measured at the plan review; this brief first counted three). Naming, grouping, and the guard gap are all in reach, and all are content work rather than register work.
 
 ## 6. First-cut pass shape
 

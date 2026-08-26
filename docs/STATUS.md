@@ -12,20 +12,25 @@ bar, the storage rename live, migration `0037` (pending-request unique index) ap
 remote. The record: `docs/design-benchmark/decisions.md` (the 2026-08-25 settle),
 `docs/HISTORY.md` (2026-08-25), harvest `docs/2026-08-24-assets-register-harvest-findings.md`.
 Events-admin and its probe round (PRs #8/#9) are likewise settled and on dev. The apex
-cutover remains its own deliberate DNS change. Next initiative: the Email + Announce pass,
-prepped — the brief is `docs/2026-08-25-email-announce-prep-brief.md` (five screens mapped,
-the 471-row email_log cluster is one CLOSED 2026-07-14 quota incident, not a backlog; two
-probe subjects; nine-task first cut; the split fork if announce-on-publish or a Compose
-rework enters). Resume prompt for a fresh session: "Start the Email + Announce pass: read
-docs/STATUS.md and docs/2026-08-25-email-announce-prep-brief.md, then run the functional
-brainstorm with Geoff (the brief's section 5 holds the eight open questions)."
+cutover remains its own deliberate DNS change. The Email + Announce pass is brainstormed,
+contracted, planned, and adversarially reviewed (2026-08-25): contract
+`docs/2026-08-25-email-announce-design.md` (nine rulings, headlined by the
+head-of-household audience model — 89 active households measured live against a 200/day
+quota), plan `docs/plans/2026-08-25-email-announce.md` (11 tasks, workflow mode, 2.5M
+ceiling; a 60-agent review folded 79 findings, verification clean). SMS + announce-on-
+publish are logged as ROADMAP's `club-notifications`. Resume prompt: "Continue the Email +
+Announce pass: read docs/STATUS.md, the contract, and the plan's Probe round; build the
+three-subject probe from live data for Geoff's verdicts, then execute via
+pass-execute.js."
 
 **Immediate next action (Geoff's).** The assets before/after (delivered 2026-08-25 as a
 machine-local HTML file in the session; ask for a re-send if lost) — it gates the apex, and
 carries one explicit call: the 10px StatusChip payment-standing ink, graded legible-but-at-
 the-floor. Then the standing dev queue: `/admin/club/events` and `/events` at 1440/390,
 smartypants on `/governance`, the theme-flip cross-fade on `/` and a 404, a minted "Share
-preview" link in a private window, one Tidy run.
+preview" link in a private window, one Tidy run. New from the pass prep: mint the
+read-only Email Sending API token in the dashboard (or skip it; plan Task 2 degrades
+cleanly), and file Cloudflare's quota Limit Increase Request form (200/day measured).
 
 **Open decisions.**
 - `wrangler.toml` `compatibility_date` is `2026-07-06`; bumping it is a deliberate runtime
@@ -57,6 +62,6 @@ rebuilt Assets screens (gates the apex), Classes, the pass-B sidebar walkthrough
 waivers signing moment, member directory and committees, the portal redesign against mock D,
 the retention step on /my-account/renew, the fragments /members page. Also: the attorney packet
 send (docs/waivers/), the payments live smoke (docs/plans/2026-07-15-payments-live-smoke.md),
-the five-stop dev walkthrough, the 07-15 apology-send verification, the unfiled fragments
+the five-stop dev walkthrough, the unfiled fragments
 harvest (docs/2026-07-17-fragments-harvest-findings.md), the directory pass's DX notes, and the
 board-demo cleanup (`node scripts/import/demo-household.mjs --cleanup`).
