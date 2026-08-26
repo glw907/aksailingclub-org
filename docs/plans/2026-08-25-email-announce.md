@@ -87,7 +87,10 @@ technology), and `email_log.segment` is null on all 750 live rows.
 - Visual baselines are CI-canonical: no local `--update-snapshots`, ever, and no local run
   that can mint a missing PNG. Any local e2e run uses `npm run test:e2e -- --ignore-snapshots`
   (Playwright 1.62.1 supports the flag; the config sets no `updateSnapshots` override).
-  Regeneration happens once, at close, via `gh workflow run ci.yml -f update_snapshots=true`.
+  Regeneration happens once, at close, via
+  `gh workflow run ci.yml --ref email-announce -f update_snapshots=true` (the `--ref` is
+  load-bearing: without it the dispatch runs against `main`, which lacks the new specs);
+  confirm the run's `head_branch` is `email-announce` before reading its log.
 - Comments follow ts-conventions/svelte-conventions; no em dashes in comments.
 - Member-facing copy (the portal Notifications sentence) follows the shared web-content
   method's rubric; there is no site content guide (`docs/content-guide.md` does not
@@ -108,6 +111,7 @@ technology), and `email_log.segment` is null on all 750 live rows.
 | `src/admin-club/lib/club-email.ts` | Modify | full-log reader for T5; doc-drift comment fixes for T8 (see the ownership note in T5) |
 | `src/admin-club/lib/email-log-groups.ts` | Create | the pure incident-fold over an ordered row array |
 | `src/admin-club/lib/email-templates-store.ts` | Modify | known-variable guard gap, stale `withdrawal_notice` key |
+| `src/admin-club/lib/discord.ts` | Modify | drop the stale `EDUCATION` secret doc-comment claim (T8) |
 | `src/admin-club/lib/email-limits.ts` | Create | quota headroom client, degrade-to-unknown |
 | `src/theme/announce-stamps.ts` | Create | `publishedAt` seam over the committed manifest |
 | `src/routes/admin/club/email/+page.server.ts` | Modify | serves templates plus the full log |
@@ -137,8 +141,9 @@ technology), and `email_log.segment` is null on all 750 live rows.
 
 **Outcome:** both of this pass's migrations, each a directory in this repo's shape
 (`forward.sql`, `rollback.sql`, `verify.sql`, `README.md`, matching
-`migrations/asc-club/0037_asset_request_unique/`), scratch-proven and applied to remote at
-close of the task. A flat `.sql` file is invisible to every applier in this repo, which
+`migrations/asc-club/0037_asset_request_unique/`), scratch-proven and applied to the
+local replica; the live apply is the conductor's, at close (see Overnight standing
+orders). A flat `.sql` file is invisible to every applier in this repo, which
 enumerates directories (`e2e/fixtures/bootstrap-club-db.mjs:85-91`, `scripts/verify/*.mjs`).
 `0038_club_email_optin` adds `members.club_email_opt_in` (integer, not null, default 0).
 `0039_email_log_sent_at` adds `CREATE INDEX idx_email_log_sent_at ON email_log(sent_at)`,
@@ -402,7 +407,9 @@ Task 2.
 
 **Files:** `src/routes/admin/club/email/[id]/+page.svelte`;
 `src/admin-club/lib/email-templates-store.ts`; `src/admin-club/lib/club-email.ts`
-(comments only); `src/tests/email-templates-store.test.ts`.
+(comments only); `src/admin-club/lib/discord.ts` (one doc comment: the nonexistent
+`EDUCATION` secret claim, per the Probe verdicts' substrate findings);
+`src/tests/email-templates-store.test.ts`.
 
 **Outcome:** the template editor at the register bar: dead classes replaced (`w-fit`,
 `text-warning`, `text-success`, `max-w-none`, `btn-warning`) and the preview released from
@@ -553,18 +560,22 @@ these without asking:
 - **Budget: run to completion.** The 2.5M ceiling is recorded against, not stopped at;
   the recap states actual spend and the overrun size.
 - **Execution:** tasks run via `pass-execute.js` with the args in
-  `docs/plans/2026-08-25-email-announce-dispatch.json`, minus any task whose commit
-  already sits on branch `email-announce` (check `git log`). Arm the runaway guard.
-  Sequential order is the dependency order.
+  `docs/plans/2026-08-25-email-announce-dispatch.json`, in the three stages its `_readme`
+  names (2–5, then 6–10, then 11), minus any task already committed (the `Pass-Task: N`
+  trailer; task 1 predates the trailer and is `6003a26`). Arm the runaway guard. A task
+  record returning anything but `accepted` HALTS progression: re-dispatch that task alone
+  with the reviewer's blocking findings before any dependent task, and record the halt in
+  the recap. Do not set a Workflow token budget (`pass-execute` silently defers tasks
+  under a low budget); the runaway guard is the transcript poller, not a budget cap.
 - **Taste calls** surfacing at reviews or the coherence read are the conductor's,
   each recorded in `decisions.md` or the recap. A member-facing product fork holds for
   Geoff; none is expected on this path.
 - **At close:** remote migrations 0038 and 0039 applied to live `asc-club` and verified;
   merge on green plus dev deploy under the standing pre-cutover authorization, including
   API-approving held bot-commit CI runs and the `update_snapshots` dispatch.
-- **Before/after:** the "before" frames come from a main worktree's local build (dev
-  will already be "after" once merged); the "after" from dev. Machine-local HTML, PII,
-  never published.
+- **Before/after:** the "before" frames build from commit `1238751` (the branch point)
+  in a linked worktree, captured BEFORE the merge bullet runs; the "after" from dev
+  post-deploy. Machine-local HTML, PII, never published.
 - **Not blocking, Geoff's whenever:** the optional read-only Email Sending token mint
   (headroom shows unknown until then, a supported state) and the Cloudflare quota
   Limit Increase form.
@@ -581,7 +592,8 @@ these without asking:
 - [ ] Review gate: svelte-reviewer, daisyui-a11y-reviewer, cloudflare-workers-reviewer,
       web-auth-security-reviewer (the portal toggle and new secret make this one mandatory)
 - [ ] Fresh-context coherence read at 390 and 1440 on the five screens
-- [ ] Visual baselines via `gh workflow run ci.yml -f update_snapshots=true`; read the log
+- [ ] Visual baselines via `gh workflow run ci.yml --ref email-announce -f update_snapshots=true`;
+      confirm the run's `head_branch` is `email-announce`, then read the log
 - [ ] PR, merge on green, deploy to dev (standing pre-cutover authorization)
 - [ ] Harvest findings doc (`docs/2026-08-25-email-announce-harvest-findings.md`); the
       StatusChip third-consumer consolidation evidence belongs here, along with the headroom

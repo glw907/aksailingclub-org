@@ -1,5 +1,5 @@
 {
- "_readme": "Workflow args for ~/.claude/workflows/pass-execute.js, persisted for cross-session resume. Before launching: check `git log --oneline` on branch email-announce and DELETE from tasks[] every task whose commit already landed (task 1 may already be there). Then Workflow({scriptPath:'/home/glw907/.claude/workflows/pass-execute.js', args:<this file, minus _readme>}). Arm the runaway guard per the workstation doctrine.",
+ "_readme": "Workflow args for ~/.claude/workflows/pass-execute.js, persisted for cross-session resume. Run in THREE STAGES as three Workflow invocations: tasks 2-5, then 6-10, then 11 — pass-execute does not halt on a failed task, so a stage boundary is the decision point; a task record returning anything but 'accepted' halts progression (re-dispatch that task alone with the reviewer's blocking findings before dependents). Before each stage, delete every task whose 'Pass-Task: N' commit trailer already appears in git log on branch email-announce (task 1 predates the trailer rule; its commit is 6003a26). Do NOT set a Workflow token budget (pass-execute silently defers tasks under a low budget). Arm the runaway guard per workstation doctrine. Launch shape per stage: Workflow({scriptPath:'/home/glw907/.claude/workflows/pass-execute.js', args:{...this file minus _readme, tasks: <the stage's tasks>}}).",
  "repo": "/home/glw907/Projects/aksailingclub-org",
  "gate": "npm run check && npm test",
  "implementer": "site-implementer",
@@ -20,7 +20,7 @@
     "src/tests/announcements.test.ts",
     "src/tests/compose-actions.test.ts"
    ],
-   "notes": "Work on the already-checked-out branch email-announce. Commit with a pathspec'd git add of exactly your files (never git add -A). fakeD1 asserts SQL text only: guards live in the statement. This task owns compose-actions.test.ts's fixture/label updates and announcements.test.ts; later tasks only append."
+   "notes": "Work on the already-checked-out branch email-announce. Commit with a pathspec'd git add of exactly your files (never git add -A). fakeD1 asserts SQL text only: guards live in the statement. This task owns compose-actions.test.ts's fixture/label updates and announcements.test.ts; later tasks only append. End your commit message with a 'Pass-Task: 1' trailer line (above the Co-Authored-By footer)."
   },
   {
    "id": "2",
@@ -32,17 +32,17 @@
     "src/app.d.ts",
     "worker-configuration.d.ts"
    ],
-   "notes": "Branch email-announce; pathspec'd commit. Do not mint or reference any real token value."
+   "notes": "Branch email-announce; pathspec'd commit. Do not mint or reference any real token value. End your commit message with a 'Pass-Task: 2' trailer line (above the Co-Authored-By footer)."
   },
   {
    "id": "3",
    "title": "Portal Notifications section (my-account/profile)",
-   "criteria": "Read the plan's Global constraints and Task 3 in full and implement exactly. The Notifications section on src/routes/(site)/my-account/profile: one row per channel with email the only row, toggle for the signed-in member's own club_email_opt_in via Task 1's setClubEmailOptIn, member id derived from the session and never the form, portalAction wrapper with CSRF intact, section markup shaped so a second channel row is additive. The one-sentence copy per the contract's opt-in surfaces paragraph. Acceptance: the forged-member-id action test, both toggle states rendering, plus the plan's remaining Task 3 list. Follow the CsrfField/use:enhance global constraint. Gate must pass.",
+   "criteria": "Read the plan's Global constraints and Task 3 in full and implement exactly. The Notifications section on src/routes/(site)/my-account/profile: one row per channel with email the only row, toggle for the signed-in member's own club_email_opt_in via Task 1's setClubEmailOptIn, member id derived from the session and never the form, portalAction wrapper with CSRF intact, section markup shaped so a second channel row is additive. The one-sentence copy per docs/2026-08-25-email-announce-design.md's 'The opt-in surfaces' paragraph. Acceptance: the forged-member-id action test, both toggle states rendering, plus the plan's remaining Task 3 list. Follow the CsrfField/use:enhance global constraint. Gate must pass.",
    "files": [
     "src/routes/(site)/my-account/profile/+page.svelte",
     "src/routes/(site)/my-account/profile/+page.server.ts"
    ],
-   "notes": "Branch email-announce; pathspec'd commit. Depends on Task 1 (already landed)."
+   "notes": "Branch email-announce; pathspec'd commit. Depends on Task 1 (already landed). End your commit message with a 'Pass-Task: 3' trailer line (above the Co-Authored-By footer)."
   },
   {
    "id": "4",
@@ -52,27 +52,29 @@
     "src/routes/admin/club/members/[id]/+page.svelte",
     "src/routes/admin/club/members/[id]/+page.server.ts"
    ],
-   "notes": "Branch email-announce; pathspec'd commit. No other change to the settled Members screen."
+   "notes": "Branch email-announce; pathspec'd commit. No other change to the settled Members screen. End your commit message with a 'Pass-Task: 4' trailer line (above the Co-Authored-By footer)."
   },
   {
    "id": "5",
    "title": "Send-log data: full-set reader, incident grouping fold",
-   "criteria": "Read the plan's Global constraints and Task 5 in full and implement exactly. Raise listEmailLog's cap to the 2,000-row guard bound ordered sent_at DESC, id DESC (this task owns club-email.ts's reader; leave its comments for Task 8); create src/admin-club/lib/email-log-groups.ts, the pure incident-fold over the ordered chronology BEFORE filtering and pagination — runs computed over failed rows alone, one error_detail, gaps under an hour; the load serves templates plus the full log. Unit tests per the plan's Task 5 acceptance: the live cluster's shape (471 rows one incident), singleton failure, two clusters split by more than an hour, interleaved sent rows neither joining nor splitting a run, filter invariance. Gate must pass.",
+   "criteria": "Read the plan's Global constraints and Task 5 in full and implement exactly. Raise listEmailLog's cap to the 2,000-row guard bound ordered sent_at DESC, id DESC (this task owns club-email.ts's reader; leave its comments for Task 8); create src/admin-club/lib/email-log-groups.ts, the pure incident-fold over the ordered chronology BEFORE filtering and pagination — runs computed over failed rows alone, one error_detail, gaps under an hour; the load serves templates plus the full log. Unit tests per the plan's Task 5 acceptance: the live cluster's shape (471 rows one incident), singleton failure, two clusters split by more than an hour, interleaved sent rows neither joining nor splitting a run, filter invariance. Gate must pass. Tests live in src/tests/email-log-groups.test.ts (new); also update src/tests/club-email.test.ts's listEmailLog fakeD1 fixture key to assert the NEW statement text (ORDER BY sent_at DESC, id DESC and the 2000 bound) — a stale substring key that still matches the old statement is asserting nothing.",
    "files": [
     "src/admin-club/lib/club-email.ts",
     "src/admin-club/lib/email-log-groups.ts",
-    "src/routes/admin/club/email/+page.server.ts"
+    "src/routes/admin/club/email/+page.server.ts",
+    "src/tests/email-log-groups.test.ts",
+    "src/tests/club-email.test.ts"
    ],
-   "notes": "Branch email-announce; pathspec'd commit. Task 8 will edit club-email.ts comments after this lands; keep your diff to the reader."
+   "notes": "Branch email-announce; pathspec'd commit. Task 8 will edit club-email.ts comments after this lands; keep your diff to the reader. End your commit message with a 'Pass-Task: 5' trailer line (above the Co-Authored-By footer)."
   },
   {
    "id": "6",
    "title": "Email index screen: switcher, filters, incident rows, chips",
-   "criteria": "Read the plan's Global constraints, Probe verdicts, and Task 6 in full and implement exactly. One OfficeList behind the aria-pressed Templates/Send log switcher; client-state filters (two labeled selects: outcome, template) and page number over the fully loaded set; the computeCountLine role=status line; zebra; EmptyState; error in subtitle plus role=alert banner, never the empty cell; chips through StatusChip inside the exact marker spans the Global constraints quote, with the per-page admin-chip-registers.css import; incident rows per probe verdicts 1 and 2 (NEUTRAL ground, warning chip carries tone; expanded = inset member rows + in-incident pager); toolkit Pagination. Acceptance per the plan's Task 6 list including scrollWidth === clientWidth at 390 with an incident row expanded and the dark-theme INK-difference chip check. Gate must pass.",
+   "criteria": "Read the plan's Global constraints, Probe verdicts, and Task 6 in full and implement exactly. One OfficeList behind the aria-pressed Templates/Send log switcher; client-state filters (two labeled selects: outcome, template) and page number over the fully loaded set; the computeCountLine role=status line; zebra; EmptyState; error in subtitle plus role=alert banner, never the empty cell; chips through StatusChip inside the exact marker spans the Global constraints quote, with the per-page admin-chip-registers.css import; incident rows per probe verdicts 1 and 2 (NEUTRAL ground, warning chip carries tone; expanded = inset member rows + in-incident pager); toolkit Pagination. Acceptance per the plan's Task 6 list including scrollWidth === clientWidth at 390 with an incident row expanded and the dark-theme INK-difference chip check. Gate must pass. The send-log row KEEPS its Segment column (null on every live row today; retained by plan — do not drop it as empty). The itemNoun subtitle names the active view's real count.",
    "files": [
     "src/routes/admin/club/email/+page.svelte"
    ],
-   "notes": "Branch email-announce; pathspec'd commit. The probe's rendered composition is at ~/.local/asc-data/probes/email-announce/probe-light.html — match its structure, not its probe-only chrome."
+   "notes": "Branch email-announce; pathspec'd commit. The probe's rendered composition is at ~/.local/asc-data/probes/email-announce/probe-light.html — match its structure, not its probe-only chrome. End your commit message with a 'Pass-Task: 6' trailer line (above the Co-Authored-By footer)."
   },
   {
    "id": "7",
@@ -84,12 +86,12 @@
     "src/tests/compose-component.test.ts",
     "src/tests/compose-actions.test.ts"
    ],
-   "notes": "Branch email-announce; pathspec'd commit. If the register sweep leaves the variable palette reading as assembled, file it as a fourth probe subject in your report rather than inventing an idiom."
+   "notes": "Branch email-announce; pathspec'd commit. If the register sweep leaves the variable palette reading as assembled, file it as a fourth probe subject in your report rather than inventing an idiom. End your commit message with a 'Pass-Task: 7' trailer line (above the Co-Authored-By footer)."
   },
   {
    "id": "8",
    "title": "Template edit sweep + eight-template guard gap + doc drift",
-   "criteria": "Read the plan's Global constraints and Task 8 in full and implement exactly. Template editor register sweep (dead classes; preview released from prose max-width; the banner-gating item is already done and struck; the Reset warning-intent styling item is dropped by ruling — behavior unchanged); KNOWN_TEMPLATE_VARIABLES closes the full eight-template gap with vocabularies read from the SEND SITES the plan cites (never from template bodies) and the stale withdrawal_notice key removed; club-email.ts comment drift fixed (the Empty-today claim; the segment vocabulary naming what writers actually emit) plus discord.ts's DiscordBindingEnv comment dropping the nonexistent EDUCATION secret claim (probe verdicts section, substrate findings). Acceptance tests per the plan's Task 8 list. Gate must pass.",
+   "criteria": "Read the plan's Global constraints and Task 8 in full and implement exactly. Template editor register sweep (dead classes; preview released from prose max-width; the banner-gating item is already done and struck; btn-warning is REMOVED with the other dead classes and the Reset button keeps plain btn chrome — what is dropped by ruling is inventing a warning button register (that question goes to the harvest); behavior unchanged); KNOWN_TEMPLATE_VARIABLES closes the full eight-template gap with vocabularies read from the SEND SITES the plan cites (never from template bodies) and the stale withdrawal_notice key removed; club-email.ts comment drift fixed (the Empty-today claim; the segment vocabulary naming what writers actually emit) plus discord.ts's DiscordBindingEnv comment dropping the nonexistent EDUCATION secret claim (the plan's 'Probe verdicts' section, substrate findings paragraph). Acceptance tests per the plan's Task 8 list. Gate must pass.",
    "files": [
     "src/routes/admin/club/email/[id]/+page.svelte",
     "src/admin-club/lib/email-templates-store.ts",
@@ -97,7 +99,7 @@
     "src/admin-club/lib/discord.ts",
     "src/tests/email-templates-store.test.ts"
    ],
-   "notes": "Branch email-announce; pathspec'd commit. club-email.ts: comments only (Task 5 owned the reader)."
+   "notes": "Branch email-announce; pathspec'd commit. club-email.ts: comments only (Task 5 owned the reader). End your commit message with a 'Pass-Task: 8' trailer line (above the Co-Authored-By footer)."
   },
   {
    "id": "9",
@@ -109,7 +111,7 @@
     "src/routes/admin/club/announce/+page.svelte",
     "src/tests/announce-list-order.test.ts"
    ],
-   "notes": "Branch email-announce; pathspec'd commit. announcements.test.ts belongs to Task 1; your tests go in the new file."
+   "notes": "Branch email-announce; pathspec'd commit. announcements.test.ts belongs to Task 1; your tests go in the new file. End your commit message with a 'Pass-Task: 9' trailer line (above the Co-Authored-By footer)."
   },
   {
    "id": "10",
@@ -119,20 +121,23 @@
     "src/routes/admin/club/announce/[id]/+page.svelte",
     "src/routes/admin/club/announce/[id]/+page.server.ts"
    ],
-   "notes": "Branch email-announce; pathspec'd commit. The probe page's Probe C section is the ratified composition; match its structure, not its probe-only chrome."
+   "notes": "Branch email-announce; pathspec'd commit. The probe page's Probe C section is the ratified composition; match its structure, not its probe-only chrome. End your commit message with a 'Pass-Task: 10' trailer line (above the Co-Authored-By footer)."
   },
   {
    "id": "11",
    "title": "e2e + visual specs + email seed",
-   "criteria": "Read the plan's Global constraints and Task 11 in full and implement exactly. Create e2e/fixtures/email-seed.sql per the plan (multi-page incident cluster, sent rows, singleton failure, one announcements row), applied last in bootstrap-club-db.mjs after assets-seed.sql; the functional e2e per the plan's list (index switcher with aria-pressed, incident row expanding, outcome filter narrowing, compose review count + confirm acknowledgment, announce form's two previews, the portal Notifications toggle round-trip via e2e/helpers/member-session.ts — never admin-session for the portal); the visual specs for the five admin screens and the portal section at the family viewports including the announce form's stacked-field register. Local verification runs npm run test:e2e -- --ignore-snapshots plus the git status --porcelain e2e/ cleanliness check; NEVER a bare local test:e2e run and NEVER --update-snapshots (new PNGs come only from the CI dispatch at close). Gate must pass.",
+   "criteria": "Read the plan's Global constraints and Task 11 in full and implement exactly. Create e2e/fixtures/email-seed.sql per the plan (multi-page incident cluster, sent rows, singleton failure, one announcements row), applied last in bootstrap-club-db.mjs after assets-seed.sql; the functional e2e per the plan's list (index switcher with aria-pressed, incident row expanding, outcome filter narrowing, compose review count + confirm acknowledgment, announce form's two previews, the portal Notifications toggle round-trip via e2e/helpers/member-session.ts — never admin-session for the portal); the visual specs for the five admin screens and the portal section at the family viewports including the announce form's stacked-field register. Local verification runs npm run test:e2e -- --ignore-snapshots plus the git status --porcelain e2e/ cleanliness check; NEVER a bare local test:e2e run and NEVER --update-snapshots (new PNGs come only from the CI dispatch at close). Gate must pass. Functional and visual specs are SEPARATE files per the repo's *-visual.spec.ts convention (the three visual spec files in this task's file list). Also amend assets-seed.sql's header comment and bootstrap-club-db.mjs's 'MUST run last' comment so the ordering constraint they state stays true once email-seed.sql runs after them.",
    "files": [
     "e2e/fixtures/email-seed.sql",
     "e2e/fixtures/bootstrap-club-db.mjs",
     "e2e/email-admin.spec.ts",
     "e2e/announce-admin.spec.ts",
-    "e2e/portal-notifications.spec.ts"
+    "e2e/portal-notifications.spec.ts",
+    "e2e/email-admin-visual.spec.ts",
+    "e2e/announce-admin-visual.spec.ts",
+    "e2e/portal-notifications-visual.spec.ts"
    ],
-   "notes": "Branch email-announce; pathspec'd commit. Playwright mints missing snapshots on any un-flagged run — the --ignore-snapshots flag is load-bearing, and committing a locally minted PNG breaks CI."
+   "notes": "Branch email-announce; pathspec'd commit. Playwright mints missing snapshots on any un-flagged run — the --ignore-snapshots flag is load-bearing, and committing a locally minted PNG breaks CI. End your commit message with a 'Pass-Task: 11' trailer line (above the Co-Authored-By footer)."
   }
  ]
 }
