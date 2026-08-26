@@ -24,6 +24,25 @@ carrying its own enable control and its own preview). Geoff verdicts async; verd
 appended to this plan as a "Probe verdicts" section before the gated tasks dispatch.
 T1–T5, T7, and T8 do not wait on the probe; T11 waits on it transitively through T6.
 
+## Probe verdicts (Geoff, 2026-08-25: "These look great. Go forward.")
+
+Blanket ratification of the probe's primary compositions as rendered (probe pages at
+`~/.local/asc-data/probes/email-announce/`, both themes, read at 1440 and 390):
+
+1. The incident row sits on the NEUTRAL row ground (probe A): the warning chip alone
+   carries the tone. The A′ tinted-ground alternative is not taken.
+2. The expanded state as probed: inset member rows with their own Failed chips, the
+   in-incident pager, sent rows continuing in chronology below.
+3. The announced-state chip pair with the detail as muted text beside the chip.
+4. The announce form's stacked parallel channel blocks, each carrying its own enable
+   control, its fields, and its own preview; SMS joins as a third block later.
+5. The subject field lives inside the Email block.
+
+Two substrate findings recorded for Task 8 and the harvest: `discord.ts`'s
+`DiscordBindingEnv` doc comment claims an `EDUCATION` webhook secret that does not exist
+(verified configured channels 2026-08-25: general, site, fleet, racing, harbor,
+technology), and `email_log.segment` is null on all 750 live rows.
+
 ## Global constraints
 
 - Chip recipes ride `src/theme/admin-chip-registers.css` (the assets pass's stylesheet) via
