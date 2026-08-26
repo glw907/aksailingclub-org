@@ -40,13 +40,13 @@ test.describe('the email index screen', () => {
     // by default. The log's own read orders `sent_at DESC`, so the incident's own member rows run
     // newest first: page 1 (INCIDENT_PAGE_SIZE 50) covers inc-55 (the latest) down to inc-6, and
     // page 2 covers the oldest five, inc-5 down to inc-1.
-    const showButton = page.getByRole('button', { name: 'Show 55 sends ▸' });
+    const showButton = page.getByRole('button', { name: 'Show 55 sends' });
     await expect(showButton).toBeVisible();
     await expect(page.getByText('e2e-eml-inc-55@aksailingclub.org')).not.toBeVisible();
 
     await showButton.click();
 
-    await expect(page.getByRole('button', { name: 'Hide sends ▾' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Hide 55 sends' })).toBeVisible();
     await expect(page.getByText('e2e-eml-inc-55@aksailingclub.org')).toBeVisible();
     await expect(page.getByText('1–50 of 55 in this incident')).toBeVisible();
     await expect(page.getByText('e2e-eml-inc-1@aksailingclub.org')).not.toBeVisible();
@@ -65,14 +65,14 @@ test.describe('the email index screen', () => {
 
     // Before filtering: both a sent row and the two kinds of failure are on the page.
     await expect(page.getByText('e2e-eml-sent-1@aksailingclub.org')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Show 55 sends ▸' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Show 55 sends' })).toBeVisible();
     await expect(page.getByText('e2e-eml-single-1@aksailingclub.org')).toBeVisible();
 
     await page.getByLabel('Outcome').selectOption('failed');
 
     // The incident row and the singleton failure both survive a `failed` filter (an incident is
     // always a run of failed rows); every sent row disappears.
-    await expect(page.getByRole('button', { name: 'Show 55 sends ▸' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Show 55 sends' })).toBeVisible();
     await expect(page.getByText('e2e-eml-single-1@aksailingclub.org')).toBeVisible();
     await expect(page.getByText('e2e-eml-sent-1@aksailingclub.org')).not.toBeVisible();
     await expect(page.getByText('e2e-eml-sent-4@aksailingclub.org')).not.toBeVisible();

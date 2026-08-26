@@ -27,7 +27,7 @@ for (const width of WIDTHS) {
       await page.emulateMedia({ colorScheme });
       await page.goto('/admin/club/email');
       await page.getByRole('button', { name: 'Send log' }).click();
-      await page.getByRole('button', { name: 'Show 55 sends ▸' }).click();
+      await page.getByRole('button', { name: 'Show 55 sends' }).click();
       // The log's own read orders `sent_at DESC`, so page 1 of the in-incident pager shows the
       // newest member row, inc-55, not inc-1 (e2e/email-admin.spec.ts's own comment on the order).
       await expect(page.getByText('e2e-eml-inc-55@aksailingclub.org')).toBeVisible();
