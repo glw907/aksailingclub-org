@@ -164,8 +164,9 @@ d1File(path.join(repoRoot, 'e2e/fixtures/waivers-seed.sql'));
 // delete-and-reinsert of those same rows (that file's own header explains why capacity always
 // resets to NULL there).
 d1File(path.join(repoRoot, 'e2e/fixtures/assets-seed.sql'));
-// The Email + Announce admin e2e/visual fixture (Task 11): `email_log` and `announcements` are
-// untouched by every other seed file in this pipeline, so this file's own position relative to
-// them never matters -- it runs last simply because it is the newest addition, matching this
-// pipeline's own convention of appending rather than inserting.
+// The Email + Announce admin e2e/visual fixture (Task 11): MUST run after signup-seed.sql,
+// whose own blanket (no-WHERE) `DELETE FROM email_log;` would wipe this file's rows if it ran
+// first (email-seed.sql's own header explains the full ordering). `announcements` alone is
+// untouched by every other fixture in this pipeline. It runs last simply because it is the
+// newest addition, matching this pipeline's own convention of appending rather than inserting.
 d1File(path.join(repoRoot, 'e2e/fixtures/email-seed.sql'));

@@ -4,11 +4,12 @@
 -- suite. This file supplies both.
 --
 -- Wired into e2e/fixtures/bootstrap-club-db.mjs's own seed list, applied LAST, after
--- assets-seed.sql. Ordering relative to every other fixture in that pipeline does not matter:
--- this file touches only `email_log` and `announcements`, two tables no other seed file inserts
--- into, deletes from, or reads a capacity/foreign-key relationship against. It still runs last by
--- convention (matching this pipeline's own "newest fixture goes at the end" practice), not because
--- an earlier slot would break anything.
+-- assets-seed.sql. MUST run after signup-seed.sql: that file's own `DELETE FROM email_log;`
+-- has no WHERE clause, so it would wipe every row this file inserts if it ran later. Position
+-- relative to portal-seed.sql, waivers-seed.sql, and assets-seed.sql does not matter --
+-- `announcements` is untouched by every other fixture, and none of those three files touch
+-- `email_log`. It runs last by convention (matching this pipeline's own "newest fixture goes
+-- at the end" practice), not because an earlier slot after signup-seed.sql would break anything.
 --
 -- Every id is prefixed `eseed-`, distinct from every other fixture's own prefix (`portal-`,
 -- `waiver-`, `madm-`, `signup-`, `atrial-`), so the deletes below only ever touch this file's own

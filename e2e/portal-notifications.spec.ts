@@ -27,8 +27,9 @@ test('the Notifications email toggle round-trips through the real club_email_opt
   await toggle.check();
   await notificationsForm.getByRole('button', { name: 'Update' }).click();
 
-  // No `use:enhance` on this screen (this route's own header: a full page load follows every
-  // POST here), so the reload re-renders the checkbox straight from the just-written column.
+  // This form submits through `use:enhance` with `update({ reset: false })`, so the assertion
+  // below reads the checkbox re-rendered from the `invalidateAll`-refreshed load data, not from
+  // a full page load.
   const reloadedToggle = page.locator('form[action="?/updateNotifications"]').getByRole('checkbox', { name: 'Receive club email' });
   await expect(reloadedToggle).toBeChecked();
   const afterOn = queryClubDb<{ club_email_opt_in: number }>(
