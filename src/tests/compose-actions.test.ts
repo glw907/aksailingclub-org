@@ -60,13 +60,23 @@ function postEvent(
   } as unknown as ActionEvent;
 }
 
-// A current household with one member on file, so `resolveSegment('current')` has a real
-// recipient to find (the review/send tests below).
+// A current household with its own default recipient on file, so `resolveSegment('current')` has a
+// real recipient to find (the review/send tests below). Keyed on `is_default_recipient`, the
+// audience statement `segments.ts` runs for a membership segment since the Email + Announce pass;
+// the pre-pass `'FROM members WHERE archived_at'` key named `membersInHouseholds`, which this path
+// no longer runs and which would silently answer `[]` if it were left behind.
 const asAdmin = {
   allResults: {
-    'FROM households h': [{ household_id: 'hh-larsen', paid_at: new Date().toISOString().slice(0, 10), primary_member_id: null }],
-    'FROM members WHERE archived_at': [
-      { id: 'mem-erik', name: 'Erik Larsen', email: 'erik.larsen@example.com', household_id: 'hh-larsen' },
+    'FROM households h': [{ household_id: 'hh-larsen', paid_at: new Date().toISOString().slice(0, 10), primary_member_id: 'mem-erik' }],
+    is_default_recipient: [
+      {
+        id: 'mem-erik',
+        name: 'Erik Larsen',
+        email: 'erik.larsen@example.com',
+        phone: null,
+        household_id: 'hh-larsen',
+        is_default_recipient: 1,
+      },
     ],
   },
 };
@@ -79,6 +89,9 @@ describe('/admin/club/email/compose load', () => {
           {
             id: 'blast-1',
             segment_key: 'current',
+            // A stored snapshot from a past send, not a label this module mints: `email_blasts`
+            // records what the segment was called on the day it went out, so a pre-audience-model
+            // row keeps reading "Current members" forever. Deliberately not renamed.
             segment_label: 'Current members',
             subject: 'Fleet update',
             body: 'Hi {{person_name}}',
@@ -202,7 +215,7 @@ describe('/admin/club/email/compose review action', () => {
     const result = await actions.review(
       postEvent(admin, { segmentKey: 'current', subject: 'Fleet update', body: 'Hi {{person_name}}' }, { db }),
     );
-    expect(result).toMatchObject({ kind: 'review', segmentKey: 'current', segmentLabel: 'Current members', recipientCount: 1 });
+    expect(result).toMatchObject({ kind: 'review', segmentKey: 'current', segmentLabel: 'Current households', recipientCount: 1 });
     expect((result as { sample: unknown[] }).sample).toEqual([
       { email: 'erik.larsen@example.com', personName: 'Erik Larsen', memberId: 'mem-erik' },
     ]);
@@ -258,7 +271,7 @@ describe('/admin/club/email/compose send action', () => {
         { db, env: { EMAIL: { send } } },
       ),
     );
-    expect(result).toMatchObject({ kind: 'sent', segmentLabel: 'Current members', recipientCount: 1, sentCount: 1, failedCount: 0 });
+    expect(result).toMatchObject({ kind: 'sent', segmentLabel: 'Current households', recipientCount: 1, sentCount: 1, failedCount: 0 });
     const blastInsert = calls.find((c) => c.sql.startsWith('INSERT INTO email_blasts'));
     expect(blastInsert?.args[5]).toBe(1); // recipient_count: the fresh resolve, never the posted 999
   });

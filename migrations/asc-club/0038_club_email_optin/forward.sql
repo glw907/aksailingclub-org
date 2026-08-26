@@ -1,0 +1,22 @@
+-- asc-club migration 0038: per-member club-email opt-in (Email + Announce pass, Task 1).
+--
+-- The audience model for membership-wide sends changes with this pass
+-- (docs/2026-08-25-email-announce-design.md, ruling 2): a whole-club email reaches one default
+-- recipient per qualifying household -- its `primary_member_id` row when that member is
+-- non-archived and carries an email, otherwise the household's earliest-created non-archived
+-- member with an email -- rather than every member of it. This column is how any other member of
+-- a household says "send it to me too": self-serve in the member portal's own Notifications
+-- section, and admin-set on the member's row in the household desk.
+--
+-- ONE column per channel, not a preferences table or a JSON blob. There are two known channels
+-- (email now, SMS in the `club-notifications` initiative) and the SMS pass adds `sms` as its own
+-- later additive migration, which keeps every audience query a plain column predicate and keeps
+-- the column's meaning readable in a `SELECT *`. A generic table for two known keys would be
+-- speculative surgery (the contract's own "Groundwork for the notifications pass" section).
+--
+-- INTEGER NOT NULL DEFAULT 0, matching this schema's own boolean convention (`classes.visible`,
+-- `classes.drop_in`, `class_enrollments.fee_paid`): SQLite has no boolean type, and every
+-- existing flag in asc-club is a 0/1 integer. Default 0 means the migration changes nobody's
+-- reach on the day it lands: every existing member is opted out, and the default-recipient rule
+-- alone decides who a membership-wide send reaches until members and admins start setting it.
+ALTER TABLE members ADD COLUMN club_email_opt_in INTEGER NOT NULL DEFAULT 0;
