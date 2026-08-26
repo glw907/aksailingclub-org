@@ -141,7 +141,8 @@ each inside its own marker span.
   });
 
   // The count line names real send attempts (an incident counts as its own filtered membership,
-  // not as one unit), matching what an admin actually means by "N entries".
+  // not as one unit) -- the "send"/"sends" noun below, not "N entries" (item 6 moved the count
+  // line to that vocabulary).
   const filteredEntryCount = $derived(
     filteredUnits.reduce((sum, unit) => sum + (unit.kind === 'incident' ? unit.count : 1), 0),
   );
@@ -166,8 +167,10 @@ each inside its own marker span.
   // resetting it back to 1 (which renders one empty frame before the reset commits), this derived
   // clamp is what slicing and `Pagination` actually read, so an out-of-range `page` never shows an
   // empty page even for the one frame between the filter change and a reset (item 11, the
-  // 2026-08-26 close round). `incidentPage` needs no equivalent: it already resets to 1 in
-  // `toggleIncident` whenever a new incident opens, the only place it can go stale.
+  // 2026-08-26 close round). `incidentPage` carries the same risk but from a narrower cause:
+  // `toggleIncident` only resets it to 1 when a DIFFERENT incident opens, so a template filter
+  // narrowing the CURRENTLY open incident's row count (with no reopen in between) can strand it
+  // past the new range -- fixed the same way, with the `safeIncidentPage` clamp below.
   const safePage = $derived(Math.min(page, totalPages));
   const pageStart = $derived((safePage - 1) * PAGE_SIZE);
   const pagedUnits = $derived(filteredUnits.slice(pageStart, pageStart + PAGE_SIZE));
@@ -302,9 +305,10 @@ each inside its own marker span.
                   </td>
                 </tr>
                 {#if isOpen}
-                  {@const incidentPageStart = (incidentPage - 1) * INCIDENT_PAGE_SIZE}
-                  {@const incidentPageRows = unit.rows.slice(incidentPageStart, incidentPageStart + INCIDENT_PAGE_SIZE)}
                   {@const incidentTotalPages = Math.max(1, Math.ceil(unit.rows.length / INCIDENT_PAGE_SIZE))}
+                  {@const safeIncidentPage = Math.min(incidentPage, incidentTotalPages)}
+                  {@const incidentPageStart = (safeIncidentPage - 1) * INCIDENT_PAGE_SIZE}
+                  {@const incidentPageRows = unit.rows.slice(incidentPageStart, incidentPageStart + INCIDENT_PAGE_SIZE)}
                   {#each incidentPageRows as row (row.id)}
                     <tr class="email-member-row">
                       <td class="type-body">{row.recipient}</td>
@@ -326,20 +330,20 @@ each inside its own marker span.
                         </span>
                         <button
                           type="button"
-                          class="btn btn-ghost btn-xs {incidentPage === 1 ? 'btn-disabled' : ''}"
-                          aria-disabled={incidentPage === 1}
+                          class="btn btn-ghost btn-xs {safeIncidentPage === 1 ? 'btn-disabled' : ''}"
+                          aria-disabled={safeIncidentPage === 1}
                           onclick={() => {
-                            if (incidentPage > 1) incidentPage -= 1;
+                            if (safeIncidentPage > 1) incidentPage = safeIncidentPage - 1;
                           }}
                         >
                           &lsaquo; Prev
                         </button>
                         <button
                           type="button"
-                          class="btn btn-ghost btn-xs {incidentPage === incidentTotalPages ? 'btn-disabled' : ''}"
-                          aria-disabled={incidentPage === incidentTotalPages}
+                          class="btn btn-ghost btn-xs {safeIncidentPage === incidentTotalPages ? 'btn-disabled' : ''}"
+                          aria-disabled={safeIncidentPage === incidentTotalPages}
                           onclick={() => {
-                            if (incidentPage < incidentTotalPages) incidentPage += 1;
+                            if (safeIncidentPage < incidentTotalPages) incidentPage = safeIncidentPage + 1;
                           }}
                         >
                           Next &rsaquo;
