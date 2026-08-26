@@ -51,13 +51,9 @@ have no visual-baseline coverage. Probe infra for future Assets work:
 `~/.local/asc-data/probes/assets-register/` (bootstrap, then the seed; admin session recipe
 `e2e/helpers/admin-session.ts`).
 
-**events-redesign (merged and deployed to dev, 2026-08-22).** PRs #6 and #7 are on dev;
-contract `docs/2026-08-22-events-redesign-design.md`, ledger entry in `docs/HISTORY.md`.
-Geoff's steps: the before/after (`/events` at 1440 and 390; Register shows only on a real open
-class) and the owed fresh-context coherence read. Harvest:
-`docs/2026-08-22-events-redesign-harvest-findings.md`.
-
-**Geoff's review queue (full entries in docs/status-archive.md).** Before/afters on dev: the
+**Geoff's review queue (full entries in docs/status-archive.md).** From events-redesign
+(on dev; ledger in `docs/HISTORY.md`): the `/events` before/after at 1440 and 390 and the
+owed fresh-context coherence read. Before/afters on dev: the
 rebuilt Assets screens (gates the apex), Classes, the pass-B sidebar walkthrough per role, the
 waivers signing moment, member directory and committees, the portal redesign against mock D,
 the retention step on /my-account/renew, the fragments /members page. Also: the attorney packet
