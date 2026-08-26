@@ -108,12 +108,19 @@ function toLogRow(row: EmailLogRawRow): EmailLogRow {
   };
 }
 
+/** A guard bound, well above the 750 live rows, on `listEmailLog`'s read: the admin screen's
+ *  load reads the whole log at this bound rather than a page of it (grouping, filtering, and
+ *  pagination all happen client side over the loaded set). */
+export const EMAIL_LOG_GUARD_LIMIT = 2000;
+
 /** The most recent sends, newest first: the Email screen's own send-log list. Empty today (no
  *  consumer has sent through this module in production yet); the offer notification wired this
  *  pass is its first real writer. */
-export async function listEmailLog(db: D1Database, limit = 100): Promise<EmailLogRow[]> {
+export async function listEmailLog(db: D1Database, limit = EMAIL_LOG_GUARD_LIMIT): Promise<EmailLogRow[]> {
   const { results } = await db
-    .prepare('SELECT id, template_id, segment, recipient, subject, status, error_detail, sent_at FROM email_log ORDER BY sent_at DESC LIMIT ?1')
+    .prepare(
+      'SELECT id, template_id, segment, recipient, subject, status, error_detail, sent_at FROM email_log ORDER BY sent_at DESC, id DESC LIMIT ?1',
+    )
     .bind(limit)
     .all<EmailLogRawRow>();
   return results.map(toLogRow);

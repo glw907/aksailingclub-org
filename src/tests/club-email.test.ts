@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { getEmailTemplate, listEmailLog, listEmailTemplates, renderTemplateWithVariables, sendClubEmail } from '../admin-club/lib/club-email';
+import { EMAIL_LOG_GUARD_LIMIT, getEmailTemplate, listEmailLog, listEmailTemplates, renderTemplateWithVariables, sendClubEmail } from '../admin-club/lib/club-email';
 import { fakeD1 } from './_fake-d1';
 
 const CLASS_OFFER_TEMPLATE = {
@@ -34,10 +34,10 @@ describe('listEmailTemplates / getEmailTemplate', () => {
 });
 
 describe('listEmailLog', () => {
-  it('reads the send log, newest first, camelCased', async () => {
-    const { db } = fakeD1({
+  it('reads the send log ordered sent_at DESC, id DESC, camelCased, at the 2,000-row guard bound', async () => {
+    const { db, calls } = fakeD1({
       allResults: {
-        'FROM email_log': [
+        'FROM email_log ORDER BY sent_at DESC, id DESC': [
           {
             id: 'log-1',
             template_id: 'class_offer',
@@ -64,6 +64,9 @@ describe('listEmailLog', () => {
         sentAt: '2026-07-07 12:00:00',
       },
     ]);
+    const read = calls.find((c) => c.sql.includes('FROM email_log'));
+    expect(read?.args[0]).toBe(EMAIL_LOG_GUARD_LIMIT);
+    expect(EMAIL_LOG_GUARD_LIMIT).toBe(2000);
   });
 });
 
