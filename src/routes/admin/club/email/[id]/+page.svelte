@@ -166,11 +166,9 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
 {/if}
 
 <style>
-  /* `.prose`'s own `max-width: var(--container-measure)` (prose.css, `@layer components`)
-     narrows the sample-preview panel to reading width; Tailwind's `max-w-none` utility never
-     compiles into the built admin stylesheet (`no-uncompiled-class`), so it never actually
-     released the panel. This scoped rule is unlayered, which beats a `@layer components` rule
-     regardless of specificity (the site's own `@layer` doctrine), so it reliably does. */
+  /* `max-w-none` never compiles into `cairn-admin.css` (no shipped admin component references
+     it), so this scoped rule is the defensive max-width reset in its place (the sibling
+     Compose screen's `.compose-preview` rule takes the same approach). */
   .template-preview-body {
     max-width: none;
   }

@@ -15,12 +15,16 @@ import { getEmailTemplate, type EmailTemplateRow } from './club-email';
  * the gap for: the three `class-reminders.ts` touches (`class_week_out`/`class_day_before`/
  * `class_followup`, all three sharing one five-var set), `class-refund-window-notice.ts`
  * (`class_refund_window`), `class-welcome.ts` (`class_welcome`), and `stripe-reconcile.ts`
- * (`stripe_payment_receipt`, `join_welcome`, `board_join_notice`). Each vocabulary is read from
- * its sender's own `vars` object at the call site, never scanned off a stored body. Kept as one
- * small map, not derived live from a template's current body, because a body's own `{{token}}`
- * set is what the ADMIN typed, exactly the thing the unknown-variable guard below must check
- * AGAINST, not read off of. `withdrawal_notice` is not listed: it was a map key with no
- * `email_templates` row behind it, removed by Task 8.
+ * (`stripe_payment_receipt`, `join_welcome`, `board_join_notice`). Each of the eight vocabularies
+ * above is read from its sender's own `vars` object at the call site, never scanned off a stored
+ * body. `renewal_reminder` is the one exception: its entry tracks what migration 0015's shipped
+ * body actually uses (`{{household_name}}` is missing because that body never references it),
+ * not the full `vars` object `renewal-reminders.ts` passes to `sendClubEmail` -- deliberately
+ * outside Task 8's eight-template scope. Kept as one small map, not derived live from a
+ * template's current body, because a body's own `{{token}}` set is what the ADMIN typed, exactly
+ * the thing the unknown-variable guard below must check AGAINST, not read off of.
+ * `withdrawal_notice` is not listed: it was a map key with no `email_templates` row behind it,
+ * removed by Task 8.
  */
 export const KNOWN_TEMPLATE_VARIABLES: Readonly<Record<string, readonly string[]>> = {
   asset_approval: ['person_name', 'item_display_name', 'fee_section', 'description_section', 'committee_email'],
