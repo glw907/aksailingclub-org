@@ -24,6 +24,11 @@ function readManifest(result: Record<string, unknown>): Manifest {
 
 const manifest = readManifest(globResult);
 
+/** The glob's own entry count, exported only to pin the manifest seam in a test: an
+ *  independent JSON import of the same committed file can assert equality against this,
+ *  which a silently-empty glob (a match miss degrading to `{ entries: [] }`) would fail. */
+export const manifestEntryCount: number = manifest.entries.length;
+
 /** Every post's first-publish stamp, keyed by post id. Entries outside the `posts` concept, and
  *  posts published before the field existed (or never published at all), are simply absent; the
  *  announce list's ordering falls back to a post's own `date` for those. */

@@ -4,7 +4,7 @@
 // or the `announcements` table this file's sibling covers.
 import { describe, expect, it } from 'vitest';
 import { render } from 'svelte/server';
-import { orderByPublished, postPublishedAt } from '$theme/announce-stamps';
+import { manifestEntryCount, orderByPublished, postPublishedAt } from '$theme/announce-stamps';
 import type { AnnounceListRow } from '../routes/admin/club/announce/+page.server';
 import Page from '../routes/admin/club/announce/+page.svelte';
 import type { PageData } from '../routes/admin/club/announce/$types';
@@ -98,20 +98,25 @@ describe('/admin/club/announce list: the visible count line', () => {
 });
 
 describe('announce-stamps.ts: the manifest seam (close round item 29)', () => {
-  it('postPublishedAt is built from the real committed manifest, not a silently-empty glob', () => {
-    // `readManifest`'s own fallback for a glob match miss is `{ version: 1, entries: [] }`
-    // (announce-stamps.ts's own header comment): reading the SAME file a second, independent
-    // way (a plain JSON import, never through `import.meta.glob`) proves the committed manifest
-    // this module is supposed to read is real and non-trivial, not the empty-glob degenerate.
-    const rawPosts = (manifestRaw as { entries: Array<{ id: string; concept: string; publishedAt?: string }> }).entries.filter(
-      (entry) => entry.concept === 'posts',
-    );
-    expect(rawPosts.length).toBeGreaterThan(0);
+  const manifestEntries = (manifestRaw as { entries: Array<{ id: string; concept: string; publishedAt?: string }> }).entries;
 
-    // `postPublishedAt` (the module's own glob-built map) must exactly match the same filter
-    // run against this independently-read copy of the file: an empty-glob regression would
-    // leave the module's map permanently empty regardless of what the real manifest says, which
-    // this equality check catches the moment any post's `publishedAt` actually differs from {}.
+  it('manifestEntryCount matches an independent JSON import of the same committed manifest', () => {
+    // `readManifest`'s own fallback for a glob match miss is `{ version: 1, entries: [] }`
+    // (announce-stamps.ts's own header comment): a plain JSON import (never through
+    // `import.meta.glob`) reads the SAME file a second, independent way. The committed manifest
+    // has 91 entries today, none carrying `publishedAt` yet (cairn only stamps it on publish),
+    // so this equality is the assertion that actually exercises the module's glob seam -- a
+    // silently-empty glob would leave `manifestEntryCount` at 0 against a real 91.
+    expect(manifestEntryCount).toBe(manifestEntries.length);
+    expect(manifestEntryCount).toBeGreaterThan(0);
+  });
+
+  it('postPublishedAt exactly matches the same filter run against the independent copy', () => {
+    // Starts biting the moment any post's `publishedAt` actually differs from {}: today both
+    // sides are empty maps (no post has been published since migration 0038 added the column),
+    // so this equality alone cannot detect an empty-glob regression -- `manifestEntryCount`
+    // above is what pins that.
+    const rawPosts = manifestEntries.filter((entry) => entry.concept === 'posts');
     const expected = new Map(rawPosts.filter((entry) => Boolean(entry.publishedAt)).map((entry) => [entry.id, entry.publishedAt as string]));
     expect(postPublishedAt).toEqual(expected);
   });

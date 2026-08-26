@@ -14,7 +14,7 @@ test('the Notifications email toggle round-trips through the real club_email_opt
   await page.goto('/my-account/profile');
 
   const notificationsForm = page.locator('form[action="?/updateNotifications"]');
-  const toggle = notificationsForm.getByRole('checkbox', { name: 'Receive club email' });
+  const toggle = notificationsForm.getByRole('checkbox', { name: 'Email', exact: true });
 
   // Off by default: migration 0038's own default is 0, and this fixture member's row never sets
   // it explicitly.
@@ -30,7 +30,7 @@ test('the Notifications email toggle round-trips through the real club_email_opt
   // This form submits through `use:enhance` with `update({ reset: false })`, so the assertion
   // below reads the checkbox re-rendered from the `invalidateAll`-refreshed load data, not from
   // a full page load.
-  const reloadedToggle = page.locator('form[action="?/updateNotifications"]').getByRole('checkbox', { name: 'Receive club email' });
+  const reloadedToggle = page.locator('form[action="?/updateNotifications"]').getByRole('checkbox', { name: 'Email', exact: true });
   await expect(reloadedToggle).toBeChecked();
   const afterOn = queryClubDb<{ club_email_opt_in: number }>(
     `SELECT club_email_opt_in FROM members WHERE id = 'portal-mem-primary'`,
@@ -40,7 +40,7 @@ test('the Notifications email toggle round-trips through the real club_email_opt
   await reloadedToggle.uncheck();
   await page.locator('form[action="?/updateNotifications"]').getByRole('button', { name: 'Update' }).click();
 
-  const finalToggle = page.locator('form[action="?/updateNotifications"]').getByRole('checkbox', { name: 'Receive club email' });
+  const finalToggle = page.locator('form[action="?/updateNotifications"]').getByRole('checkbox', { name: 'Email', exact: true });
   await expect(finalToggle).not.toBeChecked();
   const afterOff = queryClubDb<{ club_email_opt_in: number }>(
     `SELECT club_email_opt_in FROM members WHERE id = 'portal-mem-primary'`,

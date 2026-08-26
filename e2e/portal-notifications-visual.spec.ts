@@ -21,7 +21,9 @@ for (const width of WIDTHS) {
       await page.emulateMedia({ colorScheme });
       await page.goto('/my-account/profile');
       await expect(page.getByRole('heading', { level: 2, name: 'Notifications' })).toBeVisible();
-      await expect(page.getByRole('checkbox', { name: 'Receive club email' })).not.toBeChecked();
+      await expect(
+        page.locator('form[action="?/updateNotifications"]').getByRole('checkbox', { name: 'Email', exact: true }),
+      ).not.toBeChecked();
       await expect(page).toHaveScreenshot(`profile-notifications-${colorScheme}-${width}.png`, { fullPage: true });
     });
   }
