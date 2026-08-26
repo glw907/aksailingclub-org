@@ -12,6 +12,7 @@
 //   could join or lapse between the review click and the send click, and the recorded
 //   `email_blasts` row must reflect who the segment reaches right now, not a stale snapshot.
 import { fail } from '@sveltejs/kit';
+import { itemNoun } from '@glw907/cairn-cms/admin-toolkit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
 import { resolveClubDb } from '$admin-club/lib/club-db';
@@ -24,6 +25,7 @@ import {
   type SegmentRecipient,
 } from '$admin-club/lib/segments';
 import { listBlasts, sendBlastTest, sendSegmentBlast, type BulkEmailEnv, type EmailBlastRow } from '$admin-club/lib/bulk-email';
+import { getEmailQuotaHeadroom } from '$admin-club/lib/email-limits';
 
 /** How many resolved recipients the review step shows by name, enough to spot-check "did this
  *  segment resolve to who I expect" without dumping a full roster into the page. */
@@ -54,6 +56,11 @@ function resolvePresetSegmentKey(param: string | null, options: readonly Segment
 export const load: PageServerLoad = async (event) => {
   const editor = requireSession(event);
   const db = resolveClubDb(event.platform?.env);
+  // Advisory only (Task 2): independent of `CLUB_DB`, so it is read once here regardless of
+  // which return branch below fires, and degrades to `null` -- "headroom unknown" -- on any
+  // failure (a missing account id, a missing token secret, a non-200, a timeout, a thrown
+  // fetch), never blocking the load.
+  const headroom = await getEmailQuotaHeadroom(event.platform?.env ?? {});
   if (!db) {
     return {
       blasts: [] as EmailBlastRow[],
@@ -61,6 +68,7 @@ export const load: PageServerLoad = async (event) => {
       editorEmail: editor.email,
       error: 'CLUB_DB is not bound.',
       presetSegmentKey: null as SegmentKey | null,
+      headroom,
     };
   }
   const [blasts, segmentOptions] = await Promise.all([listBlasts(db), listSegmentOptions(db)]);
@@ -85,7 +93,7 @@ export const load: PageServerLoad = async (event) => {
     }
   }
 
-  return { blasts, segmentOptions: pickerOptions, editorEmail: editor.email, error: null as string | null, presetSegmentKey };
+  return { blasts, segmentOptions: pickerOptions, editorEmail: editor.email, error: null as string | null, presetSegmentKey, headroom };
 };
 
 /** The three fields every action here reads off the compose form; `body` is deliberately not
@@ -139,7 +147,7 @@ export const actions: Actions = {
       ctx.audit({
         action: 'compose-review',
         entity: 'email-blast',
-        detail: `segment ${segment.key}: ${segment.recipients.length} recipient(s)`,
+        detail: `segment ${segment.key}: ${segment.recipients.length} ${itemNoun(segment.recipients.length, { one: 'recipient', many: 'recipients' })}`,
       });
       const result: ComposeReviewResult = {
         kind: 'review',

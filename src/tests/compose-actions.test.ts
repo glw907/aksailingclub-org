@@ -25,12 +25,12 @@ type LoadEvent = Parameters<typeof load>[0];
 type ActionEvent = Parameters<typeof actions.review>[0];
 type LoadResult = Exclude<Awaited<ReturnType<typeof load>>, void>;
 
-function loadEventFor(editor: Editor | null, db: unknown, search = ''): LoadEvent {
+function loadEventFor(editor: Editor | null, db: unknown, search = '', envExtra: Record<string, unknown> = {}): LoadEvent {
   return {
     route: { id: '/admin/club/email/compose' },
     setHeaders: () => undefined,
     locals: { cairnEditor: editor },
-    platform: { env: { CLUB_DB: db } },
+    platform: { env: { CLUB_DB: db, ...envExtra } },
     url: new URL(`https://x.dev/admin/club/email/compose${search}`),
   } as unknown as LoadEvent;
 }
@@ -82,6 +82,8 @@ const asAdmin = {
 };
 
 describe('/admin/club/email/compose load', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it('lists segment options and past blasts, with the signed-in editor own email', async () => {
     const { db } = fakeD1({
       allResults: {
@@ -175,6 +177,31 @@ describe('/admin/club/email/compose load', () => {
     const result = (await load(loadEventFor(admin, db, '?segment=household:no-such'))) as LoadResult;
     expect(result.presetSegmentKey).toBeNull();
     expect(result.segmentOptions.some((o: SegmentOption) => o.key.startsWith('household:'))).toBe(false);
+  });
+
+  it('carries the account quota headroom (Task 2) when the env is configured', async () => {
+    const { db } = fakeD1();
+    // The exact body shape the plan's Task 2 quotes, with a non-zero sent-today so the
+    // resolved `remaining` differs from `quota`.
+    const body = { result: { quota: { value: 200, unit: 'day' }, usage: { sent: 50, over_quota: false, resets_at: null } }, success: true };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(body) }));
+
+    const result = (await load(
+      loadEventFor(admin, db, '', { CLOUDFLARE_ACCOUNT_ID: 'acct-123', CLOUDFLARE_EMAIL_SENDING_TOKEN: 'token-abc' }),
+    )) as LoadResult;
+
+    expect(result.headroom).toEqual({ quota: 200, sentToday: 50, remaining: 150 });
+  });
+
+  it('carries null headroom (unknown) with no quota env configured, never blocking the load', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const { db } = fakeD1();
+    const result = (await load(loadEventFor(admin, db))) as LoadResult;
+
+    expect(result.headroom).toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 
