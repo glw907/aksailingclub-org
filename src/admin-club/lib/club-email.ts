@@ -113,9 +113,7 @@ function toLogRow(row: EmailLogRawRow): EmailLogRow {
  *  pagination all happen client side over the loaded set). */
 export const EMAIL_LOG_GUARD_LIMIT = 2000;
 
-/** The most recent sends, newest first: the Email screen's own send-log list. Empty today (no
- *  consumer has sent through this module in production yet); the offer notification wired this
- *  pass is its first real writer. */
+/** The most recent sends, newest first: the Email screen's own send-log list. */
 export async function listEmailLog(db: D1Database, limit = EMAIL_LOG_GUARD_LIMIT): Promise<EmailLogRow[]> {
   const { results } = await db
     .prepare(
@@ -223,10 +221,11 @@ export interface SendClubEmailArgs {
   templateId?: string;
   raw?: { subject: string; body: string; replyTo?: string | null };
   vars: Record<string, string>;
-  /** The batch this send belongs to (`'current'`, `'lapsed'`, `'class:<id>'`), or `null` for a
-   *  single, one-off send (this pass's only real caller, the offer notification). Segment sends
-   *  are 2.3's own scope; this field exists on `email_log` and is threaded through now so that
-   *  pass writes no new column. */
+  /** The batch this send belongs to, or `null` for a single, one-off send (a class-touch
+   *  reminder, a payment receipt, an offer notification). The vocabulary writers actually emit:
+   *  `blast:<id>` (`bulk-email.ts`'s `sendSegmentBlast`), `blast-test` (that module's own test
+   *  send, which writes no `email_blasts` row), and `announce:<postId>`
+   *  (`announcements.ts`'s post-publish send). */
   segment?: string | null;
 }
 

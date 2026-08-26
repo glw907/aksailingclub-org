@@ -32,8 +32,8 @@
  *  `club-email.ts`), read as independently optional strings so a site that has provisioned only
  *  some channels' webhooks still gets pings on those. `ASSETS`/`CLASSES` are the two committee
  *  channels above; the rest are the Announce vocabulary. Only `GENERAL`, `SITE`, `FLEET`,
- *  `EDUCATION`, `RACING`, `HARBOR`, and `TECHNOLOGY` are set as real Worker secrets as of this
- *  writing; `LEADERSHIP` and `BUCCANEER_18` are declared but unconfigured (see
+ *  `RACING`, `HARBOR`, and `TECHNOLOGY` are set as real Worker secrets as of this writing;
+ *  `LEADERSHIP`, `EDUCATION`, and `BUCCANEER_18` are declared but unconfigured (see
  *  `docs/discord-notifications-wiring.md`'s own cutover note for the committee pair's history). */
 export interface DiscordBindingEnv {
   DISCORD_WEBHOOK_ASSETS?: string;

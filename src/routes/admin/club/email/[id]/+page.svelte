@@ -54,7 +54,7 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
   }
 </script>
 
-<a href="/admin/club/email" class="mb-4 inline-flex w-fit items-center gap-1 type-body text-muted hover:text-primary">
+<a href="/admin/club/email" class="mb-4 inline-flex items-center gap-1 type-body text-muted hover:text-primary">
   <span aria-hidden="true">&larr;</span> Back to Email
 </a>
 
@@ -84,12 +84,12 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
       </p>
     {/if}
     {#if form && 'warning' in form && form.warning}
-      <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-warning" role="alert">
+      <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium" role="alert">
         {form.warning}
       </p>
     {/if}
     {#if form && 'reset' in form && form.reset}
-      <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-success" role="status">
+      <p class="border-b border-[var(--cairn-card-border)] px-6 py-3 type-body font-medium text-muted" role="status">
         Restored to the shipped default.
       </p>
     {/if}
@@ -133,7 +133,7 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
             Rendered with placeholder sample values, through the same render a real send uses.
           </p>
           <p class="mt-2 type-body font-medium">{preview.subject}</p>
-          <div class="prose mt-2 max-w-none rounded-box border border-[var(--cairn-card-border)] p-4 type-body">
+          <div class="prose template-preview-body mt-2 rounded-box border border-[var(--cairn-card-border)] p-4 type-body">
             {@html preview.html}
           </div>
         </section>
@@ -157,10 +157,21 @@ short admin markdown with a handful of `{{variable}}` placeholders, not authored
         <div class="modal-action">
           <!-- svelte-ignore a11y_autofocus -->
           <button type="submit" class="btn" autofocus formnovalidate>Cancel</button>
-          <button type="submit" class="btn btn-warning" formmethod="post" formaction="?/reset">Reset</button>
+          <button type="submit" class="btn" formmethod="post" formaction="?/reset">Reset</button>
         </div>
       </form>
     </div>
   </dialog>
   {/key}
 {/if}
+
+<style>
+  /* `.prose`'s own `max-width: var(--container-measure)` (prose.css, `@layer components`)
+     narrows the sample-preview panel to reading width; Tailwind's `max-w-none` utility never
+     compiles into the built admin stylesheet (`no-uncompiled-class`), so it never actually
+     released the panel. This scoped rule is unlayered, which beats a `@layer components` rule
+     regardless of specificity (the site's own `@layer` doctrine), so it reliably does. */
+  .template-preview-body {
+    max-width: none;
+  }
+</style>

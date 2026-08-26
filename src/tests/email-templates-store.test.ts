@@ -1,3 +1,6 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { fakeD1 } from './_fake-d1';
 import {
@@ -5,6 +8,7 @@ import {
   findUnknownVariables,
   getEmailTemplateWithDefaults,
   getKnownVariables,
+  KNOWN_TEMPLATE_VARIABLES,
   resetEmailTemplate,
   updateEmailTemplate,
 } from '$admin-club/lib/email-templates-store';
@@ -144,5 +148,120 @@ describe('resetEmailTemplate', () => {
     const { db } = fakeD1();
     const result = await resetEmailTemplate(db, 'no-such-template', 'admin@example.com');
     expect(result).toEqual({ ok: false, error: 'No such template.' });
+  });
+});
+
+// The eight-template gap closed by Task 8 (email-announce): each new map entry equals the exact
+// `vars` key set its own sender passes, read from the sender's own call site rather than
+// re-derived, so a drift between the map and a real send is caught here rather than only at a
+// send that silently drops or leaves unresolved a variable.
+describe('KNOWN_TEMPLATE_VARIABLES: the eight-template gap', () => {
+  it('gives the three class-reminders.ts touches the same five-variable set', () => {
+    const touchVars = ['person_name', 'item_display_name', 'start_date', 'location', 'committee_email'];
+    expect(getKnownVariables('class_week_out')).toEqual(touchVars);
+    expect(getKnownVariables('class_day_before')).toEqual(touchVars);
+    expect(getKnownVariables('class_followup')).toEqual(touchVars);
+  });
+
+  it('gives class_refund_window the vocabulary class-refund-window-notice.ts passes', () => {
+    expect(getKnownVariables('class_refund_window')).toEqual([
+      'person_name',
+      'item_display_name',
+      'cutoff_date',
+      'withdraw_url',
+      'committee_email',
+    ]);
+  });
+
+  it('gives class_welcome the vocabulary class-welcome.ts passes', () => {
+    expect(getKnownVariables('class_welcome')).toEqual(['person_name', 'item_display_name', 'youth_note', 'committee_email']);
+  });
+
+  it("gives stripe_payment_receipt its two call sites' shared vars, receiptVars(...) expanded", () => {
+    expect(getKnownVariables('stripe_payment_receipt')).toEqual([
+      'person_name',
+      'item_display_name',
+      'amount',
+      'payment_date',
+      'reference',
+      'committee_email',
+    ]);
+  });
+
+  it('gives join_welcome the vocabulary stripe-reconcile.ts passes', () => {
+    expect(getKnownVariables('join_welcome')).toEqual([
+      'person_name',
+      'tier_label',
+      'season',
+      'credit_status',
+      'portal_url',
+      'discord_url',
+      'committee_email',
+    ]);
+  });
+
+  it('gives board_join_notice the vocabulary stripe-reconcile.ts passes', () => {
+    expect(getKnownVariables('board_join_notice')).toEqual(['household_name', 'tier_label', 'season', 'classes_summary']);
+  });
+
+  it('no longer names withdrawal_notice, a map key with no email_templates row behind it', () => {
+    expect(getKnownVariables('withdrawal_notice')).toBeUndefined();
+    expect(Object.keys(KNOWN_TEMPLATE_VARIABLES)).not.toContain('withdrawal_notice');
+  });
+});
+
+describe('findUnknownVariables: the closed-gap templates', () => {
+  it('flags a token outside class_followup its known vocabulary', () => {
+    expect(findUnknownVariables('class_followup', 'Subject', 'Body with {{signature_block}}')).toEqual(['signature_block']);
+  });
+
+  it('does not flag {{committee_email}}, a known class_followup variable the shipped body does not yet use', () => {
+    // The real shipped class_followup body (migration 0012_class_reminders) never uses
+    // {{committee_email}}, even though the sender's own vars object always passes it: a known-but-
+    // unused variable is not an "unknown token in the body" and must not be reported.
+    const shippedSubject = 'Thanks for sailing with us -- {{item_display_name}}';
+    const shippedBody =
+      'Hi {{person_name}},\n\nThanks for taking **{{item_display_name}}** with us! Any boat checkouts earned in class are now on file.\n\nReady for more? Check the classes page for what\'s next, or reply to this email with questions.';
+    expect(findUnknownVariables('class_followup', shippedSubject, shippedBody)).toEqual([]);
+  });
+});
+
+// `fakeD1` never executes real SQL (`_fake-d1.ts`'s own header), so this suite cannot prove the
+// map matches the LIVE `email_templates` table; it instead reads the repo's own migration SQL, so
+// a future migration that seeds a new template with no matching KNOWN_TEMPLATE_VARIABLES entry
+// fails this test immediately rather than silently reopening the gap Task 8 closed.
+describe('KNOWN_TEMPLATE_VARIABLES: migration coverage', () => {
+  it('names every template id an asc-club migration seeds', () => {
+    const repoRoot = path.resolve(fileURLToPath(import.meta.url), '../../..');
+    const migrationsDir = path.join(repoRoot, 'migrations/asc-club');
+    const seededIds = new Set<string>();
+
+    for (const dir of readdirSync(migrationsDir)) {
+      const forwardPath = path.join(migrationsDir, dir, 'forward.sql');
+      let text: string;
+      try {
+        text = readFileSync(forwardPath, 'utf8');
+      } catch {
+        continue;
+      }
+      // Scope the search to each email_templates INSERT statement (stopping at the audit_log
+      // INSERT that always follows it in this repo's migrations), so a quoted id-shaped string
+      // elsewhere in the file (an audit_log row's own actor/action literals) is never mistaken
+      // for a seeded template id.
+      const statementRe = /INSERT(?:\s+OR\s+IGNORE)?\s+INTO\s+email_templates[\s\S]*?(?=INSERT INTO audit_log|$)/g;
+      for (const statementMatch of text.matchAll(statementRe)) {
+        const rowIdRe = /\(\s*'([a-z][a-z_]*)'\s*,/g;
+        for (const idMatch of statementMatch[0].matchAll(rowIdRe)) {
+          seededIds.add(idMatch[1]);
+        }
+      }
+    }
+
+    // A sanity floor: fail loudly if the parser above stops finding the migrations it should
+    // (a renamed directory, a changed INSERT idiom) rather than silently asserting nothing.
+    expect(seededIds.size).toBeGreaterThanOrEqual(9);
+    for (const id of seededIds) {
+      expect(Object.keys(KNOWN_TEMPLATE_VARIABLES)).toContain(id);
+    }
   });
 });
