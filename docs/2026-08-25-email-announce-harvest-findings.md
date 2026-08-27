@@ -161,6 +161,15 @@ belongs to cairn, a design choice belongs to this site.
     admin-toolkit barrel is radioactive to any server-graph import, so a pure-utils
     subpath export is the real fix.
 
+    Post-merge addendum, from the close's CI forensics: the
+    `GITHUB_APP_PRIVATE_KEY_B64 is not configured` lines that co-occurred with the CI
+    failures are BENIGN and unrelated — one caught `warn` per authed admin request
+    from cairn's shell load (`content-routes-core.js:251-268`, the streamed publish
+    pending-count degrading to null), present in every green CI run because CI has no
+    `.dev.vars`. Small engine ask: the shell could skip the pending-count listing
+    when the key is absent, silencing per-request noise that made a real failure
+    harder to read.
+
 ## A11y review findings (2026-08-26 close), engine-level and deferred
 
 31. **DaisyUI's unchecked `.checkbox` edge is near-invisible on both themes**

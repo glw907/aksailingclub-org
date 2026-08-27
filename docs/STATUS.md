@@ -6,60 +6,58 @@
 > `ROADMAP.md`; pre-2026-08-21 status entries are `docs/status-archive.md`. Pruning means
 > moving to one of those, never deleting.
 
-**Current state (2026-08-25).** The site runs cairn `^0.96.0`. The `assets-register` pass is
-complete: PR #10 merged and deployed to dev, both Assets admin screens at the events register
-bar, the storage rename live, migration `0037` (pending-request unique index) applied to
-remote. The record: `docs/design-benchmark/decisions.md` (the 2026-08-25 settle),
-`docs/HISTORY.md` (2026-08-25), harvest `docs/2026-08-24-assets-register-harvest-findings.md`.
-Events-admin and its probe round (PRs #8/#9) are likewise settled and on dev. The apex
-cutover remains its own deliberate DNS change. The Email + Announce pass is brainstormed,
-contracted, planned, and adversarially reviewed (2026-08-25): contract
-`docs/2026-08-25-email-announce-design.md` (nine rulings, headlined by the
-head-of-household audience model — 89 active households measured live against a 200/day
-quota), plan `docs/plans/2026-08-25-email-announce.md` (11 tasks, workflow mode, 2.5M
-ceiling; a 60-agent review folded 79 findings, verification clean). SMS + announce-on-
-publish are logged as ROADMAP's `club-notifications`. Probe verdicted (plan's "Probe
-verdicts"); execution is IN FLIGHT on branch `email-announce`. Resume prompt (fresh
-overnight session, launch on that branch): "Run the Email + Announce pass to completion:
-read docs/STATUS.md and docs/plans/2026-08-25-email-announce.md in full — its Overnight
-standing orders section governs. Execute the remaining tasks per the dispatch JSON it
-names, then the full pass-end checklist."
+**Current state (2026-08-26).** The site runs cairn `^0.96.0`. The Email + Announce pass is
+complete: PR #11 merged and deployed to dev — the head-of-household audience model end to
+end (migrations 0038/0039 applied to live and verified), the five Email and Announce admin
+screens at the register bar, the advisory quota headroom (renders "unknown" until the token
+mints), and the first email/announce e2e plus visual coverage. The record:
+`docs/design-benchmark/decisions.md` (the 2026-08-26 settle), `docs/HISTORY.md`
+(2026-08-26), harvest `docs/2026-08-25-email-announce-harvest-findings.md` (39 findings).
+The apex cutover remains its own deliberate DNS change, **now explicitly blocked on the
+CSRF/Referrer-Policy defect below**.
 
-**Immediate next action (Geoff's).** The assets before/after (delivered 2026-08-25 as a
-machine-local HTML file in the session; ask for a re-send if lost) — it gates the apex, and
-carries one explicit call: the 10px StatusChip payment-standing ink, graded legible-but-at-
-the-floor. Then the standing dev queue: `/admin/club/events` and `/events` at 1440/390,
-smartypants on `/governance`, the theme-flip cross-fade on `/` and a 404, a minted "Share
-preview" link in a private window, one Tidy run. New from the pass prep: mint the
-read-only Email Sending API token in the dashboard (or skip it; plan Task 2 degrades
-cleanly), and file Cloudflare's quota Limit Increase Request form (200/day measured).
+**THE pre-cutover blocker.** The blanket `Referrer-Policy: no-referrer`
+(`src/hooks.server.ts`) nulls `Origin` on every plain form POST, which cairn's CSRF guard
+403s: member sign-in and magic-link confirm fail in real browsers on dev today (40 plain
+forms; confirmed by curl and Chromium at this pass's close). The next pass fixes it; the
+staging brief with the census, mechanism, and remedy options is
+`docs/2026-08-26-csrf-referrer-prep-brief.md`. Three decisions open for its brainstorm: the
+default policy value, non-clobbering scope, and acceptance depth.
+
+**Immediate next action (Geoff's).** The Email + Announce before/after (machine-local HTML,
+delivered at the overnight close). Then the CSRF pass brainstorm off the prep brief. Held
+for Geoff from this pass's reviews: the head-of-household toggle semantics (the default
+recipient sees a control that cannot change their own reach — harvest 15), the announce
+list's emphasis inversion and the announce send's missing confirm (harvest 37). Chores
+whenever: mint the read-only Email Sending token (`CLOUDFLARE_EMAIL_SENDING_TOKEN` via the
+ASC store + `wrangler secret put`; headroom shows "unknown" until then, a supported state)
+and file Cloudflare's quota Limit Increase form (200/day measured). Standing dev queue:
+`/admin/club/events` and `/events` at 1440/390, smartypants on `/governance`, the
+theme-flip cross-fade on `/` and a 404, a minted "Share preview" link in a private window,
+one Tidy run.
 
 **Open decisions.**
-- `wrangler.toml` `compatibility_date` is `2026-07-06`; bumping it is a deliberate runtime
-  change for its own small pass, not a ride-along.
-- TypeScript 7 and `@types/node` 26 are held back on purpose (svelte-check compatibility; the
-  Node 24 runtime). `@anthropic-ai/sdk` stays on `^0.105`, inside cairn's widened `>=0.105.0 <1` peer range.
-- `prose.css` stays diverged from the showcase chassis by design (`src/chassis/README.md`,
-  "Deliberate omissions"); re-syncing it is a design pass with a before/after.
+- `wrangler.toml` `compatibility_date` is `2026-07-06`; bumping it is its own small pass.
+- TypeScript 7 / `@types/node` 26 held back (svelte-check; Node 24). `@anthropic-ai/sdk`
+  stays `^0.105` inside cairn's peer range.
+- `prose.css` stays diverged from the showcase chassis by design.
+- `households.left_at` is ignored by the email audience (harvest 22): a household that
+  "left" keeps receiving club email until its paid year lapses. Latent (0 live rows);
+  wants a one-predicate ruling.
 
-**Carry-forwards.** From 0.94: announce-list recency via `publishedAt` (rides the Email +
-Announce pass); baseline coverage for the stacked field register. From assets-register's
-reviews, deferred deliberately: `payForApprovedRequest`'s three-write money path wants
-`db.batch()` atomicity; the review inbox's per-row prior-holding query is N+1; the household
-desk's asset chip is still hand-rolled (migrates when StatusChip absorbs the register,
-harvest finding 1); the four `isUniqueViolation` copies consolidate onto the `errorText`
-shape; the committees subtitle still carries a "(s)" plural; the two Assets admin screens
-have no visual-baseline coverage. Probe infra for future Assets work:
-`~/.local/asc-data/probes/assets-register/` (bootstrap, then the seed; admin session recipe
-`e2e/helpers/admin-session.ts`).
+**Carry-forwards.** From assets-register, deferred deliberately: `payForApprovedRequest`
+atomicity (`db.batch()`), the review inbox's per-row N+1, the household desk's hand-rolled
+asset chip, the `isUniqueViolation` consolidation, the committees "(s)" subtitle, no
+visual baselines on the two Assets screens. From email-announce: `email_log(segment)`
+index as migration 0040 on the next schema touch (harvest 20); the send-log payload/count
+truncation notes (harvest 21); the `setEmailOptIn` household-scoping sweep across its
+three siblings (harvest 17); `wrangler dev`'s local esbuild barrel-import failure
+(harvest 39). Probe infra: `~/.local/asc-data/probes/` (assets-register, email-announce).
 
-**Geoff's review queue (full entries in docs/status-archive.md).** From events-redesign
-(on dev; ledger in `docs/HISTORY.md`): the `/events` before/after at 1440 and 390 and the
-owed fresh-context coherence read. Before/afters on dev: the
-rebuilt Assets screens (gates the apex), Classes, the pass-B sidebar walkthrough per role, the
-waivers signing moment, member directory and committees, the portal redesign against mock D,
-the retention step on /my-account/renew, the fragments /members page. Also: the attorney packet
-send (docs/waivers/), the payments live smoke (docs/plans/2026-07-15-payments-live-smoke.md),
-the five-stop dev walkthrough, the unfiled fragments
-harvest (docs/2026-07-17-fragments-harvest-findings.md), the directory pass's DX notes, and the
+**Geoff's review queue (full entries in docs/status-archive.md).** The Email + Announce
+before/after (this close). Still queued: the assets before/after (gates the apex), the
+`/events` before/after and coherence read, Classes, the pass-B sidebar walkthrough,
+waivers signing, member directory and committees, the portal redesign against mock D, the
+retention step, the fragments /members page, the attorney packet send, the payments live
+smoke, the five-stop dev walkthrough, the fragments harvest, the directory DX notes, the
 board-demo cleanup (`node scripts/import/demo-household.mjs --cleanup`).
