@@ -88,6 +88,12 @@ bucket_name = "asc-site-media"
 # production stays untouched. Dev overrides via PUBLIC_ORIGIN in .dev.vars.
 PUBLIC_ORIGIN = "https://dev.aksailingclub.org"
 
+# Email + Announce pass, Task 2: the quota headroom check
+# (src/admin-club/lib/email-limits.ts) needs the account id in a form the Worker runtime can
+# read; this line mirrors the top-level `account_id` deploy field at line 4 above, which is a
+# wrangler-only deploy setting and is not exposed to the running Worker.
+CLOUDFLARE_ACCOUNT_ID = "120c269ad6d3dfbe6d63a0bb53758ca0"
+
 # Payments-live-smoke Task 3 (docs/2026-07-15-payments-live-smoke-design.md section 2b): the GA
 # Workers rate-limiting binding, one namespace per limit class, `src/theme/rate-limit.ts` the
 # shared wrapper every call site reads through. `period` only supports 10 or 60 seconds; every

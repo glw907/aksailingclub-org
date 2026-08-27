@@ -1,0 +1,14 @@
+-- asc-club migration 0039: an ordering index for the send log (Email + Announce pass, Task 1).
+--
+-- `email_log` (0007_assets_email) has carried no index of any kind since it was created, and the
+-- Email index screen's rebuild reads the whole log ordered `sent_at DESC, id DESC` on every load
+-- rather than a page of it (docs/2026-08-25-email-announce-design.md, ruling 5), so the sort is
+-- the read's own cost. 750 live rows today, 471 of them the 2026-07-14 quota incident.
+--
+-- PERFORMANCE ONLY. No query depends on this index for correctness: the read's own ORDER BY is
+-- what makes the log deterministic, and the `id` tie-break is what makes it stable across a
+-- client-side page boundary (`sent_at` is second-granular and `id` is a random UUID, so a tie
+-- without one would repeat or drop a row). SQLite will use this index for the `sent_at` leg and
+-- sort the ties itself; a composite on `(sent_at, id)` would buy nothing here, since the ties are
+-- a handful of rows inside one second, never the scan.
+CREATE INDEX idx_email_log_sent_at ON email_log(sent_at);

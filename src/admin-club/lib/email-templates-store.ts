@@ -10,27 +10,44 @@ import { getEmailTemplate, type EmailTemplateRow } from './club-email';
  * The known `{{variable}}` vocabulary per template id: which variables a real sender actually
  * passes (`offers.ts`'s own `sendClubEmail` call for `class_offer`; the ops import's own
  * `README`'s "variable vocabulary, template by template" section for the 12 ported/authored
- * templates it documents), plus `renewal_reminder`/`withdrawal_notice` (landed by a sibling
- * pass's own migration, no README section of its own yet), whose vocabulary is scanned off their
- * stored body directly. Kept as one small map, not derived live from a template's current body,
- * because a body's own `{{token}}` set is what the ADMIN typed, exactly the thing the unknown-
- * variable guard below must check AGAINST, not read off of.
+ * templates it documents), plus `renewal_reminder` (landed by a sibling pass's own migration, no
+ * README section of its own yet) and the eight templates the email-announce pass's Task 8 closed
+ * the gap for: the three `class-reminders.ts` touches (`class_week_out`/`class_day_before`/
+ * `class_followup`, all three sharing one five-var set), `class-refund-window-notice.ts`
+ * (`class_refund_window`), `class-welcome.ts` (`class_welcome`), and `stripe-reconcile.ts`
+ * (`stripe_payment_receipt`, `join_welcome`, `board_join_notice`). Each of the eight vocabularies
+ * above is read from its sender's own `vars` object at the call site, never scanned off a stored
+ * body. `renewal_reminder` is the one exception: its entry tracks what migration 0015's shipped
+ * body actually uses (`{{household_name}}` is missing because that body never references it),
+ * not the full `vars` object `renewal-reminders.ts` passes to `sendClubEmail` -- deliberately
+ * outside Task 8's eight-template scope. Kept as one small map, not derived live from a
+ * template's current body, because a body's own `{{token}}` set is what the ADMIN typed, exactly
+ * the thing the unknown-variable guard below must check AGAINST, not read off of.
+ * `withdrawal_notice` is not listed: it was a map key with no `email_templates` row behind it,
+ * removed by Task 8.
  */
 export const KNOWN_TEMPLATE_VARIABLES: Readonly<Record<string, readonly string[]>> = {
   asset_approval: ['person_name', 'item_display_name', 'fee_section', 'description_section', 'committee_email'],
   asset_denial: ['person_name', 'item_display_name', 'committee_email'],
   asset_signup: ['person_name', 'item_display_name', 'position', 'description_section', 'committee_email'],
   billing_inquiry: ['person_name', 'person_email', 'person_phone', 'message'],
+  board_join_notice: ['household_name', 'tier_label', 'season', 'classes_summary'],
   class_approval: ['person_name', 'item_display_name', 'registration_url'],
+  class_day_before: ['person_name', 'item_display_name', 'start_date', 'location', 'committee_email'],
   class_denial: ['person_name', 'item_display_name', 'committee_email'],
+  class_followup: ['person_name', 'item_display_name', 'start_date', 'location', 'committee_email'],
   class_offer: ['person_name', 'item_display_name', 'claim_url', 'expires_at', 'committee_email'],
+  class_refund_window: ['person_name', 'item_display_name', 'cutoff_date', 'withdraw_url', 'committee_email'],
   class_signup: ['person_name', 'item_display_name', 'position', 'comment_section', 'committee_email'],
+  class_week_out: ['person_name', 'item_display_name', 'start_date', 'location', 'committee_email'],
+  class_welcome: ['person_name', 'item_display_name', 'youth_note', 'committee_email'],
   donation_receipt: ['donor_name', 'date', 'amount', 'reference', 'note_section'],
+  join_welcome: ['person_name', 'tier_label', 'season', 'credit_status', 'portal_url', 'discord_url', 'committee_email'],
   payment_notification: ['person_name', 'person_email', 'asset_type_name', 'amount', 'payment_date'],
   payment_receipt: ['person_name', 'asset_type_name', 'season', 'amount', 'reference'],
   payment_request: ['person_name', 'asset_type_name', 'season', 'fee_display', 'payment_url'],
   renewal_reminder: ['person_name', 'message', 'portal_url', 'committee_email'],
-  withdrawal_notice: ['member_name', 'class_name', 'withdrawn_at', 'offer_result'],
+  stripe_payment_receipt: ['person_name', 'item_display_name', 'amount', 'payment_date', 'reference', 'committee_email'],
 };
 
 /** This template's known variable vocabulary, or `undefined` for an id this map does not name

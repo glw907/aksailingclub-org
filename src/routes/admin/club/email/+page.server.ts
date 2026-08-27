@@ -4,7 +4,7 @@
 import type { PageServerLoad } from './$types';
 import { requireSession } from '@glw907/cairn-cms/sveltekit';
 import { resolveClubDb } from '$admin-club/lib/club-db';
-import { listEmailLog, listEmailTemplates, type EmailLogRow, type EmailTemplateRow } from '$admin-club/lib/club-email';
+import { EMAIL_LOG_GUARD_LIMIT, listEmailLog, listEmailTemplates, type EmailLogRow, type EmailTemplateRow } from '$admin-club/lib/club-email';
 
 export const load: PageServerLoad = async (event) => {
   requireSession(event);
@@ -13,7 +13,9 @@ export const load: PageServerLoad = async (event) => {
     return { templates: [] as EmailTemplateRow[], log: [] as EmailLogRow[], error: 'CLUB_DB is not bound.' };
   }
   try {
-    const [templates, log] = await Promise.all([listEmailTemplates(db), listEmailLog(db)]);
+    // The whole send log, not a page of it: grouping (`email-log-groups.ts`), filtering, and
+    // pagination all happen client side over this fully loaded set.
+    const [templates, log] = await Promise.all([listEmailTemplates(db), listEmailLog(db, EMAIL_LOG_GUARD_LIMIT)]);
     return { templates, log, error: null as string | null };
   } catch (err) {
     console.error('admin/club/email: CLUB_DB read failed', err);

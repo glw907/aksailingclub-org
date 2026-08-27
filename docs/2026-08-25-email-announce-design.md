@@ -214,7 +214,8 @@ needed:
 
 Two migrations, both additive, each a directory in this repo's own shape (`forward.sql`,
 `rollback.sql`, `verify.sql`, `README.md`, matching `migrations/asc-club/0037_asset_request_unique/`),
-scratch-proven and then applied to the live database: `0038_club_email_optin` adds the
+scratch-proven against the local replica during the pass and applied to the live database
+as the conductor's own close step, never by an implementer: `0038_club_email_optin` adds the
 opt-in column on `members`, and `0039_email_log_sent_at` adds `email_log(sent_at)`, a table
 that carries no index of any kind today. The second is performance only. No schema
 change beyond the opt-in column and that index: incident grouping is a query and

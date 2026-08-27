@@ -511,6 +511,40 @@ Dates are 2026-07-07/08 (the home convergence arc) unless noted.
   not settled: the 10px StatusChip ink is the smallest text on the screens and carries payment
   standing; the cold read graded it legible but at the floor.
 
+- **Email + Announce settle (2026-08-26, the email-announce pass close, PR #11)**: the
+  probe's five verdicts built and settled — the incident row on the NEUTRAL row ground
+  with the warning chip alone carrying tone; the expanded state as inset member rows with
+  their own Failed chips plus an in-incident pager; the announced-state chip pair with the
+  detail as muted text beside the chip; the announce form as stacked parallel channel
+  blocks each carrying its own enable control and preview (SMS joins as a third block
+  later); the subject inside the Email block. The chip registers were REUSED UNMODIFIED
+  on their third, fourth, and fifth consumers (email index, announce list, Compose badge;
+  verify-chip-registers green throughout, extended to 28 measurements to cover the new
+  inset-member-row ground at 1.306:1 light / 1.275:1 dark, inside the events settle's
+  1.16-1.47:1 band). COUNT VOCABULARY on the send log: three counts name three things —
+  the subtitle's "log entries", the filter band's "sends" (send attempts), the pager's
+  "groups" (folded display units); one noun for all three read as contradiction. CHECKBOX
+  EDGES take an explicit primary border (unlayered, dual-selector dark): DaisyUI's
+  unchecked default measured ~1.5:1 against the 3:1 floor; the fix measures 9.72/7.55:1
+  (site light/dark) and 5.82/5.43:1 (admin light/dark); the mechanic is filed engine-level
+  (harvest 31). The COMPOSE VARIABLE PALETTE is judged settled WITHOUT a probe (the plan's
+  contingency): the cold read graded it designed-in-conception, undone only by the UA
+  `<ul>` indent — the SAME gotcha the assets settle logged ("padding-inline-start survives
+  list-style: none under the no-Preflight admin"), now bitten twice across passes and
+  filed as the engine list-reset ask (harvest 35). The close's cold read graded four
+  screens DESIGNED and two ASSEMBLY (the send log's stacked filter selects at 1440, the
+  portal Notifications row collapsing at both widths); both fixed in close round A with
+  measured after-numbers. Contract ruling 4's `currentMemberEmails` overdue-widening
+  walkthrough is CLOSED-CONFIRMED: the audience query grounds on
+  `classifyHouseholdStanding`, and an overdue household's default recipient lands in
+  `current` (covered by the Task 1 acceptance test). FLAGGED TO GEOFF, not settled: the
+  announce list's emphasis inversion (fourteen outlined "Not announced" pills louder than
+  the one quiet "Announced"; the probe-ratified pair stands unless reopened); the headroom
+  fact's two homes (bordered banner on compose review, bare helper on the announce form);
+  the announce send carrying no count-acknowledging confirm while Compose gates the same
+  action; and the head-of-household toggle semantics (the default recipient sees a control
+  that cannot change their own reach — security review finding, harvest 15).
+
 ## Benchmark provenance
 
 Pinned by the owner 2026-07-08 ("that's our new design benchmark"): the home page at commit

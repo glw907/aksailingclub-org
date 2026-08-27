@@ -5,7 +5,7 @@ import { redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { updateProfile } from '$member-portal/lib/profile';
 import { addBoat, listMemberBoats, removeBoat, updateBoat } from '$member-portal/lib/boats';
-import { getHouseholdAddress, setDirectoryVisibility, type DirectoryVisibility } from '$member-portal/lib/household';
+import { getHouseholdAddress, setClubEmailOptIn, setDirectoryVisibility, type DirectoryVisibility } from '$member-portal/lib/household';
 import type { ProfilePreviewFacts } from '$member-portal/lib/profile-preview';
 import { portalAction } from '$member-portal/lib/portal-action';
 import { issueMemberCsrfToken } from '$member-auth/lib/auth';
@@ -25,17 +25,19 @@ export const load: PageServerLoad = async (event) => {
     return {
       csrf,
       profile: { email: '', phone: '', birthdate: '', directoryVisibility: 'partial' as DirectoryVisibility },
+      notifications: { clubEmailOptIn: false },
       boats: [],
       preview: { hasPositions: false, hasMemberships: false, boatCount: 0, hasAddress: false } satisfies ProfilePreviewFacts,
     };
   }
 
   const [row, boats, positionCount, membershipCount, address] = await Promise.all([
-    db.prepare('SELECT email, phone, birthdate, directory_visibility FROM members WHERE id = ?1').bind(member.id).first<{
+    db.prepare('SELECT email, phone, birthdate, directory_visibility, club_email_opt_in FROM members WHERE id = ?1').bind(member.id).first<{
       email: string | null;
       phone: string | null;
       birthdate: string | null;
       directory_visibility: DirectoryVisibility;
+      club_email_opt_in: number;
     }>(),
     listMemberBoats(db, member.id),
     db.prepare('SELECT COUNT(*) AS n FROM member_positions WHERE member_id = ?1').bind(member.id).first<{ n: number }>(),
@@ -48,6 +50,7 @@ export const load: PageServerLoad = async (event) => {
     profile: row
       ? { email: row.email ?? '', phone: row.phone ?? '', birthdate: row.birthdate ?? '', directoryVisibility: row.directory_visibility }
       : { email: '', phone: '', birthdate: '', directoryVisibility: 'partial' as DirectoryVisibility },
+    notifications: { clubEmailOptIn: row?.club_email_opt_in === 1 },
     boats,
     preview: {
       hasPositions: (positionCount?.n ?? 0) > 0,
@@ -73,6 +76,16 @@ export const actions: Actions = {
     const visibility = String(form.get('visibility') ?? '');
     if (!VISIBILITY_VALUES.includes(visibility as DirectoryVisibility)) return { error: 'Invalid visibility.' };
     await setDirectoryVisibility(ctx.db, ctx.member.id, visibility as DirectoryVisibility);
+    return { saved: true as const };
+  }),
+
+  // The Notifications section's own write: the member id comes from `ctx.member` (the session
+  // `portalAction` already resolved), never from the form, so a forged field in the payload
+  // cannot move another member's flag. Mirrors `updateVisibility` above, sharing the one writer
+  // Task 1 built (`$member-portal/lib/household.ts`'s `setClubEmailOptIn`).
+  updateNotifications: portalAction(async ({ form, ctx }) => {
+    const clubEmailOptIn = form.get('clubEmailOptIn') === 'on';
+    await setClubEmailOptIn(ctx.db, ctx.member.id, clubEmailOptIn);
     return { saved: true as const };
   }),
 

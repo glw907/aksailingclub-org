@@ -4,18 +4,61 @@
 own "3. Profile"). -->
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { enhance } from '$app/forms';
+  import type { SubmitFunction } from '@sveltejs/kit';
   import type { ActionData, PageData } from './$types';
   import { siteConfig } from '$theme/cairn.config';
   import { profilePreviewLines } from '$member-portal/lib/profile-preview';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
-  // A full page load follows every form POST here (no use:enhance), so this component remounts
-  // on every save; the one-time snapshot svelte-check warns about is exactly what is wanted, so
-  // `untrack` marks the read as deliberate (the documented escape hatch for this warning).
+  // A full page load follows every OTHER form POST on this page (no use:enhance), so the
+  // component remounts on every save; the one-time snapshot svelte-check warns about is exactly
+  // what is wanted, so `untrack` marks the read as deliberate (the documented escape hatch for
+  // this warning).
   let visibility = $state(untrack(() => data.profile.directoryVisibility));
 
   const previewLines = $derived(profilePreviewLines(visibility, data.preview));
+
+  // The Notifications form's own submit (Email + Announce Task 11 fix): `use:enhance` with
+  // `update({ reset: false })`, the plan's own sanctioned alternative to "no use:enhance at all"
+  // (Global constraints, the `CsrfField` + `use:enhance` reset trap note) -- `reset: false`
+  // because this form's checkbox is server-driven (`checked={data.notifications.clubEmailOptIn}`,
+  // never `bind:checked`), so the default `update()` reset would otherwise wipe it back to
+  // unchecked the instant a save response lands, before the refreshed `data` even arrives.
+  //
+  // Every OTHER form on this page stays a plain, unenhanced POST on purpose (this file's own
+  // established precedent, still correct for them). This one form differs because a plain
+  // top-level POST navigation's `Origin` header follows the page's `Referrer-Policy`
+  // (`no-referrer`, `src/hooks.server.ts`), which a real browser resolves to `Origin: null` even
+  // for a same-origin request -- and `cairn-cms`'s own non-admin CSRF guard requires that header
+  // to equal the request's own origin, so a plain POST here always 403s "Cross-site POST form
+  // submissions are forbidden" (found by this task's own e2e coverage, the first real-browser
+  // exercise of this route; confirmed by intercepting the actual request and by reproducing the
+  // identical 403 with a bare `curl` POST carrying no `Origin` header). A `fetch()`-based submit
+  // is unaffected: its own `Origin` header is unconditional, never referrer-policy-governed. The
+  // blanket header is this site's own choice on every route (`/classes/offer/`'s token-bearing
+  // URLs are why it exists) and out of this fix's reach; every other plain form on `/my-account/**`
+  // carries the identical latent defect and is tracked separately, not fixed here.
+  //
+  // Close round item 21: this action's own inline `role="status"` line reads `notificationsResult`
+  // (captured from `use:enhance`'s own `result` here, not the page-level `form` prop every OTHER
+  // form on this page also writes) so a save inside this mid-page section stays perceivable
+  // without depending on which of the page's several forms most recently posted.
+  let notificationsResult: { text: string; failed: boolean } | null = $state(null);
+
+  function submitNotifications(): SubmitFunction {
+    return () => async ({ update, result }) => {
+      await update({ reset: false });
+      if (result.type === 'failure' && result.data && 'error' in result.data && typeof result.data.error === 'string') {
+        notificationsResult = { text: result.data.error, failed: true };
+      } else if (result.type === 'success' && result.data && 'saved' in result.data && result.data.saved) {
+        notificationsResult = { text: 'Saved.', failed: false };
+      } else {
+        notificationsResult = null;
+      }
+    };
+  }
 </script>
 
 <svelte:head>
@@ -68,6 +111,51 @@ own "3. Profile"). -->
       <option value="hidden">Hidden</option>
     </select>
     <button type="submit" class="btn btn-sm">Update</button>
+  </form>
+</section>
+
+<section class="mt-l max-w-measure-wide rounded-box border border-card-border bg-base-100 p-m">
+  <h2 class="m-0 text-step-0 font-semibold text-base-content">Notifications</h2>
+  <form method="POST" action="?/updateNotifications" class="mt-2xs" use:enhance={submitNotifications()}>
+    <input type="hidden" name="csrf" value={data.csrf} />
+    <ul class="mt-xs flex flex-col gap-s">
+      <!-- Label-wrapped checkbox (close round item 20, mirroring the announce form's own
+           label-wrapped channel checkboxes): a real visible `<label>` gives the control its
+           accessible name (replacing the aria-label-only naming) and a click/touch target
+           beyond the bare 20px box, while the longer helper sentence stays a sibling paragraph
+           linked in only via `aria-describedby` -- inside the label, its own text would have
+           been folded into the accessible NAME rather than staying a DESCRIPTION. `min-w-0` on
+           the helper (a flex item with no default min-width otherwise refuses to shrink below
+           its own intrinsic text width) is what lets it wrap instead of pushing the label to a
+           naked second row at 1440; `shrink-0` keeps the short label from being squeezed in turn.
+           Shaped so a second channel row is another `<li>` of the identical shape. -->
+      <li class="flex flex-wrap items-center justify-between gap-xs">
+        <p id="notif-email-helper" class="m-0 min-w-0 flex-1 text-step--2 text-muted">
+          Household announcements go to the head of household by default; turn this on to receive them yourself too.
+        </p>
+        <label class="flex shrink-0 items-center gap-2 text-step--1 font-medium text-base-content">
+          <input
+            type="checkbox"
+            class="checkbox checkbox-sm"
+            name="clubEmailOptIn"
+            checked={data.notifications.clubEmailOptIn}
+            aria-describedby="notif-email-helper"
+          />
+          Email
+        </label>
+      </li>
+    </ul>
+    <!-- Perceivable save confirmation (close round item 21, a11y blocker): rendered
+         unconditionally so the live region already exists in the DOM before the first reply
+         lands (a screen reader does not reliably announce a `role="status"` node inserted AND
+         populated in the same tick, only a later text-content change on a node it already
+         knows about) -- `empty:mt-0` drops the row's own top margin while there is nothing to
+         show, so the empty state opens no visible gap before "Update". -->
+    <p
+      class="mt-xs mb-0 empty:mt-0 text-step--2 {notificationsResult?.failed ? 'text-error' : 'text-success'}"
+      role="status"
+    >{notificationsResult?.text ?? ''}</p>
+    <button type="submit" class="btn btn-sm mt-s">Update</button>
   </form>
 </section>
 

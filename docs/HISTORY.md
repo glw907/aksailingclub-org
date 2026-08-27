@@ -6,6 +6,62 @@
 > than the ones here live in `docs/status-archive.md` (the pre-2026-08-21 rolling status,
 > moved whole).
 
+## 2026-08-26: email-announce, the audience model plus five screens (overnight run)
+
+Branch `email-announce`, PR #11. Contract `docs/2026-08-25-email-announce-design.md`; plan
+`docs/plans/2026-08-25-email-announce.md` (11 tasks, workflow mode, overnight standing
+orders); settle entry in `docs/design-benchmark/decisions.md` (2026-08-26); harvest
+`docs/2026-08-25-email-announce-harvest-findings.md` (38 findings); close round
+`docs/2026-08-26-email-announce-close-round.md`; next-pass staging
+`docs/2026-08-26-csrf-referrer-prep-brief.md`.
+
+**What landed.** T1 (opus): migrations 0038 (`members.club_email_opt_in`, default 0) and
+0039 (`idx_email_log_sent_at`), both applied to live and verified (288 members, planner
+uses the index); the `segments.ts` audience-selection/email-projection split with the
+default-recipient CTE; `setClubEmailOptIn` beside `setDirectoryVisibility`;
+Current/Former households labels. T2: `email-limits.ts` quota headroom
+(degrade-to-unknown; secret `CLOUDFLARE_EMAIL_SENDING_TOKEN` unminted by design). T3/T4:
+the portal Notifications toggle and household-desk opt-in control, both through the one
+writer. T5/T6: the full-log reader (2,000 guard bound, `sent_at DESC, id DESC`), the pure
+incident fold, and the email index rebuild (switcher, filters, incident rows, chips).
+T7/T8: the Compose and template-editor sweeps, the eight-template
+`KNOWN_TEMPLATE_VARIABLES` gap, doc-drift fixes. T9/T10: the announce list
+(`publishedAt ?? date` ordering seam, chip pair) and the channel-block form rebuild.
+T11: the first email/announce e2e plus visual specs at 390/1440 x light/dark. Then the
+close: code-simplifier, four-reviewer fan-out, a cold coherence read, and close round A
+(29 items: two a11y blockers — checkbox edge contrast at ~1.5:1 fixed to 5.4-9.7:1
+measured, the silent save confirmation — plus the stacked filter selects, the collapsed
+portal row, the sticky incident toggle at 390, count vocabulary, focus management).
+
+**What the gates caught, in order of embarrassment prevented.** Task 11's first
+real-browser portal POST exposed the site-wide `Referrer-Policy: no-referrer` →
+`Origin: null` → cairn-guard 403 defect: member sign-in and magic-link confirm broken on
+dev in real browsers, invisible to every prior test (40 plain forms; census and remedy in
+the prep brief; THE pre-cutover blocker). The diff-reviewer chain caught, by real
+Chromium measurement, the incident pager's `display: flex` td silently dropping
+`colspan` (the implementer's own scrollWidth check was blind to it inside
+`overflow-x-auto`), a tautological filter-invariance test, seed-ordering comments
+contradicted by `signup-seed.sql`'s blanket `DELETE FROM email_log`, and a stranded
+in-incident page after the reset `$effect` became a clamp for only one of its two
+values. The a11y sweep measured the invisible unchecked checkbox on three surfaces. The
+cold read caught the UA `<ul>` indent AGAIN (second pass in a row) and the fixed-width
+`.select` stacking an intended inline filter row at 1440. The baselines dispatch caught
+the one break no repo gate can see: a server-chunk import of the admin-toolkit barrel (a
+close-round refactor) fails wrangler's esbuild while `check`, `test`, and `npm run
+build` all stay green — the dev server's port opens and serves nothing, so CI's e2e
+ground silently for hours instead of failing (harvest 39; a `wrangler deploy --dry-run`
+CI step is the standing ask).
+
+**What a later pass would be wrong to rediscover.** The default-recipient CTE is
+email-determined by ruling 2's own definition; the SMS pass inherits that and must
+decide whether "reachable on any enabled channel" replaces it. `email_log(segment)` has
+no index and three member-facing cooldown reads full-scan it (harvest 20, first
+candidate for the next schema touch). Only `no-referrer` nulls `Origin`; `same-origin`
+keeps it while leaking no Referer — the whole CSRF remedy hangs on that one Fetch-spec
+fact. `Playwright's accessible-name matching is substring-based`: a glyph moved into
+`aria-hidden` breaks exact-name locators. Historic `email_blasts.segment_label` values
+are point-in-time snapshots and stay "Current members" on pre-pass rows by design.
+
 ## 2026-08-25: assets-register, both Assets screens at the events bar
 
 Branch `assets-register`, PR #10, merged and deployed to dev. Contract

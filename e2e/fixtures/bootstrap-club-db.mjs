@@ -19,11 +19,14 @@
  * re-run every migration for it (0001_substrate's own `CREATE TABLE` statements fail outright
  * against an already-populated replica), the script checks for one artifact a later migration
  * adds and applies just that one migration's `forward.sql` on its own when the artifact is
- * missing. Two such probes exist today, each keyed on the schema object its own migration adds:
- * `event_series` the table for `0035_event_series`, and `uq_asset_requests_pending_household_type`
- * the index for `0037_asset_request_unique`. A migration between the two (`0036_event_indexes`)
- * carries no probe of its own; a future migration a warm replica needs to catch up on should add
- * one following either shape above, not assume 0035's alone covers everything since.
+ * missing. Four such probes exist today, each keyed on the schema object its own migration adds:
+ * `event_series` the table for `0035_event_series`, `uq_asset_requests_pending_household_type` the
+ * index for `0037_asset_request_unique`, `members.club_email_opt_in` the column for
+ * `0038_club_email_optin`, and `idx_email_log_sent_at` the index for `0039_email_log_sent_at`.
+ * A migration between them (`0036_event_indexes`) carries no probe of its own; a future migration
+ * a warm replica needs to catch up on should add one following one of the three shapes above
+ * (`tableExists`, `indexExists`, `columnExists`), not assume an earlier probe covers everything
+ * since.
  *
  * `wrangler d1 execute --local` never touches the real asc-club data the admin screens and the
  * import scripts own; it only ever writes the gitignored local replica.
@@ -81,6 +84,28 @@ function indexExists(name) {
   return results.length > 0;
 }
 
+/** A column probe, for a migration whose only artifact is an added column: neither `tableExists`
+ *  nor `indexExists` can see one, since `sqlite_master` records the table's whole DDL as one
+ *  string. `pragma_table_info` is the read that can. */
+function columnExists(table, column) {
+  const out = execFileSync(
+    'npx',
+    [
+      'wrangler',
+      'd1',
+      'execute',
+      'asc-club',
+      '--local',
+      '--json',
+      '--command',
+      `SELECT name FROM pragma_table_info('${table}') WHERE name='${column}'`,
+    ],
+    { cwd: repoRoot },
+  ).toString();
+  const [{ results }] = JSON.parse(out);
+  return results.length > 0;
+}
+
 function applyMigrations() {
   const migrationDirs = readdirSync(migrationsDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -106,6 +131,20 @@ if (!tableExists('settings')) {
   if (!indexExists('uq_asset_requests_pending_household_type')) {
     d1File(path.join(migrationsDir, '0037_asset_request_unique', 'forward.sql'));
   }
+  // 0038_club_email_optin (Email + Announce, Task 1): without this probe a warm replica runs the
+  // whole suite against a `members` table with no `club_email_opt_in` column, so every membership
+  // segment query throws while cold CI passes. A column needs its own probe shape: `sqlite_master`
+  // stores the table's DDL as one string, so neither `tableExists` nor `indexExists` can see one.
+  if (!columnExists('members', 'club_email_opt_in')) {
+    d1File(path.join(migrationsDir, '0038_club_email_optin', 'forward.sql'));
+  }
+  // 0039_email_log_sent_at (Email + Announce, Task 1): performance only, so a warm replica missing
+  // it would still pass. Probed anyway, because the point of this block is that a replica ends up
+  // in the same state as a cold CI checkout, not merely a state the current specs cannot tell
+  // apart.
+  if (!indexExists('idx_email_log_sent_at')) {
+    d1File(path.join(migrationsDir, '0039_email_log_sent_at', 'forward.sql'));
+  }
 }
 
 d1File(path.join(repoRoot, 'e2e/fixtures/events-seed.sql'));
@@ -117,9 +156,17 @@ d1File(path.join(repoRoot, 'e2e/fixtures/portal-seed.sql'));
 // The member-waivers e2e fixture (T8): its own `waiver-`-prefixed rows never collide with
 // portal-seed.sql's `portal-`-prefixed ones, so ordering relative to that file does not matter.
 d1File(path.join(repoRoot, 'e2e/fixtures/waivers-seed.sql'));
-// The Assets trial build's request/waitlist fixture (Task 2): MUST run last. signup-seed.sql's
-// own blanket (no-WHERE) deletes of asset_requests/asset_waitlist/asset_payments/
-// asset_assignments would wipe this file's rows if it ran earlier, and its own capacity UPDATEs
-// on the real asset_types rows would be undone by portal-seed.sql's delete-and-reinsert of those
-// same rows (that file's own header explains why capacity always resets to NULL there).
+// The Assets trial build's request/waitlist fixture (Task 2): MUST run after signup-seed.sql and
+// portal-seed.sql, though no longer last overall (email-seed.sql, below, is newer).
+// signup-seed.sql's own blanket (no-WHERE) deletes of asset_requests/asset_waitlist/
+// asset_payments/asset_assignments would wipe this file's rows if it ran earlier, and its own
+// capacity UPDATEs on the real asset_types rows would be undone by portal-seed.sql's
+// delete-and-reinsert of those same rows (that file's own header explains why capacity always
+// resets to NULL there).
 d1File(path.join(repoRoot, 'e2e/fixtures/assets-seed.sql'));
+// The Email + Announce admin e2e/visual fixture (Task 11): MUST run after signup-seed.sql,
+// whose own blanket (no-WHERE) `DELETE FROM email_log;` would wipe this file's rows if it ran
+// first (email-seed.sql's own header explains the full ordering). `announcements` alone is
+// untouched by every other fixture in this pipeline. It runs last simply because it is the
+// newest addition, matching this pipeline's own convention of appending rather than inserting.
+d1File(path.join(repoRoot, 'e2e/fixtures/email-seed.sql'));

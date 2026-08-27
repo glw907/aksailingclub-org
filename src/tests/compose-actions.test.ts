@@ -25,12 +25,12 @@ type LoadEvent = Parameters<typeof load>[0];
 type ActionEvent = Parameters<typeof actions.review>[0];
 type LoadResult = Exclude<Awaited<ReturnType<typeof load>>, void>;
 
-function loadEventFor(editor: Editor | null, db: unknown, search = ''): LoadEvent {
+function loadEventFor(editor: Editor | null, db: unknown, search = '', envExtra: Record<string, unknown> = {}): LoadEvent {
   return {
     route: { id: '/admin/club/email/compose' },
     setHeaders: () => undefined,
     locals: { cairnEditor: editor },
-    platform: { env: { CLUB_DB: db } },
+    platform: { env: { CLUB_DB: db, ...envExtra } },
     url: new URL(`https://x.dev/admin/club/email/compose${search}`),
   } as unknown as LoadEvent;
 }
@@ -60,18 +60,30 @@ function postEvent(
   } as unknown as ActionEvent;
 }
 
-// A current household with one member on file, so `resolveSegment('current')` has a real
-// recipient to find (the review/send tests below).
+// A current household with its own default recipient on file, so `resolveSegment('current')` has a
+// real recipient to find (the review/send tests below). Keyed on `is_default_recipient`, the
+// audience statement `segments.ts` runs for a membership segment since the Email + Announce pass;
+// the pre-pass `'FROM members WHERE archived_at'` key named `membersInHouseholds`, which this path
+// no longer runs and which would silently answer `[]` if it were left behind.
 const asAdmin = {
   allResults: {
-    'FROM households h': [{ household_id: 'hh-larsen', paid_at: new Date().toISOString().slice(0, 10), primary_member_id: null }],
-    'FROM members WHERE archived_at': [
-      { id: 'mem-erik', name: 'Erik Larsen', email: 'erik.larsen@example.com', household_id: 'hh-larsen' },
+    'FROM households h': [{ household_id: 'hh-larsen', paid_at: new Date().toISOString().slice(0, 10), primary_member_id: 'mem-erik' }],
+    is_default_recipient: [
+      {
+        id: 'mem-erik',
+        name: 'Erik Larsen',
+        email: 'erik.larsen@example.com',
+        phone: null,
+        household_id: 'hh-larsen',
+        is_default_recipient: 1,
+      },
     ],
   },
 };
 
 describe('/admin/club/email/compose load', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it('lists segment options and past blasts, with the signed-in editor own email', async () => {
     const { db } = fakeD1({
       allResults: {
@@ -79,6 +91,9 @@ describe('/admin/club/email/compose load', () => {
           {
             id: 'blast-1',
             segment_key: 'current',
+            // A stored snapshot from a past send, not a label this module mints: `email_blasts`
+            // records what the segment was called on the day it went out, so a pre-audience-model
+            // row keeps reading "Current members" forever. Deliberately not renamed.
             segment_label: 'Current members',
             subject: 'Fleet update',
             body: 'Hi {{person_name}}',
@@ -163,6 +178,31 @@ describe('/admin/club/email/compose load', () => {
     expect(result.presetSegmentKey).toBeNull();
     expect(result.segmentOptions.some((o: SegmentOption) => o.key.startsWith('household:'))).toBe(false);
   });
+
+  it('carries the account quota headroom (Task 2) when the env is configured', async () => {
+    const { db } = fakeD1();
+    // The exact body shape the plan's Task 2 quotes, with a non-zero sent-today so the
+    // resolved `remaining` differs from `quota`.
+    const body = { result: { quota: { value: 200, unit: 'day' }, usage: { sent: 50, over_quota: false, resets_at: null } }, success: true };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(body) }));
+
+    const result = (await load(
+      loadEventFor(admin, db, '', { CLOUDFLARE_ACCOUNT_ID: 'acct-123', CLOUDFLARE_EMAIL_SENDING_TOKEN: 'token-abc' }),
+    )) as LoadResult;
+
+    expect(result.headroom).toEqual({ quota: 200, sentToday: 50, remaining: 150 });
+  });
+
+  it('carries null headroom (unknown) with no quota env configured, never blocking the load', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const { db } = fakeD1();
+    const result = (await load(loadEventFor(admin, db))) as LoadResult;
+
+    expect(result.headroom).toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 });
 
 describe('/admin/club/email/compose review action', () => {
@@ -202,7 +242,7 @@ describe('/admin/club/email/compose review action', () => {
     const result = await actions.review(
       postEvent(admin, { segmentKey: 'current', subject: 'Fleet update', body: 'Hi {{person_name}}' }, { db }),
     );
-    expect(result).toMatchObject({ kind: 'review', segmentKey: 'current', segmentLabel: 'Current members', recipientCount: 1 });
+    expect(result).toMatchObject({ kind: 'review', segmentKey: 'current', segmentLabel: 'Current households', recipientCount: 1 });
     expect((result as { sample: unknown[] }).sample).toEqual([
       { email: 'erik.larsen@example.com', personName: 'Erik Larsen', memberId: 'mem-erik' },
     ]);
@@ -258,7 +298,7 @@ describe('/admin/club/email/compose send action', () => {
         { db, env: { EMAIL: { send } } },
       ),
     );
-    expect(result).toMatchObject({ kind: 'sent', segmentLabel: 'Current members', recipientCount: 1, sentCount: 1, failedCount: 0 });
+    expect(result).toMatchObject({ kind: 'sent', segmentLabel: 'Current households', recipientCount: 1, sentCount: 1, failedCount: 0 });
     const blastInsert = calls.find((c) => c.sql.startsWith('INSERT INTO email_blasts'));
     expect(blastInsert?.args[5]).toBe(1); // recipient_count: the fresh resolve, never the posted 999
   });

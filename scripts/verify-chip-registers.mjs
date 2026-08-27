@@ -59,6 +59,7 @@ const STATUS_CHIP_SVELTE = join(
   'node_modules/@glw907/cairn-cms/dist/admin-toolkit/StatusChip.svelte'
 );
 const SITE_CSS = join(REPO_ROOT, 'src/theme/admin-chip-registers.css');
+const EMAIL_INDEX_SVELTE = join(REPO_ROOT, 'src/routes/admin/club/email/+page.svelte');
 
 const GROUND_LOW = 1.16;
 const GROUND_HIGH = 1.47;
@@ -75,6 +76,22 @@ function statusChipScopedCss() {
     throw new Error('Could not find a <style> block in StatusChip.svelte');
   }
   return match[1];
+}
+
+// Item 16 of the 2026-08-26 close round: `.email-member-row` (email/+page.svelte's own scoped
+// style) introduces a THIRD ground -- a color-mix of `--color-base-200` at 35% over the page's
+// own base ground -- that this script never measured, even though it is the one ground the
+// warning chip actually renders on inside an expanded incident's own member rows. Read directly
+// out of the real page's scoped style block (the same "read the shipped source, don't duplicate
+// a literal formula that can drift" reasoning `statusChipScopedCss` above already follows) rather
+// than hardcoding the color-mix formula here a second time.
+function emailMemberRowBackground() {
+  const source = readFileSync(EMAIL_INDEX_SVELTE, 'utf8');
+  const match = source.match(/\.email-member-row\s*\{([^}]*)\}/);
+  if (!match) {
+    throw new Error('Could not find a .email-member-row rule in email/+page.svelte');
+  }
+  return match[1].trim();
 }
 
 // Renders at `xs` (fix round B, item 7b): `StatusChip.svelte`'s own `size` prop, replicated class
@@ -95,6 +112,11 @@ function buildHtml(theme) {
   const cells = (rowId) =>
     registers.map((r) => `<td id="${r.id}-${rowId}">${statusChip(r)}</td>`).join('\n');
 
+  // The `.email-member-row` ground (item 16): the warning chip is the only register that ever
+  // renders on it (an expanded incident's own Failed member rows), so this row carries only that
+  // one chip rather than the full quiet/warning/outline set the other two rows measure.
+  const memberRowCell = `<td id="warning-member">${statusChip({ wrapperClass: 'asc-admin-chip-warning', tone: 'warning', register: 'quiet' })}</td>`;
+
   return `<!doctype html>
 <html data-theme="${theme}">
 <head>
@@ -108,6 +130,7 @@ function buildHtml(theme) {
       <tbody>
         <tr id="row-unstriped">${cells('unstriped')}</tr>
         <tr id="row-striped">${cells('striped')}</tr>
+        <tr id="row-member" style="${emailMemberRowBackground()}">${memberRowCell}</tr>
       </tbody>
     </table>
   </div>
@@ -169,6 +192,23 @@ async function measure(page) {
         const groundColor = canvasColor(ground, ground);
         groundResults.push({ register: label, stripe, contrast: contrast(chipColor, groundColor) });
       }
+    }
+
+    // The `.email-member-row` ground (item 16 of the 2026-08-26 close round): its own
+    // `background-color` is itself a translucent color-mix, so the ground a chip actually sits on
+    // is that fill COMPOSITED over the page's own base ground, not the raw CSS value alone --
+    // `canvasColor` resolves that the same way it already resolves the outline register's own
+    // translucent border. Only the warning chip ever renders here (a Failed member row inside an
+    // expanded incident), so this measures warning alone against this third ground.
+    {
+      const memberRowCssRaw = getComputedStyle(document.getElementById('row-member')).backgroundColor;
+      const memberGroundRgb = canvasColor(memberRowCssRaw, groundUnstriped);
+      const memberGround = `rgb(${memberGroundRgb.join(',')})`;
+      const chip = document.querySelector('#warning-member .status-chip');
+      const cssVal = getComputedStyle(chip).backgroundColor;
+      const chipColor = canvasColor(cssVal, memberGround);
+      const groundColor = canvasColor(memberGround, memberGround);
+      groundResults.push({ register: 'warning', stripe: 'member', contrast: contrast(chipColor, groundColor) });
     }
 
     const borderResults = [];

@@ -8,6 +8,7 @@ import { requireSession } from '@glw907/cairn-cms/sveltekit';
 import { resolveClubDb } from '$admin-club/lib/club-db';
 import { latestAnnouncementByPost, listAnnouncements, type AnnouncementRow } from '$admin-club/lib/announcements';
 import { posts } from '$chassis/content';
+import { orderByPublished, postPublishedAt } from '$theme/announce-stamps';
 
 /** How many recent posts the list shows: enough to cover "did I already announce this" for
  *  everything an editor would plausibly still be thinking about, without loading the whole
@@ -23,7 +24,7 @@ export interface AnnounceListRow {
 
 export const load: PageServerLoad = async (event) => {
   requireSession(event);
-  const recent = posts.all().slice(0, RECENT_POST_LIMIT);
+  const recent = orderByPublished(posts.all(), postPublishedAt).slice(0, RECENT_POST_LIMIT);
 
   const db = resolveClubDb(event.platform?.env);
   const latestByPost = db ? latestAnnouncementByPost(await listAnnouncements(db)) : new Map<string, AnnouncementRow>();

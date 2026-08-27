@@ -108,12 +108,17 @@ function toLogRow(row: EmailLogRawRow): EmailLogRow {
   };
 }
 
-/** The most recent sends, newest first: the Email screen's own send-log list. Empty today (no
- *  consumer has sent through this module in production yet); the offer notification wired this
- *  pass is its first real writer. */
-export async function listEmailLog(db: D1Database, limit = 100): Promise<EmailLogRow[]> {
+/** A guard bound, well above the 750 live rows, on `listEmailLog`'s read: the admin screen's
+ *  load reads the whole log at this bound rather than a page of it (grouping, filtering, and
+ *  pagination all happen client side over the loaded set). */
+export const EMAIL_LOG_GUARD_LIMIT = 2000;
+
+/** The most recent sends, newest first: the Email screen's own send-log list. */
+export async function listEmailLog(db: D1Database, limit = EMAIL_LOG_GUARD_LIMIT): Promise<EmailLogRow[]> {
   const { results } = await db
-    .prepare('SELECT id, template_id, segment, recipient, subject, status, error_detail, sent_at FROM email_log ORDER BY sent_at DESC LIMIT ?1')
+    .prepare(
+      'SELECT id, template_id, segment, recipient, subject, status, error_detail, sent_at FROM email_log ORDER BY sent_at DESC, id DESC LIMIT ?1',
+    )
     .bind(limit)
     .all<EmailLogRawRow>();
   return results.map(toLogRow);
@@ -216,10 +221,16 @@ export interface SendClubEmailArgs {
   templateId?: string;
   raw?: { subject: string; body: string; replyTo?: string | null };
   vars: Record<string, string>;
-  /** The batch this send belongs to (`'current'`, `'lapsed'`, `'class:<id>'`), or `null` for a
-   *  single, one-off send (this pass's only real caller, the offer notification). Segment sends
-   *  are 2.3's own scope; this field exists on `email_log` and is threaded through now so that
-   *  pass writes no new column. */
+  /** Either the batch a bulk send belongs to, or a unique per-send tag some single sends use as
+   *  a sent-once/cooldown key, or `null` for a single, one-off send with no such key (a
+   *  class-touch reminder, a payment receipt, an offer notification). The vocabulary writers
+   *  actually emit: `blast:<id>` (`bulk-email.ts`'s `sendSegmentBlast`), `blast-test` (that
+   *  module's own test send, which writes no `email_blasts` row), `announce:<postId>`
+   *  (`announcements.ts`'s post-publish send), `waiver-nudge:<memberId>:<season>` and
+   *  `waiver-resumption:<householdId>:<season>` (`waiver-notify.ts`'s cooldown and
+   *  at-most-once guards, both enforced by a `SELECT ... WHERE segment = ?` read against this
+   *  same column), and `asset-decision:<kind>:<requestId>` /
+   *  `asset-decision:slot_opened:<waitlistId>` (`asset-decision-notify.ts`). */
   segment?: string | null;
 }
 

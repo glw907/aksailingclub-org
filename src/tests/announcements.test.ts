@@ -103,21 +103,52 @@ function daysAgo(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
+/** One audience-query row, in the column shape `segments.ts`'s audience statement selects
+ *  (`segments.test.ts` carries the same helper, and the full per-branch proof of the ranking that
+ *  decides `is_default_recipient` lives in migration 0038's own README). */
+function audienceRow(row: { id: string; name: string; household_id: string; email?: string | null; is_default_recipient?: 0 | 1 }) {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email ?? null,
+    phone: null,
+    household_id: row.household_id,
+    is_default_recipient: row.is_default_recipient ?? 1,
+  };
+}
+
 describe('currentMemberEmails', () => {
   // A thin call through resolveSegment('current') (segments.ts): these pin the same behavior
   // through the shared segment resolver, so the SQL text matches that module's own queries, not
-  // the pre-refactor inline ones.
-  it('includes a non-archived member with an email in a current household', async () => {
+  // the pre-refactor inline ones. Since the Email + Announce pass that query is the two-step
+  // audience statement, keyed here on `is_default_recipient`; the old
+  // `'FROM members WHERE archived_at'` key names `membersInHouseholds`, which this path no longer
+  // runs at all and which would answer `[]` rather than erroring if it were left behind.
+  it('includes the default recipient of a current household', async () => {
     const { db } = fakeD1({
       allResults: {
-        'FROM households h': [{ household_id: 'hh-larsen', paid_at: daysAgo(10), primary_member_id: null, former_at: null }],
-        'FROM members WHERE archived_at': [{ id: 'mem-erik', name: 'Erik Larsen', email: 'erik.larsen@example.com', household_id: 'hh-larsen' }],
+        'FROM households h': [{ household_id: 'hh-larsen', paid_at: daysAgo(10), primary_member_id: 'mem-erik', former_at: null }],
+        is_default_recipient: [audienceRow({ id: 'mem-erik', name: 'Erik Larsen', email: 'erik.larsen@example.com', household_id: 'hh-larsen' })],
       },
     });
     await expect(currentMemberEmails(db)).resolves.toContain('erik.larsen@example.com');
   });
 
-  it('excludes a recorded-Former household entirely: the members query never runs', async () => {
+  it('reaches one address per household, not one per member: announce inherits the audience model', async () => {
+    const { db, calls } = fakeD1({
+      allResults: {
+        'FROM households h': [{ household_id: 'hh-larsen', paid_at: daysAgo(10), primary_member_id: 'mem-erik', former_at: null }],
+        // The household's second member is not in the answer because the statement's own final
+        // predicate excludes anyone who is neither the default recipient nor opted in.
+        is_default_recipient: [audienceRow({ id: 'mem-erik', name: 'Erik Larsen', email: 'erik.larsen@example.com', household_id: 'hh-larsen' })],
+      },
+    });
+    await expect(currentMemberEmails(db)).resolves.toEqual(['erik.larsen@example.com']);
+    const audienceCall = calls.find((c) => c.sql.includes('is_default_recipient'));
+    expect(audienceCall?.sql).toContain('WHERE a.club_email_opt_in = 1 OR a.id = d.member_id');
+  });
+
+  it('excludes a recorded-Former household entirely: the audience query never runs', async () => {
     const { db, calls } = fakeD1({
       allResults: {
         'FROM households h': [{ household_id: 'hh-whitfield', paid_at: daysAgo(400), primary_member_id: null, former_at: daysAgo(30) }],
@@ -125,29 +156,29 @@ describe('currentMemberEmails', () => {
     });
     const emails = await currentMemberEmails(db);
     expect(emails).toEqual([]);
-    expect(calls.some((c) => c.sql.startsWith('SELECT id, name, email, household_id FROM members'))).toBe(false);
+    expect(calls.some((c) => c.sql.includes('is_default_recipient'))).toBe(false);
   });
 
   it('a household well past its renewal boundary but never recorded Former still counts as current (Overdue keeps full benefits, announce reach included)', async () => {
     const { db } = fakeD1({
       allResults: {
         'FROM households h': [{ household_id: 'hh-stale', paid_at: daysAgo(400), primary_member_id: null, former_at: null }],
-        'FROM members WHERE archived_at': [{ id: 'mem-stale', name: 'Stale Member', email: 'stale@example.com', household_id: 'hh-stale' }],
+        is_default_recipient: [audienceRow({ id: 'mem-stale', name: 'Stale Member', email: 'stale@example.com', household_id: 'hh-stale' })],
       },
     });
     await expect(currentMemberEmails(db)).resolves.toEqual(['stale@example.com']);
   });
 
-  it('scopes the member query to archived_at IS NULL, so an archived member is excluded by construction', async () => {
+  it('scopes the audience query to archived_at IS NULL, so an archived member is excluded by construction', async () => {
     const { db, calls } = fakeD1({
       allResults: {
         'FROM households h': [{ household_id: 'hh-petrov', paid_at: daysAgo(10), primary_member_id: null, former_at: null }],
-        'FROM members WHERE archived_at': [{ id: 'mem-dimitri', name: 'Dimitri Petrov', email: 'dimitri.petrov@example.com', household_id: 'hh-petrov' }],
+        is_default_recipient: [audienceRow({ id: 'mem-dimitri', name: 'Dimitri Petrov', email: 'dimitri.petrov@example.com', household_id: 'hh-petrov' })],
       },
     });
     await currentMemberEmails(db);
-    const memberCall = calls.find((c) => c.sql.startsWith('SELECT id, name, email, household_id FROM members'));
-    expect(memberCall?.sql).toContain('archived_at IS NULL');
+    const audienceCall = calls.find((c) => c.sql.includes('is_default_recipient'));
+    expect(audienceCall?.sql).toContain('WHERE m.archived_at IS NULL');
   });
 
   it('answers a deduplicated list', async () => {
@@ -157,9 +188,9 @@ describe('currentMemberEmails', () => {
           { household_id: 'hh-a', paid_at: daysAgo(10), primary_member_id: null },
           { household_id: 'hh-b', paid_at: daysAgo(5), primary_member_id: null },
         ],
-        'FROM members WHERE archived_at': [
-          { id: 'mem-a', name: 'Member A', email: 'shared@example.com', household_id: 'hh-a' },
-          { id: 'mem-b', name: 'Member B', email: 'shared@example.com', household_id: 'hh-b' },
+        is_default_recipient: [
+          audienceRow({ id: 'mem-a', name: 'Member A', email: 'shared@example.com', household_id: 'hh-a' }),
+          audienceRow({ id: 'mem-b', name: 'Member B', email: 'shared@example.com', household_id: 'hh-b' }),
         ],
       },
     });
@@ -183,11 +214,11 @@ describe('currentMemberEmails', () => {
       return new Date(NOW.getTime() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
     }
 
-    it('includes a household past its one-year renewal boundary but never recorded Former (Overdue keeps full benefits)', async () => {
+    it("includes an overdue household's head: past the one-year renewal boundary but never recorded Former, so it keeps full benefits", async () => {
       const { db } = fakeD1({
         allResults: {
-          'FROM households h': [{ household_id: 'hh-overdue', paid_at: paidAtDaysAgo(365 + 20), primary_member_id: null, former_at: null }],
-          'FROM members WHERE archived_at': [{ id: 'mem-overdue', name: 'Overdue Member', email: 'overdue@example.com', household_id: 'hh-overdue' }],
+          'FROM households h': [{ household_id: 'hh-overdue', paid_at: paidAtDaysAgo(365 + 20), primary_member_id: 'mem-overdue', former_at: null }],
+          is_default_recipient: [audienceRow({ id: 'mem-overdue', name: 'Overdue Member', email: 'overdue@example.com', household_id: 'hh-overdue' })],
         },
       });
       await expect(currentMemberEmails(db)).resolves.toEqual(['overdue@example.com']);
@@ -201,7 +232,7 @@ describe('currentMemberEmails', () => {
       });
       const emails = await currentMemberEmails(db);
       expect(emails).toEqual([]);
-      expect(calls.some((c) => c.sql.startsWith('SELECT id, name, email, household_id FROM members'))).toBe(false);
+      expect(calls.some((c) => c.sql.includes('is_default_recipient'))).toBe(false);
     });
   });
 });

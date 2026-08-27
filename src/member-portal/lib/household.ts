@@ -132,6 +132,23 @@ export async function setDirectoryVisibility(db: D1Database, memberId: string, v
   await db.prepare("UPDATE members SET directory_visibility = ?1, updated_at = datetime('now') WHERE id = ?2").bind(visibility, memberId).run();
 }
 
+/** Set one member's club-email opt-in (`members.club_email_opt_in`, migration 0038). A
+ *  membership-wide send reaches one default recipient per household; this flag is how any other
+ *  member of that household asks to receive it too (the Email + Announce contract's ruling 2).
+ *
+ *  The ONE writer for this column, deliberately: the portal's own Notifications toggle and the
+ *  admin household desk's per-member control both call it, exactly as they already share
+ *  {@link setDirectoryVisibility} for the sibling per-member column. Stored as the schema's own
+ *  0/1 integer, since SQLite has no boolean type. The route layer owns the ownership check (self,
+ *  or an admin acting through `clubAdminAction`); this module trusts its caller, the same boundary
+ *  every other writer here draws. */
+export async function setClubEmailOptIn(db: D1Database, memberId: string, optedIn: boolean): Promise<void> {
+  await db
+    .prepare("UPDATE members SET club_email_opt_in = ?1, updated_at = datetime('now') WHERE id = ?2")
+    .bind(optedIn ? 1 : 0, memberId)
+    .run();
+}
+
 /**
  * The lean leave-the-club action (design doc's own "the lean LEAVE-THE-CLUB action" and the
  * symmetry rule's "join implies leave"): stamps `households.left_at`, which stops the (future)

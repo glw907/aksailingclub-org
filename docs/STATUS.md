@@ -18,10 +18,12 @@ contracted, planned, and adversarially reviewed (2026-08-25): contract
 head-of-household audience model — 89 active households measured live against a 200/day
 quota), plan `docs/plans/2026-08-25-email-announce.md` (11 tasks, workflow mode, 2.5M
 ceiling; a 60-agent review folded 79 findings, verification clean). SMS + announce-on-
-publish are logged as ROADMAP's `club-notifications`. Resume prompt: "Continue the Email +
-Announce pass: read docs/STATUS.md, the contract, and the plan's Probe round; build the
-three-subject probe from live data for Geoff's verdicts, then execute via
-pass-execute.js."
+publish are logged as ROADMAP's `club-notifications`. Probe verdicted (plan's "Probe
+verdicts"); execution is IN FLIGHT on branch `email-announce`. Resume prompt (fresh
+overnight session, launch on that branch): "Run the Email + Announce pass to completion:
+read docs/STATUS.md and docs/plans/2026-08-25-email-announce.md in full — its Overnight
+standing orders section governs. Execute the remaining tasks per the dispatch JSON it
+names, then the full pass-end checklist."
 
 **Immediate next action (Geoff's).** The assets before/after (delivered 2026-08-25 as a
 machine-local HTML file in the session; ask for a re-send if lost) — it gates the apex, and

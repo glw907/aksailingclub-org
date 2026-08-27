@@ -4,6 +4,34 @@
 // vocabularies once a second consumer needed them). Member-domain chips and labels stay in
 // member-format.ts, which reads `ChipStyle` from here.
 
+import type { EmailQuotaHeadroom } from './email-limits';
+
+/** A count-line noun in both grammatical numbers: `one` is the singular form, used when the count
+ *  is exactly 1; `many` is the plural, used for every other count, zero included ("0 households").
+ *  Mirrors `@glw907/cairn-cms/admin-toolkit`'s own `ItemLabel`. */
+export interface ItemLabel {
+  one: string;
+  many: string;
+}
+
+/** Pick the grammatical number for a count surface: `one` at exactly 1, `many` otherwise. `label`
+ *  also accepts a plain string, which is invariant across every count.
+ *
+ *  A local copy of `@glw907/cairn-cms/admin-toolkit`'s `itemNoun`, not a re-export (close round
+ *  item 28 originally re-exported it here so no server file had to import the toolkit package
+ *  directly). That barrel also carries `.svelte` components, and Vite's SSR build leaves a
+ *  package import like this one external in the server chunk rather than inlining it; wrangler
+ *  dev's own esbuild pass then tries to bundle that external barrel and fails, because esbuild
+ *  has no loader configured for `.svelte` files. `npm run build` never surfaces this (Vite
+ *  bundles the whole graph itself), so the break only shows up against wrangler's own bundler.
+ *  The fix is the same one item 28 already established for the two server files: the toolkit
+ *  package never enters the server import graph. This copy keeps the exported name and call-site
+ *  shape identical to the toolkit's own function. */
+export function itemNoun(count: number, label: string | ItemLabel): string {
+  if (typeof label === 'string') return label;
+  return count === 1 ? label.one : label.many;
+}
+
 /** One chip's display: the label it reads, and the badge classes carrying its color. */
 export interface ChipStyle {
   label: string;
@@ -83,4 +111,13 @@ const clubTimestampFmt = new Intl.DateTimeFormat(undefined, {
 export function formatClubTimestamp(sqliteDatetime: string): string {
   const parsed = new Date(`${sqliteDatetime.replace(' ', 'T')}Z`);
   return Number.isNaN(parsed.getTime()) ? sqliteDatetime : clubTimestampFmt.format(parsed);
+}
+
+/** The advisory send-quota line both send surfaces render word for word (Compose's own review
+ *  step and the Announce form's Email block), so the wording has one home rather than a copy per
+ *  screen. A `null` headroom is a supported, permanent state (the read failed, or the Email
+ *  Sending token was never minted), never an error, and never blocks a send. */
+export function formatHeadroomLine(headroom: EmailQuotaHeadroom | null): string {
+  if (!headroom) return 'Daily send headroom is unknown.';
+  return `Daily quota ${headroom.quota}, sent today ${headroom.sentToday}, ${headroom.remaining} remaining.`;
 }

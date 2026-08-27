@@ -58,11 +58,10 @@ functional brainstorm (purpose and common use cases documented first; UI/UX flow
 that). Scope per Geoff 2026-07-21: the series runs across the ENTIRE admin surface
 until every screen is fully polished; ordering is not critical — whatever makes sense
 pass to pass. Shipped so far: Members (2026-07-20), Classes (2026-07-21), Events (2026-08-23, the
-series ledger). Remaining pre-toolkit screens: Assets + asset-requests (the `asset_types`
-id defect shipped fixed in migration `0034`; the live rider is the `asset_requests`
-uniqueness race, a unique-index migration), Email + Announce (a natural single pass), Settings (rides the
-`season-rollover` initiative), Committees (light retrofit candidate); Money
-deliberately later, once the table and form vocabulary exists. Toolkit
+series ledger), Assets + asset-requests (2026-08-25), Email + Announce (2026-08-26,
+the head-of-household audience model plus the five screens). Remaining pre-toolkit
+screens: Settings (rides the `season-rollover` initiative), Committees (light retrofit
+candidate); Money deliberately later, once the table and form vocabulary exists. Toolkit
 components and written standards are harvested into cairn as each pass lands, so the
 process compounds. The effort OPENS with the design-research survey (table density,
 striping, form layout — published UX literature plus mature admin design systems),

@@ -13,6 +13,17 @@
 // not a pure function of `paid_at` any more), and the guardian-aware class-contact resolver
 // (`class-contact.ts`'s `resolveClassContact`) for a class roster, the same resolver every other
 // class-related send already routes through.
+//
+// The two MEMBERSHIP segments resolve in two steps (Email + Announce pass,
+// docs/2026-08-25-email-announce-design.md ruling 2 and its "Groundwork for the notifications
+// pass" section). Step one, `resolveMembershipAudience`, answers who the club would notify on any
+// channel: each qualifying household's default recipient plus that household's opted-in members,
+// carrying membership guards alone. Step two projects that audience onto one channel, which for
+// today is email (`projectAudienceToEmail`). The split is only worth having if the channel filter
+// sits on the right side of it, so no channel-specific predicate belongs in the audience query;
+// the SMS pass reuses step one unchanged and adds a phone projection beside step two. The other
+// segments stay per-member and unsplit on purpose: enrollment is its own opt-in, and emailing one
+// named household deliberately reaches every member of it.
 import { classifyHouseholdStanding } from '$member-auth/lib/standing';
 import { resolveClassContact } from './class-contact';
 import { getClass, listEnrollments, type ClassRow } from './classes-store';
@@ -54,9 +65,11 @@ interface RecipientCandidate {
   memberId: string;
   name: string;
   email: string;
-  /** Whether this candidate is the household primary member: the shared-email tie-break rule
-   *  ({@link dedupeRecipients}) prefers a primary's name over a non-primary's when two candidates
-   *  collide on the same email. */
+  /** Whether this candidate is the one to prefer when two candidates collide on the same email
+   *  ({@link dedupeRecipients}). The household primary for a `household:<id>` segment, which is
+   *  where the flag got its name; the household's DEFAULT RECIPIENT for a membership segment,
+   *  which is the same row in the ordinary case and differs only when the primary is archived or
+   *  carries no email. */
   isPrimary: boolean;
 }
 
@@ -67,6 +80,10 @@ interface RecipientCandidate {
  * rule); among candidates that are never marked primary (instructors, a class roster), the first
  * one encountered simply wins, which is already correct there since `resolveClassContact` itself
  * resolves every enrollee sharing one guardian's inbox to that guardian's own name.
+ *
+ * This is also where the non-empty-email filter lives for the membership segments: an audience
+ * member with no email (a phone-only opt-in) is dropped here rather than in the audience query,
+ * which is the whole point of splitting audience selection from channel projection.
  */
 function dedupeRecipients(candidates: readonly RecipientCandidate[]): SegmentRecipient[] {
   const byKey = new Map<string, RecipientCandidate>();
@@ -145,39 +162,162 @@ async function membersInHouseholds(db: D1Database, householdIds: readonly string
   return members;
 }
 
+/** One member of the club's notification audience for a membership-wide send: the household's own
+ *  default recipient, or a member of that household who has opted in. Carries every channel's raw
+ *  contact detail and no channel's filter, so a projection (email today, phone when the SMS pass
+ *  lands) decides on its own who it can actually reach. */
+export interface AudienceMember {
+  memberId: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  householdId: string;
+  /** Whether this member is the household's default recipient (the head of household in the
+   *  ordinary case). False for a member reached only through their own opt-in. */
+  isDefaultRecipient: boolean;
+}
+
+interface AudienceRow {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  household_id: string;
+  is_default_recipient: number;
+}
+
 /**
- * The two membership segments: `'current'` is every non-archived member's email in a household
- * whose standing is `'current'` or `'overdue'` (Members pass T2's renamed vocabulary; Overdue
- * keeps full benefits everywhere, this segment included, until a household is actually recorded
- * Former), read through {@link classifyHouseholdStanding}; `'lapsed'` is every such household
- * recorded `'former'`. A household that has never had a non-refunded paid row (never-paid, or
- * refunded-only) is excluded from both: "lapsed" means "was a member, isn't now", never "never
- * was one".
+ * The notification audience inside `householdIds`: each household's own default recipient plus
+ * every member of it who has opted in, queried in chunks of at most
+ * {@link HOUSEHOLD_QUERY_CHUNK_SIZE} household ids so the bound-parameter count never approaches
+ * D1's cap.
+ *
+ * Every guard is in the statement, which is what makes it testable at all (`fakeD1` asserts SQL
+ * text, never behavior). Reading it in the order it runs:
+ *
+ * - `audience_member` is the household-membership guard: non-archived members of the named
+ *   households, joined to their household so `primary_member_id` is in scope below.
+ * - `default_recipient` ranks the members who could actually receive a channel-bearing message
+ *   today (a non-empty email), preferring the household's own primary and falling back to the
+ *   earliest-created member, with `id` as a stable final tie-break so the pick never depends on
+ *   row order. Ruling 2's rule, exactly: the primary when non-archived and emailed, otherwise the
+ *   earliest-created non-archived emailed member.
+ * - The outer `LEFT JOIN` is what keeps a household with no emailed member at all from vanishing:
+ *   `d.member_id` is then NULL, so `a.id = d.member_id` is NULL, and only that household's
+ *   opted-in members survive the final predicate.
+ *
+ * The `<>` empty-string check sits beside `IS NOT NULL` because this schema allows either shape:
+ * `members.email` is nullable by design (a covered child may have none), and an import can leave
+ * an empty string behind.
+ *
+ * Keep the household join written as `JOIN households AS h`, never `FROM households h`. The unit
+ * tests script `fakeD1` by SQL substring, and `FROM households h` is the key that names
+ * {@link householdGrounding}; a rewrite into that form would make this statement answer the
+ * grounding fixture instead, which is a silent vacuous pass rather than a failure.
  */
-async function resolveMembershipSegment(db: D1Database, key: 'current' | 'lapsed'): Promise<ResolvedSegment> {
+async function audienceInHouseholds(db: D1Database, householdIds: readonly string[]): Promise<AudienceMember[]> {
+  if (householdIds.length === 0) return [];
+  const audience: AudienceMember[] = [];
+  for (let i = 0; i < householdIds.length; i += HOUSEHOLD_QUERY_CHUNK_SIZE) {
+    const chunk = householdIds.slice(i, i + HOUSEHOLD_QUERY_CHUNK_SIZE);
+    const placeholders = chunk.map((_, index) => `?${index + 1}`).join(', ');
+    const { results } = await db
+      .prepare(
+        `WITH audience_member AS (
+           SELECT m.id, m.name, m.email, m.phone, m.household_id, m.created_at, m.club_email_opt_in,
+                  h.primary_member_id
+           FROM members m
+           JOIN households AS h ON h.id = m.household_id
+           WHERE m.archived_at IS NULL AND m.household_id IN (${placeholders})
+         ),
+         default_recipient AS (
+           SELECT household_id, id AS member_id,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY household_id
+                    ORDER BY (id = primary_member_id) DESC, created_at ASC, id ASC
+                  ) AS pick
+           FROM audience_member
+           WHERE email IS NOT NULL AND TRIM(email) <> ''
+         )
+         SELECT a.id, a.name, a.email, a.phone, a.household_id,
+                CASE WHEN a.id = d.member_id THEN 1 ELSE 0 END AS is_default_recipient
+         FROM audience_member a
+         LEFT JOIN default_recipient d ON d.household_id = a.household_id AND d.pick = 1
+         WHERE a.club_email_opt_in = 1 OR a.id = d.member_id`,
+      )
+      .bind(...chunk)
+      .all<AudienceRow>();
+    audience.push(
+      ...results.map((row) => ({
+        memberId: row.id,
+        name: row.name,
+        email: row.email ?? null,
+        phone: row.phone ?? null,
+        householdId: row.household_id,
+        isDefaultRecipient: row.is_default_recipient === 1,
+      })),
+    );
+  }
+  return audience;
+}
+
+/**
+ * Step one of the membership path: who the club would notify for `key`, on any channel.
+ *
+ * `'current'` grounds on every household whose standing is `'current'` or `'overdue'` (Members
+ * pass T2's renamed vocabulary; Overdue keeps full benefits everywhere, this segment included,
+ * until a household is actually recorded Former), read through {@link classifyHouseholdStanding};
+ * `'lapsed'` is every such household recorded `'former'`. A household that has never had a
+ * non-refunded paid row (never-paid, or refunded-only) is excluded from both: "lapsed" means "was
+ * a member, isn't now", never "never was one".
+ *
+ * Exported because the SMS pass reuses it verbatim and adds a phone projection beside
+ * {@link projectAudienceToEmail}. The household logic is never forked per channel.
+ */
+export async function resolveMembershipAudience(db: D1Database, key: 'current' | 'lapsed'): Promise<AudienceMember[]> {
   const grounding = await householdGrounding(db);
   const now = new Date();
 
-  const primaryByHousehold = new Map<string, string | null>();
   const householdIds: string[] = [];
   for (const row of grounding) {
-    primaryByHousehold.set(row.household_id, row.primary_member_id);
     const status = classifyHouseholdStanding(row.paid_at, row.former_at ?? null, now);
     const isCurrentOrOverdue = status === 'current' || status === 'overdue';
     if (key === 'current' ? isCurrentOrOverdue : !isCurrentOrOverdue) householdIds.push(row.household_id);
   }
 
-  const members = await membersInHouseholds(db, householdIds);
-  const recipients = dedupeRecipients(
-    members.map((member) => ({
-      memberId: member.id,
+  return audienceInHouseholds(db, householdIds);
+}
+
+/** Step two of the membership path: the audience projected onto the email channel. The non-empty
+ *  email requirement and the case-insensitive dedup both live here ({@link dedupeRecipients}), so
+ *  a phone-only opted-in member is in the audience and absent from this list. */
+function projectAudienceToEmail(audience: readonly AudienceMember[]): SegmentRecipient[] {
+  return dedupeRecipients(
+    audience.map((member) => ({
+      memberId: member.memberId,
       name: member.name,
-      email: member.email,
-      isPrimary: member.id === primaryByHousehold.get(member.household_id),
+      email: member.email ?? '',
+      isPrimary: member.isDefaultRecipient,
     })),
   );
+}
 
-  return { key, label: key === 'current' ? 'Current members' : 'Former members', recipients };
+/**
+ * The two membership segments, as email: {@link resolveMembershipAudience} then
+ * {@link projectAudienceToEmail}.
+ *
+ * The labels say "households" rather than "members" because that is what the audience now is
+ * (ruling 2): one default recipient per qualifying household, plus whoever else in it asked to be
+ * included. `segments.ts` is the only place either label is minted; the picker's own copies are
+ * right below, in {@link listSegmentOptions}.
+ */
+async function resolveMembershipSegment(db: D1Database, key: 'current' | 'lapsed'): Promise<ResolvedSegment> {
+  const audience = await resolveMembershipAudience(db, key);
+  return {
+    key,
+    label: key === 'current' ? 'Current households' : 'Former households',
+    recipients: projectAudienceToEmail(audience),
+  };
 }
 
 /** Everyone in `class_instructors` for the club's current season, deduplicated. */
@@ -289,8 +429,8 @@ export async function listSegmentOptions(db: D1Database): Promise<SegmentOption[
   }));
 
   return [
-    { key: 'current', label: 'Current members' },
-    { key: 'lapsed', label: 'Former members' },
+    { key: 'current', label: 'Current households' },
+    { key: 'lapsed', label: 'Former households' },
     { key: 'instructors', label: 'Instructors' },
     ...classOptions,
   ];
