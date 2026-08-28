@@ -16,6 +16,10 @@ mints), and the first email/announce e2e plus visual coverage. The record:
 The apex cutover remains its own deliberate DNS change, **now explicitly blocked on the
 CSRF/Referrer-Policy defect below**.
 
+**Resume prompt (next session).** "Start the CSRF/Referrer-Policy pass: read
+docs/STATUS.md and docs/2026-08-26-csrf-referrer-prep-brief.md in full, then run the
+brainstorm on the brief's three open decisions with Geoff before any plan is written."
+
 **THE pre-cutover blocker.** The blanket `Referrer-Policy: no-referrer`
 (`src/hooks.server.ts`) nulls `Origin` on every plain form POST, which cairn's CSRF guard
 403s: member sign-in and magic-link confirm fail in real browsers on dev today (40 plain
