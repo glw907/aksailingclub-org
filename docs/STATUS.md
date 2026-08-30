@@ -35,7 +35,8 @@ recipient sees a control that cannot change their own reach — harvest 15), the
 list's emphasis inversion and the announce send's missing confirm (harvest 37). Chores
 whenever: mint the read-only Email Sending token (`CLOUDFLARE_EMAIL_SENDING_TOKEN` via the
 ASC store + `wrangler secret put`; headroom shows "unknown" until then, a supported state)
-and file Cloudflare's quota Limit Increase form (200/day measured). Standing dev queue:
+file Cloudflare's quota Limit Increase form (200/day measured), and add a `.devcontainer/`
+with pinned Node + wrangler (`~/.dotfiles/bluefin/devenv-research.md`). Standing dev queue:
 `/admin/club/events` and `/events` at 1440/390, smartypants on `/governance`, the
 theme-flip cross-fade on `/` and a 404, a minted "Share preview" link in a private window,
 one Tidy run.
