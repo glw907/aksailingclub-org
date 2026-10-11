@@ -194,7 +194,7 @@ The deliberate live-Stripe smoke that has been queued since pass 2.1, plus Turns
 and rate limiting on the new public money forms (a named cutover blocker).
 Fable-window ruling (Geoff, 2026-07-14): spec and plan authored in-window (what the
 smoke proves, expected outcomes, abort criteria, the Turnstile/rate-limit design);
-execution runs post-window under an Opus conductor — the live smoke needs Geoff's go
+execution runs post-window in its own session — the live smoke needs Geoff's go
 regardless.
 Pre-spec rulings (Geoff, 2026-07-14, the settle-in-advance round): the smoke charges a
 REAL card on the cheapest real product and refunds it through the ledger's own refund
@@ -209,7 +209,7 @@ docs/plans/2026-07-15-payments-live-smoke.md (plan). Decision points for Geoff:
 smoke product ($1 donation default vs $100 domain-row alternative), dev-Access posture
 (dev verified PUBLIC today, contra CLAUDE.md), and smoke marking — SETTLED 2026-07-15 as
 MEMO (no marker column; the shipped memo path is final, migration 0027 dropped). Two remain.
-HARDENING HALF EXECUTED 2026-07-15 overnight (Opus-conducted, plan Tasks 1-6 + conductor
+HARDENING HALF EXECUTED 2026-07-15 overnight (plan Tasks 1-6 plus the runbook's
 steps 1-2): Turnstile on all five remaining public POSTs, the [[ratelimits]] layer, the
 optional smoke memo, and the key-swap appendix — 7 commits (56500fb..fd61fcf) gate-green
 (check 0/0, test 1216, e2e 33/33) and DELIBERATELY UNPUSHED (push=dev deploy). Review gate
@@ -323,8 +323,8 @@ resolves to nothing. Fix the site contract's own failures here; file cairn's aga
 PLANNED 2026-07-17 (the Fable planning session; Geoff approved the design interactively): spec
 `docs/2026-07-17-fragments-migration-design.md` (ratified decisions: probe matrix + diary,
 blocks-only conversion bar with the content-agreement test, Claude drives the editor seat) + plan
-`docs/plans/2026-07-17-fragments-migration.md` (conductor runbook) + the stage-runner workflow
-script beside it. Execution Opus-conducted in a fresh session per Geoff's downshift ruling; the
+`docs/plans/2026-07-17-fragments-migration.md` (execution runbook) + the stage-runner workflow
+script beside it. Execution in a fresh session per Geoff's downshift ruling; the
 resume prompt is docs/STATUS.md's top entry.
 
 EXECUTED 2026-07-17, developer seat only. The site runs `^0.87.0` with the fragments concept
@@ -444,7 +444,7 @@ complaints. Shape: pages grouped by template kind for review economy — (1) hom
 the six primary pages (mostly round-hardened already; fast confirms), (2) the
 Members-menu children and membership/renewal how-tos, (3) governance and policy
 documents, (4) storage pages, (5) form/confirmation and system pages, (6) the news
-surfaces (index, tag pages, post/bulletin rendering). Per group: conductor render
+surfaces (index, tag pages, post/bulletin rendering). Per group: render
 reads at the five-viewport bar, fixes for what misses the contract, then Geoff's live
 localhost read confirms the group; a confirmed page is logged and not revisited unless
 he reopens it. Rolled into the sweep: the `.page-cta` ratification and rollout to its
@@ -458,8 +458,8 @@ session. The ledger: docs/design-benchmark/page-confirmations.md (home + educati
 already confirmed, Geoff 2026-07-14).
 Fable-window ruling (Geoff, 2026-07-14): FABLE-PRIORITY IN-WINDOW. Geoff finds Fable
 much stronger in the design realm, and unlike the mechanical initiatives this edge
-cannot be banked as a spec — the taste lives in the conducting (probe authorship,
-render reads, the arrangement calls), not in a plan a cheaper conductor executes. So
+cannot be banked as a spec — the taste lives in the executing session (probe authorship,
+render reads, the arrangement calls), not in a plan a cheaper executor runs. So
 design rounds rank beside admin-roles/admin-nav-reorg for in-window Fable time, ahead
 of the spec-only queue when his review availability lines up.
 Standing authorization (Geoff, 2026-07-14): pages may be moved onto the ratified

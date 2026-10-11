@@ -3,18 +3,16 @@
 The Alaska Sailing Club's public site: guides, news, pages, and the season calendar, built on
 `@glw907/cairn-cms` (see `package.json` for the current range) using the cairn chassis
 structure. It replaces the club's prior Hugo/Blowfish site (now at
-`~/Projects/aksailingclub-legacy` after the 2026-07-06 rename; see "The repo family" below)
-and its abandoned SvelteKit rebuild (`~/Projects/aksailingclub-sveltekit`, kept only as
-phase-2 evidence, not a foundation).
+`~/Projects/aksailingclub-legacy`; see "The repo family" below) and its abandoned SvelteKit
+rebuild (`~/Projects/aksailingclub-sveltekit`, phase-2 evidence only).
 
 @docs/STATUS.md
 
 ## What this is
 
 Three cairn concepts: **posts** (news, results, recaps, a curated tag vocabulary), **pages**
-(stable content: guides, governance, education), and **notifications** (a site-declared concept
-rendering as the home banner). Everything a member reads is markdown content edited through
-cairn's `/admin`; the season calendar is D1 data, not content (see below).
+(stable content), and **notifications** (the home banner). Everything a member reads is
+markdown edited through cairn's `/admin`; the season calendar is D1 data, not content.
 
 `src/chassis/` carries the genre-free plumbing (content delivery, the token system, prose and
 composition CSS, the runtime composition point) verbatim or near-verbatim from cairn-cms's own
@@ -26,8 +24,7 @@ anything under `src/chassis/`: a theme file reaches chassis only through its exp
 
 ## The design contract
 
-This site executes a locked design spec, not an ad hoc theme. Durable local copies live in this
-repo so the contract survives independent of the cairn-cms repo:
+This site executes a locked design spec. Durable local copies live in this repo:
 
 - **`docs/2026-07-06-asc-phase-1-design.md`**: the phase-1 spec — the four named issues (complex
   CSS, busy pages, uneven responsiveness, heavy card use), the locked density recipes (A1 quieted
@@ -37,13 +34,11 @@ repo so the contract survives independent of the cairn-cms repo:
   Every locked decision in one rendered artifact; a change to the home page reads against this
   file, not against memory of what it says.
 
-Both are frozen references from the brainstorm that produced this build. A future redesign pass
-supersedes them with a new spec and north star, it does not edit these in place.
+Both are frozen; a future redesign supersedes them with a new spec, never an in-place edit.
 
 ### The club-grounds color story
 
-The palette replaces the old site's unexamined Blowfish defaults. Roles are the contract; exact
-values may tune, but a color never crosses roles:
+Roles are the contract; exact values may tune, but a color never crosses roles:
 
 - **Flag navy** (`~#1C4670`, deep `#12294A`): links, structure, identity. The only link color.
 - **Star gold** (`~#E3A008`): marks and waypoints only, never body text — the active-nav
@@ -52,14 +47,14 @@ values may tune, but a color never crosses roles:
 - **Fireweed** (`~#B23A77`): the single pop color — primary CTAs, at most twice per page.
 - **Building sage** (tints `~#F2F5F1`/`~#E5EBE3`): band and surface neutrals.
 - **Harbor ink** (`~#16222E`) and its muted step: text.
-- The semantic palette (caution/success/error) stays a separate reserved vocabulary. The
-  education category can never collide with a warning color again, the way it did on the old site.
+- The semantic palette (caution/success/error) stays a separate reserved vocabulary, so the
+  education category never collides with a warning color.
 
 ### The resolved-craft bar (Geoff, 2026-07-15)
 
-Every page must feel _designed_, never assembled — and this bar covers the whole site and all
-design work, basic work included, not just dedicated polish passes. The operating rubric is the
-invisible-craft catalogue in `docs/2026-07-15-asc-invisible-polish-brief.md` (spacing rhythm,
+Every page must feel _designed_, never assembled, across the whole site and all design work.
+The rubric is the invisible-craft
+catalogue in `docs/2026-07-15-asc-invisible-polish-brief.md` (spacing rhythm,
 register boundaries, optical alignment, weight-built hierarchy, tinted neutrals, layered depth,
 motion discipline, state coverage, micro-typography): a new surface gets the catalogue applied
 at build time, not deferred to a later polish round. `scripts/design-probe.mjs` carries the
@@ -70,26 +65,19 @@ changed or Geoff reopens it.
 
 ### One-check and visual-fidelity, for any design change
 
-This site follows cairn-cms's family-wide doctrine (see that repo's `CLAUDE.md` for the full
-statement): **nothing deploys to production without at least one full-page render read by a
-human's own eyes**, and because this is a member-facing site, **Geoff's explicit before/after
-approval gates every visual change before it reaches the apex**. Mechanical gates (`npm run
-check`, `npm test`, the pixel-diff rider) measure correctness, never resemblance; only a read
-screenshot measures what a member sees.
+**Nothing deploys to production without a full-page render read by a human's own eyes**, and
+because this is a member-facing site, **Geoff's explicit before/after approval gates every
+visual change before it reaches the apex**. Mechanical gates measure correctness, never
+resemblance. Any non-trivial visual change follows the `visual-fidelity` skill (reference first,
+screenshot-compare loop, fresh-eyes verification); the family five-viewport bar (320, 390, 768,
+1440, 2560) is the responsiveness bar, and `e2e/site-visual.spec.ts` is its CI-enforced form.
 
-Any non-trivial visual change runs the **visual-fidelity method**: capture the reference first,
-build against a screenshot-compare loop, verify with fresh eyes (not the same session that made
-the change), then the one-check gate above. The family five-viewport bar (320, 390, 768, 1440,
-2560, composed at the extremes) is the acceptance bar for responsiveness; `e2e/site-visual.spec.ts`
-is the CI-enforced form of it, and any change that alters rendering must regenerate its baselines
-in the same change, never leave them stale. **Baselines are CI-canonical and regenerate only via
-`ci.yml`'s `workflow_dispatch` `update_snapshots` mode** (`gh workflow run ci.yml -f
-update_snapshots=true`), which runs the visual spec on the CI runner and commits the resulting
-PNGs straight back to the branch — never a local `--update-snapshots` run (`ci.yml`'s own comment
-names the reason: baselines are CI-canonical, and a workstation render is never an acceptable
-substitute — rendering-environment differences between a workstation and the CI runner produce a
-pixel delta the comparison catches). A workstation-rendered PNG committed as a baseline silently
-breaks CI on the very next run; it happened 2026-07-15.
+A change that alters rendering regenerates its baselines in the same change. **Baselines are
+CI-canonical and regenerate only via `ci.yml`'s `workflow_dispatch` `update_snapshots` mode**
+(`gh workflow run ci.yml -f update_snapshots=true`), which commits the PNGs back to the branch;
+never a local `--update-snapshots` run. A workstation-rendered baseline silently breaks CI on
+the next run (it happened 2026-07-15). Dispatch it last, since a push after its checkout fails
+it (`docs/engineering-notes.md`).
 
 ## The asc-club schema is fully evolvable — never write around it (Geoff, 2026-07-13)
 
@@ -107,7 +95,7 @@ Source exports are committed to this repo age-encrypted under `data/membershipwo
 (`*.csv.age`, encrypted to the ASC age key; decrypt with `age -d -i $AGE_KEY_FILE`, the key at
 `~/.config/age/asc-key.txt`, never committed). Plaintext copies live machine-local only at
 `~/.local/asc-data/`; never commit a plaintext export. Import scripts live in `scripts/import/`
-(verified-import-script pattern: dry-run plan, audit trail, verify.sql, rollback). Member data
+(dry-run plan, audit trail, verify.sql, rollback). Member data
 regularizes on every write path, import and live alike: emails lowercase, phones E.164 (+1
 default), names conservatively recased.
 
@@ -125,21 +113,19 @@ own database (cairn's magic-link auth store) and takes migrations normally.
 
 **dev.aksailingclub.org** serves this build (the `asc-site` Worker), behind the same Cloudflare
 Access application volunteers already used for the prior migration shell (repointed from
-`asc-staging` to `asc-site` at the Task 5 dev takeover; `asc-staging` itself is untouched, still
+`asc-staging` to `asc-site` at the dev takeover; `asc-staging` itself is untouched, still
 bound at `staging.aksailingclub.org`). Non-interactive verification (curl, Playwright) uses the
 `claude-capture-asc-ref` Access service token
 (`ASC_ACCESS_CLIENT_ID`/`ASC_ACCESS_CLIENT_SECRET` in `~/.local/secrets`) with the
 `CF-Access-Client-Id`/`CF-Access-Client-Secret` headers. **Production
 (`aksailingclub.org`) is not behind Access and is not this Worker yet** — see the deploy story
-below. Full Access-app inventory and token-minting steps: the `asc-cloudflare-access` memory in
-the cairn-cms project's agent memory.
+below. Full Access-app inventory: `~/.claude/docs/cloudflare-estate-inventory.md`.
 
 ## Deploy story
 
 - **Push to `main`** runs `.github/workflows/deploy.yml`, which deploys straight to the
   `asc-site` Worker. **That Worker is bound to `dev.aksailingclub.org`, not the production apex.**
-  A push to `main` is a dev deploy; it is not gated on Geoff's review by the deploy mechanism
-  itself, only by the one-check rule above as a practice.
+  A push to `main` is a dev deploy, gated on Geoff's review only by the one-check rule above.
 - **Merging and deploying to dev is default behavior until the apex cutover (Geoff,
   2026-08-22).** When a pass's PR is green on its final commit (baselines regenerated through
   CI), merge it and let `deploy.yml` run without asking; report the merge and the deploy in the
@@ -149,10 +135,10 @@ the cairn-cms project's agent memory.
 - **`.github/workflows/ci.yml`** is the pull-request gate: `check`, `test`, `build`, and the
   pixel-diff `test:e2e` suite, with a `workflow_dispatch` mode to regenerate visual baselines.
 - **The production apex cutover (`aksailingclub.org` itself) is a separate, deliberate DNS
-  change** — repointing the zone apex from the retiring Hugo/GCE origin to this Worker. It is
-  **never automatic and never bundled with a routine push to `main`.** It happens only on
-  Geoff's explicit go, after his own before/after review of dev, per the phase-1 design spec's
-  acceptance criteria. The GCE origin retires only after a soak period following that cutover.
+  change** repointing the zone apex from the retiring Hugo/GCE origin to this Worker. It is
+  **never automatic and never bundled with a routine push to `main`**; it happens only on
+  Geoff's explicit go, after his own before/after review of dev. The GCE origin retires after a
+  soak period.
 
 ## Build & Dev
 
@@ -160,103 +146,55 @@ the cairn-cms project's agent memory.
 npm install
 npm run dev                                          # dev server at http://localhost:5173
 npm run build                                        # build to .svelte-kit/cloudflare/
-npm run build:search                                 # build + Pagefind search index
-npx wrangler dev --remote                            # real D1/R2 bindings (EVENTS_DB, MEDIA_BUCKET)
-npm run check                                         # svelte-check, 0 errors/0 warnings
-npm run types    # regenerate worker-configuration.d.ts (wrangler types --include-env=false) after any wrangler.toml change
-npm test                                              # vitest
-npm run test:e2e                                      # Playwright, the pixel-diff visual suite
+npm run build:search                                 # build + Pagefind index
+npx wrangler dev --remote                            # real D1/R2 bindings
+npm run check                                        # svelte-check, 0 errors/0 warnings
+npm run types                                        # worker-configuration.d.ts, after any wrangler.toml change
+npm test                                             # vitest
+npm run test:e2e                                     # Playwright, the pixel-diff visual suite
 ```
 
 `npm run cairn:manifest` regenerates `src/content/.cairn/index.json` after any content edit made
-outside the admin (a direct file edit, a migration script); the admin's own save path regenerates
-it automatically. `worker-configuration.d.ts` is committed; `npm run types` runs `wrangler types
---include-env=false`, which keeps the generated file machine-independent, since without that flag
-wrangler embeds the built worker's module type into `GlobalProps` whenever
-`.svelte-kit/cloudflare/_worker.js` happens to exist on whichever machine regenerates it (a stray
-local build left over from an earlier session, say), which cascades through `checkJs` into
-thousands of `svelte-check` errors. `--include-env=false` also means the generated `Env` interface
-never appears; this site declares its bindings explicitly instead, in `src/app.d.ts`'s
-`Platform.env`, because that shape also names Worker secrets (`TURNSTILE_SECRET_KEY`,
-`STRIPE_*`, `DISCORD_WEBHOOK_*`) that wrangler.toml never lists and `wrangler types` therefore
-never could generate. `@cloudflare/workers-types` stays a devDependency even though nothing in
-this site's own source imports from it directly: cairn's own dist `.d.ts` files do
-(`D1Database`/`R2Bucket`/`RateLimit`), and with it absent those degrade to an unresolved-import
-`any` that `skipLibCheck: true` hides from `svelte-check` entirely.
+outside the admin. Type generation (`npm run types` must keep `--include-env=false`), why
+`@cloudflare/workers-types` stays a devDependency, and the new-post frontmatter template live in
+`docs/engineering-notes.md`.
 
-## New Post
-
-Create `src/content/posts/YYYY-MM-DD-slug.md`:
-
-```yaml
----
-title: "Post Title"
-date: YYYY-MM-DD
-draft: false
-description: "One sentence description."
-tags: ["tag1"]
-image:
-  src: "media/<content-hash>"
-  alt: "What the photo shows."
----
-```
-
-## Worker & Secrets
+## Worker secrets and engine-level UI mechanics
 
 `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID`, and `GITHUB_APP_PRIVATE_KEY_B64` (cairn's GitHub
-App, committer `cairn-cms[bot]`; values on file in the cairn-cms repo's `CLAUDE.md` and
-`~/.local/secrets`) are set as Worker secrets on `asc-site`. Check with:
+App, committer `cairn-cms[bot]`) are Worker secrets on `asc-site`; `npx wrangler secret list`
+checks them. Where values live: the workstation age store and `~/.local/secrets`
+(`~/.claude/docs/bluefin-admin.md`, "Secrets: installing, receiving, and 1Password").
 
-```bash
-npx wrangler secret list
-```
-
-## Engine-level UI mechanics
-
-**The rule is workstation-level and covers every cairn site: see "Engine-level UI mechanics,
-every cairn site" in `~/.claude/CLAUDE.md`.** A UI mechanic belongs to cairn, a design choice
-belongs to this site, and filing the mechanics is default behavior at the end of any pass
-carrying UI work rather than something done on request.
-
-This repo's part of it: findings go in that pass's own
-`docs/YYYY-MM-DD-<pass>-harvest-findings.md`, and the mechanically detectable half belongs in
-`cairn-audit` rather than this repo's `scripts/design-probe.mjs`. The 2026-07-30 file
-(`docs/2026-07-30-assets-substrate-harvest-findings.md`) is the worked example, carrying six
-findings with their evidence and the measurement methods that produced them.
+A UI mechanic belongs to cairn, a design choice to this site, and filing the mechanics is default
+behavior at the end of any pass carrying UI work (the `site-pass` and `cairn-pass` skills carry
+the rule). Findings go in the pass's own `docs/YYYY-MM-DD-<pass>-harvest-findings.md`; the
+mechanically detectable half belongs in `cairn-audit`, not `scripts/design-probe.mjs`.
+`docs/2026-07-30-assets-substrate-harvest-findings.md` is the worked example.
 
 ## Documentation
 
-- `docs/STATUS.md`: rolling status, read first.
-- `docs/2026-07-06-asc-phase-1-design.md` / `docs/2026-07-06-asc-home-northstar.html`: the design
-  contract (see above).
-- `docs/design-benchmark/decisions.md`: every settled design question with its reasoning; later
-  rounds never re-litigate a logged decision unless Geoff reopens it. An in-flight live round
-  keeps a one-line-per-probe arc log beside it (`education-round-<N>-arc.md`), distilled into
-  decisions.md at settle and then removed.
+- `docs/STATUS.md`: current state, read first.
+- `docs/design-benchmark/decisions.md`: every settled design question; never re-litigate a
+  logged decision unless Geoff reopens it. A live round keeps a one-line-per-probe arc log beside it.
 - `docs/image-standard.md`: the per-template image standard (hero crops, figure insets).
   BINDING for any image or figure work; consult it, never re-derive.
-- `docs/2026-07-07-polish-backlog.md`: the design/content polish backlog. This repo keeps no
-  separate BACKLOG.md; carry-forwards live in STATUS entries.
-- `docs/content-migration-findings.md`: what migrated from the Hugo site and the deltas taken.
-- `docs/events-integration-findings.md`: the `EVENTS_DB` schema verification and taxonomy rules.
-- `docs/verification-findings.md`: the phase-1 verification pass, the pixel-diff rider, and the
-  dev takeover record.
-- `docs/content-guide.md`: **does not exist yet.** The `content-draft`/`content-review` skills
-  and the shared `web-content-method.md` expect each site to supply its own generative content
-  guide at this path (see `ecxc-ski/docs/content-guide.md` for the family shape); ASC has never
-  authored one. Until it exists, content work runs on the shared method's rubric alone plus this
-  repo's own locked references (`docs/2026-07-06-asc-phase-1-design.md`, `docs/image-standard.md`)
-  — verified 2026-07-16, investigated rather than assumed (checked this repo, cairn-cms, and the
-  sibling site repos; no ASC-specific content guide exists anywhere).
-
+- `docs/2026-07-07-polish-backlog.md`: the polish backlog (carry-forwards live in STATUS).
+- `docs/content-migration-findings.md`, `docs/events-integration-findings.md`,
+  `docs/verification-findings.md`: the Hugo migration deltas, the `EVENTS_DB` schema and taxonomy
+  rules, and the phase-1 verification and dev takeover record.
+- `docs/HISTORY.md` is frozen; git history and PR bodies are the record.
+- `docs/engineering-notes.md`: build, CI, CSS, and SQL gotchas, on demand.
+- `docs/content-guide.md`: **does not exist yet** (verified 2026-07-16 across this repo,
+  cairn-cms, and the sibling sites). Content work runs on the shared method's rubric plus
+  `docs/2026-07-06-asc-phase-1-design.md` and `docs/image-standard.md`.
 
 ## The repo family (renamed 2026-07-06)
 
-- **This repo (glw907/aksailingclub-org)** is the NEW site — cairn-based, the club's
-  future production site (formerly asc-site; the worker keeps the name `asc-site`).
-- **glw907/aksailingclub-legacy** (locally ~/Projects/aksailingclub-legacy) serves the
-  LIVE site today (Hugo/Blowfish + the ops/ dashboard) and stays authoritative until the
-  cutover; it archives after the soak. Its ops/ dashboard keeps running beside this site
-  through the whole phase-2 absorption (the coexistence strategy).
+- **This repo (glw907/aksailingclub-org)** is the new cairn-based site, the club's future
+  production site (the worker keeps the name `asc-site`).
+- **glw907/aksailingclub-legacy** (`~/Projects/aksailingclub-legacy`) serves the LIVE site today
+  (Hugo/Blowfish plus the ops/ dashboard) and stays authoritative until the cutover; it archives
+  after the soak. Its ops/ dashboard runs beside this site through the phase-2 absorption.
 - ~/Projects/aksailingclub-sveltekit is the retired experiment (see its RETIRED.md).
-- Claude sessions for ASC work launch HERE; this project has its own memory.
+- Claude sessions for ASC work launch HERE.
