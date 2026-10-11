@@ -1,10 +1,10 @@
 # asc-site status
 
 > Present tense only: where the work stands and the immediate next action. Read in full at
-> every session start, so it stays under 60 lines. The per-pass ledger (what landed, what the
-> gate caught, what not to rediscover) is `docs/HISTORY.md`; strategic initiatives are
-> `ROADMAP.md`; pre-2026-08-21 status entries are `docs/status-archive.md`. Pruning means
-> moving to one of those, never deleting.
+> every session start, so it stays under 60 lines. `docs/HISTORY.md` is a frozen record (git and
+> PR bodies are the history now); strategic initiatives are `ROADMAP.md`; superseded status
+> entries, carry-forwards, and the review queue are `docs/status-archive.md`. Pruning means
+> moving to the archive, never deleting.
 
 **Current state (2026-08-26).** The site runs cairn `^0.96.0`. The Email + Announce pass is
 complete: PR #11 merged and deployed to dev — the head-of-household audience model end to
@@ -50,19 +50,6 @@ one Tidy run.
   "left" keeps receiving club email until its paid year lapses. Latent (0 live rows);
   wants a one-predicate ruling.
 
-**Carry-forwards.** From assets-register, deferred deliberately: `payForApprovedRequest`
-atomicity (`db.batch()`), the review inbox's per-row N+1, the household desk's hand-rolled
-asset chip, the `isUniqueViolation` consolidation, the committees "(s)" subtitle, no
-visual baselines on the two Assets screens. From email-announce: `email_log(segment)`
-index as migration 0040 on the next schema touch (harvest 20); the send-log payload/count
-truncation notes (harvest 21); the `setEmailOptIn` household-scoping sweep across its
-three siblings (harvest 17); `wrangler dev`'s local esbuild barrel-import failure
-(harvest 39). Probe infra: `~/.local/asc-data/probes/` (assets-register, email-announce).
-
-**Geoff's review queue (full entries in docs/status-archive.md).** The Email + Announce
-before/after (this close). Still queued: the assets before/after (gates the apex), the
-`/events` before/after and coherence read, Classes, the pass-B sidebar walkthrough,
-waivers signing, member directory and committees, the portal redesign against mock D, the
-retention step, the fragments /members page, the attorney packet send, the payments live
-smoke, the five-stop dev walkthrough, the fragments harvest, the directory DX notes, the
-board-demo cleanup (`node scripts/import/demo-household.mjs --cleanup`).
+**Carry-forwards and Geoff's review queue** (assets-register and email-announce deferrals, probe
+infra, the before/after reads, the attorney packet, the board-demo cleanup) are in the newest
+entry of `docs/status-archive.md`.

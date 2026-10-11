@@ -4,6 +4,25 @@
 > STATUS.md's preamble). History only: nothing here is a live instruction, and entries
 > reflect what was true when written. The live rolling status is docs/STATUS.md.
 
+**Moved from STATUS on 2026-10-10 (lean pass cutover): carry-forwards and the review queue.**
+
+**Carry-forwards.** From assets-register, deferred deliberately: `payForApprovedRequest`
+atomicity (`db.batch()`), the review inbox's per-row N+1, the household desk's hand-rolled
+asset chip, the `isUniqueViolation` consolidation, the committees "(s)" subtitle, no
+visual baselines on the two Assets screens. From email-announce: `email_log(segment)`
+index as migration 0040 on the next schema touch (harvest 20); the send-log payload/count
+truncation notes (harvest 21); the `setEmailOptIn` household-scoping sweep across its
+three siblings (harvest 17); `wrangler dev`'s local esbuild barrel-import failure
+(harvest 39). Probe infra: `~/.local/asc-data/probes/` (assets-register, email-announce).
+
+**Geoff's review queue (full entries in docs/status-archive.md).** The Email + Announce
+before/after (this close). Still queued: the assets before/after (gates the apex), the
+`/events` before/after and coherence read, Classes, the pass-B sidebar walkthrough,
+waivers signing, member directory and committees, the portal redesign against mock D, the
+retention step, the fragments /members page, the attorney packet send, the payments live
+smoke, the five-stop dev walkthrough, the fragments harvest, the directory DX notes, the
+board-demo cleanup (`node scripts/import/demo-household.mjs --cleanup`).
+
 **THE CAIRN ADOPTION PASS IS COMPLETE AND VERIFIED ON BRANCH `cairn-0.94-migration`, PINNED TO
 `0.94.0-rc.2` (commit `d71ff1e`). IT IS NOT MERGED AND NOT DEPLOYED. GEOFF APPROVED THE STACKED
 FIELD REGISTER ON 2026-08-06, so the only remaining gate is the engine. IMMEDIATE NEXT ACTION: flip
