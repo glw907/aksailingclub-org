@@ -2,7 +2,8 @@
 
 > Superseded STATUS entries, newest first, moved here by the rolling-status trim (see
 > STATUS.md's preamble). History only: nothing here is a live instruction, and entries
-> reflect what was true when written. The live rolling status is docs/STATUS.md.
+> reflect what was true when written. The live rolling status is docs/STATUS.md. The one exception is
+> the "Moved from STATUS on 2026-10-10" entry: its carry-forwards and review queue stay live until worked.
 
 **Moved from STATUS on 2026-10-10 (lean pass cutover): carry-forwards and the review queue.**
 
@@ -15,8 +16,8 @@ truncation notes (harvest 21); the `setEmailOptIn` household-scoping sweep acros
 three siblings (harvest 17); `wrangler dev`'s local esbuild barrel-import failure
 (harvest 39). Probe infra: `~/.local/asc-data/probes/` (assets-register, email-announce).
 
-**Geoff's review queue (full entries in docs/status-archive.md).** The Email + Announce
-before/after (this close). Still queued: the assets before/after (gates the apex), the
+**Geoff's review queue.** The Email + Announce
+before/after. Still queued: the assets before/after (gates the apex), the
 `/events` before/after and coherence read, Classes, the pass-B sidebar walkthrough,
 waivers signing, member directory and committees, the portal redesign against mock D, the
 retention step, the fragments /members page, the attorney packet send, the payments live

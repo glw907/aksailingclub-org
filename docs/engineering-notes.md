@@ -110,6 +110,6 @@ image:
 - Historic `email_blasts.segment_label` values are point-in-time snapshots; pre-pass rows stay
   "Current members" by design.
 - `email_log(segment)` has no index and three member-facing cooldown reads scan it; it is the
-  first candidate for the next schema touch (STATUS carry-forwards).
+  first candidate for the next schema touch (`docs/status-archive.md`, the 2026-10-10 entry).
 - The media picker is built site-local over the committed manifest
   (`src/routes/admin/club/events/HeroImageField.svelte`); it is not reachable through cairn's exports.
