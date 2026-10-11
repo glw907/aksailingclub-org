@@ -38,9 +38,9 @@ Merge and dedupe (keep the highest severity per cluster). One fresh-context skep
 surviving finding, prompted to refute it against the screenshot evidence; a convincingly
 refuted finding dies. No majority voting.
 
-## Stage 4 — the conductor's own eyes, then Geoff
+## Stage 4 — the executing session's own eyes, then Geoff
 
-The main loop reads the final renders itself (the one-check rule), then Geoff receives the
+The executing session reads the final renders itself (the one-check rule), then Geoff receives the
 surviving ranked list with evidencing crops, never the raw fan-out output.
 
 ## Amendments (2026-07-07 evening, from the education dev-review misses)
@@ -49,7 +49,7 @@ Three green panel rounds still shipped a broken hero, ragged day cards, and the 
 TOC to Geoff's dev review. The fixes are binding:
 
 1. **The deployed surface is the review surface.** Once the branch is pushed and dev serves
-   it, the final read (the orchestrator's and any last lens round) grades DEV through the
+   it, the final read (the executing session's and any last lens round) grades DEV through the
    Access service token, never only local captures. Geoff reads dev; grade what he sees.
 2. **Top-of-page crops are mandatory.** Every capture set includes a native-resolution crop
    of the hero/header region per width. Full-page downscale on a long page hides hero

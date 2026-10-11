@@ -1,3 +1,4 @@
+> Frozen as of 2026-10-10: git history and PR bodies are the record now (lean pass ruling 8).
 # asc-site history
 
 > The per-pass ledger, newest first. Read on demand at a post-mortem or a "when did this
