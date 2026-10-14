@@ -2,7 +2,7 @@
 
 > Present tense only: where the work stands and the immediate next action. Read in full at
 > every session start, so it stays under 60 lines. `docs/HISTORY.md` is a frozen record (git and
-> PR bodies are the history now); strategic initiatives are `ROADMAP.md`; superseded status
+> PR bodies are the history now); initiatives are records in `glw907/initiatives`, deferred work is `BACKLOG.md`; superseded status
 > entries, carry-forwards, and the review queue are `docs/status-archive.md`. Pruning means
 > moving to the archive, never deleting.
 
