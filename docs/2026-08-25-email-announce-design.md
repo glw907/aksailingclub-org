@@ -239,7 +239,7 @@ state, not an error. The cron trigger stays disabled until `mw-cutover`.
 ## Groundwork for the notifications pass
 
 The SMS ruling (Geoff, 2026-08-25) lands as its own `club-notifications` initiative on
-The retired roadmap, and this pass lays its groundwork deliberately rather than incidentally:
+the retired roadmap, and this pass lays its groundwork deliberately rather than incidentally:
 
 - **Per-channel opt-in columns.** Migration `0038` adds the email opt-in as its own column;
   the SMS pass adds `sms` as a later additive migration. No generic preferences table or

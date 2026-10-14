@@ -223,7 +223,7 @@ events-redesign-round-1-arc.md`; create `docs/2026-08-22-events-redesign-harvest
 - `decisions.md` gains the settled events decisions with reasoning (one long page, chrono
   plus coda, quieted past, the title, the four subscribe entries, the stub route), distilled
   from the arc log, which is then deleted. `ledger.md` gains the page's verdict.
-- the retired roadmap's `events-redesign` entry is marked DONE with the date; `HISTORY.md` gets
+- The retired roadmap's `events-redesign` entry is marked DONE with the date; `HISTORY.md` gets
   the pass entry (what landed, what the gate caught, what not to rediscover); `STATUS.md`
   points at Geoff's before/after on dev as the next action and stays under 60 lines.
 - The harvest doc lists any engine-level mechanic the build surfaced (candidates already

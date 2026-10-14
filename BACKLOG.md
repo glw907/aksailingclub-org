@@ -41,11 +41,13 @@
   integration, A2P 10DLC registration (Geoff-attended, weeks of lead time), the STOP/HELP webhook,
   an SMS delivery log, and a portal Notifications row. Head-of-household by default with per-member
   opt-in. Groundwork: `docs/2026-08-25-email-announce-design.md`.
-- [ ] **#7** Fragments migration and the DX/contract harvest (`fragments-migration`) `#improvement` `#site` *(2026-10-14)*
-  Move repeated content onto cairn's Fragments (`::include{fragment="<id>"}`), starting from the
-  nine ready cases in `docs/fragment-candidates.md`, verified against today's content. Drop a
-  candidate that has one real consumer. Doubles as the first real fragments-consumer test, so it
-  logs DX and contract failures tied to the capability. Check whether it already ran before scheduling.
+- [ ] **#7** Fragments migration: the carry-forwards (`fragments-migration`) `#improvement` `#site` *(2026-10-14)*
+  The developer seat shipped 2026-07-17 (site on `^0.87.0`, one of nine candidates converted,
+  integrity and content-agreement tests in place). Two items stay open. First, the editor-seat
+  probes E1-E8 run when ASC moves to `^0.88.0`, gated by `{ stage: 'probes', editor: true }`.
+  Second, the drafted harvest in `docs/2026-07-17-fragments-harvest-findings.md` gets pasted into
+  cairn-cms's friction log, then the staging file is deleted. Spec:
+  `docs/2026-07-17-fragments-migration-design.md`.
 - [ ] **#8** Class management (`class-management`) `#feature` `#admin` *(2026-10-14)*
   In-season tooling: attendance and check-in, roster exports, instructor self-serve rosters
   (check-in writes only), and class-fee refunds through the ledger, following the club's refund

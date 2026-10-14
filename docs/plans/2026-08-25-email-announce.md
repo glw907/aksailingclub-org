@@ -605,8 +605,8 @@ these without asking:
       the missing `reply_to` threading)
 - [ ] `decisions.md` settle entry, recording the `currentMemberEmails` overdue-widening
       walkthrough as closed-confirmed (contract ruling 4); `docs/HISTORY.md` entry
-- [ ] the retired roadmap: move Email + Announce out of `admin-screen-passes`'s remaining-screens
-      sentence (the retired roadmap) into the "Shipped so far" list (`:60`)
+- [ ] The retired roadmap: move Email + Announce out of `admin-screen-passes`'s remaining-screens
+      sentence into the "Shipped so far" list
 - [ ] `docs/STATUS.md`: new starter prompt, and remove the three items this pass closes
       (the 0.94 `publishedAt` announce-list recency carry-forward, the stacked-field
       baseline coverage carry-forward, and the "07-15 apology-send verification" queue item

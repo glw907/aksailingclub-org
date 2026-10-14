@@ -1736,7 +1736,7 @@ export, 14 attendee rosters; plaintext machine-local only); pre-import backup at
 `~/.local/asc-data/backups/`. Rulings recorded in CLAUDE.md: asc-club schema fully evolvable
 (never write around it), encrypted exports in-repo, normalization on every write path (emails
 lower, phones E.164, conservative name recasing — live paths done: ensureMember, portal
-profile/household; portal profile still validates unparseable phones). the retired roadmap born:
+profile/household; portal profile still validates unparseable phones). The retired roadmap born:
 `qbo-integration` logged as the phase-2 accounting project (ledger-shaped transactions table;
 Geoff's ruling). FOR GEOFF/COMMITTEE: (1) the Wright household + Elayne C Hunter hold active
 asset assignments but memberships stale >400 days — 6 assignment rows correctly skipped until

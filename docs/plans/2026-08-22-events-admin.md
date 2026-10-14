@@ -719,7 +719,7 @@ seams this build hit are filed for cairn.
   what the gates caught, what a later pass would be wrong to rediscover (the SQLite recreate
   forced by the column-level UNIQUE; the slug-no-longer-unique consequence for
   `EVENT_BY_SLUG_QUERY`; the `bootstrap-club-db.mjs` warm-replica gap; the picker seam).
-- the retired roadmap's `admin-screen-passes` entry gains Events to its shipped list with the date,
+- The retired roadmap's `admin-screen-passes` entry gains Events to its shipped list with the date,
   leaving the remaining screens as they stand.
 - **`docs/STATUS.md`** stays under 60 lines and points at Geoff's before/after of
   `/admin/club/events` on dev as the next action, keeps the live-migration record visible, and
