@@ -1,6 +1,6 @@
 # Membership admin on live data — design
 
-Initiative 3 of the MembershipWorks replacement program (`membership-admin` in ROADMAP.md).
+Initiative 3 of the MembershipWorks replacement program (`membership-admin` in the retired roadmap).
 This spec replaces the fixture-backed admin members screens with real `asc-club` data and
 adds the missing membership CRUD: manual payments, tier changes, refunds against the
 ledger, archive, directory visibility, and household merge/move. The staff-roles collapse

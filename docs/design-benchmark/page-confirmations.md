@@ -1,6 +1,6 @@
 # Page-by-page design confirmation ledger
 
-The working checklist for the `design-propagation` sweep (ROADMAP.md): every page gets
+The working checklist for the `design-propagation` sweep (the retired roadmap): every page gets
 an affirmative confirmation against the design contract, group by group. A checked page
 is confirmed by Geoff's own read and is not revisited unless he reopens it. Method and
 group rationale: the ROADMAP entry. Contract: the phase-1 design spec, the north star,

@@ -224,7 +224,7 @@ panel with zero navigations; e2e green.
 
 ### Task 8: pass close — gates, reviews, records
 
-**Files:** `docs/STATUS.md`, `ROADMAP.md`, `docs/design-benchmark/decisions.md`
+**Files:** `docs/STATUS.md`, the retired roadmap, `docs/design-benchmark/decisions.md`
 (the brainstorm's rulings distilled), `docs/design-benchmark/ledger.md` (coherence
 verdict), a harvest-findings note for the cairn-bound components.
 

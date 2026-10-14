@@ -1,8 +1,9 @@
 # BACKLOG
 
-> Project issue tracker. Managed by `/log-issue`. Moved here from `ROADMAP.md` on 2026-10-14
-> by the repo-organization pass; each entry's full text, with its rulings and history, is the
-> last committed `ROADMAP.md` on `main` before that pass's merge (`git log --diff-filter=D -- ROADMAP.md`).
+> Project issue tracker. Managed by `/log-issue`. Moved here from the retired roadmap on 2026-10-14
+> by the repo-organization pass. Each entry's full text, with its rulings and history, is in the
+> roadmap file as last committed before that pass's merge (find the deleting commit with
+> `git log --diff-filter=D --name-only`).
 
 ## High
 

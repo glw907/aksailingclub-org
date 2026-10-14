@@ -314,4 +314,4 @@ each deliberately.
 - `scripts/import/mw-members.README.md`: the full delta-import mechanics.
 - `docs/2026-07-15-payments-live-smoke-design.md`: the live-Stripe key mode and webhook procedure.
 - `wrangler.toml`: the cron trigger (commented), the D1 bindings, and the 2026-07-14 incident note.
-- ROADMAP.md, the `mw-cutover` entry: the governing rulings this runbook executes.
+- The retired roadmap, the `mw-cutover` entry: the governing rulings this runbook executes.

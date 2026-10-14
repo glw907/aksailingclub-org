@@ -2,7 +2,7 @@
 
 Brainstormed with Geoff on 2026-08-25 and ratified in that sitting, with the audience-model
 ruling added later the same day. This is the Email + Announce pass in the
-`admin-screen-passes` series (`ROADMAP.md`), covering the five screens under
+`admin-screen-passes` series (the retired roadmap), covering the five screens under
 `/admin/club/email` and `/admin/club/announce`, their shared library modules, and one
 addition to the member portal. The factual ground is the prep brief
 (`docs/2026-08-25-email-announce-prep-brief.md`); the bar is the settled admin register
@@ -239,7 +239,7 @@ state, not an error. The cron trigger stays disabled until `mw-cutover`.
 ## Groundwork for the notifications pass
 
 The SMS ruling (Geoff, 2026-08-25) lands as its own `club-notifications` initiative on
-`ROADMAP.md`, and this pass lays its groundwork deliberately rather than incidentally:
+The retired roadmap, and this pass lays its groundwork deliberately rather than incidentally:
 
 - **Per-channel opt-in columns.** Migration `0038` adds the email opt-in as its own column;
   the SMS pass adds `sms` as a later additive migration. No generic preferences table or
@@ -293,7 +293,7 @@ the `decisions.md` settle.
 ## Out of scope
 
 Announce-on-publish and the SMS channel, which together form the notifications initiative
-on `ROADMAP.md` (Twilio or equivalent, A2P 10DLC registration, STOP handling, an SMS
+on the retired roadmap (Twilio or equivalent, A2P 10DLC registration, STOP handling, an SMS
 delivery log, and the on-publish hook; member phones are already E.164 on every write
 path, and per-channel opt-in columns make SMS a later additive migration). Template
 renaming, grouping, and subject content. Drafts, scheduling, Discord on compose, open and click tracking, and ad-hoc
