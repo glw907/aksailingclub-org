@@ -583,7 +583,7 @@ errors + 5 direct dispatches; commits ecde24c..cbb79f5; cairn 0.89.1).** What sh
   and the probe verdicts above.
 - **NEXT PASS — ASSETS (first under the whole-surface series ruling)**: opens with
   the functional brainstorm. RESUME PROMPT: "Start the Assets pass: read
-  ROADMAP.md's admin-screen-passes entry and docs/STATUS.md, then open the
+  the retired roadmap's admin-screen-passes entry and docs/STATUS.md, then open the
   functional brainstorm with Geoff (superpowers:brainstorming) before any visual
   work. The asset_types underscore-vs-hyphen defect rides the pass; opening cairn
   task candidates: ExpandableRow's graduation (second consumer landed) and the
@@ -696,7 +696,7 @@ read, commits 68a656f..1fe85db + the CI baseline-regen commit).** What shipped:
   template). OPENS WITH A FUNCTIONAL BRAINSTORM with Geoff (what the page must do for
   members and visitors) before any visual work; probe-iteration process governs; the
   current page's timeline/chips/season machinery is requirements evidence, not a design
-  to preserve. Resume prompt: "Start the events-redesign pass: read ROADMAP.md's
+  to preserve. Resume prompt: "Start the events-redesign pass: read the retired roadmap's
   events-redesign entry and docs/STATUS.md, then open the functional brainstorm with
   Geoff (superpowers:brainstorming) before any visual work." Launch fresh from
   ~/Projects/aksailingclub-org.
@@ -1622,7 +1622,7 @@ the age store + 4 GH repos; CF_ZT_TOKEN retired; scope truth now lives ONLY in
 REVOKED (via cairn Tidy failing on asc-site — which also never had the key routed);
 new key minted, validated live, rotated to asc-site + ecxc workers; Tidy healthy.
 NEXT SESSION (fresh context, per the ruling): INITIATIVE 4, segment-email — read this
-entry + ROADMAP.md's segment-email entry, then brainstorm. Scope ruled 2026-07-13:
+entry + the retired roadmap's segment-email entry, then brainstorm. Scope ruled 2026-07-13:
 announce stays; add segment targeting (current, lapsed, class roster, instructors) and
 compose-without-a-post, on the email-templates/log substrate; the segments now exist
 live (standing.ts + the announcements repoint). The staff-roles collapse onto cairn's
@@ -1671,7 +1671,7 @@ files, 1050 tests, e2e suite previously 27/27), dev redeployed from main and smo
 The two flagged calls (the welcome-back magic-link amendment, the fireweed submit)
 stand unless Geoff reopens them at his dev walkthrough.
 NEXT SESSION (fresh context, per the ruling): INITIATIVE 3, membership-admin — read
-this entry + ROADMAP.md's membership-admin entry + the consumer brief
+this entry + the retired roadmap's membership-admin entry + the consumer brief
 docs/2026-07-13-cairn-editor-roles-consumer-brief.md, then brainstorm. The opening fork
 is Geoff's screen-shape question (two Members/Memberships screens vs one
 household-grouped screen + a money/renewals view) — drive mockups from the REAL
@@ -1684,7 +1684,7 @@ manual); Turnstile enforcement + rate limiting ride payments-live-smoke; portal-
 e2e wants a member-auth login helper.**
 
 **PRIOR (INITIATIVE 1, money-ledger) IS COMPLETE AND LIVE (2026-07-13, the program's first
-session): the MW REPLACEMENT PROGRAM is on ROADMAP.md (Geoff-approved; one go-live —
+session): the MW REPLACEMENT PROGRAM is on the retired roadmap (Geoff-approved; one go-live —
 apex cutover waits for membership signup/renewal/admin, MW cancels right after):
 money-ledger → unified-signup → membership-admin → segment-email → payments-live-smoke →
 mw-cutover; qbo-integration narrowed to the sync. Rulings this session: email = announce
@@ -1715,7 +1715,7 @@ Gate at close: check 0/0 (792 files), 973/973 tests, build green. Budgets: ~1.44
 subagent tokens + the Fable main loop; 2 questions to Geoff (finish line, email scope),
 0 corrections. NEXT SESSION (fresh context, per the ruling): INITIATIVE 2, the
 unified-signup brainstorm (Fable-authorized; the education arc log holds the framing;
-ROADMAP.md's unified-signup entry is the scope) — the dues checkout call sites land
+the retired roadmap's unified-signup entry is the scope) — the dues checkout call sites land
 there against the now-ledger-complete seams. The round-5 settle and admin review round
 remain queued from the prior entries.**
 
@@ -1736,7 +1736,7 @@ export, 14 attendee rosters; plaintext machine-local only); pre-import backup at
 `~/.local/asc-data/backups/`. Rulings recorded in CLAUDE.md: asc-club schema fully evolvable
 (never write around it), encrypted exports in-repo, normalization on every write path (emails
 lower, phones E.164, conservative name recasing — live paths done: ensureMember, portal
-profile/household; portal profile still validates unparseable phones). ROADMAP.md born:
+profile/household; portal profile still validates unparseable phones). The retired roadmap born:
 `qbo-integration` logged as the phase-2 accounting project (ledger-shaped transactions table;
 Geoff's ruling). FOR GEOFF/COMMITTEE: (1) the Wright household + Elayne C Hunter hold active
 asset assignments but memberships stale >400 days — 6 assignment rows correctly skipped until

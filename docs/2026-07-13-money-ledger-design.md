@@ -1,7 +1,7 @@
 # The money ledger (`money-ledger`) — design spec
 
 Approved by Geoff 2026-07-13. Initiative 1 of the MembershipWorks replacement program
-(ROADMAP.md). Executes the 2026-07-13 QBO ruling: money events get a first-class,
+(the retired roadmap). Executes the 2026-07-13 QBO ruling: money events get a first-class,
 ledger-shaped home, designed now at the payments pass rather than bolted on mid-flow.
 
 ## Goal

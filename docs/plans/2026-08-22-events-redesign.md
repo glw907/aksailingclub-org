@@ -205,7 +205,7 @@ photo, and description, then lands the reader on `/events#{id}`.
 ### Task 5: Baselines, docs, and the close
 
 **Files:** visual baselines under `e2e/` (CI-generated); modify `docs/STATUS.md`,
-`docs/HISTORY.md`, `docs/design-benchmark/decisions.md`, `ROADMAP.md`,
+`docs/HISTORY.md`, `docs/design-benchmark/decisions.md`, the retired roadmap,
 `docs/design-benchmark/ledger.md`; delete `docs/design-benchmark/
 events-redesign-round-1-arc.md`; create `docs/2026-08-22-events-redesign-harvest-findings.md`.
 
@@ -223,7 +223,7 @@ events-redesign-round-1-arc.md`; create `docs/2026-08-22-events-redesign-harvest
 - `decisions.md` gains the settled events decisions with reasoning (one long page, chrono
   plus coda, quieted past, the title, the four subscribe entries, the stub route), distilled
   from the arc log, which is then deleted. `ledger.md` gains the page's verdict.
-- `ROADMAP.md`'s `events-redesign` entry is marked DONE with the date; `HISTORY.md` gets
+- The retired roadmap's `events-redesign` entry is marked DONE with the date; `HISTORY.md` gets
   the pass entry (what landed, what the gate caught, what not to rediscover); `STATUS.md`
   points at Geoff's before/after on dev as the next action and stays under 60 lines.
 - The harvest doc lists any engine-level mechanic the build surfaced (candidates already

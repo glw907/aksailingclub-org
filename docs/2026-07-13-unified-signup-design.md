@@ -1,6 +1,6 @@
 # Unified signup & membership lifecycle — design
 
-**Initiative:** `unified-signup` (ROADMAP.md), the MembershipWorks replacement program's
+**Initiative:** `unified-signup` (the retired roadmap), the MembershipWorks replacement program's
 centerpiece. Brainstormed and ruled with Geoff on 2026-07-13, immediately after
 `money-ledger` shipped. This initiative builds on the ledger seams; the admin screens
 ride the later `membership-admin` initiative.

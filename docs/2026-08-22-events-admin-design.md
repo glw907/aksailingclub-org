@@ -1,7 +1,7 @@
 # Events admin: the design contract
 
 Brainstormed with Geoff on 2026-08-22 and ratified in that sitting. This is the Events entry
-of the `admin-screen-passes` series in `ROADMAP.md`, and the third screen in that series after
+of the `admin-screen-passes` series in the retired roadmap, and the third screen in that series after
 Members and Classes. It replaces the list-plus-detail-page screen at `/admin/club/events`
 with a series ledger, adds the season roll-forward, and wires the hero photo the redesigned
 public `/events` page needs (`docs/2026-08-22-events-redesign-design.md`). The admin register

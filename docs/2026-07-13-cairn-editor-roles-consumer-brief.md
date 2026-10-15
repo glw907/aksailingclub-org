@@ -14,7 +14,7 @@ committed config, each declared role mapping to one engine capability level
 vocabulary — collapses exactly the machinery this site had to build: the parallel
 `club_roles` table, the second grant/revoke screen in Settings, the duplicated
 last-owner guard, and the bridge from cairn's session to our own binding. ASC commits
-to collapsing onto the seam at its `membership-admin` initiative (ROADMAP.md), as the
+to collapsing onto the seam at its `membership-admin` initiative (the retired roadmap), as the
 first consumer.
 
 The boundary that stays: member-scale auth (`member_tokens` / `member_sessions`,

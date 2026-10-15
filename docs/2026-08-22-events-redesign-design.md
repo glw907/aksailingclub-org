@@ -1,7 +1,7 @@
 # Events page redesign: the design contract
 
 Brainstormed with Geoff on 2026-08-22 and ratified in that sitting. This is the
-`events-redesign` initiative in `ROADMAP.md`. It replaces the season-spine listing at `/events`
+`events-redesign` initiative in the retired roadmap. It replaces the season-spine listing at `/events`
 and the per-event detail pages with one long, anchorable season page. The locked site recipes
 apply unchanged: A1 quieted bands, B1 editorial pacing, the C7 gold-star taxonomy
 (`docs/2026-07-06-asc-phase-1-design.md`), the image standard (`docs/image-standard.md`), and

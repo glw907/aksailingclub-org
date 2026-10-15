@@ -261,7 +261,7 @@ the content-review gates; standing vocabulary consistent with the flows.
   money paths (join action, welcome-back, class gate, webhook changes),
   `svelte-reviewer` over the new UI, `cloudflare-workers-reviewer` over
   payments/reconcile/webhook diffs. Conductor triages; confirmed findings fixed.
-- [ ] `code-simplifier` over the arc's diff; full gate; STATUS.md + ROADMAP.md updated;
+- [ ] `code-simplifier` over the arc's diff; full gate; STATUS.md + the retired roadmap updated;
   commit. Deploy to dev via wrangler (Actions billing-blocked) and hand Geoff the
   before/after — the apex never moves here.
 
