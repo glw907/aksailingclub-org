@@ -9,7 +9,7 @@
 public class forms — the extension seam's first production test.
 
 **Architecture:** The two-database strategy: `asc-club` is created fresh from the ratified DDL
-(`cairn-cms/docs/superpowers/specs/assets/phase-2-reference/asc-club-schema.sql`); `asc-ops` is
+(`cairn-cms/docs/specs/assets/phase-2-reference/asc-club-schema.sql`); `asc-ops` is
 never altered. Old data arrives through verified import scripts. The site's reads repoint at
 cutover; rollback is repointing back. The admin screens are the club-admin scaffold (merged,
 `5549d19`) swapped onto the engine's Part C seams (merged at cairn `69a2908`) and onto live D1.

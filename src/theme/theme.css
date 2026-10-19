@@ -1,6 +1,6 @@
 /* ASC's public reading template: the ratified "club grounds" color story (Task 3), per
-   docs/superpowers/specs/2026-07-06-asc-phase-1-design.md and the committed north star at
-   docs/superpowers/specs/assets/2026-07-06-asc-home-northstar.html in the cairn-cms repo. Every
+   docs/specs/2026-07-06-asc-phase-1-design.md and the committed north star at
+   docs/specs/assets/2026-07-06-asc-home-northstar.html in the cairn-cms repo. Every
    hex the story names converts to oklch (Björn Ottosson's sRGB->OKLab matrices; see the
    pass scratchpad) rather than eyeballed, so the DaisyUI role colors land pixel-close to the
    north star's own literal hex values.

@@ -3,7 +3,7 @@
 ## What this does
 
 Lands five tables from the ratified DDL's "THE MEMBER CORE (pass 2.2)" section
-(`cairn-cms/docs/superpowers/specs/assets/phase-2-reference/asc-club-schema.sql`), verbatim in
+(`cairn-cms/docs/specs/assets/phase-2-reference/asc-club-schema.sql`), verbatim in
 structure, no seed rows: `households`, `members`, `memberships`, `credit_grants`,
 `credit_redemptions`. Full pass-2.2 behavior (the join flow, the member portal, the credit
 ledger's redemption UI) is still a later pass; this migration only lands the structure, ahead of

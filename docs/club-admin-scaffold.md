@@ -1,7 +1,7 @@
 # The Club admin scaffold
 
 What this pass built, on the current cairn extension seam, ahead of the real Pass 2.1 build the
-design suite specifies. Canonical plan: `~/Projects/cairn-cms/docs/superpowers/specs/2026-07-06-asc-phase-2-design-suite.md`
+design suite specifies. Canonical plan: `~/Projects/cairn-cms/docs/specs/2026-07-06-asc-phase-2-design-suite.md`
 (Parts A-2.1, B, and C). Read that spec first; this doc records the structure this pass produced
 and the dependency map back to Part C's four engine gaps, corrected where the live code disagreed
 with the spec's own phrasing.

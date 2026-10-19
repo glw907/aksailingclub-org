@@ -3,7 +3,7 @@
 ## What this does
 
 Lands six tables from the ratified DDL's "ASSETS (pass 2.4)" and "EMAIL (pass 2.3)" sections
-(`cairn-cms/docs/superpowers/specs/assets/phase-2-reference/asc-club-schema.sql`), verbatim in
+(`cairn-cms/docs/specs/assets/phase-2-reference/asc-club-schema.sql`), verbatim in
 structure, no seed rows: `asset_types`, `asset_assignments`, `asset_payments`, `asset_waitlist`,
 `email_templates`, `email_log`. Neither domain has an admin screen or write path yet (both are
 later passes' own work); this migration only lands the structure, ahead of its own pass, the same

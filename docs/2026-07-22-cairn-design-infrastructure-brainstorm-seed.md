@@ -163,7 +163,7 @@ sitting — the cairn session resumes at design section 3 of 3 and does not re-a
 **Remaining for the cairn sitting**: design section 3 (the audit rule inventory and
 rendered-mode mechanics, the Assets proof-loop measurement design, initiative
 sequencing and versioning), then the spec to cairn-cms
-`docs/superpowers/specs/`, spec self-review, Geoff's review, writing-plans.
+`docs/specs/`, spec self-review, Geoff's review, writing-plans.
 
 UPDATED RESUME PROMPT (launch directory ~/Projects/cairn-cms): "Resume the cairn
 design-infrastructure brainstorm mid-flight: read
@@ -172,4 +172,4 @@ INCLUDING its 'Brainstorm state (2026-07-24)' section — audience, sequencing, 
 composition, and the craft-capture chapter are settled there; do not re-ask them.
 Continue superpowers:brainstorming with Geoff at design section 3 of 3 (cairn-audit
 mechanics, the Assets proof loop, sequencing), then write the spec to
-docs/superpowers/specs/."
+docs/specs/."

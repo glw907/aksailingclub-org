@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 // The pixel-diff CI rider (plan Task 5's acceptance: "the pixel-diff rider is in the site's CI").
 // This suite is a REGRESSION gate against ASC's own prior render, not a live diff against the
-// north star HTML (docs/superpowers/specs/assets/2026-07-06-asc-home-northstar.html in cairn-cms):
+// north star HTML (docs/specs/assets/2026-07-06-asc-home-northstar.html in cairn-cms):
 // that file is a static mockup with no D1 data or real photography, so it served as the one-time
 // build contract Task 3/4 built against, verified by a fresh-context glance read, not an ongoing
 // pixel source. Once a human has confirmed a baseline matches intent, this suite catches any future

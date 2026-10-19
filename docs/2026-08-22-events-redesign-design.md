@@ -11,7 +11,7 @@ the resolved-craft bar (`docs/2026-07-15-asc-invisible-polish-brief.md`).
 
 Events stay D1 domain records in `asc-club`, read by a site-owned page. The brainstorm
 considered cairn's standing no-events-concept ruling (cairn-cms
-`docs/superpowers/specs/2026-08-05-engine-harvest-decisions.md`, ruling 4) and leaves it
+`docs/specs/2026-08-05-engine-harvest-decisions.md`, ruling 4) and leaves it
 closed on purpose: nothing about this page is content-shaped, and the engine gets no ask.
 
 One page carries the whole season. NN/g's scrolling research supports a long page when every

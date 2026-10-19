@@ -1,5 +1,5 @@
 // The three fixed home-page photography placements (Task 3): the north star's hero, fleet, and
-// facilities panels (docs/superpowers/specs/assets/2026-07-06-asc-home-northstar.html in the
+// facilities panels (docs/specs/assets/2026-07-06-asc-home-northstar.html in the
 // cairn-cms repo), each a real club photo pulled from the live site's assets into the media
 // library with alt text. The home page is a hand-built template, not migrated content (the
 // content-migration-findings.md's own note: "the home page ... is not migrated markdown

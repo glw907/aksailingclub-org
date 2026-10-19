@@ -1,7 +1,7 @@
 -- asc-club migration 0001: the substrate for pass 2.1 (events/classes admin), plus the
 -- waiver-acceptance rider folded in early from the gap analysis (the table Task 8's public
 -- forms and 2.2's join flow will both write). Lands the 2.1-needed subset of the ratified DDL
--- (cairn-cms/docs/superpowers/specs/assets/phase-2-reference/asc-club-schema.sql) verbatim in
+-- (cairn-cms/docs/specs/assets/phase-2-reference/asc-club-schema.sql) verbatim in
 -- table structure: events, classes, class_instructors, class_enrollments, class_waitlist,
 -- class_offers, club_roles, settings, audit_log. Member-domain tables (households, members,
 -- memberships, credit_grants, credit_redemptions) and the email/asset domains are later
