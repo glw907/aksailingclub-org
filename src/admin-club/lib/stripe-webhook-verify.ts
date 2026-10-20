@@ -1,5 +1,5 @@
 // Stripe webhook signature verification, lifted from the phase-2 payments reference
-// implementation (cairn-cms/docs/superpowers/specs/assets/phase-2-reference/stripe-webhook-verify.ts,
+// implementation (cairn-cms/docs/specs/assets/phase-2-reference/stripe-webhook-verify.ts,
 // Fable, 2026-07-06), itself the clean Workers-native re-derivation of the retiring ops Worker's
 // own hand-rolled verify (aksailingclub-legacy/src/lib/handlers/stripe.js). Guarantees: the
 // signature is verified over the RAW body (never a re-serialization of the parsed event, which

@@ -4,7 +4,7 @@
    same convention prose.css itself uses. Reads only chassis/theme tokens, so a re-skin recolors
    both with no edit here.
 
-   A1 (the locked house recipe, docs/superpowers/specs/2026-07-06-asc-phase-1-design.md): "bands
+   A1 (the locked house recipe, docs/specs/2026-07-06-asc-phase-1-design.md): "bands
    mark sections, cards mark objects, nothing gets both." Passage is content directly on whatever
    band it sits on (no border, no background, no shadow); the card grid is the one place body
    content gets real card chrome, and it stays deliberately quiet (a hairline border, no shadow at

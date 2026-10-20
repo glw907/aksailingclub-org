@@ -2,7 +2,7 @@
 -- landed together, same early-arrival pattern 0005_member_domain set for the member core).
 --
 -- Lands six tables from the ratified DDL
--- (cairn-cms/docs/superpowers/specs/assets/phase-2-reference/asc-club-schema.sql), verbatim in
+-- (cairn-cms/docs/specs/assets/phase-2-reference/asc-club-schema.sql), verbatim in
 -- structure, no seed rows: `asset_types`, `asset_assignments`, `asset_payments`,
 -- `asset_waitlist` (the "ASSETS (pass 2.4)" section) and `email_templates`, `email_log` (the
 -- "EMAIL (pass 2.3)" section). Neither domain has any admin screen or write path yet (both are

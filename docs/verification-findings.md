@@ -15,7 +15,7 @@ this ships to the club's volunteers.
 Rendered the actual build (`wrangler dev`, both `--local` and `--remote`, not `vite preview`,
 which carries no Cloudflare platform bindings and would silently drop the Season section and
 every real photo) and compared it against the north star
-(`docs/superpowers/specs/assets/2026-07-06-asc-home-northstar.html` in the cairn-cms repo) and the
+(`docs/specs/assets/2026-07-06-asc-home-northstar.html` in the cairn-cms repo) and the
 content-migration/events-integration findings.
 
 **SELF-GRADED PASS, home page.** The built home matches the north star section-for-section: the

@@ -1,6 +1,6 @@
 <!-- @component
 ASC's home page (Task 3, live-data-wired in Task 4): the north star made real, section for
-section (docs/superpowers/specs/assets/2026-07-06-asc-home-northstar.html in the cairn-cms repo,
+section (docs/specs/assets/2026-07-06-asc-home-northstar.html in the cairn-cms repo,
 the build's design contract). A1's quieting recipe governs every section here: bands mark
 sections (the sage News band, the navy-deep closing band), cards mark objects (the news grid
 only), and the notification is an unboxed slim accent strip rather than a card. The Season band's

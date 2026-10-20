@@ -1995,7 +1995,7 @@ line is checked.**
 
 
 Rolling status for the Alaska Sailing Club's cairn rebuild. Canonical plan:
-`~/Projects/cairn-cms/docs/superpowers/plans/2026-07-06-asc-phase-1-build.md`. The design contract
+`~/Projects/cairn-cms/docs/plans/2026-07-06-asc-phase-1-build.md`. The design contract
 this build executes has a durable local copy in this repo: `docs/2026-07-06-asc-phase-1-design.md`
 and the blessed home-page example, `docs/2026-07-06-asc-home-northstar.html`. Read this file first
 for where the work stands before picking up the next task.

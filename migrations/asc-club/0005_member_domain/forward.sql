@@ -8,7 +8,7 @@
 -- 0001_substrate) declare `REFERENCES members(id)` columns that have had no target table until
 -- now, so every write through those columns has been failing against the real database, working
 -- only against the `fakeD1` test double. This migration lands the ratified member-domain DDL
--- (cairn-cms/docs/superpowers/specs/assets/phase-2-reference/asc-club-schema.sql, the "THE MEMBER
+-- (cairn-cms/docs/specs/assets/phase-2-reference/asc-club-schema.sql, the "THE MEMBER
 -- CORE (pass 2.2)" section) verbatim in table structure, no seed rows, so those write paths have
 -- a real target to reference. Full pass-2.2 behavior (the join flow, the portal, the credit
 -- ledger's redemption UI) is still a later pass; this migration only lands the structure.
