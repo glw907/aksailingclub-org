@@ -57,6 +57,8 @@
   a per-season audit row): `current_season`, new class instances, the registration gate, renewal
   season assignment, seasonal storage re-up, the `waiver_text_version` review, and season-stamped
   copy. Precedent: the legacy ops `startNewSeason`. Needs a live brainstorm.
+- [ ] **#12** Make the CI visual-fidelity suite pass on main `#bug` `#site` *(2026-11-07)*
+  The `ci` workflow fails on `main` (runs on 2026-10-15 and 2026-10-20 and on every PR since) in "Run the visual-fidelity suite": the dev server throws `CairnError: GITHUB_APP_PRIVATE_KEY_B64 is not configured` on every request. Give the suite a stub value for the variable, or stop the route that reads it from loading in the test build. Found by credential-hygiene pass C, whose two-line docs PR fails only this check.
 
 ## Low
 
