@@ -164,7 +164,7 @@ outside the admin. Type generation (`npm run types` must keep `--include-env=fal
 `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID`, and `GITHUB_APP_PRIVATE_KEY_B64` (cairn's GitHub
 App, committer `cairn-cms[bot]`) are Worker secrets on `asc-site`; `npx wrangler secret list`
 checks them. Where values live: the workstation age store and `~/.local/secrets`
-(`~/.claude/docs/bluefin-admin.md`, "Secrets: installing, receiving, and 1Password").
+(`~/.claude/docs/bluefin-admin.md`, "Secrets: installing, receiving, and Proton Pass").
 
 A UI mechanic belongs to cairn, a design choice to this site, and filing the mechanics is default
 behavior at the end of any pass carrying UI work (the `site-pass` and `cairn-pass` skills carry

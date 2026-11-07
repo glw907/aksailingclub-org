@@ -3,7 +3,7 @@
 Source data for the member import (`scripts/import/mw-members.mjs`), committed encrypted so the
 club's member history survives independent of any one machine. Every file is member PII: only
 `*.csv.age` is ever committed (`.gitignore` refuses plaintext `*.csv` here), encrypted to the ASC
-age key. Decrypt with the key at `~/.config/age/asc-key.txt` (held in 1Password, never in git):
+age key. Decrypt with the key at `~/.config/age/asc-key.txt` (held in the `ASC` Proton Pass vault as "Age key (ASC)", never in git):
 
 ```sh
 age -d -i "$AGE_KEY_FILE" 2026-07-13-members.csv.age > /tmp/members.csv
